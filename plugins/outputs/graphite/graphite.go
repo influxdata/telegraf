@@ -250,6 +250,7 @@ func (g *Graphite) Write(metrics []telegraf.Metric) error {
 
 func (g *Graphite) send(batch []byte) error {
 	// Try sending the data to a server. Try them in random order
+	//nolint:gosec // False-positive G404 as this doesn't require strong RNG
 	p := rand.Perm(len(g.connections))
 	for i, n := range p {
 		server := g.connections[n]

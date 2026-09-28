@@ -43,16 +43,16 @@ func determineConverterI64(outType, byteOrder string) (fieldConverterFunc, error
 
 	switch outType {
 	case "native", "INT64":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			return int64(tohost(b))
 		}, nil
 	case "UINT64":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			in := int64(tohost(b))
 			return uint64(in)
 		}, nil
 	case "FLOAT64":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			in := int64(tohost(b))
 			return float64(in)
 		}, nil
@@ -69,15 +69,15 @@ func determineConverterU64(outType, byteOrder string) (fieldConverterFunc, error
 
 	switch outType {
 	case "INT64":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			return int64(tohost(b))
 		}, nil
 	case "native", "UINT64":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			return tohost(b)
 		}, nil
 	case "FLOAT64":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			return float64(tohost(b))
 		}, nil
 	}
@@ -93,7 +93,7 @@ func determineConverterF64(outType, byteOrder string) (fieldConverterFunc, error
 
 	switch outType {
 	case "native", "FLOAT64":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			raw := tohost(b)
 			return math.Float64frombits(raw)
 		}, nil
@@ -110,22 +110,22 @@ func determineConverterI64Scale(outType, byteOrder string, scale float64) (field
 
 	switch outType {
 	case "native":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			in := int64(tohost(b))
 			return int64(float64(in) * scale)
 		}, nil
 	case "INT64":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			in := int64(tohost(b))
 			return int64(float64(in) * scale)
 		}, nil
 	case "UINT64":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			in := int64(tohost(b))
 			return uint64(float64(in) * scale)
 		}, nil
 	case "FLOAT64":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			in := int64(tohost(b))
 			return float64(in) * scale
 		}, nil
@@ -142,22 +142,22 @@ func determineConverterU64Scale(outType, byteOrder string, scale float64) (field
 
 	switch outType {
 	case "native":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			in := tohost(b)
 			return uint64(float64(in) * scale)
 		}, nil
 	case "INT64":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			in := tohost(b)
 			return int64(float64(in) * scale)
 		}, nil
 	case "UINT64":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			in := tohost(b)
 			return uint64(float64(in) * scale)
 		}, nil
 	case "FLOAT64":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			in := tohost(b)
 			return float64(in) * scale
 		}, nil
@@ -174,7 +174,7 @@ func determineConverterF64Scale(outType, byteOrder string, scale float64) (field
 
 	switch outType {
 	case "native", "FLOAT64":
-		return func(b []byte) interface{} {
+		return func(b []byte) any {
 			raw := tohost(b)
 			in := math.Float64frombits(raw)
 			return in * scale

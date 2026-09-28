@@ -20,7 +20,7 @@ var testmetrics = []telegraf.Metric{
 			"location": "main building",
 			"status":   "OK",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"operating_hours": 37,
 			"temperature":     23.1,
 		},
@@ -33,7 +33,7 @@ var testmetrics = []telegraf.Metric{
 			"location": "factory X",
 			"status":   "OK",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"operating_hours": 1337,
 			"temperature":     19.9,
 			"pieces":          96878,
@@ -47,7 +47,7 @@ var testmetrics = []telegraf.Metric{
 			"location": "factory X",
 			"status":   "failure",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"operating_hours": 1009,
 			"temperature":     67.3,
 			"message":         "temperature alert",
@@ -61,7 +61,7 @@ var testmetrics = []telegraf.Metric{
 			"location": "factory Y",
 			"status":   "OK",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"operating_hours": 825,
 			"temperature":     31.2,
 		},
@@ -160,7 +160,7 @@ func TestNamePass(t *testing.T) {
 				"location": "factory X",
 				"status":   "failure",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"operating_hours": 1009,
 				"temperature":     67.3,
 				"message":         "temperature alert",
@@ -174,7 +174,7 @@ func TestNamePass(t *testing.T) {
 				"location": "factory Y",
 				"status":   "OK",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"operating_hours": 825,
 				"temperature":     31.2,
 			},
@@ -204,7 +204,7 @@ func TestNameDrop(t *testing.T) {
 				"location": "main building",
 				"status":   "OK",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"operating_hours": 37,
 				"temperature":     23.1,
 			},
@@ -217,7 +217,7 @@ func TestNameDrop(t *testing.T) {
 				"location": "factory X",
 				"status":   "OK",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"operating_hours": 1337,
 				"temperature":     19.9,
 				"pieces":          96878,
@@ -248,7 +248,7 @@ func TestNameGlob(t *testing.T) {
 				"location": "factory X",
 				"status":   "OK",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"operating_hours": 1337,
 				"temperature":     19.9,
 				"pieces":          96878,
@@ -280,7 +280,7 @@ func TestTagPass(t *testing.T) {
 				"location": "main building",
 				"status":   "OK",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"operating_hours": 37,
 				"temperature":     23.1,
 			},
@@ -293,7 +293,7 @@ func TestTagPass(t *testing.T) {
 				"location": "factory X",
 				"status":   "OK",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"operating_hours": 1337,
 				"temperature":     19.9,
 				"pieces":          96878,
@@ -307,7 +307,7 @@ func TestTagPass(t *testing.T) {
 				"location": "factory Y",
 				"status":   "OK",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"operating_hours": 825,
 				"temperature":     31.2,
 			},
@@ -337,7 +337,7 @@ func TestTagDrop(t *testing.T) {
 				"location": "factory X",
 				"status":   "failure",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"operating_hours": 1009,
 				"temperature":     67.3,
 				"message":         "temperature alert",
@@ -372,7 +372,7 @@ func TestTagMultiple(t *testing.T) {
 				"location": "factory X",
 				"status":   "OK",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"operating_hours": 1337,
 				"temperature":     19.9,
 				"pieces":          96878,
@@ -386,7 +386,7 @@ func TestTagMultiple(t *testing.T) {
 				"location": "factory Y",
 				"status":   "OK",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"operating_hours": 825,
 				"temperature":     31.2,
 			},
@@ -417,7 +417,7 @@ func TestTagGlob(t *testing.T) {
 				"location": "factory X",
 				"status":   "OK",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"operating_hours": 1337,
 				"temperature":     19.9,
 				"pieces":          96878,
@@ -431,7 +431,7 @@ func TestTagGlob(t *testing.T) {
 				"location": "factory X",
 				"status":   "failure",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"operating_hours": 1009,
 				"temperature":     67.3,
 				"message":         "temperature alert",
@@ -445,7 +445,7 @@ func TestTagGlob(t *testing.T) {
 				"location": "factory Y",
 				"status":   "OK",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"operating_hours": 825,
 				"temperature":     31.2,
 			},
@@ -494,7 +494,7 @@ func TestFieldPass(t *testing.T) {
 				"location": "factory X",
 				"status":   "OK",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"operating_hours": 1337,
 				"temperature":     19.9,
 				"pieces":          96878,
@@ -508,7 +508,7 @@ func TestFieldPass(t *testing.T) {
 				"location": "factory X",
 				"status":   "failure",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"operating_hours": 1009,
 				"temperature":     67.3,
 				"message":         "temperature alert",
@@ -539,7 +539,7 @@ func TestFieldDrop(t *testing.T) {
 				"location": "main building",
 				"status":   "OK",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"operating_hours": 37,
 				"temperature":     23.1,
 			},
@@ -552,7 +552,7 @@ func TestFieldDrop(t *testing.T) {
 				"location": "factory Y",
 				"status":   "OK",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"operating_hours": 825,
 				"temperature":     31.2,
 			},
@@ -583,7 +583,7 @@ func TestFieldGlob(t *testing.T) {
 				"location": "factory X",
 				"status":   "OK",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"operating_hours": 1337,
 				"temperature":     19.9,
 				"pieces":          96878,
@@ -597,7 +597,7 @@ func TestFieldGlob(t *testing.T) {
 				"location": "factory X",
 				"status":   "failure",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"operating_hours": 1009,
 				"temperature":     67.3,
 				"message":         "temperature alert",
@@ -651,7 +651,7 @@ func TestRuleMultiple(t *testing.T) {
 				"location": "main building",
 				"status":   "OK",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"operating_hours": 37,
 				"temperature":     23.1,
 			},
@@ -687,7 +687,7 @@ func TestTracking(t *testing.T) {
 				"location": "factory X",
 				"status":   "failure",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"operating_hours": 1009,
 				"temperature":     67.3,
 				"message":         "temperature alert",
@@ -701,7 +701,7 @@ func TestTracking(t *testing.T) {
 				"location": "factory Y",
 				"status":   "OK",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"operating_hours": 825,
 				"temperature":     31.2,
 			},

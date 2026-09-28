@@ -42,7 +42,7 @@ func (ms *Mem) Gather(acc telegraf.Accumulator) error {
 		return fmt.Errorf("error getting virtual memory info: %w", err)
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"total":             vm.Total,
 		"available":         vm.Available,
 		"used":              vm.Used,

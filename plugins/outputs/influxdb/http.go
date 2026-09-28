@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net"
 	"net/http"
 	"net/url"
@@ -148,9 +149,7 @@ func NewHTTPClient(cfg HTTPConfig) (*httpClient, error) {
 		cfg.Headers = make(map[string]string)
 	}
 	cfg.Headers["User-Agent"] = userAgent
-	for k, v := range cfg.Headers {
-		cfg.Headers[k] = v
-	}
+	maps.Copy(cfg.Headers, cfg.Headers)
 
 	var proxy func(*http.Request) (*url.URL, error)
 	if cfg.Proxy != nil {
@@ -181,7 +180,7 @@ func NewHTTPClient(cfg HTTPConfig) (*httpClient, error) {
 		}
 	case "unix":
 		transport = &http.Transport{
-			Dial: func(_, _ string) (net.Conn, error) {
+			DialContext: func(context.Context, string, string) (net.Conn, error) {
 				return net.DialTimeout(
 					cfg.URL.Scheme,
 					cfg.URL.Path,
@@ -389,12 +388,10 @@ func (c *httpClient) writeBatch(ctx context.Context, db, rp string, metrics []te
 	}
 	if strings.Contains(desc, errStringDatabaseNotFound) {
 		return &DatabaseNotFoundError{
-			APIError: APIError{
-				StatusCode:  resp.StatusCode,
-				Title:       resp.Status,
-				Description: desc,
-			},
-			Database: db,
+			StatusCode:  resp.StatusCode,
+			Title:       resp.Status,
+			Description: desc,
+			Database:    db,
 		}
 	}
 

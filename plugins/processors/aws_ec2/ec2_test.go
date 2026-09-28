@@ -85,7 +85,7 @@ func TestTracking(t *testing.T) {
 			map[string]string{
 				"metric_tag": "from_metric",
 			},
-			map[string]interface{}{"value": int64(1)},
+			map[string]any{"value": int64(1)},
 			time.Unix(0, 0),
 		),
 		metric.New(
@@ -93,7 +93,7 @@ func TestTracking(t *testing.T) {
 			map[string]string{
 				"metric_tag": "foo_metric",
 			},
-			map[string]interface{}{"value": int64(2)},
+			map[string]any{"value": int64(2)},
 			time.Unix(0, 0),
 		),
 	}
@@ -105,7 +105,7 @@ func TestTracking(t *testing.T) {
 				"accountId":  "123456789",
 				"instanceId": "i-123456789123",
 			},
-			map[string]interface{}{"value": int64(1)},
+			map[string]any{"value": int64(1)},
 			time.Unix(0, 0),
 		),
 		metric.New(
@@ -115,7 +115,7 @@ func TestTracking(t *testing.T) {
 				"accountId":  "123456789",
 				"instanceId": "i-123456789123",
 			},
-			map[string]interface{}{"value": int64(2)},
+			map[string]any{"value": int64(2)},
 			time.Unix(0, 0),
 		),
 	}

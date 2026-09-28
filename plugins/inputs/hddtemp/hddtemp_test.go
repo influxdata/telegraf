@@ -47,11 +47,11 @@ func TestFetch(t *testing.T) {
 	require.Equal(t, 2, acc.NFields())
 
 	var tests = []struct {
-		fields map[string]interface{}
+		fields map[string]any
 		tags   map[string]string
 	}{
 		{
-			map[string]interface{}{
+			map[string]any{
 				"temperature": int32(13),
 			},
 			map[string]string{
@@ -63,7 +63,7 @@ func TestFetch(t *testing.T) {
 			},
 		},
 		{
-			map[string]interface{}{
+			map[string]any{
 				"temperature": int32(14),
 			},
 			map[string]string{

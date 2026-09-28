@@ -38,7 +38,7 @@ func TestFullProcFile(t *testing.T) {
 		metric.New(
 			"kernel",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"boot_time":        int64(1457505775),
 				"context_switches": int64(2626618),
 				"disk_pages_in":    int64(5741),
@@ -63,7 +63,7 @@ func TestPartialProcFile(t *testing.T) {
 	acc := testutil.Accumulator{}
 	require.NoError(t, k.Gather(&acc))
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"boot_time":        int64(1457505775),
 		"context_switches": int64(2626618),
 		"disk_pages_in":    int64(5741),
@@ -140,7 +140,7 @@ func TestKsmEnabledValidKsmDirectory(t *testing.T) {
 		metric.New(
 			"kernel",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"boot_time":                              int64(1457505775),
 				"context_switches":                       int64(2626618),
 				"disk_pages_in":                          int64(5741),

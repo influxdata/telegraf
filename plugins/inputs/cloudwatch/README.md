@@ -154,9 +154,6 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   #    value = "p-example"
 ```
 
-Please note, the `namespace` option is deprecated in favor of the `namespaces`
-list option.
-
 ## Requirements and Terminology
 
 Plugin Configuration utilizes [CloudWatch concepts][concept] and access

@@ -206,7 +206,7 @@ func TestGatherContainsTag(t *testing.T) {
 	require.Empty(t, acc1.Errors, "There should be no errors after gather")
 
 	for _, s := range testSimpleData[0].services {
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		tags := make(map[string]string)
 		fields["state"] = s.state
 		fields["startup_mode"] = s.startUpMode
@@ -229,7 +229,7 @@ func TestExcludingNamesTag(t *testing.T) {
 	require.NoError(t, winServices.Gather(&acc1))
 
 	for _, s := range testSimpleData[0].services {
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		tags := make(map[string]string)
 		fields["state"] = s.state
 		fields["startup_mode"] = s.startUpMode

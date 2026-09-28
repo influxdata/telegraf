@@ -13,7 +13,7 @@ var m = New(
 		"mykey":       "myvalue",
 		"another key": "another value",
 	},
-	map[string]interface{}{
+	map[string]any{
 		"f1": 1,
 		"f2": 2,
 		"f3": 3,

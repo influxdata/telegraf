@@ -74,7 +74,7 @@ func (cfg *apiConfig) parseCore(acc telegraf.Accumulator, coreStr string, data *
 		if strings.Contains(name, "@") {
 			continue
 		}
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"deleted_docs": m.Stats.DeletedDocs,
 			"max_docs":     m.Stats.MaxDoc,
 			"num_docs":     m.Stats.NumDocs,
@@ -109,7 +109,7 @@ func (cfg *apiConfig) parseCache(acc telegraf.Accumulator, core string, data *mB
 	}
 
 	for name, metrics := range cacheMetrics {
-		fields := make(map[string]interface{}, len(metrics.Stats))
+		fields := make(map[string]any, len(metrics.Stats))
 		for key, value := range metrics.Stats {
 			splitKey := strings.Split(key, ".")
 			newKey := splitKey[len(splitKey)-1]
@@ -160,10 +160,10 @@ func (cfg *apiConfig) parseQueryHandler(acc telegraf.Accumulator, core string, d
 			continue
 		}
 
-		var values map[string]interface{}
+		var values map[string]any
 		switch v := metrics.Stats.(type) {
-		case []interface{}:
-			values = make(map[string]interface{}, len(v)/2)
+		case []any:
+			values = make(map[string]any, len(v)/2)
 			for i := 0; i < len(v); i += 2 {
 				key, ok := v[i].(string)
 				if !ok {
@@ -171,13 +171,13 @@ func (cfg *apiConfig) parseQueryHandler(acc telegraf.Accumulator, core string, d
 				}
 				values[key] = v[i+1]
 			}
-		case map[string]interface{}:
+		case map[string]any:
 			values = v
 		default:
 			continue
 		}
 
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"15min_rate_reqs_per_second": getFloat(values["15minRateReqsPerSecond"]),
 			"5min_rate_reqs_per_second":  getFloat(values["5minRateReqsPerSecond"]),
 			"75th_pc_request_time":       getFloat(values["75thPcRequestTime"]),
@@ -233,7 +233,7 @@ func (cfg *apiConfig) parseUpdateHandler(acc telegraf.Accumulator, core string, 
 			}
 		}
 
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"adds":                        metrics.Stats.Adds,
 			"autocommit_max_docs":         metrics.Stats.AutocommitMaxDocs,
 			"autocommit_max_time":         autoCommitMaxTime,

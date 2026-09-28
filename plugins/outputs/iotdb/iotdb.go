@@ -48,7 +48,7 @@ type recordsWithTags struct {
 	// IoTDB Records basic data struct
 	DeviceIDList     []string
 	MeasurementsList [][]string
-	ValuesList       [][]interface{}
+	ValuesList       [][]any
 	DataTypesList    [][]client.TSDataType
 	TimestampList    []int64
 	// extra tags
@@ -154,7 +154,7 @@ func (s *IoTDB) Write(metrics []telegraf.Metric) error {
 }
 
 // Find out data type of the value and return it's id in TSDataType, and convert it if necessary.
-func (s *IoTDB) getDataTypeAndValue(value interface{}) (client.TSDataType, interface{}) {
+func (s *IoTDB) getDataTypeAndValue(value any) (client.TSDataType, any) {
 	switch v := value.(type) {
 	case int32:
 		return client.INT32, v
@@ -208,7 +208,7 @@ func (s *IoTDB) convertMetricsToRecordsWithTags(metrics []telegraf.Metric) (*rec
 	timestampList := make([]int64, 0, len(metrics))
 	deviceidList := make([]string, 0, len(metrics))
 	measurementsList := make([][]string, 0, len(metrics))
-	valuesList := make([][]interface{}, 0, len(metrics))
+	valuesList := make([][]any, 0, len(metrics))
 	dataTypesList := make([][]client.TSDataType, 0, len(metrics))
 	tagsList := make([][]*telegraf.Tag, 0, len(metrics))
 
@@ -216,7 +216,7 @@ func (s *IoTDB) convertMetricsToRecordsWithTags(metrics []telegraf.Metric) (*rec
 		// write `metric` to the output sink here
 		// deal with basic parameter
 		keys := make([]string, 0, len(metric.FieldList()))
-		values := make([]interface{}, 0, len(metric.FieldList()))
+		values := make([]any, 0, len(metric.FieldList()))
 		dataTypes := make([]client.TSDataType, 0, len(metric.FieldList()))
 		for _, field := range metric.FieldList() {
 			datatype, value := s.getDataTypeAndValue(field.Value)

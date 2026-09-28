@@ -90,7 +90,7 @@ func TestParseFullOutputThreadAsTagHistogram(t *testing.T) {
 	acc.AssertContainsFields(t, "unbound_threads", parsedFullOutputThreadAsTagMeasurementUnboundThreads)
 }
 
-var parsedFullOutput = map[string]interface{}{
+var parsedFullOutput = map[string]any{
 	"thread0_num_queries":              float64(11907596),
 	"thread0_num_cachehits":            float64(11489288),
 	"thread0_num_cachemiss":            float64(418308),
@@ -156,7 +156,7 @@ var parsedFullOutput = map[string]interface{}{
 	"unwanted_replies":                 float64(0),
 }
 
-var parsedFullOutputHistogram = map[string]interface{}{
+var parsedFullOutputHistogram = map[string]any{
 	"thread0_num_queries":              float64(11907596),
 	"thread0_num_cachehits":            float64(11489288),
 	"thread0_num_cachemiss":            float64(418308),
@@ -262,7 +262,7 @@ var parsedFullOutputHistogram = map[string]interface{}{
 	"unwanted_replies":                 float64(0),
 }
 
-var parsedFullOutputThreadAsTagMeasurementUnboundThreads = map[string]interface{}{
+var parsedFullOutputThreadAsTagMeasurementUnboundThreads = map[string]any{
 	"num_queries":              float64(11907596),
 	"num_cachehits":            float64(11489288),
 	"num_cachemiss":            float64(418308),
@@ -278,7 +278,7 @@ var parsedFullOutputThreadAsTagMeasurementUnboundThreads = map[string]interface{
 	"recursion_time_median":    float64(0.00292343),
 }
 
-var parsedFullOutputThreadAsTagMeasurementUnbound = map[string]interface{}{
+var parsedFullOutputThreadAsTagMeasurementUnbound = map[string]any{
 	"total_num_queries":              float64(11907596),
 	"total_num_cachehits":            float64(11489288),
 	"total_num_cachemiss":            float64(418308),
@@ -331,7 +331,7 @@ var parsedFullOutputThreadAsTagMeasurementUnbound = map[string]interface{}{
 	"unwanted_replies":               float64(0),
 }
 
-var parsedFullOutputThreadAsTagHistogramMeasurementUnbound = map[string]interface{}{
+var parsedFullOutputThreadAsTagHistogramMeasurementUnbound = map[string]any{
 	"total_num_queries":              float64(11907596),
 	"total_num_cachehits":            float64(11489288),
 	"total_num_cachemiss":            float64(418308),

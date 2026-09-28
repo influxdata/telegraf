@@ -18,7 +18,7 @@ var errBufferLimitReached = errors.New("buffer limit reached")
 // counterValue is abstraction for pdhFmtCountervalueItemDouble
 type counterValue struct {
 	instanceName string
-	value        interface{}
+	value        any
 }
 
 // performanceQuery provides wrappers around Windows performance counters API for easy usage in GO

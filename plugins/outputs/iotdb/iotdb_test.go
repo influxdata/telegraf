@@ -25,7 +25,7 @@ func newMetricWithOrderedFields(
 	fields []telegraf.Field,
 	timestamp time.Time,
 ) telegraf.Metric {
-	m := metric.New(name, map[string]string{}, map[string]interface{}{}, timestamp)
+	m := metric.New(name, map[string]string{}, map[string]any{}, timestamp)
 	for _, tag := range tags {
 		m.AddTag(tag.Key, tag.Value)
 	}
@@ -140,7 +140,7 @@ func TestMetricConversionToRecordsWithTags(t *testing.T) {
 					{"counter", "temperature"},
 					{"temperature", "counter", "unsigned_big", "string", "bool", "int_text"},
 				},
-				ValuesList: [][]interface{}{
+				ValuesList: [][]any{
 					{float64(42.55), int64(987654321)},
 					{int64(123456789), float64(56.24)},
 					{float64(30.33), int64(123456789), int64(math.MaxInt64), "Made in China.", bool(false), "123456789011"},
@@ -198,7 +198,7 @@ func TestMetricConversionToRecordsWithTags(t *testing.T) {
 			expected: recordsWithTags{
 				DeviceIDList:     []string{"root.computer.uint_to_text"},
 				MeasurementsList: [][]string{{"unsigned_big"}},
-				ValuesList:       [][]interface{}{{strconv.FormatUint(uint64(math.MaxInt64+1000), 10)}},
+				ValuesList:       [][]any{{strconv.FormatUint(uint64(math.MaxInt64+1000), 10)}},
 				DataTypesList:    [][]client.TSDataType{{client.TEXT}},
 				TimestampList:    []int64{testTimestamp.UnixNano()},
 			},
@@ -219,7 +219,7 @@ func TestMetricConversionToRecordsWithTags(t *testing.T) {
 			expected: recordsWithTags{
 				DeviceIDList:     []string{"root.computer.overflow"},
 				MeasurementsList: [][]string{{"unsigned_big"}},
-				ValuesList:       [][]interface{}{{int64(-9223372036854774809)}},
+				ValuesList:       [][]any{{int64(-9223372036854774809)}},
 				DataTypesList:    [][]client.TSDataType{{client.INT64}},
 				TimestampList:    []int64{testTimestamp.UnixNano()},
 			},
@@ -240,7 +240,7 @@ func TestMetricConversionToRecordsWithTags(t *testing.T) {
 			expected: recordsWithTags{
 				DeviceIDList:     []string{"root.computer.second"},
 				MeasurementsList: [][]string{{"unsigned_big"}},
-				ValuesList:       [][]interface{}{{int64(math.MaxInt64)}},
+				ValuesList:       [][]any{{int64(math.MaxInt64)}},
 				DataTypesList:    [][]client.TSDataType{{client.INT64}},
 				TimestampList:    []int64{testTimestamp.Unix()},
 			},
@@ -349,7 +349,7 @@ func TestTagsHandling(t *testing.T) {
 			expected: recordsWithTags{
 				DeviceIDList:     []string{"root.computer.fields"},
 				MeasurementsList: [][]string{{"temperature", "counter", "owner", "price"}},
-				ValuesList: [][]interface{}{
+				ValuesList: [][]any{
 					{float64(42.55), int64(987654321), "cpu", "expensive"},
 				},
 				DataTypesList: [][]client.TSDataType{
@@ -360,7 +360,7 @@ func TestTagsHandling(t *testing.T) {
 			input: recordsWithTags{
 				DeviceIDList:     []string{"root.computer.fields"},
 				MeasurementsList: [][]string{{"temperature", "counter"}},
-				ValuesList: [][]interface{}{
+				ValuesList: [][]any{
 					{float64(42.55), int64(987654321)},
 				},
 				DataTypesList: [][]client.TSDataType{
@@ -379,7 +379,7 @@ func TestTagsHandling(t *testing.T) {
 			expected: recordsWithTags{
 				DeviceIDList:     []string{"root.computer.deviceID.cpu.expensive"},
 				MeasurementsList: [][]string{{"temperature", "counter"}},
-				ValuesList: [][]interface{}{
+				ValuesList: [][]any{
 					{float64(42.55), int64(987654321)},
 				},
 				DataTypesList: [][]client.TSDataType{
@@ -390,7 +390,7 @@ func TestTagsHandling(t *testing.T) {
 			input: recordsWithTags{
 				DeviceIDList:     []string{"root.computer.deviceID"},
 				MeasurementsList: [][]string{{"temperature", "counter"}},
-				ValuesList: [][]interface{}{
+				ValuesList: [][]any{
 					{float64(42.55), int64(987654321)},
 				},
 				DataTypesList: [][]client.TSDataType{
@@ -436,7 +436,7 @@ func TestEntireMetricConversion(t *testing.T) {
 				MeasurementsList: [][]string{
 					{"temperature", "counter", "unsigned_big", "string", "bool", "int_text"},
 				},
-				ValuesList: [][]interface{}{
+				ValuesList: [][]any{
 					{float64(30.33), int64(123456789), int64(math.MaxInt64), "Made in China.", bool(false), "123456789011"},
 				},
 				DataTypesList: [][]client.TSDataType{
@@ -472,7 +472,7 @@ func TestEntireMetricConversion(t *testing.T) {
 				MeasurementsList: [][]string{
 					{"temperature", "counter", "unsigned_big", "string", "bool", "int_text"},
 				},
-				ValuesList: [][]interface{}{
+				ValuesList: [][]any{
 					{float64(30.33), int64(123456789), int64(math.MaxInt64), "Made in China.", bool(false), "123456789011"},
 				},
 				DataTypesList: [][]client.TSDataType{
@@ -508,7 +508,7 @@ func TestEntireMetricConversion(t *testing.T) {
 				MeasurementsList: [][]string{
 					{"temperature", "counter"},
 				},
-				ValuesList: [][]interface{}{
+				ValuesList: [][]any{
 					{float64(30.33), int64(123456789)},
 				},
 				DataTypesList: [][]client.TSDataType{

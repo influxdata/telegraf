@@ -119,7 +119,7 @@ func TestOpenConfigTelemetryData(t *testing.T) {
 		"path":         "/sensor",
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"/sensor/intKey":   int64(10),
 		"_sequence":        uint64(0),
 		"_timestamp":       uint64(0),
@@ -143,7 +143,7 @@ func TestOpenConfigTelemetryData_timestamp(t *testing.T) {
 		"system_id":    "",
 		"path":         "/sensor_with_timestamp",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"/sensor/intKey":   int64(10),
 		"_sequence":        uint64(0),
 		"_timestamp":       uint64(timestamp),
@@ -167,7 +167,7 @@ func TestOpenConfigTelemetryDataWithPrefix(t *testing.T) {
 		"path":      "/sensor_with_prefix",
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"/sensor/prefix/intKey": int64(10),
 		"_sequence":             uint64(0),
 		"_timestamp":            uint64(0),
@@ -192,7 +192,7 @@ func TestOpenConfigTelemetryDataWithMultipleTags(t *testing.T) {
 		"path":                       "/sensor_with_multiple_tags",
 	}
 
-	fields1 := map[string]interface{}{
+	fields1 := map[string]any{
 		"/sensor/prefix/tagKey/boolKey": false,
 		"_sequence":                     uint64(0),
 		"_timestamp":                    uint64(0),
@@ -206,7 +206,7 @@ func TestOpenConfigTelemetryDataWithMultipleTags(t *testing.T) {
 		"path":      "/sensor_with_multiple_tags",
 	}
 
-	fields2 := map[string]interface{}{
+	fields2 := map[string]any{
 		"/sensor/prefix/intKey": int64(10),
 		"_sequence":             uint64(0),
 		"_timestamp":            uint64(0),
@@ -232,7 +232,7 @@ func TestOpenConfigTelemetryDataWithStringValues(t *testing.T) {
 		"path":                       "/sensor_with_string_values",
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"/sensor/prefix/strKey/strValue": "10",
 		"_sequence":                      uint64(0),
 		"_timestamp":                     uint64(0),

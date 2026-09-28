@@ -96,7 +96,7 @@ func (d *Derivative) Push(acc telegraf.Accumulator) {
 			d.Log.Debugf("Got difference 0 in denominator for %q, skipping.", aggregate.name)
 			continue
 		}
-		derivatives := make(map[string]interface{})
+		derivatives := make(map[string]any)
 		for key, start := range aggregate.first.fields {
 			if key == d.Variable {
 				// Skip derivation variable
@@ -149,7 +149,7 @@ func extractConvertedFields(in telegraf.Metric) map[string]float64 {
 	return fields
 }
 
-func upsertConvertedFields(source map[string]interface{}, target map[string]float64) {
+func upsertConvertedFields(source map[string]any, target map[string]float64) {
 	for k, v := range source {
 		if value, ok := convert(v); ok {
 			target[k] = value
@@ -157,7 +157,7 @@ func upsertConvertedFields(source map[string]interface{}, target map[string]floa
 	}
 }
 
-func convert(in interface{}) (float64, bool) {
+func convert(in any) (float64, bool) {
 	switch v := in.(type) {
 	case float64:
 		return v, true

@@ -191,7 +191,7 @@ func (m *Memcached) gatherServer(address string, unix bool, acc telegraf.Accumul
 	tags := map[string]string{"server": address}
 
 	// Process values
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	for _, key := range sendMetrics {
 		if value, ok := values[key]; ok {
 			// Mostly it is the number

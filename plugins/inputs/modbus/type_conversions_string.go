@@ -10,7 +10,7 @@ func determineConverterString(byteOrder string) (fieldConverterFunc, error) {
 		return nil, err
 	}
 
-	return func(b []byte) interface{} {
+	return func(b []byte) any {
 		// Swap the bytes according to endianness
 		var buf bytes.Buffer
 		for i := 0; i < len(b); i += 2 {
@@ -30,7 +30,7 @@ func determineConverterStringLow(byteOrder string) (fieldConverterFunc, error) {
 		return nil, err
 	}
 
-	return func(b []byte) interface{} {
+	return func(b []byte) any {
 		// Swap the bytes according to endianness
 		var buf bytes.Buffer
 		for i := 0; i < len(b); i += 2 {
@@ -49,7 +49,7 @@ func determineConverterStringHigh(byteOrder string) (fieldConverterFunc, error) 
 		return nil, err
 	}
 
-	return func(b []byte) interface{} {
+	return func(b []byte) any {
 		// Swap the bytes according to endianness
 		var buf bytes.Buffer
 		for i := 0; i < len(b); i += 2 {

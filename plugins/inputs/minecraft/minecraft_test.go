@@ -95,7 +95,7 @@ func TestGather(t *testing.T) {
 						"source": "example.org",
 						"port":   "25575",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"jumps": 42,
 					},
 					now,

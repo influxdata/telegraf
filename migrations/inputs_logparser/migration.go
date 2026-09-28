@@ -12,13 +12,13 @@ import (
 // Migration function
 func migrate(tbl *ast.Table) ([]byte, string, error) {
 	// Decode the old inputs.logparser data structure
-	var logparserPlugin map[string]interface{}
+	var logparserPlugin map[string]any
 	if err := toml.UnmarshalTable(tbl, &logparserPlugin); err != nil {
 		return nil, "", err
 	}
 
 	// Initial tail plugin configuration
-	tailPlugin := make(map[string]interface{})
+	tailPlugin := make(map[string]any)
 	tailPlugin["data_format"] = "grok"
 
 	// Comments: 'inputs.logparser' -> 'inputs.tail'
@@ -129,13 +129,13 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 	return output, "", err
 }
 
-func getGrok(logparserPlugin map[string]interface{}) (map[string]interface{}, error) {
+func getGrok(logparserPlugin map[string]any) (map[string]any, error) {
 	rawGrok := logparserPlugin["grok"]
 	if rawGrok == nil {
 		return nil, nil
 	}
 
-	grok, ok := rawGrok.(map[string]interface{})
+	grok, ok := rawGrok.(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("unexpected type %T for 'grok'", rawGrok)
 	}

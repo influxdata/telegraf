@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -129,7 +130,7 @@ var (
 	sasNVMeAttributes = map[string]struct {
 		ID    string
 		Name  string
-		Parse func(fields, deviceFields map[string]interface{}, str string) error
+		Parse func(fields, deviceFields map[string]any, str string) error
 	}{
 		"Accumulated start-stop cycles": {
 			ID:   "4",
@@ -165,7 +166,7 @@ var (
 		},
 		"Critical Warning": {
 			Name: "Critical_Warning",
-			Parse: func(fields, _ map[string]interface{}, str string) error {
+			Parse: func(fields, _ map[string]any, str string) error {
 				var value int64
 				if _, err := fmt.Sscanf(str, "0x%x", &value); err != nil {
 					return err
@@ -277,7 +278,7 @@ var (
 	intelAttributes = map[string]struct {
 		ID    string
 		Name  string
-		Parse func(acc telegraf.Accumulator, fields map[string]interface{}, tags map[string]string, str string) error
+		Parse func(acc telegraf.Accumulator, fields map[string]any, tags map[string]string, str string) error
 	}{
 		"program_fail_count": {
 			Name: "Program_Fail_Count",
@@ -317,7 +318,7 @@ var (
 	intelAttributesDeprecatedFormat = map[string]struct {
 		ID    string
 		Name  string
-		Parse func(acc telegraf.Accumulator, fields map[string]interface{}, tags map[string]string, str string) error
+		Parse func(acc telegraf.Accumulator, fields map[string]any, tags map[string]string, str string) error
 	}{
 		"program_fail_count": {
 			Name: "Program_Fail_Count",
@@ -348,7 +349,7 @@ var (
 		},
 		"timed_workload_timer": {
 			Name: "Timed_Workload_Timer",
-			Parse: func(acc telegraf.Accumulator, fields map[string]interface{}, tags map[string]string, str string) error {
+			Parse: func(acc telegraf.Accumulator, fields map[string]any, tags map[string]string, str string) error {
 				return parseCommaSeparatedIntWithAccumulator(acc, fields, tags, strings.TrimSuffix(str, " min"))
 			},
 		},
@@ -423,7 +424,7 @@ func (m *Smart) Init() error {
 		m.PathNVMe, _ = exec.LookPath("nvme")
 	}
 
-	if !contains(knownReadMethods, m.ReadMethod) {
+	if !slices.Contains(knownReadMethods, m.ReadMethod) {
 		return fmt.Errorf("provided read method %q is not valid", m.ReadMethod)
 	}
 
@@ -526,7 +527,7 @@ func (m *Smart) scanDevices(ignoreExcludes bool, scanArgs ...string) ([]string, 
 		return nil, fmt.Errorf("failed to run command '%s %s': %w - %s", m.PathSmartctl, scanArgs, err, string(out))
 	}
 	var devices []string
-	for _, line := range strings.Split(string(out), "\n") {
+	for line := range strings.SplitSeq(string(out), "\n") {
 		dev := strings.Split(line, " ")
 		if len(dev) <= 1 {
 			continue
@@ -545,10 +546,8 @@ func (m *Smart) scanDevices(ignoreExcludes bool, scanArgs ...string) ([]string, 
 func excludedDev(excludes []string, deviceLine string) bool {
 	device := strings.Split(deviceLine, " ")
 	if len(device) != 0 {
-		for _, exclude := range excludes {
-			if device[0] == exclude {
-				return true
-			}
+		if slices.Contains(excludes, device[0]) {
+			return true
 		}
 	}
 	return false
@@ -578,7 +577,7 @@ func (m *Smart) addVendorNVMeAttributes(acc telegraf.Accumulator, devices []stri
 	var wg sync.WaitGroup
 
 	for _, device := range nvmeDevices {
-		if contains(m.EnableExtensions, "auto-on") {
+		if slices.Contains(m.EnableExtensions, "auto-on") {
 			//nolint:revive // one case switch on purpose to demonstrate potential extensions
 			switch device.vendorID {
 			case intelVID:
@@ -592,7 +591,7 @@ func (m *Smart) addVendorNVMeAttributes(acc telegraf.Accumulator, devices []stri
 					wg.Done()
 				}
 			}
-		} else if contains(m.EnableExtensions, "Intel") && device.vendorID == intelVID {
+		} else if slices.Contains(m.EnableExtensions, "Intel") && device.vendorID == intelVID {
 			wg.Add(1)
 			switch m.ReadMethod {
 			case "concurrent":
@@ -692,7 +691,7 @@ func gatherIntelNVMeDisk(acc telegraf.Accumulator, timeout config.Duration, uses
 
 	for scanner.Scan() {
 		line := scanner.Text()
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		tags := map[string]string{
 			"device":    path.Base(device.name),
 			"model":     device.model,
@@ -704,7 +703,7 @@ func gatherIntelNVMeDisk(acc telegraf.Accumulator, timeout config.Duration, uses
 			attr = struct {
 				ID    string
 				Name  string
-				Parse func(acc telegraf.Accumulator, fields map[string]interface{}, tags map[string]string, str string) error
+				Parse func(acc telegraf.Accumulator, fields map[string]any, tags map[string]string, str string) error
 			}{}
 			attrExists bool
 		)
@@ -772,11 +771,11 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 			deviceTags["device_type"] = strings.TrimPrefix(deviceNode[1], "-d ")
 		}
 	} else {
-		deviceNode := strings.Split(device, " ")[0]
+		deviceNode, _, _ := strings.Cut(device, " ")
 		deviceTags["device"] = path.Base(deviceNode)
 	}
 
-	deviceFields := make(map[string]interface{})
+	deviceFields := make(map[string]any)
 
 	scanner := bufio.NewScanner(strings.NewReader(outStr))
 
@@ -838,7 +837,7 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 		}
 
 		tags := make(map[string]string)
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 
 		if m.Attributes {
 			// add power mode
@@ -881,6 +880,11 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 			// save the raw value to a field.
 			if field, ok := deviceFieldIDs[attr[1]]; ok {
 				if val, err := parseRawValue(attr[8]); err == nil {
+					// Durations like 182h+39m+24.879s are parsed into seconds
+					// but only occur for hour attributes, so report hours
+					if v, ok := val.(int64); ok && strings.Contains(attr[8], "h+") {
+						val = v / 3600
+					}
 					deviceFields[field] = val
 				}
 			}
@@ -937,22 +941,12 @@ func (m *Smart) gatherDisk(acc telegraf.Accumulator, device string, wg *sync.Wai
 // Command line parse errors are denoted by the exit code having the 0 bit set.
 // All other errors are drive/communication errors and should be ignored.
 func exitStatus(err error) (int, error) {
-	var exitErr *exec.ExitError
-	if errors.As(err, &exitErr) {
+	if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
 		if status, ok := exitErr.Sys().(syscall.WaitStatus); ok {
 			return status.ExitStatus(), nil
 		}
 	}
 	return 0, err
-}
-
-func contains(args []string, element string) bool {
-	for _, arg := range args {
-		if arg == element {
-			return true
-		}
-	}
-	return false
 }
 
 func difference(a, b []string) []string {
@@ -969,7 +963,7 @@ func difference(a, b []string) []string {
 	return diff
 }
 
-func parseRawValue(rawVal string) (interface{}, error) {
+func parseRawValue(rawVal string) (any, error) {
 	// Integer
 	if i, err := strconv.ParseInt(rawVal, 10, 64); err == nil {
 		return i, nil
@@ -1012,7 +1006,7 @@ func parseRawValue(rawVal string) (interface{}, error) {
 	return duration, nil
 }
 
-func parseBytesWritten(acc telegraf.Accumulator, fields map[string]interface{}, tags map[string]string, str string) error {
+func parseBytesWritten(acc telegraf.Accumulator, fields map[string]any, tags map[string]string, str string) error {
 	var value int64
 
 	if _, err := fmt.Sscanf(str, "sectors: %d", &value); err != nil {
@@ -1023,7 +1017,7 @@ func parseBytesWritten(acc telegraf.Accumulator, fields map[string]interface{}, 
 	return nil
 }
 
-func parseThermalThrottle(acc telegraf.Accumulator, fields map[string]interface{}, tags map[string]string, str string) error {
+func parseThermalThrottle(acc telegraf.Accumulator, fields map[string]any, tags map[string]string, str string) error {
 	var percentage float64
 	var count int64
 
@@ -1042,7 +1036,7 @@ func parseThermalThrottle(acc telegraf.Accumulator, fields map[string]interface{
 	return nil
 }
 
-func parseWearLeveling(acc telegraf.Accumulator, fields map[string]interface{}, tags map[string]string, str string) error {
+func parseWearLeveling(acc telegraf.Accumulator, fields map[string]any, tags map[string]string, str string) error {
 	var vmin, vmax, avg int64
 
 	if _, err := fmt.Sscanf(str, "min: %d, max: %d, avg: %d", &vmin, &vmax, &avg); err != nil {
@@ -1058,7 +1052,7 @@ func parseWearLeveling(acc telegraf.Accumulator, fields map[string]interface{}, 
 	return nil
 }
 
-func parseTimedWorkload(acc telegraf.Accumulator, fields map[string]interface{}, tags map[string]string, str string) error {
+func parseTimedWorkload(acc telegraf.Accumulator, fields map[string]any, tags map[string]string, str string) error {
 	var value float64
 
 	if _, err := fmt.Sscanf(str, "%f", &value); err != nil {
@@ -1076,7 +1070,7 @@ func parseInt(str string) int64 {
 	return 0
 }
 
-func parseCommaSeparatedInt(fields, _ map[string]interface{}, str string) error {
+func parseCommaSeparatedInt(fields, _ map[string]any, str string) error {
 	// remove any non-utf8 values
 	// '1\xa0292' --> 1292
 	value := strings.ToValidUTF8(strings.Join(strings.Fields(str), ""), "")
@@ -1100,17 +1094,17 @@ func parseCommaSeparatedInt(fields, _ map[string]interface{}, str string) error 
 	return nil
 }
 
-func parsePercentageInt(fields, deviceFields map[string]interface{}, str string) error {
+func parsePercentageInt(fields, deviceFields map[string]any, str string) error {
 	return parseCommaSeparatedInt(fields, deviceFields, strings.TrimSuffix(str, "%"))
 }
 
-func parseDataUnits(fields, deviceFields map[string]interface{}, str string) error {
+func parseDataUnits(fields, deviceFields map[string]any, str string) error {
 	// Remove everything after '['
-	units := strings.Split(str, "[")[0]
+	units, _, _ := strings.Cut(str, "[")
 	return parseCommaSeparatedInt(fields, deviceFields, units)
 }
 
-func parseCommaSeparatedIntWithAccumulator(acc telegraf.Accumulator, fields map[string]interface{}, tags map[string]string, str string) error {
+func parseCommaSeparatedIntWithAccumulator(acc telegraf.Accumulator, fields map[string]any, tags map[string]string, str string) error {
 	i, err := strconv.ParseInt(strings.ReplaceAll(str, ",", ""), 10, 64)
 	if err != nil {
 		return err
@@ -1121,7 +1115,7 @@ func parseCommaSeparatedIntWithAccumulator(acc telegraf.Accumulator, fields map[
 	return nil
 }
 
-func parseTemperature(fields, deviceFields map[string]interface{}, str string) error {
+func parseTemperature(fields, deviceFields map[string]any, str string) error {
 	var temp int64
 	if _, err := fmt.Sscanf(str, "%d C", &temp); err != nil {
 		return err
@@ -1133,7 +1127,7 @@ func parseTemperature(fields, deviceFields map[string]interface{}, str string) e
 	return nil
 }
 
-func parseTemperatureSensor(fields, _ map[string]interface{}, str string) error {
+func parseTemperatureSensor(fields, _ map[string]any, str string) error {
 	var temp int64
 	if _, err := fmt.Sscanf(str, "%d C", &temp); err != nil {
 		return err

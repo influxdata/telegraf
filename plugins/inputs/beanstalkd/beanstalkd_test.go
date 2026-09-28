@@ -16,7 +16,7 @@ import (
 func TestBeanstalkd(t *testing.T) {
 	type tubeStats struct {
 		name   string
-		fields map[string]interface{}
+		fields map[string]any
 	}
 
 	tests := []struct {
@@ -253,7 +253,7 @@ pause-time-left: 0
 
 var (
 	// Default tube without stats
-	defaultTubeFields = map[string]interface{}{
+	defaultTubeFields = map[string]any{
 		"cmd_delete":            0,
 		"cmd_pause_tube":        0,
 		"current_jobs_buried":   0,
@@ -269,7 +269,7 @@ var (
 		"total_jobs":            0,
 	}
 	// Test tube with stats
-	testTubeFields = map[string]interface{}{
+	testTubeFields = map[string]any{
 		"cmd_delete":            0,
 		"cmd_pause_tube":        0,
 		"current_jobs_buried":   0,
@@ -285,7 +285,7 @@ var (
 		"total_jobs":            6,
 	}
 	// Server stats
-	overviewFields = map[string]interface{}{
+	overviewFields = map[string]any{
 		"binlog_current_index":     0,
 		"binlog_max_size":          10485760,
 		"binlog_oldest_index":      0,

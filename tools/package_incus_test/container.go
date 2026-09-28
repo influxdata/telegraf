@@ -316,25 +316,18 @@ func (c *Container) detectPackageManager() error {
 
 // Configure the system with InfluxData repo
 func (c *Container) setupRepo() error {
-	if c.packageManager == "apt" {
-		if err := c.configureApt(); err != nil {
-			return err
-		}
-	} else if c.packageManager == "yum" {
-		if err := c.configureYum(); err != nil {
-			return err
-		}
-	} else if c.packageManager == "zypper" {
-		if err := c.configureZypper(); err != nil {
-			return err
-		}
-	} else if c.packageManager == "dnf" {
-		if err := c.configureDnf(); err != nil {
-			return err
-		}
+	switch c.packageManager {
+	case "apt":
+		return c.configureApt()
+	case "yum":
+		return c.configureYum()
+	case "zypper":
+		return c.configureZypper()
+	case "dnf":
+		return c.configureDnf()
 	}
 
-	return nil
+	return fmt.Errorf("unknown package manager %q", c.packageManager)
 }
 
 // Wait for the network to come up on a container

@@ -121,7 +121,7 @@ func (u *Upsd) Gather(acc telegraf.Accumulator) error {
 }
 
 func (u *Upsd) gatherUps(acc telegraf.Accumulator, upsname string, variables []nut.Variable) {
-	metrics := make(map[string]interface{})
+	metrics := make(map[string]any)
 	for _, variable := range variables {
 		name := variable.Name
 		value := variable.Value
@@ -149,7 +149,7 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, upsname string, variables []n
 	}
 
 	// Add the mandatory information
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"battery_date":     metrics["battery.date"],
 		"battery_mfr_date": metrics["battery.mfr.date"],
 		"status_flags":     status,
@@ -210,7 +210,7 @@ func (u *Upsd) gatherUps(acc telegraf.Accumulator, upsname string, variables []n
 	acc.AddFields("upsd", fields, tags)
 }
 
-func mapStatus(metrics map[string]interface{}, tags map[string]string) uint64 {
+func mapStatus(metrics map[string]any, tags map[string]string) uint64 {
 	status := uint64(0)
 	statusString := fmt.Sprintf("%v", metrics["ups.status"])
 	statuses := strings.Fields(statusString)

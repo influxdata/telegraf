@@ -16,9 +16,7 @@ func TestLoadConfigurationTestModeSkipsDiskOutputBuffer(t *testing.T) {
 	}()
 
 	agent := &Telegraf{
-		GlobalFlags: GlobalFlags{
-			config: []string{"testdata/test_mode_disk_buffer.conf"},
-		},
+		config: []string{"testdata/test_mode_disk_buffer.conf"},
 	}
 	_, err := agent.loadConfiguration()
 	require.ErrorContains(t, err, "creating buffer failed")

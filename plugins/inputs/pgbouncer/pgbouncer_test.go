@@ -10,7 +10,6 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/plugins/common/postgresql"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -55,10 +54,8 @@ func TestPgBouncerGeneratesMetricsIntegration(t *testing.T) {
 	)
 
 	p := &PgBouncer{
-		Config: postgresql.Config{
-			Address:     config.NewSecret([]byte(addr)),
-			IsPgBouncer: true,
-		},
+		Address:     config.NewSecret([]byte(addr)),
+		IsPgBouncer: true,
 	}
 	require.NoError(t, p.Init())
 
@@ -144,12 +141,10 @@ func TestPgBouncerIdleConnectionReuseIntegration(t *testing.T) {
 	// connection idle and reusing it is the precondition for the driver's
 	// liveness check
 	p := &PgBouncer{
-		Config: postgresql.Config{
-			Address:     config.NewSecret([]byte(addr)),
-			MaxIdle:     1,
-			MaxOpen:     1,
-			IsPgBouncer: true,
-		},
+		Address:     config.NewSecret([]byte(addr)),
+		MaxIdle:     1,
+		MaxOpen:     1,
+		IsPgBouncer: true,
 	}
 	require.NoError(t, p.Init())
 
@@ -207,10 +202,8 @@ func TestPgBouncerGeneratesMetricsIntegrationShowCommands(t *testing.T) {
 	)
 
 	p := &PgBouncer{
-		Config: postgresql.Config{
-			Address:     config.NewSecret([]byte(addr)),
-			IsPgBouncer: true,
-		},
+		Address:      config.NewSecret([]byte(addr)),
+		IsPgBouncer:  true,
 		ShowCommands: []string{"pools", "lists", "databases"},
 	}
 	require.NoError(t, p.Init())

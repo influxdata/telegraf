@@ -17,8 +17,8 @@ type entry struct {
 	timestamp  time.Time
 	level      telegraf.LogLevel
 	prefix     string
-	attributes map[string]interface{}
-	args       []interface{}
+	attributes map[string]any
+	args       []any
 }
 
 type handler struct {
@@ -71,7 +71,7 @@ func (h *handler) switchSink(impl sink, level telegraf.LogLevel, tz *time.Locati
 	h.Unlock()
 }
 
-func (h *handler) add(level telegraf.LogLevel, ts time.Time, prefix string, attr map[string]interface{}, args ...interface{}) *entry {
+func (h *handler) add(level telegraf.LogLevel, ts time.Time, prefix string, attr map[string]any, args ...any) *entry {
 	e := &entry{
 		timestamp:  ts,
 		level:      level,
@@ -112,7 +112,7 @@ type redirectLogger struct {
 	writer io.Writer
 }
 
-func (l *redirectLogger) Print(level telegraf.LogLevel, ts time.Time, prefix string, attr map[string]interface{}, args ...interface{}) {
+func (l *redirectLogger) Print(level telegraf.LogLevel, ts time.Time, prefix string, attr map[string]any, args ...any) {
 	var attrMsg string
 	if len(attr) > 0 {
 		parts := make([]string, 0, len(attr))
@@ -122,7 +122,7 @@ func (l *redirectLogger) Print(level telegraf.LogLevel, ts time.Time, prefix str
 		attrMsg = "(" + strings.Join(parts, ",") + ")"
 	}
 
-	msg := []interface{}{ts.In(time.UTC).Format(time.RFC3339), level.Indicator()}
+	msg := []any{ts.In(time.UTC).Format(time.RFC3339), level.Indicator()}
 	if prefix+attrMsg != "" {
 		msg = append(msg, prefix+attrMsg)
 	}

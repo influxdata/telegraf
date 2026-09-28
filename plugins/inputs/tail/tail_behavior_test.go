@@ -36,7 +36,7 @@ func TestAppend(t *testing.T) {
 					metric.New(
 						"cpu",
 						map[string]string{"path": fn},
-						map[string]interface{}{"value": int64(1)},
+						map[string]any{"value": int64(1)},
 						time.Unix(0, 0),
 					),
 				},
@@ -45,13 +45,13 @@ func TestAppend(t *testing.T) {
 					metric.New(
 						"cpu",
 						map[string]string{"path": fn},
-						map[string]interface{}{"value": int64(1)},
+						map[string]any{"value": int64(1)},
 						time.Unix(0, 0),
 					),
 					metric.New(
 						"cpu",
 						map[string]string{"path": fn},
-						map[string]interface{}{"value": int64(2)},
+						map[string]any{"value": int64(2)},
 						time.Unix(0, 0),
 					),
 				},
@@ -122,7 +122,7 @@ func TestPartialWrite(t *testing.T) {
 					metric.New(
 						"cpu",
 						map[string]string{"path": fn},
-						map[string]interface{}{"value": int64(1)},
+						map[string]any{"value": int64(1)},
 						time.Unix(0, 0),
 					),
 				},
@@ -131,13 +131,13 @@ func TestPartialWrite(t *testing.T) {
 					metric.New(
 						"cpu",
 						map[string]string{"path": fn},
-						map[string]interface{}{"value": int64(1)},
+						map[string]any{"value": int64(1)},
 						time.Unix(0, 0),
 					),
 					metric.New(
 						"cpu",
 						map[string]string{"path": fn},
-						map[string]interface{}{"value": int64(2)},
+						map[string]any{"value": int64(2)},
 						time.Unix(0, 0),
 					),
 				},
@@ -217,7 +217,7 @@ func TestLogRotateCreate(t *testing.T) {
 					metric.New(
 						"cpu",
 						map[string]string{"path": fn},
-						map[string]interface{}{"value": int64(1)},
+						map[string]any{"value": int64(1)},
 						time.Unix(0, 0),
 					),
 				},
@@ -226,13 +226,13 @@ func TestLogRotateCreate(t *testing.T) {
 					metric.New(
 						"cpu",
 						map[string]string{"path": fn},
-						map[string]interface{}{"value": int64(1)},
+						map[string]any{"value": int64(1)},
 						time.Unix(0, 0),
 					),
 					metric.New(
 						"cpu",
 						map[string]string{"path": fn},
-						map[string]interface{}{"value": int64(2)},
+						map[string]any{"value": int64(2)},
 						time.Unix(0, 0),
 					),
 				},
@@ -299,13 +299,13 @@ func TestLogRotateCopyTruncateSmaller(t *testing.T) {
 					metric.New(
 						"cpu",
 						map[string]string{"path": fn},
-						map[string]interface{}{"value": int64(1)},
+						map[string]any{"value": int64(1)},
 						time.Unix(0, 0),
 					),
 					metric.New(
 						"cpu",
 						map[string]string{"path": fn},
-						map[string]interface{}{"value": int64(2)},
+						map[string]any{"value": int64(2)},
 						time.Unix(0, 0),
 					),
 				},
@@ -314,19 +314,19 @@ func TestLogRotateCopyTruncateSmaller(t *testing.T) {
 					metric.New(
 						"cpu",
 						map[string]string{"path": fn},
-						map[string]interface{}{"value": int64(1)},
+						map[string]any{"value": int64(1)},
 						time.Unix(0, 0),
 					),
 					metric.New(
 						"cpu",
 						map[string]string{"path": fn},
-						map[string]interface{}{"value": int64(2)},
+						map[string]any{"value": int64(2)},
 						time.Unix(0, 0),
 					),
 					metric.New(
 						"cpu",
 						map[string]string{"path": fn},
-						map[string]interface{}{"value": int64(3)},
+						map[string]any{"value": int64(3)},
 						time.Unix(0, 0),
 					),
 				},
@@ -404,7 +404,7 @@ func TestLogRotateCopytruncateSameSize(t *testing.T) {
 					metric.New(
 						"cpu",
 						map[string]string{"path": fn},
-						map[string]interface{}{"value": int64(1)},
+						map[string]any{"value": int64(1)},
 						time.Unix(0, 0),
 					),
 				},
@@ -413,13 +413,13 @@ func TestLogRotateCopytruncateSameSize(t *testing.T) {
 					metric.New(
 						"cpu",
 						map[string]string{"path": fn},
-						map[string]interface{}{"value": int64(1)},
+						map[string]any{"value": int64(1)},
 						time.Unix(0, 0),
 					),
 					metric.New(
 						"cpu",
 						map[string]string{"path": fn},
-						map[string]interface{}{"value": int64(2)},
+						map[string]any{"value": int64(2)},
 						time.Unix(0, 0),
 					),
 				},
@@ -497,7 +497,7 @@ func TestLogRotateCopytruncateLarger(t *testing.T) {
 					metric.New(
 						"cpu",
 						map[string]string{"path": fn},
-						map[string]interface{}{"value": int64(1)},
+						map[string]any{"value": int64(1)},
 						time.Unix(0, 0),
 					),
 				},
@@ -506,13 +506,13 @@ func TestLogRotateCopytruncateLarger(t *testing.T) {
 					metric.New(
 						"cpu",
 						map[string]string{"path": fn},
-						map[string]interface{}{"value": int64(1)},
+						map[string]any{"value": int64(1)},
 						time.Unix(0, 0),
 					),
 					metric.New(
 						"cpu",
 						map[string]string{"path": fn},
-						map[string]interface{}{"value": int64(99)},
+						map[string]any{"value": int64(99)},
 						time.Unix(0, 0),
 					),
 				},
@@ -590,7 +590,7 @@ func TestDelete(t *testing.T) {
 					metric.New(
 						"cpu",
 						map[string]string{"path": fn},
-						map[string]interface{}{"value": int64(1)},
+						map[string]any{"value": int64(1)},
 						time.Unix(0, 0),
 					),
 				},
@@ -599,13 +599,13 @@ func TestDelete(t *testing.T) {
 					metric.New(
 						"cpu",
 						map[string]string{"path": fn},
-						map[string]interface{}{"value": int64(1)},
+						map[string]any{"value": int64(1)},
 						time.Unix(0, 0),
 					),
 					metric.New(
 						"cpu",
 						map[string]string{"path": fn},
-						map[string]interface{}{"value": int64(2)},
+						map[string]any{"value": int64(2)},
 						time.Unix(0, 0),
 					),
 				},
@@ -688,7 +688,7 @@ func TestDeleteRecreate(t *testing.T) {
 					metric.New(
 						"cpu",
 						map[string]string{"path": fn},
-						map[string]interface{}{"value": int64(1)},
+						map[string]any{"value": int64(1)},
 						time.Unix(0, 0),
 					),
 				},
@@ -697,13 +697,13 @@ func TestDeleteRecreate(t *testing.T) {
 					metric.New(
 						"cpu",
 						map[string]string{"path": fn},
-						map[string]interface{}{"value": int64(1)},
+						map[string]any{"value": int64(1)},
 						time.Unix(0, 0),
 					),
 					metric.New(
 						"cpu",
 						map[string]string{"path": fn},
-						map[string]interface{}{"value": int64(2)},
+						map[string]any{"value": int64(2)},
 						time.Unix(0, 0),
 					),
 				},
@@ -785,7 +785,7 @@ func TestSymlink(t *testing.T) {
 					metric.New(
 						"cpu",
 						map[string]string{"path": link},
-						map[string]interface{}{"value": int64(1)},
+						map[string]any{"value": int64(1)},
 						time.Unix(0, 0),
 					),
 				},
@@ -794,13 +794,13 @@ func TestSymlink(t *testing.T) {
 					metric.New(
 						"cpu",
 						map[string]string{"path": link},
-						map[string]interface{}{"value": int64(1)},
+						map[string]any{"value": int64(1)},
 						time.Unix(0, 0),
 					),
 					metric.New(
 						"cpu",
 						map[string]string{"path": link},
-						map[string]interface{}{"value": int64(2)},
+						map[string]any{"value": int64(2)},
 						time.Unix(0, 0),
 					),
 				},
@@ -866,7 +866,7 @@ func TestResumeFromPreviousOffset(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{"path": fn},
-					map[string]interface{}{"value": int64(3)},
+					map[string]any{"value": int64(3)},
 					time.Unix(0, 0),
 				),
 			}
@@ -935,7 +935,7 @@ func TestStopIncompleteMultiline(t *testing.T) {
 						"path":     fn,
 						"loglevel": "DEBUG",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"message": "firstline firstcont",
 					},
 					time.Unix(0, 0),
@@ -1013,7 +1013,7 @@ func TestLongLine(t *testing.T) {
 			map[string]string{
 				"path": fn,
 			},
-			map[string]interface{}{
+			map[string]any{
 				"message": msg,
 			},
 			time.Unix(0, 0),

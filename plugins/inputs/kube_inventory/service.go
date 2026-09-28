@@ -25,7 +25,7 @@ func (ki *KubernetesInventory) gatherService(s *corev1.Service, acc telegraf.Acc
 		return
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"created":    s.GetCreationTimestamp().UnixNano(),
 		"generation": s.Generation,
 	}

@@ -118,7 +118,7 @@ const synproxyFileAltered = `entries         cookie_invalid  cookie_valid    syn
 00000000        00002c2b        000078d6        000079c2        00000000
 00000000        00002ba8        000078a0        0000798a        00000000`
 
-var synproxyResultNormal = map[string]interface{}{
+var synproxyResultNormal = map[string]any{
 	"entries":        uint32(0x00000000),
 	"syn_received":   uint32(0x0003e27b),
 	"cookie_invalid": uint32(0x0001493e),
@@ -127,7 +127,7 @@ var synproxyResultNormal = map[string]interface{}{
 	"conn_reopened":  uint32(0x00000000),
 }
 
-var synproxyResultOverflow = map[string]interface{}{
+var synproxyResultOverflow = map[string]any{
 	"entries":        uint32(0x00000000),
 	"syn_received":   uint32(0x00000004),
 	"cookie_invalid": uint32(0xd0000009),
@@ -136,7 +136,7 @@ var synproxyResultOverflow = map[string]interface{}{
 	"conn_reopened":  uint32(0x00000000),
 }
 
-func testSynproxyFileData(t *testing.T, fileData string, telegrafData map[string]interface{}) {
+func testSynproxyFileData(t *testing.T, fileData string, telegrafData map[string]any) {
 	tmpfile := makeFakeSynproxyFile([]byte(fileData))
 	defer os.Remove(tmpfile)
 

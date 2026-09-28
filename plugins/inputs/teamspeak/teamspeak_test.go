@@ -72,7 +72,7 @@ func TestGather(t *testing.T) {
 	}
 	require.NoError(t, testConfig.Gather(&acc), "Gather returned error. Error: %s\n", err)
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"uptime":                 int(148),
 		"clients_online":         int(2),
 		"total_ping":             float32(1.0000),

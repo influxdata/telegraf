@@ -20,7 +20,6 @@ import (
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/common/kafka"
-	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	outputs_kafka "github.com/influxdata/telegraf/plugins/outputs/kafka"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
@@ -84,10 +83,8 @@ func TestInit(t *testing.T) {
 		{
 			name: "parses valid version string",
 			plugin: &KafkaConsumer{
-				ReadConfig: kafka.ReadConfig{
-					Config: kafka.Config{
-						Version: "1.0.0",
-					},
+				Config: kafka.Config{
+					Version: "1.0.0",
 				},
 				Log: testutil.Logger{},
 			},
@@ -98,10 +95,8 @@ func TestInit(t *testing.T) {
 		{
 			name: "invalid version string",
 			plugin: &KafkaConsumer{
-				ReadConfig: kafka.ReadConfig{
-					Config: kafka.Config{
-						Version: "100",
-					},
+				Config: kafka.Config{
+					Version: "100",
 				},
 				Log: testutil.Logger{},
 			},
@@ -110,12 +105,8 @@ func TestInit(t *testing.T) {
 		{
 			name: "custom client_id",
 			plugin: &KafkaConsumer{
-				ReadConfig: kafka.ReadConfig{
-					Config: kafka.Config{
-						ClientID: "custom",
-					},
-				},
-				Log: testutil.Logger{},
+				ClientID: "custom",
+				Log:      testutil.Logger{},
 			},
 			check: func(t *testing.T, plugin *KafkaConsumer) {
 				require.Equal(t, "custom", plugin.config.ClientID)
@@ -151,12 +142,8 @@ func TestInit(t *testing.T) {
 		{
 			name: "enabled tls without tls config",
 			plugin: &KafkaConsumer{
-				ReadConfig: kafka.ReadConfig{
-					Config: kafka.Config{
-						EnableTLS: func(b bool) *bool { return &b }(true),
-					},
-				},
-				Log: testutil.Logger{},
+				EnableTLS: func(b bool) *bool { return &b }(true),
+				Log:       testutil.Logger{},
 			},
 			check: func(t *testing.T, plugin *KafkaConsumer) {
 				require.True(t, plugin.config.Net.TLS.Enable)
@@ -165,14 +152,8 @@ func TestInit(t *testing.T) {
 		{
 			name: "default tls with a tls config",
 			plugin: &KafkaConsumer{
-				ReadConfig: kafka.ReadConfig{
-					Config: kafka.Config{
-						ClientConfig: tls.ClientConfig{
-							InsecureSkipVerify: true,
-						},
-					},
-				},
-				Log: testutil.Logger{},
+				InsecureSkipVerify: true,
+				Log:                testutil.Logger{},
 			},
 			check: func(t *testing.T, plugin *KafkaConsumer) {
 				require.True(t, plugin.config.Net.TLS.Enable)
@@ -181,14 +162,8 @@ func TestInit(t *testing.T) {
 		{
 			name: "Insecure tls",
 			plugin: &KafkaConsumer{
-				ReadConfig: kafka.ReadConfig{
-					Config: kafka.Config{
-						ClientConfig: tls.ClientConfig{
-							InsecureSkipVerify: true,
-						},
-					},
-				},
-				Log: testutil.Logger{},
+				InsecureSkipVerify: true,
+				Log:                testutil.Logger{},
 			},
 			check: func(t *testing.T, plugin *KafkaConsumer) {
 				require.True(t, plugin.config.Net.TLS.Enable)
@@ -396,7 +371,7 @@ func TestConsumerGroupHandlerConsumeClaim(t *testing.T) {
 		metric.New(
 			"cpu",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"value": 42,
 			},
 			time.Now(),
@@ -425,7 +400,7 @@ func TestConsumerGroupHandlerHandle(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"value": 42,
 					},
 					time.Now(),
@@ -462,7 +437,7 @@ func TestConsumerGroupHandlerHandle(t *testing.T) {
 					map[string]string{
 						"topic": "telegraf",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 42,
 					},
 					time.Now(),
@@ -521,13 +496,9 @@ func TestExponentialBackoff(t *testing.T) {
 		Topics:                 []string{"topic"},
 		MaxUndeliveredMessages: 1,
 
-		ReadConfig: kafka.ReadConfig{
-			Config: kafka.Config{
-				MetadataRetryMax:     limit,
-				MetadataRetryBackoff: config.Duration(backoff),
-				MetadataRetryType:    "exponential",
-			},
-		},
+		MetadataRetryMax:     limit,
+		MetadataRetryBackoff: config.Duration(backoff),
+		MetadataRetryType:    "exponential",
 	}
 	parser := &influx.Parser{}
 	require.NoError(t, parser.Init())
@@ -543,7 +514,7 @@ func TestExponentialBackoff(t *testing.T) {
 	t.Logf("elapsed %d", elapsed)
 
 	var expectedRetryDuration time.Duration
-	for i := 0; i < limit; i++ {
+	for i := range limit {
 		expectedRetryDuration += backoff * time.Duration(math.Pow(2, float64(i)))
 	}
 	t.Logf("expected > %d", expectedRetryDuration)
@@ -568,11 +539,7 @@ func TestExponentialBackoffDefault(t *testing.T) {
 		Topics:                 []string{"topic"},
 		MaxUndeliveredMessages: 1,
 
-		ReadConfig: kafka.ReadConfig{
-			Config: kafka.Config{
-				MetadataRetryType: "exponential",
-			},
-		},
+		MetadataRetryType: "exponential",
 	}
 	parser := &influx.Parser{}
 	require.NoError(t, parser.Init())
@@ -656,7 +623,7 @@ func TestKafkaTimestampSourceIntegration(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{},
-			map[string]interface{}{"value": 42},
+			map[string]any{"value": 42},
 			time.Unix(1704067200, 0),
 		),
 	}
@@ -923,7 +890,7 @@ func TestStartupErrorBehaviorRetryIntegration(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{},
-			map[string]interface{}{"value": 42},
+			map[string]any{"value": 42},
 			time.Unix(1704067200, 0),
 		),
 	}

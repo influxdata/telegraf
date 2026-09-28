@@ -62,13 +62,13 @@ func TestJolokia2_ProxyTargets(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Gather(&acc))
 
-	acc.AssertContainsTaggedFields(t, "hello", map[string]interface{}{
+	acc.AssertContainsTaggedFields(t, "hello", map[string]any{
 		"value": 123.0,
 	}, map[string]string{
 		"jolokia_proxy_url": server.URL,
 		"jolokia_agent_url": "service:jmx:rmi:///jndi/rmi://target1:9010/jmxrmi",
 	})
-	acc.AssertContainsTaggedFields(t, "hello", map[string]interface{}{
+	acc.AssertContainsTaggedFields(t, "hello", map[string]any{
 		"value": 456.0,
 	}, map[string]string{
 		"jolokia_proxy_url": server.URL,
@@ -77,7 +77,7 @@ func TestJolokia2_ProxyTargets(t *testing.T) {
 }
 
 func TestJolokia2_ClientProxyAuthRequest(t *testing.T) {
-	var requests []map[string]interface{}
+	var requests []map[string]any
 
 	var username string
 	var password string
@@ -132,7 +132,7 @@ func TestJolokia2_ClientProxyAuthRequest(t *testing.T) {
 	expected := "hello:foo=bar"
 	require.EqualValuesf(t, expected, request["mbean"], "Expected to query mbean %s, but was %s", expected, request["mbean"])
 
-	target, ok := request["target"].(map[string]interface{})
+	target, ok := request["target"].(map[string]any)
 	require.True(t, ok, "Expected a proxy target, but was empty.")
 
 	expected = "service:jmx:rmi:///jndi/rmi://target:9010/jmxrmi"
@@ -144,22 +144,22 @@ func TestJolokia2_ClientProxyAuthRequest(t *testing.T) {
 }
 
 func TestFillFields(t *testing.T) {
-	complexPoint := map[string]interface{}{"Value": []interface{}{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	complexPoint := map[string]any{"Value": []any{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}}
-	scalarPoint := []interface{}{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	scalarPoint := []any{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 
-	results := map[string]interface{}{}
+	results := map[string]any{}
 	common.NewPointBuilder(common.Metric{Name: "test", Mbean: "complex"}, []string{"this", "that"}, "/").FillFields("", complexPoint, results)
-	require.Equal(t, map[string]interface{}{}, results)
+	require.Equal(t, map[string]any{}, results)
 
-	results = map[string]interface{}{}
+	results = map[string]any{}
 	common.NewPointBuilder(common.Metric{Name: "test", Mbean: "scalar"}, []string{"this", "that"}, "/").FillFields("", scalarPoint, results)
-	require.Equal(t, map[string]interface{}{}, results)
+	require.Equal(t, map[string]any{}, results)
 }
 
 func setupServer(resp string) *httptest.Server {

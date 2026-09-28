@@ -49,7 +49,7 @@ to use them.
   # endpoint = "opc.tcp://localhost:4840"
   #
   ## Maximum time allowed to establish a connect to the endpoint.
-  # connect_timeout = "10s"
+  # connect_timeout = "5s"
   #
   ## Behavior when we fail to connect to the endpoint on initialization. Valid options are:
   ##     "error": throw an error and exits Telegraf
@@ -58,7 +58,7 @@ to use them.
   # connect_fail_behavior = "error"
   #
   ## Maximum time allowed for a request over the established connection.
-  # request_timeout = "5s"
+  # request_timeout = "10s"
   #
   # Maximum time that a session shall remain open without activity.
   # session_timeout = "20m"

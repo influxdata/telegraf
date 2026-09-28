@@ -110,7 +110,7 @@ func (s *Serializer) buildTags(mTags map[string]string) (string, map[string]stri
 	return tagValueReplacer.Replace(source), mTags
 }
 
-func buildValue(v interface{}, name string) (val float64, valid bool) {
+func buildValue(v any, name string) (val float64, valid bool) {
 	switch p := v.(type) {
 	case bool:
 		if p {

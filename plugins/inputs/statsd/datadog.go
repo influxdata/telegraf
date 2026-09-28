@@ -76,7 +76,7 @@ func (s *Statsd) parseEventMessage(now time.Time, message, defaultHostname strin
 
 	name := rawTitle
 	tags := make(map[string]string, strings.Count(message, ",")+2) // allocate for the approximate number of tags
-	fields := make(map[string]interface{}, 9)
+	fields := make(map[string]any, 9)
 	fields["alert_type"] = eventInfo // default event type
 	fields["text"] = uncommenter.Replace(rawText)
 	if defaultHostname != "" {
@@ -227,7 +227,7 @@ func (s *Statsd) parseServiceCheckMessage(now time.Time, message, defaultHostnam
 		tags["source"] = defaultHostname
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"status":      idx,
 		"status_text": statusText,
 	}

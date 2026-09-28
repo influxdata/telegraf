@@ -374,6 +374,31 @@ func TestRemoveComments(t *testing.T) {
 	require.Equal(t, string(expected), string(actual))
 }
 
+func TestRemoveCommentsQuotesAtEOF(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{"empty basic string", `[agent]` + "\n" + `  hostname = ""`},
+		{"empty literal string", `[agent]` + "\n" + `  hostname = ''`},
+		{"non-empty basic string", `[agent]` + "\n" + `  hostname = "a"`},
+		{"four double quotes", `[agent]` + "\n" + `  hostname = """"`},
+		{"four single quotes", `[agent]` + "\n" + `  hostname = ''''`},
+		{"five double quotes", `[agent]` + "\n" + `  hostname = """""`},
+		{"empty multi-line basic string", `[agent]` + "\n" + `  hostname = """"""`},
+		{"empty multi-line literal string", `[agent]` + "\n" + `  hostname = ''''''`},
+		{"trailing newline", `[agent]` + "\n" + `  hostname = ""` + "\n"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual, err := removeComments([]byte(tt.input))
+			require.NoError(t, err)
+			require.Equal(t, tt.input, string(actual))
+		})
+	}
+}
+
 func TestURLRetries3Fails(t *testing.T) {
 	httpLoadConfigRetryInterval = 0 * time.Second
 	responseCounter := 0

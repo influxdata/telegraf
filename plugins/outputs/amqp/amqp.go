@@ -65,7 +65,6 @@ type AMQP struct {
 	serializer   telegraf.Serializer
 	connect      func(*ClientConfig) (Client, error)
 	client       Client
-	config       *ClientConfig
 	sentMessages int
 	encoder      internal.ContentEncoder
 }
@@ -84,12 +83,14 @@ func (q *AMQP) SetSerializer(serializer telegraf.Serializer) {
 }
 
 func (q *AMQP) Init() error {
-	var err error
-	q.config, err = q.makeClientConfig()
-	if err != nil {
+	// Validate the configuration early, the client configuration itself is
+	// created on each connect as the AMQP library wipes the credentials after
+	// a successful connection
+	if _, err := q.makeClientConfig(); err != nil {
 		return err
 	}
 
+	var err error
 	q.encoder, err = internal.NewContentEncoder(q.ContentEncoding)
 	if err != nil {
 		return err
@@ -99,9 +100,16 @@ func (q *AMQP) Init() error {
 }
 
 func (q *AMQP) Connect() error {
-	var err error
-	q.client, err = q.connect(q.config)
-	return err
+	cfg, err := q.makeClientConfig()
+	if err != nil {
+		return fmt.Errorf("creating client configuration failed: %w", err)
+	}
+	client, err := q.connect(cfg)
+	if err != nil {
+		return err
+	}
+	q.client = client
+	return nil
 }
 
 func (q *AMQP) Close() error {
@@ -152,21 +160,22 @@ func (q *AMQP) Write(metrics []telegraf.Metric) error {
 
 		err = q.publish(key, body)
 		if err != nil {
-			// If this is the first attempt to publish and the connection is
-			// closed, try to reconnect and retry once.
-
-			var aerr *amqp.Error
-			if first && errors.As(err, &aerr) && errors.Is(aerr, amqp.ErrClosed) {
-				q.client = nil
-				err := q.publish(key, body)
-				if err != nil {
-					return err
-				}
-			} else if q.client != nil {
+			// Only a closed connection on the first attempt is recoverable:
+			// reconnect and retry once. Any other error must be returned so
+			// the metrics stay buffered for retry instead of being dropped.
+			if q.client != nil {
 				if err := q.client.Close(); err != nil {
 					q.Log.Errorf("Closing connection failed: %v", err)
 				}
-				q.client = nil
+			}
+			q.client = nil
+
+			var aerr *amqp.Error
+			recoverable := first && errors.As(err, &aerr) && errors.Is(aerr, amqp.ErrClosed)
+			if !recoverable {
+				return err
+			}
+			if err := q.publish(key, body); err != nil {
 				return err
 			}
 		}
@@ -186,12 +195,10 @@ func (q *AMQP) Write(metrics []telegraf.Metric) error {
 
 func (q *AMQP) publish(key string, body []byte) error {
 	if q.client == nil {
-		client, err := q.connect(q.config)
-		if err != nil {
+		if err := q.Connect(); err != nil {
 			return err
 		}
 		q.sentMessages = 0
-		q.client = client
 	}
 
 	err := q.client.Publish(key, body)

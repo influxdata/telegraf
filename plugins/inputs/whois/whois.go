@@ -123,7 +123,7 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 
 			acc.AddFields(
 				"whois",
-				map[string]interface{}{
+				map[string]any{
 					"error": err.Error(),
 				},
 				map[string]string{
@@ -176,7 +176,7 @@ func (w *Whois) Gather(acc telegraf.Accumulator) error {
 		}
 
 		// Add metrics
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"creation_timestamp":   creationTimestamp,
 			"dnssec_enabled":       data.Domain.DNSSec,
 			"expiration_timestamp": expirationTimestamp,

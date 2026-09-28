@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"slices"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
@@ -71,11 +72,8 @@ func (c *converter) setup(ct converterType, log telegraf.Logger) error {
 		if c.ResultKey == "" && c.Replacement == "" {
 			groups := c.re.SubexpNames()
 			allNamed := len(groups) > 1
-			for _, g := range groups[1:] {
-				if g == "" {
-					allNamed = false
-					break
-				}
+			if slices.Contains(groups[1:], "") {
+				allNamed = false
 			}
 			if allNamed {
 				log.Debugf("%s: Using named-group mode...", ct)

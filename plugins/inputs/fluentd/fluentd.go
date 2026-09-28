@@ -111,7 +111,7 @@ func (h *Fluentd) Gather(acc telegraf.Accumulator) error {
 
 		// If not, create new metric and add it to Accumulator
 		if !skip {
-			tmpFields := make(map[string]interface{})
+			tmpFields := make(map[string]any)
 
 			tmpTags := map[string]string{
 				"plugin_id":       p.PluginID,

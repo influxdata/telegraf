@@ -30,13 +30,13 @@ type CallbackFunc func(
 	level telegraf.LogLevel,
 	timestamp time.Time,
 	source string,
-	attributes map[string]interface{},
-	arguments ...interface{},
+	attributes map[string]any,
+	arguments ...any,
 )
 
 // sink interface that has to be implemented by a logging sink
 type sink interface {
-	Print(telegraf.LogLevel, time.Time, string, map[string]interface{}, ...interface{})
+	Print(telegraf.LogLevel, time.Time, string, map[string]any, ...any)
 }
 
 // logger is the actual implementation of the telegraf logger interface
@@ -49,7 +49,7 @@ type logger struct {
 	source     string
 	prefix     string
 	onError    []func()
-	attributes map[string]interface{}
+	attributes map[string]any
 }
 
 // New creates a new logging instance to be used in models
@@ -58,7 +58,7 @@ func New(category, name, alias string) *logger {
 		category:   category,
 		name:       name,
 		alias:      alias,
-		attributes: map[string]interface{}{"category": category, "plugin": name},
+		attributes: map[string]any{"category": category, "plugin": name},
 	}
 	if alias != "" {
 		l.attributes["alias"] = alias
@@ -92,7 +92,7 @@ func (l *logger) Level() telegraf.LogLevel {
 }
 
 // AddAttribute allows to add a key-value attribute to the logging output
-func (l *logger) AddAttribute(key string, value interface{}) {
+func (l *logger) AddAttribute(key string, value any) {
 	// Do not allow to overwrite general keys
 	switch key {
 	case "category", "plugin", "alias":
@@ -102,11 +102,11 @@ func (l *logger) AddAttribute(key string, value interface{}) {
 }
 
 // Error logging including callbacks
-func (l *logger) Errorf(format string, args ...interface{}) {
+func (l *logger) Errorf(format string, args ...any) {
 	l.Error(fmt.Sprintf(format, args...))
 }
 
-func (l *logger) Error(args ...interface{}) {
+func (l *logger) Error(args ...any) {
 	l.Print(telegraf.Error, time.Now(), args...)
 	for _, f := range l.onError {
 		f()
@@ -114,42 +114,42 @@ func (l *logger) Error(args ...interface{}) {
 }
 
 // Warning logging
-func (l *logger) Warnf(format string, args ...interface{}) {
+func (l *logger) Warnf(format string, args ...any) {
 	l.Warn(fmt.Sprintf(format, args...))
 }
 
-func (l *logger) Warn(args ...interface{}) {
+func (l *logger) Warn(args ...any) {
 	l.Print(telegraf.Warn, time.Now(), args...)
 }
 
 // Info logging
-func (l *logger) Infof(format string, args ...interface{}) {
+func (l *logger) Infof(format string, args ...any) {
 	l.Info(fmt.Sprintf(format, args...))
 }
 
-func (l *logger) Info(args ...interface{}) {
+func (l *logger) Info(args ...any) {
 	l.Print(telegraf.Info, time.Now(), args...)
 }
 
 // Debug logging, this is suppressed on console
-func (l *logger) Debugf(format string, args ...interface{}) {
+func (l *logger) Debugf(format string, args ...any) {
 	l.Debug(fmt.Sprintf(format, args...))
 }
 
-func (l *logger) Debug(args ...interface{}) {
+func (l *logger) Debug(args ...any) {
 	l.Print(telegraf.Debug, time.Now(), args...)
 }
 
 // Trace logging, this is suppressed on console
-func (l *logger) Tracef(format string, args ...interface{}) {
+func (l *logger) Tracef(format string, args ...any) {
 	l.Trace(fmt.Sprintf(format, args...))
 }
 
-func (l *logger) Trace(args ...interface{}) {
+func (l *logger) Trace(args ...any) {
 	l.Print(telegraf.Trace, time.Now(), args...)
 }
 
-func (l *logger) Print(level telegraf.LogLevel, ts time.Time, args ...interface{}) {
+func (l *logger) Print(level telegraf.LogLevel, ts time.Time, args ...any) {
 	// Check if we are in early logging state and store the message in this case
 	if instance.impl == nil {
 		instance.add(level, ts, l.prefix, l.attributes, args...)
@@ -170,7 +170,7 @@ func (l *logger) Print(level telegraf.LogLevel, ts time.Time, args ...interface{
 	if instance.impl != nil {
 		instance.impl.Print(level, ts.In(instance.timezone), l.prefix, l.attributes, args...)
 	} else {
-		msg := append([]interface{}{ts.In(instance.timezone).Format(time.RFC3339), " ", level.Indicator(), " ", l.prefix}, args...)
+		msg := append([]any{ts.In(instance.timezone).Format(time.RFC3339), " ", level.Indicator(), " ", l.prefix}, args...)
 		instance.earlysink.Print(msg...)
 	}
 }

@@ -437,7 +437,7 @@ func (m *Mesos) getMetrics(role role, group string) []string {
 	return ret
 }
 
-func (m *Mesos) filterMetrics(role role, metrics *map[string]interface{}) {
+func (m *Mesos) filterMetrics(role role, metrics *map[string]any) {
 	var ok bool
 	var selectedMetrics []string
 
@@ -490,7 +490,7 @@ func urlTag(u *url.URL) string {
 
 // This should not belong to the object
 func (m *Mesos) gatherMainMetrics(u *url.URL, role role, acc telegraf.Accumulator) error {
-	var jsonOut map[string]interface{}
+	var jsonOut map[string]any
 
 	tags := map[string]string{
 		"server": u.Hostname(),

@@ -153,7 +153,7 @@ func (c *Marklogic) fetchAndInsertData(acc telegraf.Accumulator, address string)
 	}
 
 	// Build a map of field values
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"online":                    ml.HostStatus.StatusProperties.Online.Value,
 		"total_load":                ml.HostStatus.StatusProperties.LoadProperties.TotalLoad.Value,
 		"total_rate":                ml.HostStatus.StatusProperties.RateProperties.TotalRate.Value,
@@ -202,7 +202,7 @@ func (c *Marklogic) createHTTPClient() (*http.Client, error) {
 	return client, nil
 }
 
-func (c *Marklogic) gatherJSONData(address string, v interface{}) error {
+func (c *Marklogic) gatherJSONData(address string, v any) error {
 	req, err := http.NewRequest("GET", address, nil)
 	if err != nil {
 		return err

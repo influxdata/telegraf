@@ -216,8 +216,7 @@ func (sp *StreamParser) Next() (telegraf.Metric, error) {
 		return nil, err
 	}
 
-	var e *readErr
-	if errors.As(err, &e) {
+	if e, ok := errors.AsType[*readErr](err); ok {
 		return nil, e.Err
 	}
 

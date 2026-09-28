@@ -49,7 +49,7 @@ func Parse(acc telegraf.Accumulator, sectionBytes, roomBytes, devicesBytes []byt
 			"name":     device.Name,
 			"type":     device.Type,
 		}
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 
 		if device.Properties.BatteryLevel != nil {
 			if fValue, err := strconv.ParseFloat(*device.Properties.BatteryLevel, 64); err == nil {

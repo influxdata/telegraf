@@ -46,7 +46,7 @@ func TestTableBuildWalk(t *testing.T) {
 			"myfield1": "foo",
 			"index":    "0",
 		},
-		Fields: map[string]interface{}{
+		Fields: map[string]any{
 			"myfield2": 1,
 			"myfield3": float64(0.123),
 			"myfield4": 11,
@@ -58,7 +58,7 @@ func TestTableBuildWalk(t *testing.T) {
 			"myfield1": "bar",
 			"index":    "1",
 		},
-		Fields: map[string]interface{}{
+		Fields: map[string]any{
 			"myfield2": 2,
 			"myfield3": float64(0.456),
 			"myfield4": 22,
@@ -69,7 +69,7 @@ func TestTableBuildWalk(t *testing.T) {
 		Tags: map[string]string{
 			"index": "2",
 		},
-		Fields: map[string]interface{}{
+		Fields: map[string]any{
 			"myfield2": 0,
 			"myfield3": float64(0.0),
 		},
@@ -78,7 +78,7 @@ func TestTableBuildWalk(t *testing.T) {
 		Tags: map[string]string{
 			"index": "3",
 		},
-		Fields: map[string]interface{}{
+		Fields: map[string]any{
 			"myfield3": float64(9.999),
 		},
 	}
@@ -132,7 +132,7 @@ func TestTableJoin_walk(t *testing.T) {
 			"myfield4": "bar",
 			"index":    "10",
 		},
-		Fields: map[string]interface{}{
+		Fields: map[string]any{
 			"myfield2": 10,
 			"myfield3": 1,
 			"myfield5": 2,
@@ -143,7 +143,7 @@ func TestTableJoin_walk(t *testing.T) {
 			"myfield1": "instance2",
 			"index":    "11",
 		},
-		Fields: map[string]interface{}{
+		Fields: map[string]any{
 			"myfield2": 20,
 			"myfield3": 2,
 			"myfield5": 0,
@@ -154,7 +154,7 @@ func TestTableJoin_walk(t *testing.T) {
 			"myfield1": "instance3",
 			"index":    "12",
 		},
-		Fields: map[string]interface{}{
+		Fields: map[string]any{
 			"myfield2": 20,
 			"myfield3": 3,
 		},
@@ -209,7 +209,7 @@ func TestTableOuterJoin_walk(t *testing.T) {
 			"myfield4": "bar",
 			"index":    "10",
 		},
-		Fields: map[string]interface{}{
+		Fields: map[string]any{
 			"myfield2": 10,
 			"myfield3": 1,
 			"myfield5": 2,
@@ -220,7 +220,7 @@ func TestTableOuterJoin_walk(t *testing.T) {
 			"myfield1": "instance2",
 			"index":    "11",
 		},
-		Fields: map[string]interface{}{
+		Fields: map[string]any{
 			"myfield2": 20,
 			"myfield3": 2,
 			"myfield5": 0,
@@ -231,7 +231,7 @@ func TestTableOuterJoin_walk(t *testing.T) {
 			"myfield1": "instance3",
 			"index":    "12",
 		},
-		Fields: map[string]interface{}{
+		Fields: map[string]any{
 			"myfield2": 20,
 			"myfield3": 3,
 		},
@@ -241,7 +241,7 @@ func TestTableOuterJoin_walk(t *testing.T) {
 			"index":    "Secondary.0",
 			"myfield4": "foo",
 		},
-		Fields: map[string]interface{}{
+		Fields: map[string]any{
 			"myfield5": 1,
 		},
 	}
@@ -295,7 +295,7 @@ func TestTableJoinNoIndexAsTag_walk(t *testing.T) {
 			"myfield4": "bar",
 			// "index":    "10",
 		},
-		Fields: map[string]interface{}{
+		Fields: map[string]any{
 			"myfield2": 10,
 			"myfield3": 1,
 			"myfield5": 2,
@@ -306,7 +306,7 @@ func TestTableJoinNoIndexAsTag_walk(t *testing.T) {
 			"myfield1": "instance2",
 			// "index":    "11",
 		},
-		Fields: map[string]interface{}{
+		Fields: map[string]any{
 			"myfield2": 20,
 			"myfield3": 2,
 			"myfield5": 0,
@@ -317,7 +317,7 @@ func TestTableJoinNoIndexAsTag_walk(t *testing.T) {
 			"myfield1": "instance3",
 			// "index":    "12",
 		},
-		Fields: map[string]interface{}{
+		Fields: map[string]any{
 			"myfield2": 20,
 			"myfield3": 3,
 		},

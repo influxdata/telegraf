@@ -536,11 +536,9 @@ func TestRunningOutputBufferImmediateRestartOnContinuousWrite(t *testing.T) {
 	// immediately getting a new write signal.
 	var modelWriteErr error
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		modelWriteErr = ro.Write()
-	}()
+	})
 
 	// Wait for the writer to see the non-full batch, add the remaining metrics
 	// and unblock the writer
@@ -796,7 +794,7 @@ func TestRunningOutputInternalMetrics(t *testing.T) {
 				"output": "test_name",
 				"alias":  "test_alias",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"buffer_limit":     10,
 				"buffer_size":      0,
 				"errors":           0,

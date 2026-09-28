@@ -55,7 +55,7 @@ func (s *Serializer) Init() error {
 }
 
 func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
-	var obj interface{}
+	var obj any
 	obj = s.createObject(metric)
 
 	if s.Transformation != "" {
@@ -78,14 +78,14 @@ func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 }
 
 func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
-	objects := make([]interface{}, 0, len(metrics))
+	objects := make([]any, 0, len(metrics))
 	for _, metric := range metrics {
 		m := s.createObject(metric)
 		objects = append(objects, m)
 	}
 
-	var obj interface{}
-	obj = map[string]interface{}{
+	var obj any
+	obj = map[string]any{
 		"metrics": objects,
 	}
 
@@ -108,8 +108,8 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	return serialized, nil
 }
 
-func (s *Serializer) createObject(metric telegraf.Metric) map[string]interface{} {
-	m := make(map[string]interface{}, 4)
+func (s *Serializer) createObject(metric telegraf.Metric) map[string]any {
+	m := make(map[string]any, 4)
 
 	tags := make(map[string]string, len(metric.TagList()))
 	for _, tag := range metric.TagList() {
@@ -117,7 +117,7 @@ func (s *Serializer) createObject(metric telegraf.Metric) map[string]interface{}
 	}
 	m["tags"] = tags
 
-	fields := make(map[string]interface{}, len(metric.FieldList()))
+	fields := make(map[string]any, len(metric.FieldList()))
 	for _, field := range metric.FieldList() {
 		val := field.Value
 		switch fv := field.Value.(type) {
@@ -131,7 +131,7 @@ func (s *Serializer) createObject(metric telegraf.Metric) map[string]interface{}
 			if s.nestedFields != nil && s.nestedFields.Match(field.Key) {
 				bv := []byte(fv)
 				if json.Valid(bv) {
-					var nested interface{}
+					var nested any
 					if err := json.Unmarshal(bv, &nested); err == nil {
 						val = nested
 					}
@@ -151,7 +151,7 @@ func (s *Serializer) createObject(metric telegraf.Metric) map[string]interface{}
 	return m
 }
 
-func (s *Serializer) transform(obj interface{}) (interface{}, error) {
+func (s *Serializer) transform(obj any) (any, error) {
 	transformation, err := jsonata.Compile(s.Transformation)
 	if err != nil {
 		return nil, err

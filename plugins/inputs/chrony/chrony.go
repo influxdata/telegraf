@@ -245,7 +245,7 @@ func (c *Chrony) gatherActivity(acc telegraf.Accumulator) error {
 		tags["source"] = c.source
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"online":        resp.Online,
 		"offline":       resp.Offline,
 		"burst_online":  resp.BurstOnline,
@@ -290,7 +290,7 @@ func (c *Chrony) gatherTracking(acc telegraf.Accumulator) error {
 		tags["source"] = c.source
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"frequency":       resp.FreqPPM,
 		"system_time":     resp.CurrentCorrection,
 		"last_offset":     resp.LastOffset,
@@ -318,10 +318,10 @@ func (c *Chrony) gatherServerStats(acc telegraf.Accumulator) error {
 		tags["source"] = c.source
 	}
 
-	var fields map[string]interface{}
+	var fields map[string]any
 	switch resp := r.(type) {
 	case *fbchrony.ReplyServerStats:
-		fields = map[string]interface{}{
+		fields = map[string]any{
 			"ntp_hits":  resp.NTPHits,
 			"ntp_drops": resp.NTPDrops,
 			"cmd_hits":  resp.CMDHits,
@@ -329,7 +329,7 @@ func (c *Chrony) gatherServerStats(acc telegraf.Accumulator) error {
 			"log_drops": resp.LogDrops,
 		}
 	case *fbchrony.ReplyServerStats2:
-		fields = map[string]interface{}{
+		fields = map[string]any{
 			"ntp_hits":      resp.NTPHits,
 			"ntp_drops":     resp.NTPDrops,
 			"ntp_auth_hits": resp.NTPAuthHits,
@@ -340,7 +340,7 @@ func (c *Chrony) gatherServerStats(acc telegraf.Accumulator) error {
 			"nke_drops":     resp.NKEDrops,
 		}
 	case *fbchrony.ReplyServerStats3:
-		fields = map[string]interface{}{
+		fields = map[string]any{
 			"ntp_hits":             resp.NTPHits,
 			"ntp_drops":            resp.NTPDrops,
 			"ntp_auth_hits":        resp.NTPAuthHits,
@@ -354,7 +354,7 @@ func (c *Chrony) gatherServerStats(acc telegraf.Accumulator) error {
 			"nke_drops":            resp.NKEDrops,
 		}
 	case *fbchrony.ReplyServerStats4:
-		fields = map[string]interface{}{
+		fields = map[string]any{
 			"ntp_hits":                   resp.NTPHits,
 			"ntp_drops":                  resp.NTPDrops,
 			"ntp_auth_hits":              resp.NTPAuthHits,
@@ -451,7 +451,7 @@ func (c *Chrony) gatherSources(acc telegraf.Accumulator) error {
 			tags["source"] = c.source
 		}
 
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"index":                    idx,
 			"ip":                       sourceData.IPAddr.String(),
 			"poll":                     sourceData.Poll,
@@ -520,7 +520,7 @@ func (c *Chrony) gatherSourceStats(acc telegraf.Accumulator) error {
 			tags["source"] = c.source
 		}
 
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"index":              idx,
 			"ip":                 sourceStats.IPAddr.String(),
 			"samples":            sourceStats.NSamples,

@@ -22,7 +22,7 @@ func TestDovecotIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"reset_timestamp":        time.Unix(1453969886, 0),
 		"last_update":            time.Unix(1454603963, 39864),
 		"num_logins":             int64(7503897),
@@ -123,7 +123,7 @@ func TestDovecotIntegration(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "dovecot", fields, tags)
 
 	// Test type=user
-	fields = map[string]interface{}{
+	fields = map[string]any{
 		"reset_timestamp":  time.Unix(1453969886, 0),
 		"last_update":      time.Unix(1454603963, 39864),
 		"num_logins":       int64(7503897),

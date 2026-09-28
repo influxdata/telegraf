@@ -84,7 +84,7 @@ func (b *Bind) addStatsXMLv3(stats v3Stats, acc telegraf.Accumulator, hostPort s
 			}
 
 			tags := map[string]string{"url": hostPort, "source": host, "port": port, "type": cg.Type}
-			var v interface{} = c.Value
+			var v any = c.Value
 			if b.CountersAsInt {
 				if c.Value < math.MaxInt64 {
 					v = int64(c.Value)
@@ -97,7 +97,7 @@ func (b *Bind) addStatsXMLv3(stats v3Stats, acc telegraf.Accumulator, hostPort s
 	}
 
 	// Memory stats
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"total_use":    stats.Memory.Summary.TotalUse,
 		"in_use":       stats.Memory.Summary.InUse,
 		"block_size":   stats.Memory.Summary.BlockSize,
@@ -111,7 +111,7 @@ func (b *Bind) addStatsXMLv3(stats v3Stats, acc telegraf.Accumulator, hostPort s
 	if b.GatherMemoryContexts {
 		for _, c := range stats.Memory.Contexts {
 			tags := map[string]string{"url": hostPort, "source": host, "port": port, "id": c.ID, "name": c.Name}
-			fields := map[string]interface{}{"total": c.Total, "in_use": c.InUse}
+			fields := map[string]any{"total": c.Total, "in_use": c.InUse}
 
 			b.postProcessFields(fields)
 			acc.AddGauge("bind_memory_context", fields, tags)
@@ -130,7 +130,7 @@ func (b *Bind) addStatsXMLv3(stats v3Stats, acc telegraf.Accumulator, hostPort s
 						"view":   v.Name,
 						"type":   cg.Type,
 					}
-					var v interface{} = c.Value
+					var v any = c.Value
 					if b.CountersAsInt {
 						if c.Value < math.MaxInt64 {
 							v = int64(c.Value)
@@ -188,7 +188,7 @@ func (b *Bind) readStatsXMLv3(addr *url.URL, acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (b *Bind) postProcessFields(fields map[string]interface{}) {
+func (b *Bind) postProcessFields(fields map[string]any) {
 	if !b.CountersAsInt {
 		return
 	}

@@ -180,7 +180,7 @@ fields, and should use existing patterns for encoding metrics.
 
 Metrics use `snake_case` naming style.
 
-[influx_schema_design]: https://docs.influxdata.com/influxdb/latest/concepts/schema_and_data_layout/
+[influx_schema_design]: https://docs.influxdata.com/influxdb/v1/concepts/schema_and_data_layout/
 
 ### Enumerations
 

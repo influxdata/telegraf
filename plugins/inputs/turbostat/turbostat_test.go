@@ -58,7 +58,7 @@ func TestProcessValues(t *testing.T) {
 			metric: metric.New(
 				"turbostat",
 				map[string]string{"cpu": "-", "core": "-"},
-				map[string]interface{}{"busy_frequency_mhz": 1.23, "core_power_watt": 4.56},
+				map[string]any{"busy_frequency_mhz": 1.23, "core_power_watt": 4.56},
 				time.Time{},
 			),
 		},
@@ -67,7 +67,7 @@ func TestProcessValues(t *testing.T) {
 			metric: metric.New(
 				"turbostat",
 				map[string]string{"cpu": "0", "core": "1"},
-				map[string]interface{}{"busy_frequency_mhz": 1.23},
+				map[string]any{"busy_frequency_mhz": 1.23},
 				time.Time{},
 			),
 		},

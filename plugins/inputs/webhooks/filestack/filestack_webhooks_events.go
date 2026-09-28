@@ -14,8 +14,8 @@ func (fe *filestackEvent) tags() map[string]string {
 	}
 }
 
-func (fe *filestackEvent) fields() map[string]interface{} {
-	return map[string]interface{}{
+func (fe *filestackEvent) fields() map[string]any {
+	return map[string]any{
 		"id": strconv.Itoa(fe.ID),
 	}
 }

@@ -21,7 +21,7 @@ func collectStatefulSets(ctx context.Context, acc telegraf.Accumulator, ki *Kube
 
 func (ki *KubernetesInventory) gatherStatefulSet(s *v1.StatefulSet, acc telegraf.Accumulator) {
 	status := s.Status
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"created":             s.GetCreationTimestamp().UnixNano(),
 		"generation":          s.Generation,
 		"replicas":            status.Replicas,

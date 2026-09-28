@@ -19,11 +19,11 @@ func TestWireguard_gatherDeviceMetrics(t *testing.T) {
 		FirewallMark: 2,
 		Peers:        []wgtypes.Peer{{}, {}},
 	}
-	expectFields := map[string]interface{}{
+	expectFields := map[string]any{
 		"listen_port":   1,
 		"firewall_mark": 2,
 	}
-	expectGauges := map[string]interface{}{
+	expectGauges := map[string]any{
 		"peers": 2,
 	}
 	expectTags := map[string]string{
@@ -57,14 +57,14 @@ func TestWireguard_gatherDevicePeerMetrics(t *testing.T) {
 		AllowedIPs:                  []net.IPNet{{}, {}},
 		ProtocolVersion:             0,
 	}
-	expectFields := map[string]interface{}{
+	expectFields := map[string]any{
 		"persistent_keepalive_interval_ns": int64(60000000000),
 		"protocol_version":                 0,
 		"allowed_ips":                      2,
 		"allowed_peer_cidr":                "<nil>,<nil>",
 		"endpoint":                         "192.168.1.100:51820",
 	}
-	expectGauges := map[string]interface{}{
+	expectGauges := map[string]any{
 		"last_handshake_time_ns": int64(100000000000),
 		"rx_bytes":               int64(40),
 		"tx_bytes":               int64(60),
@@ -129,7 +129,7 @@ func TestWireguard_allowedPeerCIDR(t *testing.T) {
 				AllowedIPs:                  tc.allowedIPs,
 				ProtocolVersion:             0,
 			}
-			expectFields := map[string]interface{}{
+			expectFields := map[string]any{
 				"persistent_keepalive_interval_ns": int64(60000000000),
 				"protocol_version":                 0,
 				"allowed_ips":                      len(tc.allowedIPs),

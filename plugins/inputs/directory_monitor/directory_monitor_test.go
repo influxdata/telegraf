@@ -305,7 +305,7 @@ func TestCSVNoSkipRows(t *testing.T) {
 	testCSV := `line1,line2,line3
 hello,80,test_name2`
 
-	expectedFields := map[string]interface{}{
+	expectedFields := map[string]any{
 		"line2": int64(80),
 		"line3": "test_name2",
 	}
@@ -376,7 +376,7 @@ garbage,nonsense,2
 line1,line2,line3
 hello,80,test_name2`
 
-	expectedFields := map[string]interface{}{
+	expectedFields := map[string]any{
 		"line2": int64(80),
 		"line3": "test_name2",
 	}
@@ -445,7 +445,7 @@ func TestCSVMultiHeader(t *testing.T) {
 1,2,3
 hello,80,test_name2`
 
-	expectedFields := map[string]interface{}{
+	expectedFields := map[string]any{
 		"line2": int64(80),
 		"line3": "test_name2",
 	}

@@ -129,7 +129,7 @@ You can use the following techniques to avoid cardinality issues:
 
 [series cardinality]: https://docs.influxdata.com/influxdb/v1.7/concepts/glossary/#series-cardinality
 [metric filtering]: https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md#metric-filtering
-[retention policy]: https://docs.influxdata.com/influxdb/latest/guides/downsampling_and_retention/
+[retention policy]: https://docs.influxdata.com/influxdb/v1/guides/downsampling_and_retention/
 [tsi]: https://docs.influxdata.com/influxdb/latest/concepts/time-series-index/
 [show cardinality]: https://docs.influxdata.com/influxdb/latest/query_language/spec/#show-cardinality
 [influx docs]: https://docs.influxdata.com/influxdb/latest/

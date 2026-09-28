@@ -102,7 +102,7 @@ type fieldMapping struct {
 	convert     converterFunc
 }
 
-type converterFunc func([]byte) interface{}
+type converterFunc func([]byte) any
 
 func (*S7comm) SampleConfig() string {
 	return sampleConfig

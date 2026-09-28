@@ -28,11 +28,11 @@ type namespacedInterface struct {
 
 type namespacedAction struct {
 	result chan<- namespacedResult
-	f      func(*namespaceGoroutine) (interface{}, error)
+	f      func(*namespaceGoroutine) (any, error)
 }
 
 type namespacedResult struct {
-	result interface{}
+	result any
 	err    error
 }
 
@@ -49,7 +49,7 @@ func (n *namespaceGoroutine) name() string {
 }
 
 func (n *namespaceGoroutine) interfaces() ([]namespacedInterface, error) {
-	interfaces, err := n.do(func(n *namespaceGoroutine) (interface{}, error) {
+	interfaces, err := n.do(func(n *namespaceGoroutine) (any, error) {
 		interfaces, err := net.Interfaces()
 		if err != nil {
 			return nil, err
@@ -71,21 +71,21 @@ func (n *namespaceGoroutine) interfaces() ([]namespacedInterface, error) {
 }
 
 func (n *namespaceGoroutine) driverName(intf namespacedInterface) (string, error) {
-	driver, err := n.do(func(n *namespaceGoroutine) (interface{}, error) {
+	driver, err := n.do(func(n *namespaceGoroutine) (any, error) {
 		return n.ethtoolClient.DriverName(intf.Name)
 	})
 	return driver.(string), err
 }
 
 func (n *namespaceGoroutine) stats(intf namespacedInterface) (map[string]uint64, error) {
-	driver, err := n.do(func(n *namespaceGoroutine) (interface{}, error) {
+	driver, err := n.do(func(n *namespaceGoroutine) (any, error) {
 		return n.ethtoolClient.Stats(intf.Name)
 	})
 	return driver.(map[string]uint64), err
 }
 
 func (n *namespaceGoroutine) get(intf namespacedInterface) (map[string]uint64, error) {
-	result, err := n.do(func(n *namespaceGoroutine) (interface{}, error) {
+	result, err := n.do(func(n *namespaceGoroutine) (any, error) {
 		ecmd := ethtool.EthtoolCmd{}
 		speed32, err := n.ethtoolClient.CmdGet(&ecmd, intf.Name)
 		if err != nil {
@@ -170,7 +170,7 @@ func (n *namespaceGoroutine) start() error {
 }
 
 // do runs a function inside the OS thread tied to the namespace.
-func (n *namespaceGoroutine) do(f func(*namespaceGoroutine) (interface{}, error)) (interface{}, error) {
+func (n *namespaceGoroutine) do(f func(*namespaceGoroutine) (any, error)) (any, error) {
 	result := make(chan namespacedResult)
 	n.c <- namespacedAction{
 		result: result,

@@ -24,7 +24,7 @@ func TagListToJSON(tagList []*telegraf.Tag) []byte {
 }
 
 func FieldListToJSON(fieldList []*telegraf.Field) ([]byte, error) {
-	fields := make(map[string]interface{}, len(fieldList))
+	fields := make(map[string]any, len(fieldList))
 	for _, field := range fieldList {
 		fields[field.Key] = field.Value
 	}
@@ -55,7 +55,7 @@ type PGXLogger struct {
 	telegraf.Logger
 }
 
-func (l PGXLogger) Log(_ context.Context, level tracelog.LogLevel, msg string, data map[string]interface{}) {
+func (l PGXLogger) Log(_ context.Context, level tracelog.LogLevel, msg string, data map[string]any) {
 	switch level {
 	case tracelog.LogLevelError:
 		l.Errorf("PG %s - %+v", msg, data)
@@ -84,7 +84,7 @@ func GetTagID(metric telegraf.Metric) int64 {
 
 // WaitGroup is similar to sync.WaitGroup, but allows interruptible waiting (e.g. a timeout).
 type WaitGroup struct {
-	count int32
+	count atomic.Int32
 	done  chan struct{}
 }
 
@@ -100,11 +100,11 @@ func (wg *WaitGroup) Add(i int32) {
 		panic("use of an already-done WaitGroup")
 	default:
 	}
-	atomic.AddInt32(&wg.count, i)
+	wg.count.Add(i)
 }
 
 func (wg *WaitGroup) Done() {
-	i := atomic.AddInt32(&wg.count, -1)
+	i := wg.count.Add(-1)
 	if i == 0 {
 		close(wg.done)
 	}

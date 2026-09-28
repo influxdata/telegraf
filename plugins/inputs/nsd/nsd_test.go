@@ -35,11 +35,11 @@ func TestParseFullOutput(t *testing.T) {
 	acc.AssertContainsFields(t, "nsd_servers", parsedFullOutputServerAsTag)
 }
 
-var parsedFullOutputServerAsTag = map[string]interface{}{
+var parsedFullOutputServerAsTag = map[string]any{
 	"queries": float64(75576),
 }
 
-var parsedFullOutput = map[string]interface{}{
+var parsedFullOutput = map[string]any{
 	"num_queries":         float64(75557),
 	"time_boot":           float64(2944405.500253),
 	"time_elapsed":        float64(2944405.500253),

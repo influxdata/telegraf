@@ -258,6 +258,93 @@ func TestGatherSATAInfo75(t *testing.T) {
 	}
 }
 
+func TestGatherSATAInfoHoursDuration(t *testing.T) {
+	runCmd = func(config.Duration, bool, string, ...string) ([]byte, error) {
+		return []byte(seagateSMRSATAInfoData75), nil
+	}
+
+	var acc testutil.Accumulator
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	sampleSmart.gatherDisk(&acc, "/dev/sdc", wg)
+
+	// Attributes reported as "182h+39m+24.879s" keep their raw value in
+	// seconds but must end up as whole hours in power_on_hours, consistent
+	// with drives reporting a plain hour count
+	expected := []telegraf.Metric{
+		metric.New(
+			"smart_device",
+			map[string]string{
+				"capacity": "2000398934016",
+				"device":   "sdc",
+				"enabled":  "Enabled",
+				"model":    "ST2000DM008-2UB102",
+			},
+			map[string]any{
+				"command_timeout":            int64(0),
+				"end_to_end_error":           int64(0),
+				"exit_status":                int(0),
+				"health_ok":                  bool(true),
+				"pending_sector_count":       int64(0),
+				"power_cycle_count":          int64(3),
+				"power_on_hours":             int64(182),
+				"read_error_rate":            float64(0),
+				"reallocated_sectors_count":  int64(0),
+				"seek_error_rate":            float64(0),
+				"spin_retry_count":           int64(0),
+				"temp_c":                     int64(35),
+				"udma_crc_errors":            int64(0),
+				"uncorrectable_errors":       int64(0),
+				"uncorrectable_sector_count": int64(0),
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"smart_attribute",
+			map[string]string{
+				"capacity": "2000398934016",
+				"device":   "sdc",
+				"enabled":  "Enabled",
+				"fail":     "-",
+				"flags":    "-O--CK",
+				"id":       "9",
+				"model":    "ST2000DM008-2UB102",
+				"name":     "Power_On_Hours",
+			},
+			map[string]any{
+				"exit_status": int(0),
+				"raw_value":   int64(657564),
+				"threshold":   int64(0),
+				"value":       int64(100),
+				"worst":       int64(100),
+			},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"smart_attribute",
+			map[string]string{
+				"capacity": "2000398934016",
+				"device":   "sdc",
+				"enabled":  "Enabled",
+				"fail":     "-",
+				"flags":    "------",
+				"id":       "240",
+				"model":    "ST2000DM008-2UB102",
+				"name":     "Head_Flying_Hours",
+			},
+			map[string]any{
+				"exit_status": int(0),
+				"raw_value":   int64(650902),
+				"threshold":   int64(0),
+				"value":       int64(100),
+				"worst":       int64(253),
+			},
+			time.Unix(0, 0),
+		),
+	}
+	testutil.RequireMetricsSubset(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+}
+
 func TestGatherHgstSAS(t *testing.T) {
 	runCmd = func(config.Duration, bool, string, ...string) ([]byte, error) {
 		return []byte(hgstSASInfoData), nil
@@ -469,14 +556,6 @@ func Test_checkForNVMeDevices(t *testing.T) {
 	require.Equal(t, expectedNVMeDevices, resultNVMeDevices)
 }
 
-func Test_contains(t *testing.T) {
-	devices := []string{"/dev/sda", "/dev/nvme1"}
-	device := "/dev/nvme1"
-	deviceNotIncluded := "/dev/nvme5"
-	require.True(t, contains(devices, device))
-	require.False(t, contains(devices, deviceNotIncluded))
-}
-
 func Test_difference(t *testing.T) {
 	devices := []string{"/dev/sda", "/dev/nvme1", "/dev/nvme2"}
 	secondDevices := []string{"/dev/sda", "/dev/nvme1"}
@@ -576,7 +655,7 @@ var (
 				"device": "nvme0",
 				"name":   "Temperature_Sensor_3",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": int64(9223372036854775807),
 			},
 			time.Unix(0, 0),
@@ -587,7 +666,7 @@ var (
 				"device": "nvme0",
 				"name":   "Temperature_Sensor_4",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": int64(-9223372036854775808),
 			},
 			time.Unix(0, 0),
@@ -597,7 +676,7 @@ var (
 			map[string]string{
 				"device": "nvme0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"exit_status": 0,
 			},
 			time.Unix(0, 0),
@@ -615,7 +694,7 @@ var (
 				"model":     "HUC103030CSS600",
 				"name":      "Temperature_Celsius",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": 36,
 			},
 			time.Unix(0, 0),
@@ -630,7 +709,7 @@ var (
 				"model":     "HUC103030CSS600",
 				"name":      "Start_Stop_Count",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": 47,
 			},
 			time.Unix(0, 0),
@@ -643,7 +722,7 @@ var (
 				"enabled":   "Enabled",
 				"model":     "HUC103030CSS600",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"exit_status": 0,
 				"health_ok":   true,
 				"temp_c":      36,
@@ -653,11 +732,11 @@ var (
 	}
 
 	testsAda0Attributes = []struct {
-		fields map[string]interface{}
+		fields map[string]any
 		tags   map[string]string
 	}{
 		{
-			map[string]interface{}{
+			map[string]any{
 				"value":       int64(200),
 				"worst":       int64(200),
 				"threshold":   int64(0),
@@ -678,7 +757,7 @@ var (
 			},
 		},
 		{
-			map[string]interface{}{
+			map[string]any{
 				"value":       int64(100),
 				"worst":       int64(100),
 				"threshold":   int64(0),
@@ -699,7 +778,7 @@ var (
 			},
 		},
 		{
-			map[string]interface{}{
+			map[string]any{
 				"value":       int64(99),
 				"worst":       int64(99),
 				"threshold":   int64(0),
@@ -720,7 +799,7 @@ var (
 			},
 		},
 		{
-			map[string]interface{}{
+			map[string]any{
 				"value":       int64(85),
 				"worst":       int64(85),
 				"threshold":   int64(0),
@@ -741,7 +820,7 @@ var (
 			},
 		},
 		{
-			map[string]interface{}{
+			map[string]any{
 				"value":       int64(253),
 				"worst":       int64(253),
 				"threshold":   int64(10),
@@ -762,7 +841,7 @@ var (
 			},
 		},
 		{
-			map[string]interface{}{
+			map[string]any{
 				"value":       int64(185),
 				"worst":       int64(185),
 				"threshold":   int64(100),
@@ -783,7 +862,7 @@ var (
 			},
 		},
 		{
-			map[string]interface{}{
+			map[string]any{
 				"value":       int64(55),
 				"worst":       int64(40),
 				"threshold":   int64(45),
@@ -804,7 +883,7 @@ var (
 			},
 		},
 		{
-			map[string]interface{}{
+			map[string]any{
 				"value":       int64(97),
 				"worst":       int64(97),
 				"threshold":   int64(0),
@@ -825,7 +904,7 @@ var (
 			},
 		},
 		{
-			map[string]interface{}{
+			map[string]any{
 				"value":       int64(66),
 				"worst":       int64(21),
 				"threshold":   int64(0),
@@ -846,7 +925,7 @@ var (
 			},
 		},
 		{
-			map[string]interface{}{
+			map[string]any{
 				"value":       int64(100),
 				"worst":       int64(100),
 				"threshold":   int64(0),
@@ -867,7 +946,7 @@ var (
 			},
 		},
 		{
-			map[string]interface{}{
+			map[string]any{
 				"value":       int64(200),
 				"worst":       int64(200),
 				"threshold":   int64(0),
@@ -888,7 +967,7 @@ var (
 			},
 		},
 		{
-			map[string]interface{}{
+			map[string]any{
 				"value":       int64(100),
 				"worst":       int64(253),
 				"threshold":   int64(0),
@@ -959,7 +1038,7 @@ var (
 				"model":     "TS128GMTE850",
 				"serial_no": "D704940282?",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"exit_status":               0,
 				"health_ok":                 true,
 				"temp_c":                    38,
@@ -985,7 +1064,7 @@ var (
 				"serial_no": "D704940282?",
 				"model":     "TS128GMTE850",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": 6038,
 			},
 			time.Now(),
@@ -998,7 +1077,7 @@ var (
 				"serial_no": "D704940282?",
 				"model":     "TS128GMTE850",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": 472,
 			},
 			time.Now(),
@@ -1010,7 +1089,7 @@ var (
 				"serial_no": "D704940282?",
 				"model":     "TS128GMTE850",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": 0,
 			},
 			time.Now(),
@@ -1022,7 +1101,7 @@ var (
 				"serial_no": "D704940282?",
 				"model":     "TS128GMTE850",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": 119699,
 			},
 			time.Now(),
@@ -1034,7 +1113,7 @@ var (
 				"serial_no": "D704940282?",
 				"model":     "TS128GMTE850",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": 100,
 			},
 			time.Now(),
@@ -1046,7 +1125,7 @@ var (
 				"serial_no": "D704940282?",
 				"model":     "TS128GMTE850",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": 10,
 			},
 			time.Now(),
@@ -1059,7 +1138,7 @@ var (
 				"serial_no": "D704940282?",
 				"model":     "TS128GMTE850",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": 38,
 			},
 			time.Now(),
@@ -1071,7 +1150,7 @@ var (
 				"serial_no": "D704940282?",
 				"model":     "TS128GMTE850",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": int64(9),
 			},
 			time.Now(),
@@ -1083,7 +1162,7 @@ var (
 				"serial_no": "D704940282?",
 				"model":     "TS128GMTE850",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": int64(16),
 			},
 			time.Now(),
@@ -1095,7 +1174,7 @@ var (
 				"serial_no": "D704940282?",
 				"model":     "TS128GMTE850",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": int64(11836935),
 			},
 			time.Now(),
@@ -1107,7 +1186,7 @@ var (
 				"serial_no": "D704940282?",
 				"model":     "TS128GMTE850",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": int64(62288091),
 			},
 			time.Now(),
@@ -1119,7 +1198,7 @@ var (
 				"serial_no": "D704940282?",
 				"model":     "TS128GMTE850",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": int64(135924188),
 			},
 			time.Now(),
@@ -1131,7 +1210,7 @@ var (
 				"serial_no": "D704940282?",
 				"model":     "TS128GMTE850",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": int64(7715573429),
 			},
 			time.Now(),
@@ -1143,7 +1222,7 @@ var (
 				"serial_no": "D704940282?",
 				"model":     "TS128GMTE850",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": int64(4042),
 			},
 			time.Now(),
@@ -1155,7 +1234,7 @@ var (
 				"serial_no": "D704940282?",
 				"model":     "TS128GMTE850",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": int64(355),
 			},
 			time.Now(),
@@ -1167,7 +1246,7 @@ var (
 				"serial_no": "D704940282?",
 				"model":     "TS128GMTE850",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": int64(11),
 			},
 			time.Now(),
@@ -1179,7 +1258,7 @@ var (
 				"serial_no": "D704940282?",
 				"model":     "TS128GMTE850",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": int64(7),
 			},
 			time.Now(),
@@ -1190,7 +1269,7 @@ var (
 				"model":     "TS128GMTE850",
 				"name":      "Temperature_Sensor_1",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": int64(57),
 			},
 			time.Now(),
@@ -1202,7 +1281,7 @@ var (
 				"model":     "TS128GMTE850",
 				"name":      "Temperature_Sensor_2",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": int64(50),
 			},
 			time.Now(),
@@ -1214,7 +1293,7 @@ var (
 				"model":     "TS128GMTE850",
 				"name":      "Temperature_Sensor_3",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": int64(44),
 			},
 			time.Now(),
@@ -1226,7 +1305,7 @@ var (
 				"model":     "TS128GMTE850",
 				"name":      "Temperature_Sensor_4",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": int64(43),
 			},
 			time.Now(),
@@ -1238,7 +1317,7 @@ var (
 				"model":     "TS128GMTE850",
 				"name":      "Temperature_Sensor_5",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": int64(57),
 			},
 			time.Now(),
@@ -1250,7 +1329,7 @@ var (
 				"model":     "TS128GMTE850",
 				"name":      "Temperature_Sensor_6",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": int64(50),
 			},
 			time.Now(),
@@ -1262,7 +1341,7 @@ var (
 				"model":     "TS128GMTE850",
 				"name":      "Temperature_Sensor_7",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": int64(44),
 			},
 			time.Now(),
@@ -1274,7 +1353,7 @@ var (
 				"model":     "TS128GMTE850",
 				"name":      "Temperature_Sensor_8",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": int64(43),
 			},
 			time.Now(),
@@ -1286,7 +1365,7 @@ var (
 				"model":     "TS128GMTE850",
 				"name":      "Thermal_Management_T1_Trans_Count",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": 0,
 			},
 			time.Now(),
@@ -1298,7 +1377,7 @@ var (
 				"model":     "TS128GMTE850",
 				"name":      "Thermal_Management_T2_Trans_Count",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": 0,
 			},
 			time.Now(),
@@ -1310,7 +1389,7 @@ var (
 				"model":     "TS128GMTE850",
 				"name":      "Thermal_Management_T1_Total_Time",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": 0,
 			},
 			time.Now(),
@@ -1322,7 +1401,7 @@ var (
 				"model":     "TS128GMTE850",
 				"name":      "Thermal_Management_T2_Total_Time",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": 0,
 			},
 			time.Now(),
@@ -1336,7 +1415,7 @@ var (
 				"model":     "Samsung SSD 970 EVO 1TB",
 				"serial_no": "xxx",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"exit_status":               0,
 				"health_ok":                 true,
 				"temp_c":                    47,
@@ -1362,7 +1441,7 @@ var (
 				"serial_no": "xxx",
 				"model":     "Samsung SSD 970 EVO 1TB",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": 1290,
 			},
 			time.Now(),
@@ -1374,7 +1453,7 @@ var (
 				"model":     "Samsung SSD 970 EVO 1TB",
 				"name":      "Unsafe_Shutdowns",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": 9,
 			},
 			time.Now(),
@@ -1387,7 +1466,7 @@ var (
 				"serial_no": "xxx",
 				"model":     "Samsung SSD 970 EVO 1TB",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": 10779,
 			},
 			time.Now(),
@@ -1399,7 +1478,7 @@ var (
 				"serial_no": "xxx",
 				"model":     "Samsung SSD 970 EVO 1TB",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": 0,
 			},
 			time.Now(),
@@ -1411,7 +1490,7 @@ var (
 				"serial_no": "xxx",
 				"model":     "Samsung SSD 970 EVO 1TB",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": 979,
 			},
 			time.Now(),
@@ -1423,7 +1502,7 @@ var (
 				"serial_no": "xxx",
 				"model":     "Samsung SSD 970 EVO 1TB",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": 100,
 			},
 			time.Now(),
@@ -1435,7 +1514,7 @@ var (
 				"serial_no": "xxx",
 				"model":     "Samsung SSD 970 EVO 1TB",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": 10,
 			},
 			time.Now(),
@@ -1448,7 +1527,7 @@ var (
 				"serial_no": "xxx",
 				"model":     "Samsung SSD 970 EVO 1TB",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": 47,
 			},
 			time.Now(),
@@ -1460,7 +1539,7 @@ var (
 				"serial_no": "xxx",
 				"model":     "Samsung SSD 970 EVO 1TB",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": int64(0),
 			},
 			time.Now(),
@@ -1472,7 +1551,7 @@ var (
 				"serial_no": "xxx",
 				"model":     "Samsung SSD 970 EVO 1TB",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": int64(0),
 			},
 			time.Now(),
@@ -1484,7 +1563,7 @@ var (
 				"serial_no": "xxx",
 				"model":     "Samsung SSD 970 EVO 1TB",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": int64(16626888),
 			},
 			time.Now(),
@@ -1496,7 +1575,7 @@ var (
 				"serial_no": "xxx",
 				"model":     "Samsung SSD 970 EVO 1TB",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": int64(16829004),
 			},
 			time.Now(),
@@ -1508,7 +1587,7 @@ var (
 				"serial_no": "xxx",
 				"model":     "Samsung SSD 970 EVO 1TB",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": int64(205868508),
 			},
 			time.Now(),
@@ -1520,7 +1599,7 @@ var (
 				"serial_no": "xxx",
 				"model":     "Samsung SSD 970 EVO 1TB",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": int64(228472943),
 			},
 			time.Now(),
@@ -1532,7 +1611,7 @@ var (
 				"serial_no": "xxx",
 				"model":     "Samsung SSD 970 EVO 1TB",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": int64(686),
 			},
 			time.Now(),
@@ -1544,7 +1623,7 @@ var (
 				"serial_no": "xxx",
 				"model":     "Samsung SSD 970 EVO 1TB",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": int64(0),
 			},
 			time.Now(),
@@ -1556,7 +1635,7 @@ var (
 				"model":     "Samsung SSD 970 EVO 1TB",
 				"name":      "Temperature_Sensor_1",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": int64(47),
 			},
 			time.Now(),
@@ -1568,7 +1647,7 @@ var (
 				"model":     "Samsung SSD 970 EVO 1TB",
 				"name":      "Temperature_Sensor_2",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": int64(68),
 			},
 			time.Now(),
@@ -1580,7 +1659,7 @@ var (
 				"model":     "Samsung SSD 970 EVO 1TB",
 				"name":      "Warning_Temperature_Time",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": int64(0),
 			},
 			time.Now(),
@@ -1588,11 +1667,11 @@ var (
 	}
 
 	testsAda0Device = []struct {
-		fields map[string]interface{}
+		fields map[string]any
 		tags   map[string]string
 	}{
 		{
-			map[string]interface{}{
+			map[string]any{
 				"exit_status":               int(0),
 				"health_ok":                 bool(true),
 				"read_error_rate":           int64(0),
@@ -1616,11 +1695,11 @@ var (
 	}
 
 	testsSeagateSATADevice = []struct {
-		fields map[string]interface{}
+		fields map[string]any
 		tags   map[string]string
 	}{
 		{
-			map[string]interface{}{
+			map[string]any{
 				"command_timeout":            int64(0),
 				"end_to_end_error":           int64(0),
 				"exit_status":                int(0),
@@ -1650,11 +1729,11 @@ var (
 	}
 
 	testNVMeDevice = []struct {
-		fields map[string]interface{}
+		fields map[string]any
 		tags   map[string]string
 	}{
 		{
-			map[string]interface{}{
+			map[string]any{
 				"exit_status":               int(0),
 				"temp_c":                    int64(38),
 				"health_ok":                 true,
@@ -1686,7 +1765,7 @@ var (
 				"model":     mockModel,
 				"name":      "Program_Fail_Count",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": 0,
 			},
 			time.Now(),
@@ -1698,7 +1777,7 @@ var (
 				"model":     mockModel,
 				"name":      "Erase_Fail_Count",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": 0,
 			},
 			time.Now(),
@@ -1710,7 +1789,7 @@ var (
 				"model":     mockModel,
 				"name":      "End_To_End_Error_Detection_Count",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": 0,
 			},
 			time.Now(),
@@ -1722,7 +1801,7 @@ var (
 				"model":     mockModel,
 				"name":      "Crc_Error_Count",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": 13,
 			},
 			time.Now(),
@@ -1734,7 +1813,7 @@ var (
 				"model":     mockModel,
 				"name":      "Retry_Buffer_Overflow_Count",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": 0,
 			},
 			time.Now(),
@@ -1746,7 +1825,7 @@ var (
 				"model":     mockModel,
 				"name":      "Wear_Leveling_Min",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": 39,
 			},
 			time.Now(),
@@ -1758,7 +1837,7 @@ var (
 				"model":     mockModel,
 				"name":      "Wear_Leveling_Max",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": 40,
 			},
 			time.Now(),
@@ -1770,7 +1849,7 @@ var (
 				"model":     mockModel,
 				"name":      "Wear_Leveling_Avg",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": 39,
 			},
 			time.Now(),
@@ -1782,7 +1861,7 @@ var (
 				"model":     mockModel,
 				"name":      "Timed_Workload_Media_Wear",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": float64(0.13),
 			},
 			time.Now(),
@@ -1794,7 +1873,7 @@ var (
 				"model":     mockModel,
 				"name":      "Timed_Workload_Host_Reads",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": float64(71),
 			},
 			time.Now(),
@@ -1806,7 +1885,7 @@ var (
 				"model":     mockModel,
 				"name":      "Timed_Workload_Timer",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": int64(1612952),
 			},
 			time.Now(),
@@ -1818,7 +1897,7 @@ var (
 				"model":     mockModel,
 				"name":      "Thermal_Throttle_Status_Prc",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": float64(0),
 			},
 			time.Now(),
@@ -1830,7 +1909,7 @@ var (
 				"model":     mockModel,
 				"name":      "Thermal_Throttle_Status_Cnt",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": int64(0),
 			},
 			time.Now(),
@@ -1842,7 +1921,7 @@ var (
 				"model":     mockModel,
 				"name":      "Pll_Lock_Loss_Count",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": int64(0),
 			},
 			time.Now(),
@@ -1854,7 +1933,7 @@ var (
 				"model":     mockModel,
 				"name":      "Nand_Bytes_Written",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": int64(0),
 			},
 			time.Now(),
@@ -1866,7 +1945,7 @@ var (
 				"model":     mockModel,
 				"name":      "Host_Bytes_Written",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": int64(0),
 			},
 			time.Now(),
@@ -1881,7 +1960,7 @@ var (
 				"model":     mockModel,
 				"name":      "Program_Fail_Count",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": 0,
 			},
 			time.Now(),
@@ -1893,7 +1972,7 @@ var (
 				"model":     mockModel,
 				"name":      "Erase_Fail_Count",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": 0,
 			},
 			time.Now(),
@@ -1905,7 +1984,7 @@ var (
 				"model":     mockModel,
 				"name":      "Wear_Leveling_Count",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": int64(700090417315),
 			},
 			time.Now(),
@@ -1917,7 +1996,7 @@ var (
 				"model":     mockModel,
 				"name":      "End_To_End_Error_Detection_Count",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": 0,
 			},
 			time.Now(),
@@ -1929,7 +2008,7 @@ var (
 				"model":     mockModel,
 				"name":      "Crc_Error_Count",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": 13,
 			},
 			time.Now(),
@@ -1941,7 +2020,7 @@ var (
 				"model":     mockModel,
 				"name":      "Media_Wear_Percentage",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": 552,
 			},
 			time.Now(),
@@ -1953,7 +2032,7 @@ var (
 				"model":     mockModel,
 				"name":      "Host_Reads",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": 73,
 			},
 			time.Now(),
@@ -1965,7 +2044,7 @@ var (
 				"model":     mockModel,
 				"name":      "Timed_Workload_Timer",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": int64(2343038),
 			},
 			time.Now(),
@@ -1977,7 +2056,7 @@ var (
 				"model":     mockModel,
 				"name":      "Thermal_Throttle_Status",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": 0,
 			},
 			time.Now(),
@@ -1989,7 +2068,7 @@ var (
 				"model":     mockModel,
 				"name":      "Retry_Buffer_Overflow_Count",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": 0,
 			},
 			time.Now(),
@@ -2001,7 +2080,7 @@ var (
 				"model":     mockModel,
 				"name":      "Pll_Lock_Loss_Count",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"raw_value": 0,
 			},
 			time.Now(),
@@ -2836,6 +2915,64 @@ ps    0 : mp:25.00W operational enlat:0 exlat:0 rrt:0 rrl:0
           rwt:0 rwl:0 idle_power:- active_power:-
 `
 	// Mock data for standby drive
+	seagateSMRSATAInfoData75 = `smartctl 7.5 2025-04-30 r5714 [x86_64-linux-6.18.12-gentoo] (local build)
+Copyright (C) 2002-25, Bruce Allen, Christian Franke, www.smartmontools.org
+
+=== START OF INFORMATION SECTION ===
+Model Family:     Seagate BarraCuda 3.5 (SMR)
+Device Model:     ST2000DM008-2UB102
+Firmware Version: 0001
+User Capacity:    2,000,398,934,016 bytes [2.00 TB]
+Sector Sizes:     512 bytes logical, 4096 bytes physical
+Rotation Rate:    7200 rpm
+Form Factor:      3.5 inches
+TRIM Command:     Available
+Device is:        In smartctl database 7.5/6204
+ATA Version is:   ACS-3 T13/2161-D revision 5
+SATA Version is:  SATA 3.1, 6.0 Gb/s (current: 6.0 Gb/s)
+Local Time is:    Wed Aug 26 12:14:48 2026 EDT
+SMART support is: Available - device has SMART capability.
+SMART support is: Enabled
+
+=== START OF READ SMART DATA SECTION ===
+SMART overall-health self-assessment test result: PASSED
+
+SMART Attributes Data Structure revision number: 10
+Vendor Specific SMART Attributes with Thresholds:
+ID# ATTRIBUTE_NAME          FLAGS    VALUE WORST THRESH FAIL RAW_VALUE
+  1 Raw_Read_Error_Rate     POSR--   080   066   006    -    0/96644691
+  3 Spin_Up_Time            PO----   099   099   000    -    0
+  4 Start_Stop_Count        -O--CK   100   100   020    -    3
+  5 Reallocated_Sector_Ct   PO--CK   100   100   010    -    0
+  7 Seek_Error_Rate         POSR--   100   253   045    -    0/320294
+  9 Power_On_Hours          -O--CK   100   100   000    -    182h+39m+24.879s
+ 10 Spin_Retry_Count        PO--C-   100   100   097    -    0
+ 12 Power_Cycle_Count       -O--CK   100   100   020    -    3
+183 Runtime_Bad_Block       -O--CK   100   100   000    -    0
+184 End-to-End_Error        -O--CK   100   100   099    -    0
+187 Reported_Uncorrect      -O--CK   100   100   000    -    0
+188 Command_Timeout         -O--CK   100   100   000    -    0 0 0
+189 High_Fly_Writes         -O-RCK   100   100   000    -    0
+190 Airflow_Temperature_Cel -O---K   065   063   040    -    35 (Min/Max 34/37)
+191 G-Sense_Error_Rate      -O--CK   100   100   000    -    0
+192 Power-Off_Retract_Count -O--CK   100   100   000    -    6
+193 Load_Cycle_Count        -O--CK   100   100   000    -    27
+194 Temperature_Celsius     -O---K   035   040   000    -    35 (0 28 0 0 0)
+195 ECC_On_the_Fly_Count    -O-RC-   080   066   000    -    0/96644691
+197 Current_Pending_Sector  -O--C-   100   100   000    -    0
+198 Offline_Uncorrectable   ----C-   100   100   000    -    0
+199 UDMA_CRC_Error_Count    -OSRCK   200   200   000    -    0
+240 Head_Flying_Hours       ------   100   253   000    -    180h+48m+22.033s
+241 Total_LBAs_Written      ------   100   253   000    -    96526512
+242 Total_LBAs_Read         ------   100   253   000    -    118179
+                            ||||||_ K auto-keep
+                            |||||__ C event count
+                            ||||___ R error rate
+                            |||____ S speed/performance
+                            ||_____ O updated online
+                            |______ P prefailure warning
+`
+
 	mockStandbyData = `smartctl 7.4 2023-08-01 r5530 [x86_64-linux-6.12.24-Unraid] (local build)
 Copyright (C) 2002-23, Bruce Allen, Christian Franke, www.smartmontools.org
 

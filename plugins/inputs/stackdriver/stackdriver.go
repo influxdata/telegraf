@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"maps"
 	"math"
 	"strconv"
 	"strings"
@@ -425,15 +426,11 @@ func (s *Stackdriver) gatherTimeSeries(ctx context.Context, grouper *lockedSerie
 	}
 
 	for tsDesc := range tsRespChan {
-		tags := map[string]string{
-			"resource_type": tsDesc.Resource.Type,
-		}
-		for k, v := range tsDesc.Resource.Labels {
-			tags[k] = v
-		}
-		for k, v := range tsDesc.Metric.Labels {
-			tags[k] = v
-		}
+		// Set the type first so labels can override it
+		tags := make(map[string]string, len(tsDesc.Resource.Labels)+len(tsDesc.Metric.Labels)+1)
+		tags["resource_type"] = tsDesc.Resource.Type
+		maps.Copy(tags, tsDesc.Resource.Labels)
+		maps.Copy(tags, tsDesc.Metric.Labels)
 
 		for _, p := range tsDesc.Points {
 			ts := time.Unix(p.Interval.EndTime.Seconds, 0)
@@ -444,7 +441,7 @@ func (s *Stackdriver) gatherTimeSeries(ctx context.Context, grouper *lockedSerie
 					return err
 				}
 			} else {
-				var value interface{}
+				var value any
 
 				// Types that are valid to be assigned to Value
 				// See: https://godoc.org/google.golang.org/genproto/googleapis/monitoring/v3#TypedValue
@@ -489,9 +486,8 @@ func addDistribution(dist *distributionpb.Distribution, tags map[string]string, 
 	}
 	numBuckets := bucket.amount()
 
-	var i int32
 	var count int64
-	for i = 0; i < numBuckets; i++ {
+	for i := range numBuckets {
 		// The last bucket is the overflow bucket, and includes all values
 		// greater than the previous bound.
 		if i == numBuckets-1 {
@@ -513,7 +509,7 @@ func addDistribution(dist *distributionpb.Distribution, tags map[string]string, 
 }
 
 // Add adds a field key and value to the series.
-func (g *lockedSeriesGrouper) Add(measurement string, tags map[string]string, tm time.Time, field string, fieldValue interface{}) {
+func (g *lockedSeriesGrouper) Add(measurement string, tags map[string]string, tm time.Time, field string, fieldValue any) {
 	g.Lock()
 	defer g.Unlock()
 	g.SeriesGrouper.Add(measurement, tags, tm, field, fieldValue)

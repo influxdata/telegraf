@@ -6,28 +6,28 @@ import (
 )
 
 type JSONFlattener struct {
-	Fields map[string]interface{}
+	Fields map[string]any
 }
 
 // FlattenJSON flattens nested maps/interfaces into a fields map (ignoring bools and string)
 func (f *JSONFlattener) FlattenJSON(
 	fieldname string,
-	v interface{}) error {
+	v any) error {
 	if f.Fields == nil {
-		f.Fields = make(map[string]interface{})
+		f.Fields = make(map[string]any)
 	}
 
 	return f.FullFlattenJSON(fieldname, v, false, false)
 }
 
 // FullFlattenJSON flattens nested maps/interfaces into a fields map (including bools and string)
-func (f *JSONFlattener) FullFlattenJSON(fieldName string, v interface{}, convertString, convertBool bool) error {
+func (f *JSONFlattener) FullFlattenJSON(fieldName string, v any, convertString, convertBool bool) error {
 	if f.Fields == nil {
-		f.Fields = make(map[string]interface{})
+		f.Fields = make(map[string]any)
 	}
 
 	switch t := v.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		for fieldKey, fieldVal := range t {
 			if fieldName != "" {
 				fieldKey = fieldName + "_" + fieldKey
@@ -38,7 +38,7 @@ func (f *JSONFlattener) FullFlattenJSON(fieldName string, v interface{}, convert
 				return err
 			}
 		}
-	case []interface{}:
+	case []any:
 		for i, fieldVal := range t {
 			fieldKey := strconv.Itoa(i)
 			if fieldName != "" {

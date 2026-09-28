@@ -136,9 +136,7 @@ func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
 	m.sem = make(semaphore, m.MaxUndeliveredMessages)
 	m.ctx, m.cancel = context.WithCancel(context.Background())
 
-	m.wg.Add(1)
-	go func() {
-		defer m.wg.Done()
+	m.wg.Go(func() {
 		for {
 			select {
 			case <-m.ctx.Done():
@@ -147,7 +145,7 @@ func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
 				m.onDelivered(track)
 			}
 		}
-	}()
+	})
 
 	if err := m.connect(); err != nil {
 		m.Stop()

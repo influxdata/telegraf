@@ -154,8 +154,8 @@ func aggregateStats(totalStatus *cacheStatus, status cacheStatus) {
 	totalStatus.dirty += status.dirty
 }
 
-func toFields(status cacheStatus) map[string]interface{} {
-	fields := make(map[string]interface{})
+func toFields(status cacheStatus) map[string]any {
+	fields := make(map[string]any)
 	fields["length"] = status.length
 	fields["metadata_blocksize"] = status.metadataBlocksize
 	fields["metadata_used"] = status.metadataUsed

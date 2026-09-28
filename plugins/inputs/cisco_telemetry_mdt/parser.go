@@ -20,7 +20,7 @@ type parser struct {
 	includeDelete bool
 	aliases       map[string]string
 	extraTags     map[string]map[string]bool
-	propMap       map[string]func(*telemetry.TelemetryField) interface{}
+	propMap       map[string]func(*telemetry.TelemetryField) any
 	nxpathMap     map[string]map[string]string // per path map
 
 	log telegraf.Logger
@@ -37,7 +37,7 @@ type state struct {
 	isEvent     bool
 
 	extraTags map[string]map[string]bool
-	propMap   map[string]func(*telemetry.TelemetryField) interface{}
+	propMap   map[string]func(*telemetry.TelemetryField) any
 	nxpathMap map[string]string // per path map
 
 	grouper *metric.SeriesGrouper
@@ -48,7 +48,7 @@ func newParser(includeDelete bool, aliases, dmes map[string]string, embeddedTags
 		includeDelete: includeDelete,
 		aliases:       make(map[string]string, len(aliases)),
 		extraTags:     make(map[string]map[string]bool),
-		propMap:       make(map[string]func(field *telemetry.TelemetryField) interface{}, len(dmes)+4),
+		propMap:       make(map[string]func(field *telemetry.TelemetryField) any, len(dmes)+4),
 		nxpathMap:     createDatabase(),
 		warned:        make(map[string]bool),
 		log:           log,
@@ -111,7 +111,7 @@ func newParser(includeDelete bool, aliases, dmes map[string]string, embeddedTags
 	return p
 }
 
-func (s *parser) parse(
+func (p *parser) parse(
 	grouper *metric.SeriesGrouper,
 	content *telemetry.TelemetryField,
 	encodingPath string,
@@ -121,15 +121,15 @@ func (s *parser) parse(
 ) []error {
 	// Do alias lookup, to shorten measurement names
 	measurement := encodingPath
-	if alias, ok := s.aliases[encodingPath]; ok {
+	if alias, ok := p.aliases[encodingPath]; ok {
 		measurement = alias
 	} else {
-		s.Lock()
-		if !s.warned[encodingPath] {
-			s.log.Debugf("No measurement alias for encoding path: %s", encodingPath)
-			s.warned[encodingPath] = true
+		p.Lock()
+		if !p.warned[encodingPath] {
+			p.log.Debugf("No measurement alias for encoding path: %s", encodingPath)
+			p.warned[encodingPath] = true
 		}
-		s.Unlock()
+		p.Unlock()
 	}
 
 	// Determine what OS we are on and if the message encodes events
@@ -144,9 +144,9 @@ func (s *parser) parse(
 		tagPrefix:   strings.ReplaceAll(encodingPath, "-", "_") + "/",
 		isNXOS:      isNXOS,
 		isEvent:     isEvent,
-		extraTags:   s.extraTags,
-		propMap:     s.propMap,
-		nxpathMap:   s.nxpathMap[encodingPath],
+		extraTags:   p.extraTags,
+		propMap:     p.propMap,
+		nxpathMap:   p.nxpathMap[encodingPath],
 		grouper:     grouper,
 	}
 
@@ -172,7 +172,7 @@ func (s *parser) parse(
 	}
 
 	// Add a delete field if configured
-	if s.includeDelete {
+	if p.includeDelete {
 		grouper.Add(measurement, tags, timestamp, "delete", isDeleted)
 	}
 
@@ -431,7 +431,7 @@ func (s *state) parseRib(fields []*telemetry.TelemetryField, parentTags map[stri
 	// values to the correct series through the series grouper
 	var nextHopFields []*telemetry.TelemetryField
 	tags := maps.Clone(parentTags)
-	metricFields := make(map[string]interface{}, len(fields))
+	metricFields := make(map[string]any, len(fields))
 	for _, subfield := range fields {
 		switch subfield.Name {
 		case "vrfName", "address", "maskLen":
@@ -489,7 +489,7 @@ func (s *state) parseMicroburst(fields []*telemetry.TelemetryField, parentTags m
 
 		// Collect the tags and metricFields first as the tags must be complete for
 		// assigning the  field values to the correct series
-		metricFields := make(map[string]interface{}, len(subfield.Fields))
+		metricFields := make(map[string]any, len(subfield.Fields))
 		for _, subf := range subfield.Fields {
 			switch subf.Name {
 			case "sourceName":

@@ -50,11 +50,11 @@ type StatefulPlugin interface {
 	// your plugin.
 	// Note: This function has to be callable directly after the
 	// plugin's Init() function if there is any!
-	GetState() interface{}
+	GetState() any
 
 	// SetState is called by the Persister once after loading and
 	// initialization (after Init() function).
-	SetState(state interface{}) error
+	SetState(state any) error
 }
 
 // ProbePlugin is an interface that all input/output plugins need to

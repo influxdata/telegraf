@@ -71,7 +71,7 @@ func (b *bridge) processLights(ctx context.Context, acc telegraf.Accumulator) er
 			"room":      b.resolveResourceRoom(light.Id, light.Metadata.Name),
 			"device":    light.Metadata.Name,
 		}
-		fields := make(map[string]interface{}, 5)
+		fields := make(map[string]any, 5)
 		if light.On.On {
 			fields["on"] = 1
 		} else {
@@ -111,7 +111,7 @@ func (b *bridge) processTemperatures(ctx context.Context, acc telegraf.Accumulat
 			"device":    temperatureName,
 			"enabled":   strconv.FormatBool(temperature.Enabled),
 		}
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"temperature": *temperature.Temperature.TemperatureReport.Temperature,
 		}
 		acc.AddGauge("huebridge_temperature", fields, tags)
@@ -136,7 +136,7 @@ func (b *bridge) processLightLevels(ctx context.Context, acc telegraf.Accumulato
 			"device":    lightLevelName,
 			"enabled":   strconv.FormatBool(lightLevel.Enabled),
 		}
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"light_level":     *lightLevel.Light.LightLevelReport.LightLevel,
 			"light_level_lux": math.Pow(10.0, (float64(*lightLevel.Light.LightLevelReport.LightLevel)-1.0)/10000.0),
 		}
@@ -162,7 +162,7 @@ func (b *bridge) processMotionSensors(ctx context.Context, acc telegraf.Accumula
 			"device":    motionSensorName,
 			"enabled":   strconv.FormatBool(motionSensor.Enabled),
 		}
-		fields := make(map[string]interface{}, 1)
+		fields := make(map[string]any, 1)
 		if *motionSensor.Motion.MotionReport.Motion {
 			fields["motion"] = 1
 		} else {
@@ -192,7 +192,7 @@ func (b *bridge) processDevicePowers(ctx context.Context, acc telegraf.Accumulat
 			"room":      b.resolveResourceRoom(devicePower.Id, devicePowerName),
 			"device":    devicePowerName,
 		}
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"battery_level": *devicePower.PowerState.BatteryLevel,
 			"battery_state": *devicePower.PowerState.BatteryState,
 		}

@@ -23,7 +23,7 @@ var sampleChecks = []*api.HealthCheck{
 }
 
 func TestGatherHealthCheck(t *testing.T) {
-	expectedFields := map[string]interface{}{
+	expectedFields := map[string]any{
 		"check_name": "foo.health",
 		"status":     "passing",
 		"passing":    1,
@@ -50,7 +50,7 @@ func TestGatherHealthCheck(t *testing.T) {
 }
 
 func TestGatherHealthCheckWithDelimitedTags(t *testing.T) {
-	expectedFields := map[string]interface{}{
+	expectedFields := map[string]any{
 		"check_name": "foo.health",
 		"status":     "passing",
 		"passing":    1,
@@ -79,7 +79,7 @@ func TestGatherHealthCheckWithDelimitedTags(t *testing.T) {
 }
 
 func TestGatherHealthCheckV2(t *testing.T) {
-	expectedFields := map[string]interface{}{
+	expectedFields := map[string]any{
 		"passing":  1,
 		"critical": 0,
 		"warning":  0,
@@ -108,7 +108,7 @@ func TestGatherHealthCheckV2(t *testing.T) {
 }
 
 func TestGatherHealthCheckWithDelimitedTagsV2(t *testing.T) {
-	expectedFields := map[string]interface{}{
+	expectedFields := map[string]any{
 		"passing":  1,
 		"critical": 0,
 		"warning":  0,

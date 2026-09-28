@@ -7,6 +7,7 @@ import (
 	_ "embed"
 	"fmt"
 	"io"
+	"maps"
 	"net/url"
 	"reflect"
 	"regexp"
@@ -44,14 +45,14 @@ type Redis struct {
 
 	Log telegraf.Logger `toml:"-"`
 
-	clients   []client
+	clients   []*redisClient
 	connected bool
 }
 
 type redisCommand struct {
-	Command []interface{} `toml:"command"`
-	Field   string        `toml:"field"`
-	Type    string        `toml:"type"`
+	Command []any  `toml:"command"`
+	Field   string `toml:"field"`
+	Type    string `toml:"type"`
 }
 
 type redisClient struct {
@@ -171,9 +172,8 @@ type redisFieldTypes struct {
 }
 
 type client interface {
-	do(returnType string, args ...interface{}) (interface{}, error)
+	do(returnType string, args ...any) (any, error)
 	info() *redis.StringCmd
-	baseTags() map[string]string
 	close() error
 }
 
@@ -207,10 +207,11 @@ func (r *Redis) Gather(acc telegraf.Accumulator) error {
 
 	for _, cl := range r.clients {
 		wg.Add(1)
-		go func(client client) {
+		go func(client *redisClient) {
 			defer wg.Done()
-			acc.AddError(gatherServer(client, acc))
-			acc.AddError(r.gatherCommandValues(client, acc))
+			// Copy the tags as gathering the info adds tags to the map
+			acc.AddError(gatherServer(client, maps.Clone(client.tags), acc))
+			acc.AddError(r.gatherCommandValues(client, client.tags, acc))
 		}(cl)
 	}
 
@@ -237,7 +238,7 @@ func (r *Redis) connect() error {
 		r.Servers = []string{"tcp://localhost:6379"}
 	}
 
-	r.clients = make([]client, 0, len(r.Servers))
+	r.clients = make([]*redisClient, 0, len(r.Servers))
 	for _, serv := range r.Servers {
 		if !strings.HasPrefix(serv, "tcp://") && !strings.HasPrefix(serv, "unix://") {
 			r.Log.Warn("Server URL found without scheme; please update your configuration file")
@@ -306,8 +307,8 @@ func (r *Redis) connect() error {
 	return nil
 }
 
-func (r *Redis) gatherCommandValues(client client, acc telegraf.Accumulator) error {
-	fields := make(map[string]interface{})
+func (r *Redis) gatherCommandValues(client client, tags map[string]string, acc telegraf.Accumulator) error {
+	fields := make(map[string]any)
 	for _, command := range r.Commands {
 		val, err := client.do(command.Type, command.Command...)
 		if err != nil {
@@ -321,12 +322,12 @@ func (r *Redis) gatherCommandValues(client client, acc telegraf.Accumulator) err
 		fields[command.Field] = val
 	}
 
-	acc.AddFields("redis_commands", fields, client.baseTags())
+	acc.AddFields("redis_commands", fields, tags)
 
 	return nil
 }
 
-func (r *redisClient) do(returnType string, args ...interface{}) (interface{}, error) {
+func (r *redisClient) do(returnType string, args ...any) (any, error) {
 	rawVal := r.client.Do(context.Background(), args...)
 
 	switch returnType {
@@ -345,26 +346,18 @@ func (r *redisClient) info() *redis.StringCmd {
 	return r.client.Info(context.Background(), "ALL")
 }
 
-func (r *redisClient) baseTags() map[string]string {
-	tags := make(map[string]string)
-	for k, v := range r.tags {
-		tags[k] = v
-	}
-	return tags
-}
-
 func (r *redisClient) close() error {
 	return r.client.Close()
 }
 
-func gatherServer(client client, acc telegraf.Accumulator) error {
+func gatherServer(client client, tags map[string]string, acc telegraf.Accumulator) error {
 	info, err := client.info().Result()
 	if err != nil {
 		return err
 	}
 
 	rdr := strings.NewReader(info)
-	return gatherInfoOutput(rdr, acc, client.baseTags())
+	return gatherInfoOutput(rdr, acc, tags)
 }
 
 func gatherInfoOutput(rdr io.Reader, acc telegraf.Accumulator, tags map[string]string) error {
@@ -372,7 +365,7 @@ func gatherInfoOutput(rdr io.Reader, acc telegraf.Accumulator, tags map[string]s
 	var keyspaceHits, keyspaceMisses int64
 
 	scanner := bufio.NewScanner(rdr)
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	for scanner.Scan() {
 		line := scanner.Text()
 
@@ -500,14 +493,11 @@ func gatherInfoOutput(rdr io.Reader, acc telegraf.Accumulator, tags map[string]s
 // And there is one for each db on the redis instance
 func gatherKeyspaceLine(name, line string, acc telegraf.Accumulator, globalTags map[string]string) {
 	if strings.Contains(line, "keys=") {
-		fields := make(map[string]interface{})
-		tags := make(map[string]string)
-		for k, v := range globalTags {
-			tags[k] = v
-		}
+		fields := make(map[string]any)
+		tags := make(map[string]string, len(globalTags)+1)
+		maps.Copy(tags, globalTags)
 		tags["database"] = name
-		dbparts := strings.Split(line, ",")
-		for _, dbp := range dbparts {
+		for dbp := range strings.SplitSeq(line, ",") {
 			kv := strings.Split(dbp, "=")
 			ival, err := strconv.ParseInt(kv[1], 10, 64)
 			if err == nil {
@@ -529,14 +519,11 @@ func gatherCommandStateLine(name, line string, acc telegraf.Accumulator, globalT
 		return
 	}
 
-	fields := make(map[string]interface{})
-	tags := make(map[string]string)
-	for k, v := range globalTags {
-		tags[k] = v
-	}
+	fields := make(map[string]any)
+	tags := make(map[string]string, len(globalTags)+1)
+	maps.Copy(tags, globalTags)
 	tags["command"] = strings.TrimPrefix(name, "cmdstat_")
-	parts := strings.Split(line, ",")
-	for _, part := range parts {
+	for part := range strings.SplitSeq(line, ",") {
 		kv := strings.Split(part, "=")
 		if len(kv) != 2 {
 			continue
@@ -571,14 +558,11 @@ func gatherLatencyStatsLine(name, line string, acc telegraf.Accumulator, globalT
 		return
 	}
 
-	fields := make(map[string]interface{})
-	tags := make(map[string]string)
-	for k, v := range globalTags {
-		tags[k] = v
-	}
+	fields := make(map[string]any)
+	tags := make(map[string]string, len(globalTags)+1)
+	maps.Copy(tags, globalTags)
 	tags["command"] = strings.TrimPrefix(name, "latency_percentiles_usec_")
-	parts := strings.Split(line, ",")
-	for _, part := range parts {
+	for part := range strings.SplitSeq(line, ",") {
 		kv := strings.Split(part, "=")
 		if len(kv) != 2 {
 			continue
@@ -602,17 +586,14 @@ func gatherLatencyStatsLine(name, line string, acc telegraf.Accumulator, globalT
 //
 // This line will only be visible when a node has a replica attached.
 func gatherReplicationLine(name, line string, acc telegraf.Accumulator, globalTags map[string]string) {
-	fields := make(map[string]interface{})
-	tags := make(map[string]string)
-	for k, v := range globalTags {
-		tags[k] = v
-	}
+	fields := make(map[string]any)
+	tags := make(map[string]string, len(globalTags)+2)
+	maps.Copy(tags, globalTags)
 
 	tags["replica_id"] = strings.TrimLeft(name, "slave")
 	tags["replication_role"] = "slave"
 
-	parts := strings.Split(line, ",")
-	for _, part := range parts {
+	for part := range strings.SplitSeq(line, ",") {
 		kv := strings.Split(part, "=")
 		if len(kv) != 2 {
 			continue
@@ -643,9 +624,7 @@ func gatherReplicationLine(name, line string, acc telegraf.Accumulator, globalTa
 // errorstat_MOVED:count=3626
 func gatherErrorStatsLine(name, line string, acc telegraf.Accumulator, globalTags map[string]string) {
 	tags := make(map[string]string, len(globalTags)+1)
-	for k, v := range globalTags {
-		tags[k] = v
-	}
+	maps.Copy(tags, globalTags)
 	tags["err"] = strings.TrimPrefix(name, "errorstat_")
 	kv := strings.Split(line, "=")
 	if len(kv) < 2 {
@@ -658,11 +637,11 @@ func gatherErrorStatsLine(name, line string, acc telegraf.Accumulator, globalTag
 		return
 	}
 
-	fields := map[string]interface{}{"total": ival}
+	fields := map[string]any{"total": ival}
 	acc.AddFields("redis_errorstat", fields, tags)
 }
 
-func setExistingFieldsFromStruct(fields map[string]interface{}, o *redisFieldTypes) {
+func setExistingFieldsFromStruct(fields map[string]any, o *redisFieldTypes) {
 	val := reflect.ValueOf(o).Elem()
 	typ := val.Type()
 
@@ -680,7 +659,7 @@ func setExistingFieldsFromStruct(fields map[string]interface{}, o *redisFieldTyp
 	}
 }
 
-func setStructFieldsFromObject(fields map[string]interface{}, o *redisFieldTypes) {
+func setStructFieldsFromObject(fields map[string]any, o *redisFieldTypes) {
 	val := reflect.ValueOf(o).Elem()
 	typ := val.Type()
 
@@ -699,7 +678,7 @@ func setStructFieldsFromObject(fields map[string]interface{}, o *redisFieldTypes
 	}
 }
 
-func coerceType(value interface{}, typ reflect.Type) reflect.Value {
+func coerceType(value any, typ reflect.Type) reflect.Value {
 	switch sourceType := value.(type) {
 	case bool:
 		switch typ.Kind() {

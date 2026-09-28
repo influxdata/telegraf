@@ -33,7 +33,7 @@ func NewAccumulator(
 
 func (ac *accumulator) AddFields(
 	measurement string,
-	fields map[string]interface{},
+	fields map[string]any,
 	tags map[string]string,
 	t ...time.Time,
 ) {
@@ -42,7 +42,7 @@ func (ac *accumulator) AddFields(
 
 func (ac *accumulator) AddGauge(
 	measurement string,
-	fields map[string]interface{},
+	fields map[string]any,
 	tags map[string]string,
 	t ...time.Time,
 ) {
@@ -51,7 +51,7 @@ func (ac *accumulator) AddGauge(
 
 func (ac *accumulator) AddCounter(
 	measurement string,
-	fields map[string]interface{},
+	fields map[string]any,
 	tags map[string]string,
 	t ...time.Time,
 ) {
@@ -60,7 +60,7 @@ func (ac *accumulator) AddCounter(
 
 func (ac *accumulator) AddSummary(
 	measurement string,
-	fields map[string]interface{},
+	fields map[string]any,
 	tags map[string]string,
 	t ...time.Time,
 ) {
@@ -69,7 +69,7 @@ func (ac *accumulator) AddSummary(
 
 func (ac *accumulator) AddHistogram(
 	measurement string,
-	fields map[string]interface{},
+	fields map[string]any,
 	tags map[string]string,
 	t ...time.Time,
 ) {
@@ -86,7 +86,7 @@ func (ac *accumulator) AddMetric(m telegraf.Metric) {
 func (ac *accumulator) addMeasurement(
 	measurement string,
 	tags map[string]string,
-	fields map[string]interface{},
+	fields map[string]any,
 	tp telegraf.ValueType,
 	t ...time.Time,
 ) {

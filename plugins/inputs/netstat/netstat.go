@@ -44,7 +44,7 @@ func (ns *NetStat) Gather(acc telegraf.Accumulator) error {
 		counts[netcon.Status] = c + 1
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"tcp_established": counts["ESTABLISHED"],
 		"tcp_syn_sent":    counts["SYN_SENT"],
 		"tcp_syn_recv":    counts["SYN_RECV"],

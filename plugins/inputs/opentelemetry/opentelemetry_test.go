@@ -21,6 +21,9 @@ import (
 	otlpmetrics "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	otlpprofiles "go.opentelemetry.io/proto/otlp/collector/profiles/v1development"
 	otlptrace "go.opentelemetry.io/proto/otlp/collector/trace/v1"
+	common "go.opentelemetry.io/proto/otlp/common/v1"
+	profiles "go.opentelemetry.io/proto/otlp/profiles/v1development"
+	resource "go.opentelemetry.io/proto/otlp/resource/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -95,7 +98,7 @@ func TestOpenTelemetry(t *testing.T) {
 				"telemetry.sdk.name":     "opentelemetry",
 				"telemetry.sdk.version":  "1.27.0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"counter": 7,
 			},
 			time.Unix(0, 0),
@@ -254,4 +257,207 @@ func TestCases(t *testing.T) {
 			testutil.RequireMetricsEqual(t, expected, actual, options...)
 		})
 	}
+}
+
+func TestMalformedProfileExportDoesntPanic(t *testing.T) {
+	tests := []struct {
+		name    string
+		message *otlpprofiles.ExportProfilesServiceRequest
+	}{
+		{
+			name: "nil resource profile",
+			message: &otlpprofiles.ExportProfilesServiceRequest{
+				ResourceProfiles: []*profiles.ResourceProfiles{nil},
+			},
+		},
+		{
+			name: "nil resource",
+			message: profileRequest(func(r *otlpprofiles.ExportProfilesServiceRequest) {
+				r.ResourceProfiles[0].Resource = nil
+			}),
+		},
+		{
+			name: "nil dictionary",
+			message: profileRequest(func(r *otlpprofiles.ExportProfilesServiceRequest) {
+				r.Dictionary = nil
+			}),
+		},
+		{
+			name: "stack index",
+			message: profileRequest(func(r *otlpprofiles.ExportProfilesServiceRequest) {
+				r.ResourceProfiles[0].ScopeProfiles[0].Profiles[0].Samples[0].StackIndex = 999
+			}),
+		},
+		{
+			name: "negative stack index",
+			message: profileRequest(func(r *otlpprofiles.ExportProfilesServiceRequest) {
+				r.ResourceProfiles[0].ScopeProfiles[0].Profiles[0].Samples[0].StackIndex = -1
+			}),
+		},
+		{
+			name: "location index",
+			message: profileRequest(func(r *otlpprofiles.ExportProfilesServiceRequest) {
+				r.Dictionary.StackTable[0].LocationIndices = []int32{999}
+			}),
+		},
+		{
+			name: "function index",
+			message: profileRequest(func(r *otlpprofiles.ExportProfilesServiceRequest) {
+				r.Dictionary.LocationTable[0].Lines[0].FunctionIndex = 999
+			}),
+		},
+		{
+			name: "function filename index",
+			message: profileRequest(func(r *otlpprofiles.ExportProfilesServiceRequest) {
+				r.Dictionary.FunctionTable[0].FilenameStrindex = 999
+			}),
+		},
+		{
+			name: "function name index",
+			message: profileRequest(func(r *otlpprofiles.ExportProfilesServiceRequest) {
+				r.Dictionary.FunctionTable[0].NameStrindex = 999
+			}),
+		},
+		{
+			name: "nil period type",
+			message: profileRequest(func(r *otlpprofiles.ExportProfilesServiceRequest) {
+				r.ResourceProfiles[0].ScopeProfiles[0].Profiles[0].PeriodType = nil
+			}),
+		},
+		{
+			name: "period type index",
+			message: profileRequest(func(r *otlpprofiles.ExportProfilesServiceRequest) {
+				r.ResourceProfiles[0].ScopeProfiles[0].Profiles[0].PeriodType.TypeStrindex = 999
+			}),
+		},
+		{
+			name: "period unit index",
+			message: profileRequest(func(r *otlpprofiles.ExportProfilesServiceRequest) {
+				r.ResourceProfiles[0].ScopeProfiles[0].Profiles[0].PeriodType.UnitStrindex = 999
+			}),
+		},
+		{
+			name: "nil sample type",
+			message: profileRequest(func(r *otlpprofiles.ExportProfilesServiceRequest) {
+				r.ResourceProfiles[0].ScopeProfiles[0].Profiles[0].SampleType = nil
+			}),
+		},
+		{
+			name: "sample type index",
+			message: profileRequest(func(r *otlpprofiles.ExportProfilesServiceRequest) {
+				r.ResourceProfiles[0].ScopeProfiles[0].Profiles[0].SampleType.TypeStrindex = 999
+			}),
+		},
+		{
+			name: "sample unit index",
+			message: profileRequest(func(r *otlpprofiles.ExportProfilesServiceRequest) {
+				r.ResourceProfiles[0].ScopeProfiles[0].Profiles[0].SampleType.UnitStrindex = 999
+			}),
+		},
+		{
+			name: "mapping index",
+			message: profileRequest(func(r *otlpprofiles.ExportProfilesServiceRequest) {
+				r.Dictionary.LocationTable[0].MappingIndex = 999
+			}),
+		},
+		{
+			name: "mapping filename index",
+			message: profileRequest(func(r *otlpprofiles.ExportProfilesServiceRequest) {
+				r.Dictionary.MappingTable[1].FilenameStrindex = 999
+			}),
+		},
+		{
+			name: "attribute index",
+			message: profileRequest(func(r *otlpprofiles.ExportProfilesServiceRequest) {
+				r.ResourceProfiles[0].ScopeProfiles[0].Profiles[0].Samples[0].AttributeIndices = []int32{999}
+			}),
+		},
+		{
+			name: "attribute key index",
+			message: profileRequest(func(r *otlpprofiles.ExportProfilesServiceRequest) {
+				r.Dictionary.AttributeTable[0].KeyStrindex = 999
+			}),
+		},
+		{
+			name: "nil attribute value",
+			message: profileRequest(func(r *otlpprofiles.ExportProfilesServiceRequest) {
+				r.Dictionary.AttributeTable[0].Value = nil
+			}),
+		},
+		{
+			name: "missing timestamps",
+			message: profileRequest(func(r *otlpprofiles.ExportProfilesServiceRequest) {
+				r.ResourceProfiles[0].ScopeProfiles[0].Profiles[0].Samples[0].Values = []int64{42, 23}
+			}),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup the service directly instead of going through gRPC so a
+			// panic happens in the test goroutine and can be caught
+			var acc testutil.Accumulator
+			service, err := newProfileService(&acc, &testutil.Logger{Quiet: true}, nil)
+			require.NoError(t, err)
+
+			// Send a profile with invalid references into the dictionary tables
+			require.NotPanics(t, func() {
+				_, err := service.Export(t.Context(), tt.message)
+				require.NoError(t, err)
+			})
+		})
+	}
+}
+
+// profileRequest creates a valid profile request with all dictionary references
+// resolvable and applies the given modification(s) to break a single reference
+func profileRequest(modify ...func(*otlpprofiles.ExportProfilesServiceRequest)) *otlpprofiles.ExportProfilesServiceRequest {
+	req := &otlpprofiles.ExportProfilesServiceRequest{
+		ResourceProfiles: []*profiles.ResourceProfiles{
+			{
+				Resource: &resource.Resource{},
+				ScopeProfiles: []*profiles.ScopeProfiles{
+					{
+						Profiles: []*profiles.Profile{
+							{
+								SampleType: &profiles.ValueType{TypeStrindex: 3, UnitStrindex: 4},
+								PeriodType: &profiles.ValueType{TypeStrindex: 3, UnitStrindex: 4},
+								Samples: []*profiles.Sample{
+									{
+										StackIndex:         0,
+										AttributeIndices:   []int32{0},
+										Values:             []int64{42},
+										TimestampsUnixNano: []uint64{1234567890},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dictionary: &profiles.ProfilesDictionary{
+			MappingTable: []*profiles.Mapping{{}, {FilenameStrindex: 1}},
+			LocationTable: []*profiles.Location{
+				{
+					MappingIndex: 1,
+					Lines:        []*profiles.Line{{FunctionIndex: 0}},
+				},
+			},
+			FunctionTable: []*profiles.Function{{NameStrindex: 2, FilenameStrindex: 1, StartLine: 1}},
+			StringTable:   []string{"", "main.go", "main", "cpu", "nanoseconds", "thread"},
+			AttributeTable: []*profiles.KeyValueAndUnit{
+				{
+					KeyStrindex: 5,
+					Value:       &common.AnyValue{Value: &common.AnyValue_StringValue{StringValue: "worker"}},
+				},
+			},
+			StackTable: []*profiles.Stack{{LocationIndices: []int32{0}}},
+		},
+	}
+	for _, mod := range modify {
+		mod(req)
+	}
+
+	return req
 }

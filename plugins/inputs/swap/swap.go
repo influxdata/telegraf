@@ -27,13 +27,13 @@ func (ss *Swap) Gather(acc telegraf.Accumulator) error {
 		return fmt.Errorf("error getting swap memory info: %w", err)
 	}
 
-	fieldsG := map[string]interface{}{
+	fieldsG := map[string]any{
 		"total":        swap.Total,
 		"used":         swap.Used,
 		"free":         swap.Free,
 		"used_percent": swap.UsedPercent,
 	}
-	fieldsC := map[string]interface{}{
+	fieldsC := map[string]any{
 		"in":  swap.Sin,
 		"out": swap.Sout,
 	}

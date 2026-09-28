@@ -69,7 +69,7 @@ func TestEventPayload(t *testing.T) {
 	resp := post(t, pt, contentType, form.Encode())
 	require.Equal(t, http.StatusOK, resp.Code)
 
-	fields1 := map[string]interface{}{
+	fields1 := map[string]any{
 		"count":       uint64(1),
 		"id":          int64(7711561783320576),
 		"source_ip":   "208.75.57.121",
@@ -83,7 +83,7 @@ func TestEventPayload(t *testing.T) {
 		"search_id":   int64(42),
 	}
 
-	fields2 := map[string]interface{}{
+	fields2 := map[string]any{
 		"count":       uint64(1),
 		"id":          int64(7711562567655424),
 		"source_ip":   "208.75.57.120",
@@ -118,10 +118,10 @@ func TestCountPayload(t *testing.T) {
 	resp := post(t, pt, contentType, form.Encode())
 	require.Equal(t, http.StatusOK, resp.Code)
 
-	fields1 := map[string]interface{}{
+	fields1 := map[string]any{
 		"count": uint64(5),
 	}
-	fields2 := map[string]interface{}{
+	fields2 := map[string]any{
 		"count": uint64(3),
 	}
 

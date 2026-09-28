@@ -54,8 +54,7 @@ func (r *reader) Read(p []byte) (int, error) {
 		r.offset++
 		if err != nil {
 			r.buf.Reset()
-			var mErr *metricError
-			if errors.As(err, &mErr) {
+			if _, ok := errors.AsType[*metricError](err); ok {
 				continue
 			}
 			// Since we are serializing multiple metrics, don't fail the

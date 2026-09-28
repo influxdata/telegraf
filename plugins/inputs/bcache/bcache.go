@@ -113,7 +113,7 @@ func gatherBcache(bdev string, acc telegraf.Accumulator) error {
 	rawValue := strings.TrimSpace(string(file))
 	value := prettyToBytes(rawValue)
 
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	fields["dirty_data"] = value
 
 	for _, path := range metrics {

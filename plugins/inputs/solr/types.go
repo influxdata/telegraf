@@ -37,7 +37,7 @@ type core struct {
 
 // queryHandler is an exported type that contains query handler metrics
 type queryHandler struct {
-	Stats interface{} `json:"stats"`
+	Stats any `json:"stats"`
 }
 
 // updateHandler is an exported type that contains update handler metrics
@@ -65,5 +65,5 @@ type updateHandler struct {
 
 // cache is an exported type that contains cache metrics
 type cache struct {
-	Stats map[string]interface{} `json:"stats"`
+	Stats map[string]any `json:"stats"`
 }

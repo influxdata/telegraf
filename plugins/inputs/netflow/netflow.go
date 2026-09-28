@@ -105,11 +105,9 @@ func (n *NetFlow) Start(acc telegraf.Accumulator) error {
 	}
 	n.Log.Infof("Listening on %s://%s", n.conn.LocalAddr().Network(), n.conn.LocalAddr().String())
 
-	n.wg.Add(1)
-	go func() {
-		defer n.wg.Done()
+	n.wg.Go(func() {
 		n.read(acc)
-	}()
+	})
 
 	return nil
 }

@@ -129,7 +129,7 @@ func parseResponse(addr, response string, t time.Time) (telegraf.Metric, error) 
 
 	// Construct the metric
 	tags := map[string]string{"host": addr}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"cpu":            cpu,
 		"net_in":         netIn,
 		"net_out":        netOut,

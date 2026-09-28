@@ -207,7 +207,7 @@ func mapFdToInode(pid int32, fd uint32) (uint32, error) {
 	return uint32(inode), nil
 }
 
-func statsTCP(conns []gopsnet.ConnectionStat, family uint8) ([]map[string]interface{}, error) {
+func statsTCP(conns []gopsnet.ConnectionStat, family uint8) ([]map[string]any, error) {
 	if len(conns) == 0 {
 		return nil, nil
 	}
@@ -231,7 +231,7 @@ func statsTCP(conns []gopsnet.ConnectionStat, family uint8) ([]map[string]interf
 	}
 
 	// Filter the responses via the inodes belonging to the process
-	fieldslist := make([]map[string]interface{}, 0, len(responses))
+	fieldslist := make([]map[string]any, 0, len(responses))
 	for _, r := range responses {
 		c, found := inodes[r.InetDiagMsg.INode]
 		if !found {
@@ -249,7 +249,7 @@ func statsTCP(conns []gopsnet.ConnectionStat, family uint8) ([]map[string]interf
 			continue
 		}
 
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"protocol":       proto,
 			"state":          socketStateName(r.InetDiagMsg.State),
 			"pid":            c.Pid,
@@ -270,7 +270,7 @@ func statsTCP(conns []gopsnet.ConnectionStat, family uint8) ([]map[string]interf
 	return fieldslist, nil
 }
 
-func statsUDP(conns []gopsnet.ConnectionStat, family uint8) ([]map[string]interface{}, error) {
+func statsUDP(conns []gopsnet.ConnectionStat, family uint8) ([]map[string]any, error) {
 	if len(conns) == 0 {
 		return nil, nil
 	}
@@ -294,7 +294,7 @@ func statsUDP(conns []gopsnet.ConnectionStat, family uint8) ([]map[string]interf
 	}
 
 	// Filter the responses via the inodes belonging to the process
-	fieldslist := make([]map[string]interface{}, 0, len(responses))
+	fieldslist := make([]map[string]any, 0, len(responses))
 	for _, r := range responses {
 		c, found := inodes[r.InetDiagMsg.INode]
 		if !found {
@@ -312,7 +312,7 @@ func statsUDP(conns []gopsnet.ConnectionStat, family uint8) ([]map[string]interf
 			continue
 		}
 
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"protocol":  proto,
 			"state":     socketStateName(r.InetDiagMsg.State),
 			"pid":       c.Pid,
@@ -329,7 +329,7 @@ func statsUDP(conns []gopsnet.ConnectionStat, family uint8) ([]map[string]interf
 	return fieldslist, nil
 }
 
-func statsUnix(conns []gopsnet.ConnectionStat) ([]map[string]interface{}, error) {
+func statsUnix(conns []gopsnet.ConnectionStat) ([]map[string]any, error) {
 	if len(conns) == 0 {
 		return nil, nil
 	}
@@ -353,7 +353,7 @@ func statsUnix(conns []gopsnet.ConnectionStat) ([]map[string]interface{}, error)
 	}
 
 	// Filter the responses via the inodes belonging to the process
-	fieldslist := make([]map[string]interface{}, 0, len(responses))
+	fieldslist := make([]map[string]any, 0, len(responses))
 	for _, r := range responses {
 		// Check if the inode belongs to the process and skip otherwise
 		c, found := inodes[r.DiagMsg.INode]
@@ -366,7 +366,7 @@ func statsUnix(conns []gopsnet.ConnectionStat) ([]map[string]interface{}, error)
 			name = fmt.Sprintf("inode-%d", r.DiagMsg.INode)
 		}
 
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"protocol": "unix",
 			"type":     "stream",
 			"state":    socketStateName(r.DiagMsg.State),
@@ -394,7 +394,7 @@ func statsUnix(conns []gopsnet.ConnectionStat) ([]map[string]interface{}, error)
 			name = fmt.Sprintf("inode-%d", inode)
 		}
 
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"protocol": "unix",
 			"type":     socketTypeName(uint8(c.Type)),
 			"state":    "close",

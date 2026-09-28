@@ -30,7 +30,7 @@ func TestParseLine(t *testing.T) {
 			expected: metric.New(
 				"sys.cpu.user",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"value": float64(50),
 				},
 				testTimeSec,
@@ -42,7 +42,7 @@ func TestParseLine(t *testing.T) {
 			expected: metric.New(
 				"sys.cpu.user",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"value": float64(50),
 				},
 				testTimeMilli,
@@ -54,7 +54,7 @@ func TestParseLine(t *testing.T) {
 			expected: metric.New(
 				"sys.cpu.user",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"value": float64(42.5),
 				},
 				testTimeSec,
@@ -68,7 +68,7 @@ func TestParseLine(t *testing.T) {
 				map[string]string{
 					"host": "webserver01",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"value": float64(42.5),
 				},
 				testTimeSec,
@@ -83,7 +83,7 @@ func TestParseLine(t *testing.T) {
 					"host": "webserver01",
 					"cpu":  "7",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"value": float64(42.5),
 				},
 				testTimeSec,
@@ -123,7 +123,7 @@ func TestParse(t *testing.T) {
 						"host": "webserver01",
 						"cpu":  "7",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": float64(42.5),
 					},
 					testTimeSec,
@@ -140,7 +140,7 @@ func TestParse(t *testing.T) {
 						"host": "webserver01",
 						"cpu":  "7",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": float64(42.5),
 					},
 					testTimeSec,
@@ -157,7 +157,7 @@ func TestParse(t *testing.T) {
 						"host": "webserver01",
 						"cpu":  "7",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": float64(42.5),
 					},
 					testTimeSec,
@@ -175,7 +175,7 @@ func TestParse(t *testing.T) {
 						"host": "webserver01",
 						"cpu":  "7",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": float64(42.5),
 					},
 					testTimeSec,
@@ -186,7 +186,7 @@ func TestParse(t *testing.T) {
 						"host": "webserver02",
 						"cpu":  "3",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": float64(53.5),
 					},
 					testTimeSec,
@@ -207,7 +207,7 @@ func TestParse(t *testing.T) {
 						"host": "webserver01",
 						"cpu":  "7",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": float64(42.5),
 					},
 					testTimeSec,
@@ -218,7 +218,7 @@ func TestParse(t *testing.T) {
 						"host": "webserver02",
 						"cpu":  "3",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": float64(53.5),
 					},
 					testTimeSec,
@@ -264,7 +264,7 @@ func TestParse_DefaultTags(t *testing.T) {
 						"host": "webserver01",
 						"cpu":  "7",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": float64(42.5),
 					},
 					testTimeSec,
@@ -287,7 +287,7 @@ func TestParse_DefaultTags(t *testing.T) {
 						"host": "webserver01",
 						"cpu":  "7",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": float64(42.5),
 					},
 					testTimeSec,
@@ -324,7 +324,7 @@ func TestBenchmarkData(t *testing.T) {
 				"tags_platform": "python",
 				"tags_sdkver":   "3.11.4",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 4.0,
 			},
 			time.Unix(1653643420, 0),
@@ -336,7 +336,7 @@ func TestBenchmarkData(t *testing.T) {
 				"tags_platform": "python",
 				"tags_sdkver":   "3.11.5",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 5.0,
 			},
 			time.Unix(1653643420, 0),

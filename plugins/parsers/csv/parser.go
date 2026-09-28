@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"sort"
 	"strconv"
 	"strings"
@@ -286,9 +287,7 @@ func parseCSV(p *Parser, r io.Reader) ([]telegraf.Metric, error) {
 		}
 		p.remainingMetadataRows--
 		m := p.parseMetadataRow(line)
-		for k, v := range m {
-			p.metadataTags[k] = v
-		}
+		maps.Copy(p.metadataTags, m)
 	}
 	csvReader := p.compile(lineReader)
 	// if there is a header, and we did not get DataColumns
@@ -345,19 +344,15 @@ func parseCSV(p *Parser, r io.Reader) ([]telegraf.Metric, error) {
 }
 
 func (p *Parser) parseRecord(record []string) (telegraf.Metric, error) {
-	recordFields := make(map[string]interface{})
+	recordFields := make(map[string]any)
 	tags := make(map[string]string)
 
 	if p.TagOverwrite {
 		// add default tags
-		for k, v := range p.DefaultTags {
-			tags[k] = v
-		}
+		maps.Copy(tags, p.DefaultTags)
 
 		// add metadata tags
-		for k, v := range p.metadataTags {
-			tags[k] = v
-		}
+		maps.Copy(tags, p.metadataTags)
 	}
 
 	// skip columns in record
@@ -397,7 +392,7 @@ outer:
 					return nil, errors.New("column type: column count exceeded")
 				}
 
-				var val interface{}
+				var val any
 				var err error
 
 				switch p.ColumnTypes[i] {
@@ -439,14 +434,10 @@ outer:
 
 	if !p.TagOverwrite {
 		// add metadata tags
-		for k, v := range p.metadataTags {
-			tags[k] = v
-		}
+		maps.Copy(tags, p.metadataTags)
 
 		// add default tags
-		for k, v := range p.DefaultTags {
-			tags[k] = v
-		}
+		maps.Copy(tags, p.DefaultTags)
 	}
 
 	// will default to plugin name
@@ -474,7 +465,7 @@ outer:
 // ParseTimestamp return a timestamp, if there is no timestamp on the csv it
 // will be the current timestamp, else it will try to parse the time according
 // to the format.
-func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface{},
+func parseTimestamp(timeFunc func() time.Time, recordFields map[string]any,
 	timestampColumn, timestampFormat string, timezone *time.Location,
 ) (time.Time, error) {
 	if timestampColumn != "" {

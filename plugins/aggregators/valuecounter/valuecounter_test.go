@@ -21,7 +21,7 @@ func newTestValueCounter(fields []string) telegraf.Aggregator {
 
 var m1 = metric.New("m1",
 	map[string]string{"foo": "bar"},
-	map[string]interface{}{
+	map[string]any{
 		"status": 200,
 		"foobar": "bar",
 	},
@@ -30,7 +30,7 @@ var m1 = metric.New("m1",
 
 var m2 = metric.New("m1",
 	map[string]string{"foo": "bar"},
-	map[string]interface{}{
+	map[string]any{
 		"status":    "OK",
 		"ignoreme":  "string",
 		"andme":     true,
@@ -58,7 +58,7 @@ func TestBasic(t *testing.T) {
 	vc.Add(m1)
 	vc.Push(&acc)
 
-	expectedFields := map[string]interface{}{
+	expectedFields := map[string]any{
 		"status_200": 2,
 		"status_OK":  1,
 	}
@@ -79,7 +79,7 @@ func TestMultipleFields(t *testing.T) {
 	vc.Add(m1)
 	vc.Push(&acc)
 
-	expectedFields := map[string]interface{}{
+	expectedFields := map[string]any{
 		"status_200":      2,
 		"status_OK":       2,
 		"boolfield_false": 2,
@@ -100,7 +100,7 @@ func TestWithReset(t *testing.T) {
 	vc.Add(m2)
 	vc.Push(&acc)
 
-	expectedFields := map[string]interface{}{
+	expectedFields := map[string]any{
 		"status_200": 2,
 		"status_OK":  1,
 	}
@@ -117,7 +117,7 @@ func TestWithReset(t *testing.T) {
 	vc.Add(m1)
 	vc.Push(&acc)
 
-	expectedFields = map[string]interface{}{
+	expectedFields = map[string]any{
 		"status_200": 1,
 		"status_OK":  2,
 	}

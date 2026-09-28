@@ -1,3 +1,4 @@
+}
 {
   "@odata.context": "/redfish/v1/$metadata#Chassis.Chassis",
   "@odata.id": "/redfish/v1/Chassis/System.Embedded.1",
@@ -185,4 +186,3 @@
     "@odata.id": "/redfish/v1/Chassis/System.Embedded.1/Thermal"
   }
 }
-{

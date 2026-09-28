@@ -15,7 +15,7 @@ func TestIpset(t *testing.T) {
 		name   string
 		value  string
 		tags   []map[string]string
-		fields [][]map[string]interface{}
+		fields [][]map[string]any
 		err    error
 	}{
 		{
@@ -52,9 +52,9 @@ func TestIpset(t *testing.T) {
 				{"set": "myset", "rule": "1.2.3.4"},
 				{"set": "myset", "rule": "3.4.5.6"},
 			},
-			fields: [][]map[string]interface{}{
-				{map[string]interface{}{"packets_total": uint64(1328), "bytes_total": uint64(79680)}},
-				{map[string]interface{}{"packets_total": uint64(3), "bytes_total": uint64(222)}},
+			fields: [][]map[string]any{
+				{map[string]any{"packets_total": uint64(1328), "bytes_total": uint64(79680)}},
+				{map[string]any{"packets_total": uint64(3), "bytes_total": uint64(222)}},
 			},
 		},
 		{
@@ -68,9 +68,9 @@ func TestIpset(t *testing.T) {
 				{"set": "myset", "rule": "1.2.3.4"},
 				{"set": "myset", "rule": "3.4.5.6"},
 			},
-			fields: [][]map[string]interface{}{
-				{map[string]interface{}{"packets_total": uint64(1328), "bytes_total": uint64(79680)}},
-				{map[string]interface{}{"packets_total": uint64(3), "bytes_total": uint64(222)}},
+			fields: [][]map[string]any{
+				{map[string]any{"packets_total": uint64(1328), "bytes_total": uint64(79680)}},
+				{map[string]any{"packets_total": uint64(3), "bytes_total": uint64(222)}},
 			},
 		},
 		{
@@ -84,9 +84,9 @@ func TestIpset(t *testing.T) {
 				{"set": "counter-test", "rule": "192.168.1.1"},
 				{"set": "counter-test2", "rule": "192.168.1.1"},
 			},
-			fields: [][]map[string]interface{}{
-				{map[string]interface{}{"packets_total": uint64(8), "bytes_total": uint64(672), "timeout": uint64(1792)}},
-				{map[string]interface{}{"packets_total": uint64(18), "bytes_total": uint64(673)}},
+			fields: [][]map[string]any{
+				{map[string]any{"packets_total": uint64(8), "bytes_total": uint64(672), "timeout": uint64(1792)}},
+				{map[string]any{"packets_total": uint64(18), "bytes_total": uint64(673)}},
 			},
 		},
 	}

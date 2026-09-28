@@ -98,7 +98,7 @@ func socketList(cmdName, proto string, timeout config.Duration) (*bytes.Buffer, 
 func (ss *Socketstat) parseAndGather(acc telegraf.Accumulator, data *bytes.Buffer, proto string) {
 	scanner := bufio.NewScanner(data)
 	tags := make(map[string]string)
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 
 	// ss output can have blank lines, and/or socket basic info lines and more advanced
 	// statistics lines, in turns.
@@ -162,11 +162,11 @@ func (ss *Socketstat) parseAndGather(acc telegraf.Accumulator, data *bytes.Buffe
 	}
 }
 
-func getTagsAndState(proto string, words []string, log telegraf.Logger) (map[string]string, map[string]interface{}) {
+func getTagsAndState(proto string, words []string, log telegraf.Logger) (map[string]string, map[string]any) {
 	tags := map[string]string{
 		"proto": proto,
 	}
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	switch proto {
 	case "udp", "raw":
 		words = append([]string{"dummy"}, words...)

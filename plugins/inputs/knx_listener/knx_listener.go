@@ -116,13 +116,11 @@ func (kl *KNXListener) Start(acc telegraf.Accumulator) error {
 	kl.connected.Store(true)
 
 	// Listen to the KNX bus
-	kl.wg.Add(1)
-	go func() {
-		defer kl.wg.Done()
+	kl.wg.Go(func() {
 		kl.listen(acc)
 		kl.connected.Store(false)
 		acc.AddError(errors.New("disconnected from bus"))
-	}()
+	})
 
 	return nil
 }
@@ -175,7 +173,7 @@ func (kl *KNXListener) listen(acc telegraf.Accumulator) {
 		// Convert the DatapointValue interface back to its basic type again
 		// as otherwise telegraf will not push out the metrics and eat it
 		// silently.
-		var value interface{}
+		var value any
 		if !target.asstring {
 			vi := reflect.Indirect(reflect.ValueOf(target.datapoint))
 			switch vi.Kind() {
@@ -198,7 +196,7 @@ func (kl *KNXListener) listen(acc telegraf.Accumulator) {
 		}
 
 		// Compose the actual data to be pushed out
-		fields := map[string]interface{}{"value": value}
+		fields := map[string]any{"value": value}
 		tags := map[string]string{
 			"groupaddress": ga,
 			"unit":         target.datapoint.(dpt.DatapointMeta).Unit(),

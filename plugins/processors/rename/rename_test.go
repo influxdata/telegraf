@@ -12,12 +12,12 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func newMetric(name string, tags map[string]string, fields map[string]interface{}) telegraf.Metric {
+func newMetric(name string, tags map[string]string, fields map[string]any) telegraf.Metric {
 	if tags == nil {
 		tags = map[string]string{}
 	}
 	if fields == nil {
-		fields = map[string]interface{}{}
+		fields = map[string]any{}
 	}
 	m := metric.New(name, tags, fields, time.Now())
 	return m
@@ -57,17 +57,17 @@ func TestFieldRename(t *testing.T) {
 			{Field: "time_msec", Dest: "time"},
 		},
 	}
-	m := newMetric("foo", nil, map[string]interface{}{"time_msec": int64(1250), "snakes": true})
+	m := newMetric("foo", nil, map[string]any{"time_msec": int64(1250), "snakes": true})
 	results := r.Apply(m)
 
-	require.Equal(t, map[string]interface{}{"time": int64(1250), "snakes": true}, results[0].Fields(), "should change field 'time_msec' to 'time'")
+	require.Equal(t, map[string]any{"time": int64(1250), "snakes": true}, results[0].Fields(), "should change field 'time_msec' to 'time'")
 }
 
 func TestTracking(t *testing.T) {
 	inputRaw := []telegraf.Metric{
-		metric.New("foo", map[string]string{}, map[string]interface{}{"value": 42}, time.Unix(0, 0)),
-		metric.New("bar", map[string]string{}, map[string]interface{}{"value": 99}, time.Unix(0, 0)),
-		metric.New("baz", map[string]string{}, map[string]interface{}{"value": 11}, time.Unix(0, 0)),
+		metric.New("foo", map[string]string{}, map[string]any{"value": 42}, time.Unix(0, 0)),
+		metric.New("bar", map[string]string{}, map[string]any{"value": 99}, time.Unix(0, 0)),
+		metric.New("baz", map[string]string{}, map[string]any{"value": 11}, time.Unix(0, 0)),
 	}
 
 	var mu sync.Mutex
@@ -88,19 +88,19 @@ func TestTracking(t *testing.T) {
 		metric.New(
 			"foo",
 			map[string]string{},
-			map[string]interface{}{"new_value": 42},
+			map[string]any{"new_value": 42},
 			time.Unix(0, 0),
 		),
 		metric.New(
 			"bar",
 			map[string]string{},
-			map[string]interface{}{"new_value": 99},
+			map[string]any{"new_value": 99},
 			time.Unix(0, 0),
 		),
 		metric.New(
 			"baz",
 			map[string]string{},
-			map[string]interface{}{"new_value": 11},
+			map[string]any{"new_value": 11},
 			time.Unix(0, 0),
 		),
 	}

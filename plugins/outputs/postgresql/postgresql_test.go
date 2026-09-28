@@ -28,12 +28,12 @@ import (
 type Log struct {
 	level  tracelog.LogLevel
 	format string
-	args   []interface{}
+	args   []any
 }
 
 func (l Log) String() string {
 	// We have to use Errorf() as Sprintf() doesn't allow usage of %w.
-	return fmt.Errorf("%s: "+l.format, append([]interface{}{l.level}, l.args...)...).Error()
+	return fmt.Errorf("%s: "+l.format, append([]any{l.level}, l.args...)...).Error()
 }
 
 // LogAccumulator is a log collector that satisfies telegraf.Logger.
@@ -66,9 +66,9 @@ func (la *LogAccumulator) Level() telegraf.LogLevel {
 }
 
 // Unused
-func (*LogAccumulator) AddAttribute(string, interface{}) {}
+func (*LogAccumulator) AddAttribute(string, any) {}
 
-func (la *LogAccumulator) append(level tracelog.LogLevel, format string, args []interface{}) {
+func (la *LogAccumulator) append(level tracelog.LogLevel, format string, args []any) {
 	la.tb.Helper()
 
 	la.cond.L.Lock()
@@ -173,52 +173,52 @@ func (la *LogAccumulator) Logs() []Log {
 	return la.logs[:]
 }
 
-func (la *LogAccumulator) Errorf(format string, args ...interface{}) {
+func (la *LogAccumulator) Errorf(format string, args ...any) {
 	la.tb.Helper()
 	la.append(tracelog.LogLevelError, format, args)
 }
 
-func (la *LogAccumulator) Error(args ...interface{}) {
+func (la *LogAccumulator) Error(args ...any) {
 	la.tb.Helper()
 	la.append(tracelog.LogLevelError, "%v", args)
 }
 
-func (la *LogAccumulator) Warnf(format string, args ...interface{}) {
+func (la *LogAccumulator) Warnf(format string, args ...any) {
 	la.tb.Helper()
 	la.append(tracelog.LogLevelWarn, format, args)
 }
 
-func (la *LogAccumulator) Warn(args ...interface{}) {
+func (la *LogAccumulator) Warn(args ...any) {
 	la.tb.Helper()
 	la.append(tracelog.LogLevelWarn, "%v", args)
 }
 
-func (la *LogAccumulator) Infof(format string, args ...interface{}) {
+func (la *LogAccumulator) Infof(format string, args ...any) {
 	la.tb.Helper()
 	la.append(tracelog.LogLevelInfo, format, args)
 }
 
-func (la *LogAccumulator) Info(args ...interface{}) {
+func (la *LogAccumulator) Info(args ...any) {
 	la.tb.Helper()
 	la.append(tracelog.LogLevelInfo, "%v", args)
 }
 
-func (la *LogAccumulator) Debugf(format string, args ...interface{}) {
+func (la *LogAccumulator) Debugf(format string, args ...any) {
 	la.tb.Helper()
 	la.append(tracelog.LogLevelDebug, format, args)
 }
 
-func (la *LogAccumulator) Debug(args ...interface{}) {
+func (la *LogAccumulator) Debug(args ...any) {
 	la.tb.Helper()
 	la.append(tracelog.LogLevelDebug, "%v", args)
 }
 
-func (la *LogAccumulator) Tracef(format string, args ...interface{}) {
+func (la *LogAccumulator) Tracef(format string, args ...any) {
 	la.tb.Helper()
 	la.append(tracelog.LogLevelDebug, format, args)
 }
 
-func (la *LogAccumulator) Trace(args ...interface{}) {
+func (la *LogAccumulator) Trace(args ...any) {
 	la.tb.Helper()
 	la.append(tracelog.LogLevelDebug, "%v", args)
 }
@@ -386,13 +386,13 @@ func newMetric(
 	t *testing.T,
 	suffix string,
 	tags map[string]string,
-	fields map[string]interface{},
+	fields map[string]any,
 ) telegraf.Metric {
 	return metric.New(t.Name()+suffix, tags, fields, time.Now())
 }
 
 type MSS = map[string]string
-type MSI = map[string]interface{}
+type MSI = map[string]any
 
 func dbTableDump(t *testing.T, db *pgxpool.Pool, suffix string) []MSI {
 	rows, err := db.Query(ctx, "SELECT * FROM "+pgx.Identifier{t.Name() + suffix}.Sanitize())
@@ -730,7 +730,7 @@ func TestTimestampColumnNameIntegration(t *testing.T) {
 	require.NoError(t, p.Connect())
 
 	metrics := []telegraf.Metric{
-		metric.New(t.Name(), map[string]string{}, map[string]interface{}{"v": 42}, time.Unix(1691747345, 0)),
+		metric.New(t.Name(), map[string]string{}, map[string]any{"v": 42}, time.Unix(1691747345, 0)),
 	}
 	require.NoError(t, p.Write(metrics))
 
@@ -933,11 +933,11 @@ func TestStressConcurrencyIntegration(t *testing.T) {
 	pctl.Logger.emitLevel = tracelog.LogLevelWarn
 	require.NoError(t, pctl.Connect())
 
-	for i := 0; i < loops; i++ {
+	for range loops {
 		var wgStart, wgDone sync.WaitGroup
 		wgStart.Add(concurrency)
 		wgDone.Add(concurrency)
-		for j := 0; j < concurrency; j++ {
+		for range concurrency {
 			go func() {
 				mShuf := make([]telegraf.Metric, len(metrics))
 				copy(mShuf, metrics)
@@ -994,7 +994,7 @@ func TestLongColumnNamesErrorIntegration(t *testing.T) {
 		metric.New(
 			t.Name(),
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"a_field_with_a_some_very_long_name_exceeding_the_column_name_limit_of_postgres_of_63": int64(0),
 				"value": 42,
 			},
@@ -1003,7 +1003,7 @@ func TestLongColumnNamesErrorIntegration(t *testing.T) {
 		metric.New(
 			t.Name(),
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"a_field_with_a_some_very_long_name_exceeding_the_column_name_limit_of_postgres_of_63": int64(1),
 				"value": 43,
 			},
@@ -1012,7 +1012,7 @@ func TestLongColumnNamesErrorIntegration(t *testing.T) {
 		metric.New(
 			t.Name(),
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"a_field_with_a_some_very_long_name_exceeding_the_column_name_limit_of_postgres_of_63": int64(2),
 				"value": 44,
 			},
@@ -1021,7 +1021,7 @@ func TestLongColumnNamesErrorIntegration(t *testing.T) {
 		metric.New(
 			t.Name(),
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"a_field_with_another_very_long_name_exceeding_the_column_name_limit_of_postgres_of_63": int64(99),
 				"value": 45,
 			},
@@ -1047,7 +1047,7 @@ func TestLongColumnNamesErrorIntegration(t *testing.T) {
 	require.ElementsMatch(t, excpectedLongColumns, longColLogErrs)
 
 	// Denote the expected data in the table
-	expected := []map[string]interface{}{
+	expected := []map[string]any{
 		{"time": time.Unix(0, 0).Unix(), "value": int64(42)},
 		{"time": time.Unix(0, 1).Unix(), "value": int64(43)},
 		{"time": time.Unix(0, 2).Unix(), "value": int64(44)},
@@ -1089,7 +1089,7 @@ func TestLongColumnNamesClipIntegration(t *testing.T) {
 		metric.New(
 			t.Name(),
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"a_field_with_a_some_very_long_name_exceeding_the_column_name_limit_of_postgres_of_63": int64(0),
 				"value": 42,
 			},
@@ -1098,7 +1098,7 @@ func TestLongColumnNamesClipIntegration(t *testing.T) {
 		metric.New(
 			t.Name(),
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"a_field_with_a_some_very_long_name_exceeding_the_column_name_limit_of_postgres_of_63": int64(1),
 				"value": 43,
 			},
@@ -1107,7 +1107,7 @@ func TestLongColumnNamesClipIntegration(t *testing.T) {
 		metric.New(
 			t.Name(),
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"a_field_with_a_some_very_long_name_exceeding_the_column_name_limit_of_postgres_of_63": int64(2),
 				"value": 44,
 			},
@@ -1116,7 +1116,7 @@ func TestLongColumnNamesClipIntegration(t *testing.T) {
 		metric.New(
 			t.Name(),
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"a_field_with_another_very_long_name_exceeding_the_column_name_limit_of_postgres_of_63": int64(99),
 				"value": 45,
 			},
@@ -1149,7 +1149,7 @@ func TestLongColumnNamesClipIntegration(t *testing.T) {
 	require.Empty(t, longColLogErrs)
 
 	// Denote the expected data in the table
-	expected := []map[string]interface{}{
+	expected := []map[string]any{
 		{
 			"time": time.Unix(0, 0).Unix(),
 			"a_field_with_a_some_very_long_name_exceeding_the_column_name_li": int64(0),

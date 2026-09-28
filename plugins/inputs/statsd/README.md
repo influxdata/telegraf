@@ -307,8 +307,6 @@ per-measurement in the calculation of percentiles. Raising this limit increases
 the accuracy of percentiles but also increases the memory usage and cpu time.
 - **templates** []string: Templates for transforming statsd buckets into influx
 measurements and tags.
-- **parse_data_dog_tags** boolean:        Enable parsing of tags in DataDog's
-                                          [dogstatsd format][dogstatsd_format]
 - **datadog_extensions** boolean:         Enable parsing of DataDog's extensions
                                           to [dogstatsd format][dogstatsd_format]
                                           including events and service checks

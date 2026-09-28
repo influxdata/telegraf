@@ -180,7 +180,7 @@ func (p *Parser) parseTime(buf []byte) (time.Time, error) {
 	return p.timeFunc(), nil
 }
 
-func (p *Parser) unmarshalMetrics(buf []byte) (map[string]interface{}, error) {
+func (p *Parser) unmarshalMetrics(buf []byte) (map[string]any, error) {
 	var registryBytes []byte
 	if p.MetricRegistryPath != "" {
 		regResult := gjson.GetBytes(buf, p.MetricRegistryPath)
@@ -196,7 +196,7 @@ func (p *Parser) unmarshalMetrics(buf []byte) (map[string]interface{}, error) {
 	} else {
 		registryBytes = buf
 	}
-	var jsonOut map[string]interface{}
+	var jsonOut map[string]any
 	err := json.Unmarshal(registryBytes, &jsonOut)
 	if err != nil {
 		err = fmt.Errorf("unable to parse dropwizard metric registry from JSON document, %w", err)
@@ -205,8 +205,8 @@ func (p *Parser) unmarshalMetrics(buf []byte) (map[string]interface{}, error) {
 	return jsonOut, nil
 }
 
-func (p *Parser) readDWMetrics(metricType string, dwms interface{}, metrics []telegraf.Metric, tm time.Time) ([]telegraf.Metric, error) {
-	if dwmsTyped, ok := dwms.(map[string]interface{}); ok {
+func (p *Parser) readDWMetrics(metricType string, dwms any, metrics []telegraf.Metric, tm time.Time) ([]telegraf.Metric, error) {
+	if dwmsTyped, ok := dwms.(map[string]any); ok {
 		for dwmName, dwmFields := range dwmsTyped {
 			measurementName := dwmName
 			tags := make(map[string]string)
@@ -225,7 +225,7 @@ func (p *Parser) readDWMetrics(metricType string, dwms interface{}, metrics []te
 			parsed, err := p.seriesParser.Parse([]byte(measurementName))
 			var m telegraf.Metric
 			if err != nil || len(parsed) != 1 {
-				m = metric.New(measurementName, make(map[string]string), make(map[string]interface{}), tm)
+				m = metric.New(measurementName, make(map[string]string), make(map[string]any), tm)
 			} else {
 				m = parsed[0]
 				m.SetTime(tm)
@@ -236,7 +236,7 @@ func (p *Parser) readDWMetrics(metricType string, dwms interface{}, metrics []te
 				m.AddTag(k, v)
 			}
 
-			if fields, ok := dwmFields.(map[string]interface{}); ok {
+			if fields, ok := dwmFields.(map[string]any); ok {
 				for k, v := range fields {
 					switch v := v.(type) {
 					case float64, string, bool:

@@ -10,7 +10,7 @@ import (
 // Migration function to migrate http_listener to influxdb_listener
 func migrate(tbl *ast.Table) ([]byte, string, error) {
 	// Decode the old plugin configuration
-	var plugin map[string]interface{}
+	var plugin map[string]any
 	if err := toml.UnmarshalTable(tbl, &plugin); err != nil {
 		return nil, "", err
 	}

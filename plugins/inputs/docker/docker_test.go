@@ -406,7 +406,7 @@ func TestContainerStatus(t *testing.T) {
 						"container_status":  "running",
 						"source":            "e2173b9478a6",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"oomkilled":     false,
 						"pid":           1234,
 						"restart_count": 0,
@@ -437,7 +437,7 @@ func TestContainerStatus(t *testing.T) {
 						"container_status":  "running",
 						"source":            "e2173b9478a6",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"oomkilled":     false,
 						"pid":           1234,
 						"exitcode":      0,
@@ -470,7 +470,7 @@ func TestContainerStatus(t *testing.T) {
 						"container_status":  "running",
 						"source":            "e2173b9478a6",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"oomkilled":     false,
 						"pid":           1234,
 						"exitcode":      0,
@@ -501,7 +501,7 @@ func TestContainerStatus(t *testing.T) {
 						"container_status":  "running",
 						"source":            "e2173b9478a6",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"oomkilled":     false,
 						"pid":           1234,
 						"exitcode":      0,
@@ -567,7 +567,7 @@ func TestGatherInfo(t *testing.T) {
 				"engine_host":    "absol",
 				"server_version": "17.09.0-ce",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"n_listener_events":       int(0),
 				"n_cpus":                  int(4),
 				"n_used_file_descriptors": int(19),
@@ -586,7 +586,7 @@ func TestGatherInfo(t *testing.T) {
 				"engine_host":    "absol",
 				"server_version": "17.09.0-ce",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"memory_total": int64(3840757760),
 			},
 			time.Unix(0, 0),
@@ -598,7 +598,7 @@ func TestGatherInfo(t *testing.T) {
 				"server_version": "17.09.0-ce",
 				"unit":           "bytes",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"pool_blocksize": int64(65540),
 			},
 			time.Unix(0, 0),
@@ -610,7 +610,7 @@ func TestGatherInfo(t *testing.T) {
 				"server_version": "17.09.0-ce",
 				"unit":           "bytes",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"used":      int64(17300000000),
 				"total":     int64(107400000000),
 				"available": int64(36530000000),
@@ -624,7 +624,7 @@ func TestGatherInfo(t *testing.T) {
 				"server_version": "17.09.0-ce",
 				"unit":           "bytes",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"used":      int64(20970000),
 				"total":     int64(2146999999),
 				"available": int64(2126999999),
@@ -638,7 +638,7 @@ func TestGatherInfo(t *testing.T) {
 				"server_version": "17.09.0-ce",
 				"pool_name":      "docker-8:1-1182287-pool",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"base_device_size_bytes":             int64(10740000000),
 				"pool_blocksize_bytes":               int64(65540),
 				"data_space_used_bytes":              int64(17300000000),
@@ -668,7 +668,7 @@ func TestGatherInfo(t *testing.T) {
 				"server_version":    "17.09.0-ce",
 				"container_status":  "running",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"usage_total":  uint64(1231652),
 				"container_id": "b7dfbb9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296e2173",
 			},
@@ -690,7 +690,7 @@ func TestGatherInfo(t *testing.T) {
 				"server_version":    "17.09.0-ce",
 				"container_status":  "running",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"container_id":  "b7dfbb9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296e2173",
 				"limit":         uint64(18935443456),
 				"max_usage":     uint64(0),
@@ -739,7 +739,7 @@ func TestGatherSwarmInfo(t *testing.T) {
 				"service_name": "test1",
 				"service_mode": "replicated",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"tasks_running": int(2),
 				"tasks_desired": uint64(2),
 			},
@@ -752,7 +752,7 @@ func TestGatherSwarmInfo(t *testing.T) {
 				"service_name": "test2",
 				"service_mode": "global",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"tasks_running": int(1),
 				"tasks_desired": uint64(1),
 			},
@@ -765,7 +765,7 @@ func TestGatherSwarmInfo(t *testing.T) {
 				"service_name": "test3",
 				"service_mode": "replicated_job",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"tasks_running":     int(0),
 				"max_concurrent":    uint64(2),
 				"total_completions": uint64(2),
@@ -779,7 +779,7 @@ func TestGatherSwarmInfo(t *testing.T) {
 				"service_name": "test4",
 				"service_mode": "global_job",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"tasks_running": int(0),
 			},
 			time.Unix(0, 0),
@@ -820,7 +820,7 @@ func TestGatherDiskUsage(t *testing.T) {
 				"engine_host":    "absol",
 				"server_version": "17.09.0-ce",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"layers_size": int64(1e10),
 			},
 			time.Unix(0, 0),
@@ -834,7 +834,7 @@ func TestGatherDiskUsage(t *testing.T) {
 				"server_version":    "17.09.0-ce",
 				"container_name":    "some_container",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"size_root_fs": int64(123456789),
 				"size_rw":      int64(0)},
 			time.Unix(0, 0),
@@ -848,7 +848,7 @@ func TestGatherDiskUsage(t *testing.T) {
 				"engine_host":    "absol",
 				"server_version": "17.09.0-ce",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"size":        int64(123456789),
 				"shared_size": int64(0)},
 			time.Unix(0, 0),
@@ -862,7 +862,7 @@ func TestGatherDiskUsage(t *testing.T) {
 				"engine_host":    "absol",
 				"server_version": "17.09.0-ce",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"size":        int64(425484494),
 				"shared_size": int64(0)},
 			time.Unix(0, 0),
@@ -874,7 +874,7 @@ func TestGatherDiskUsage(t *testing.T) {
 				"engine_host":    "absol",
 				"server_version": "17.09.0-ce",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"size": int64(123456789),
 			},
 			time.Unix(0, 0),

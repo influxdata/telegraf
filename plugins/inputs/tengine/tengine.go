@@ -263,7 +263,7 @@ func (n *Tengine) gatherURL(addr *url.URL, acc telegraf.Accumulator) error {
 			return err
 		}
 		tags := getTags(addr, tStatus.host)
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"bytes_in":                 tStatus.bytesIn,
 			"bytes_out":                tStatus.bytesOut,
 			"conn_total":               tStatus.connTotal,

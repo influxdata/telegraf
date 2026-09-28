@@ -59,6 +59,7 @@ var (
 	modwevtapi = windows.NewLazySystemDLL("wevtapi.dll")
 
 	procEvtSubscribe             = modwevtapi.NewProc("EvtSubscribe")
+	procEvtQuery                 = modwevtapi.NewProc("EvtQuery")
 	procEvtRender                = modwevtapi.NewProc("EvtRender")
 	procEvtClose                 = modwevtapi.NewProc("EvtClose")
 	procEvtNext                  = modwevtapi.NewProc("EvtNext")
@@ -88,6 +89,27 @@ func evtSubscribe(
 		uintptr(bookmark),
 		context,
 		uintptr(callback),
+		uintptr(flags),
+	)
+
+	var err error
+	handle := evtHandle(r0)
+	if handle == 0 {
+		if e1 != 0 {
+			err = errnoErr(e1)
+		} else {
+			err = syscall.EINVAL
+		}
+	}
+	return handle, err
+}
+
+func evtQuery(session evtHandle, channelPath, query *uint16, flags evtQueryFlag) (evtHandle, error) {
+	r0, _, e1 := syscall.SyscallN(
+		procEvtQuery.Addr(),
+		uintptr(session),
+		uintptr(unsafe.Pointer(channelPath)), //nolint:gosec // G103: Valid use of unsafe call to pass channelPath
+		uintptr(unsafe.Pointer(query)),       //nolint:gosec // G103: Valid use of unsafe call to pass query
 		uintptr(flags),
 	)
 

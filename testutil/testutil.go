@@ -73,7 +73,7 @@ func MockMetricsWithValue(value float64) []telegraf.Metric {
 //	tags -> "tag1":"value1"
 //	value -> value
 //	time -> time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)
-func TestMetric(value interface{}, name ...string) telegraf.Metric {
+func TestMetric(value any, name ...string) telegraf.Metric {
 	if value == nil {
 		panic("Cannot use a nil value")
 	}
@@ -85,7 +85,7 @@ func TestMetric(value interface{}, name ...string) telegraf.Metric {
 	return metric.New(
 		measurement,
 		map[string]string{"tag1": "value1"},
-		map[string]interface{}{"value": value},
+		map[string]any{"value": value},
 		time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 }

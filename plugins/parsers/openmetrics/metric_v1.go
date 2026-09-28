@@ -1,6 +1,7 @@
 package openmetrics
 
 import (
+	"maps"
 	"math"
 	"strconv"
 	"strings"
@@ -54,7 +55,7 @@ func (p *Parser) extractMetricsV1(ometrics *MetricFamily) []telegraf.Metric {
 				if math.IsNaN(value) {
 					continue
 				}
-				fields := map[string]interface{}{"value": value}
+				fields := map[string]any{"value": value}
 				metrics = append(metrics, metric.New(metricName, tags, fields, t, telegraf.Untyped))
 			case MetricType_GAUGE:
 				x := omp.GetGaugeValue().GetValue()
@@ -71,7 +72,7 @@ func (p *Parser) extractMetricsV1(ometrics *MetricFamily) []telegraf.Metric {
 				if math.IsNaN(value) {
 					continue
 				}
-				fields := map[string]interface{}{"gauge": value}
+				fields := map[string]any{"gauge": value}
 				metrics = append(metrics, metric.New(metricName, tags, fields, t, telegraf.Gauge))
 			case MetricType_COUNTER:
 				x := omp.GetCounterValue().GetTotal()
@@ -88,12 +89,12 @@ func (p *Parser) extractMetricsV1(ometrics *MetricFamily) []telegraf.Metric {
 				if math.IsNaN(value) {
 					continue
 				}
-				fields := map[string]interface{}{"counter": value}
+				fields := map[string]any{"counter": value}
 				metrics = append(metrics, metric.New(metricName, tags, fields, t, telegraf.Counter))
 			case MetricType_STATE_SET:
 				stateset := omp.GetStateSetValue()
 				// Collect the fields
-				fields := make(map[string]interface{}, len(stateset.States))
+				fields := make(map[string]any, len(stateset.States))
 				for _, state := range stateset.GetStates() {
 					fname := strings.ReplaceAll(state.GetName(), " ", "_")
 					fields[fname] = state.GetEnabled()
@@ -101,11 +102,9 @@ func (p *Parser) extractMetricsV1(ometrics *MetricFamily) []telegraf.Metric {
 				metrics = append(metrics, metric.New(metricName, tags, fields, t, telegraf.Untyped))
 			case MetricType_INFO:
 				info := omp.GetInfoValue().GetInfo()
-				fields := map[string]interface{}{"info": uint64(1)}
+				fields := map[string]any{"info": uint64(1)}
 				mptags := make(map[string]string, len(tags)+len(info))
-				for k, v := range tags {
-					mptags[k] = v
-				}
+				maps.Copy(mptags, tags)
 				for _, itag := range info {
 					mptags[itag.Name] = itag.Value
 				}
@@ -114,7 +113,7 @@ func (p *Parser) extractMetricsV1(ometrics *MetricFamily) []telegraf.Metric {
 				histogram := omp.GetHistogramValue()
 
 				// Collect the fields
-				fields := make(map[string]interface{}, len(histogram.Buckets)+3)
+				fields := make(map[string]any, len(histogram.Buckets)+3)
 				fields["count"] = float64(histogram.GetCount())
 				if s := histogram.GetSum(); s != nil {
 					switch v := s.(type) {
@@ -136,7 +135,7 @@ func (p *Parser) extractMetricsV1(ometrics *MetricFamily) []telegraf.Metric {
 				summary := omp.GetSummaryValue()
 
 				// Collect the fields
-				fields := make(map[string]interface{}, len(summary.Quantile)+2)
+				fields := make(map[string]any, len(summary.Quantile)+2)
 				fields["count"] = float64(summary.GetCount())
 				if s := summary.GetSum(); s != nil {
 					switch v := s.(type) {

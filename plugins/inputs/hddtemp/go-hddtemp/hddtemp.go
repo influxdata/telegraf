@@ -44,7 +44,7 @@ func (*hddtemp) Fetch(address string) ([]Disk, error) {
 
 	size := len(fields) / 5
 	disks := make([]Disk, 0, size)
-	for index := 0; index < size; index++ {
+	for index := range size {
 		status := ""
 		offset := index * 5
 		device := fields[offset+1]

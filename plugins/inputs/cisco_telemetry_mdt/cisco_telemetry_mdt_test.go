@@ -183,7 +183,7 @@ func TestTCPDialoutMultiple(t *testing.T) {
 				"source":       "hostname",
 				"subscription": "subscription",
 			},
-			map[string]interface{}{"value": int64(-1)},
+			map[string]any{"value": int64(-1)},
 			time.Unix(0, 1543236572000000000),
 		),
 		metric.New(
@@ -194,7 +194,7 @@ func TestTCPDialoutMultiple(t *testing.T) {
 				"source":       "hostname",
 				"subscription": "subscription",
 			},
-			map[string]interface{}{"value": int64(-1)},
+			map[string]any{"value": int64(-1)},
 			time.Unix(0, 1543236572000000000),
 		),
 		metric.New(
@@ -205,7 +205,7 @@ func TestTCPDialoutMultiple(t *testing.T) {
 				"source":       "hostname",
 				"subscription": "subscription",
 			},
-			map[string]interface{}{"value": int64(-1)},
+			map[string]any{"value": int64(-1)},
 			time.Unix(0, 1543236572000000000),
 		),
 	}
@@ -376,7 +376,7 @@ func TestGRPCDialoutMultiple(t *testing.T) {
 				"source":       "hostname",
 				"subscription": "subscription",
 			},
-			map[string]interface{}{"value": int64(-1)},
+			map[string]any{"value": int64(-1)},
 			time.Unix(0, 1543236572000000000),
 		),
 		metric.New(
@@ -387,7 +387,7 @@ func TestGRPCDialoutMultiple(t *testing.T) {
 				"source":       "hostname",
 				"subscription": "subscription",
 			},
-			map[string]interface{}{"value": int64(-1)},
+			map[string]any{"value": int64(-1)},
 			time.Unix(0, 1543236572000000000),
 		),
 		metric.New(
@@ -398,7 +398,7 @@ func TestGRPCDialoutMultiple(t *testing.T) {
 				"source":       "hostname",
 				"subscription": "subscription",
 			},
-			map[string]interface{}{"value": int64(-1)},
+			map[string]any{"value": int64(-1)},
 			time.Unix(0, 1543236572000000000),
 		),
 	}

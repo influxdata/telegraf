@@ -227,11 +227,11 @@ to use them.
   ## it too much may cause performance issues.
   # metric_lookback = 3
 
-  ## Optional SSL Config
-  # ssl_ca = "/path/to/cafile"
-  # ssl_cert = "/path/to/certfile"
-  # ssl_key = "/path/to/keyfile"
-  ## Use SSL but skip chain & host verification
+  ## Optional TLS Config
+  # tls_ca = "/path/to/cafile"
+  # tls_cert = "/path/to/certfile"
+  # tls_key = "/path/to/keyfile"
+  ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
   ## The Historical Interval value must match EXACTLY the interval in the daily
@@ -1024,11 +1024,11 @@ configuration of hosts, VMs, and other resources.
   collect_concurrency = 5
   discover_concurrency = 5
 
-  ## Optional SSL Config
-  # ssl_ca = "/path/to/cafile"
-  # ssl_cert = "/path/to/certfile"
-  # ssl_key = "/path/to/keyfile"
-  ## Use SSL but skip chain & host verification
+  ## Optional TLS Config
+  # tls_ca = "/path/to/cafile"
+  # tls_cert = "/path/to/certfile"
+  # tls_key = "/path/to/keyfile"
+  ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 ```
 

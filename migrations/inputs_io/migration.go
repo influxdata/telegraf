@@ -13,7 +13,7 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 	// modify anything beyond the name.
 
 	// Decode the old data structure
-	var plugin interface{}
+	var plugin any
 	if err := toml.UnmarshalTable(tbl, &plugin); err != nil {
 		return nil, "", err
 	}

@@ -40,10 +40,10 @@ type TimeSeries struct {
 }
 
 type Metric struct {
-	Metric     map[string]interface{} `json:"metrics"`
-	Dimensions map[string]string      `json:"dimensions"`
-	Time       time.Time              `json:"@timestamp"`
-	Type       string                 `json:"type"`
+	Metric     map[string]any    `json:"metrics"`
+	Dimensions map[string]string `json:"dimensions"`
+	Time       time.Time         `json:"@timestamp"`
+	Type       string            `json:"type"`
 }
 
 func (*Logzio) SampleConfig() string {
@@ -153,7 +153,7 @@ func (l *Logzio) authURL() (string, error) {
 
 func parseMetric(metric telegraf.Metric) *Metric {
 	return &Metric{
-		Metric: map[string]interface{}{
+		Metric: map[string]any{
 			metric.Name(): metric.Fields(),
 		},
 		Dimensions: metric.Tags(),

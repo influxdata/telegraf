@@ -268,7 +268,7 @@ func TestWriteMultiMeasuresSingleTableMode(t *testing.T) {
 		inputs = append(inputs, metric.New(
 			"multi_measure_name",
 			map[string]string{"tag1": "value1"},
-			map[string]interface{}{
+			map[string]any{
 				fieldName1: float64(10),
 				fieldName2: float64(20),
 			},
@@ -326,7 +326,7 @@ func TestWriteMultiMeasuresMultiTableMode(t *testing.T) {
 		inputs = append(inputs, metric.New(
 			"multi_measure_name",
 			map[string]string{"tag1": "value1"},
-			map[string]interface{}{
+			map[string]any{
 				fieldName1: float64(10),
 				fieldName2: float64(20),
 			},
@@ -377,7 +377,7 @@ func TestBuildMultiMeasuresInSingleAndMultiTableMode(t *testing.T) {
 	input1 := metric.New(
 		metricName1,
 		map[string]string{"tag1": "value1"},
-		map[string]interface{}{
+		map[string]any{
 			"measureDouble": aws.Float64(10),
 		},
 		time1,
@@ -386,7 +386,7 @@ func TestBuildMultiMeasuresInSingleAndMultiTableMode(t *testing.T) {
 	input2 := metric.New(
 		metricName1,
 		map[string]string{"tag2": "value2"},
-		map[string]interface{}{
+		map[string]any{
 			"measureBigint": aws.Int32(20),
 		},
 		time1,
@@ -395,7 +395,7 @@ func TestBuildMultiMeasuresInSingleAndMultiTableMode(t *testing.T) {
 	input3 := metric.New(
 		metricName1,
 		map[string]string{"tag3": "value3"},
-		map[string]interface{}{
+		map[string]any{
 			"measureVarchar": "DUMMY",
 		},
 		time1,
@@ -404,7 +404,7 @@ func TestBuildMultiMeasuresInSingleAndMultiTableMode(t *testing.T) {
 	input4 := metric.New(
 		metricName1,
 		map[string]string{"tag4": "value4"},
-		map[string]interface{}{
+		map[string]any{
 			"measureBool": true,
 		},
 		time1,
@@ -413,7 +413,7 @@ func TestBuildMultiMeasuresInSingleAndMultiTableMode(t *testing.T) {
 	input5 := metric.New(
 		metricName1,
 		map[string]string{"tag5": "value5"},
-		map[string]interface{}{
+		map[string]any{
 			"measureMaxUint64": uint64(math.MaxUint64),
 		},
 		time1,
@@ -422,7 +422,7 @@ func TestBuildMultiMeasuresInSingleAndMultiTableMode(t *testing.T) {
 	input6 := metric.New(
 		metricName1,
 		map[string]string{"tag6": "value6"},
-		map[string]interface{}{
+		map[string]any{
 			"measureSmallUint64": uint64(123456),
 		},
 		time1,
@@ -624,7 +624,7 @@ func TestThrottlingErrorIsReturnedToTelegraf(t *testing.T) {
 	input := metric.New(
 		metricName1,
 		map[string]string{"tag1": "value1"},
-		map[string]interface{}{"value": float64(1)},
+		map[string]any{"value": float64(1)},
 		time1,
 	)
 
@@ -650,7 +650,7 @@ func TestRejectedRecordsErrorResultsInMetricsBeingSkipped(t *testing.T) {
 	input := metric.New(
 		metricName1,
 		map[string]string{"tag1": "value1"},
-		map[string]interface{}{"value": float64(1)},
+		map[string]any{"value": float64(1)},
 		time1,
 	)
 
@@ -666,6 +666,7 @@ func TestWriteWhenRequestsGreaterThanMaxWriteGoRoutinesCount(t *testing.T) {
 	const totalRecords = maxWriteRecordsCalls * maxRecordsInWriteRecordsCall
 	mockClient := &mockTimestreamClient{0}
 
+	//nolint:unparam // False-positive as this is only a mock and we must adhere to the interface
 	WriteFactory = func(*common_aws.CredentialConfig) (WriteClient, error) {
 		return mockClient, nil
 	}
@@ -686,7 +687,7 @@ func TestWriteWhenRequestsGreaterThanMaxWriteGoRoutinesCount(t *testing.T) {
 		inputs = append(inputs, metric.New(
 			metricName1,
 			map[string]string{"tag1": "value1"},
-			map[string]interface{}{
+			map[string]any{
 				fieldName: float64(10),
 			},
 			time1,
@@ -705,6 +706,7 @@ func TestWriteWhenRequestsLesserThanMaxWriteGoRoutinesCount(t *testing.T) {
 	const totalRecords = maxWriteRecordsCalls * maxRecordsInWriteRecordsCall
 	mockClient := &mockTimestreamClient{0}
 
+	//nolint:unparam // False-positive as this is only a mock and we must adhere to the interface
 	WriteFactory = func(*common_aws.CredentialConfig) (WriteClient, error) {
 		return mockClient, nil
 	}
@@ -725,7 +727,7 @@ func TestWriteWhenRequestsLesserThanMaxWriteGoRoutinesCount(t *testing.T) {
 		inputs = append(inputs, metric.New(
 			metricName1,
 			map[string]string{"tag1": "value1"},
-			map[string]interface{}{
+			map[string]any{
 				fieldName: float64(10),
 			},
 			time1,
@@ -741,13 +743,13 @@ func TestTransformMetricsSkipEmptyMetric(t *testing.T) {
 	input1 := metric.New(
 		metricName1,
 		map[string]string{"tag1": "value1"},
-		map[string]interface{}{}, // no fields here
+		map[string]any{},
 		time1,
 	)
 	input2 := metric.New(
 		metricName1,
 		map[string]string{"tag2": "value2"},
-		map[string]interface{}{
+		map[string]any{
 			"value": float64(10),
 		},
 		time1,
@@ -755,7 +757,7 @@ func TestTransformMetricsSkipEmptyMetric(t *testing.T) {
 	input3 := metric.New(
 		metricName1,
 		map[string]string{}, // record with no dimensions should appear in the results
-		map[string]interface{}{
+		map[string]any{
 			"value": float64(20),
 		},
 		time1,
@@ -824,7 +826,7 @@ func TestTransformMetricsRequestsAboveLimitAreSplit(t *testing.T) {
 		inputs = append(inputs, metric.New(
 			metricName1,
 			map[string]string{"tag1": "value1"},
-			map[string]interface{}{
+			map[string]any{
 				fieldName: float64(10),
 			},
 			time1,
@@ -884,7 +886,7 @@ func TestTransformMetricsRequestsAboveLimitAreSplitSingleTable(t *testing.T) {
 		inputs = append(inputs, metric.New(
 			metricName1,
 			map[string]string{"tag1": "value1"},
-			map[string]interface{}{
+			map[string]any{
 				fieldName: float64(10),
 			},
 			time.Unix(int64(localTime), 0),
@@ -941,7 +943,7 @@ func TestTransformMetricsDifferentDimensionsSameTimestampsAreWrittenSeparate(t *
 	input1 := metric.New(
 		metricName1,
 		map[string]string{"tag1": "value1"},
-		map[string]interface{}{
+		map[string]any{
 			"value_supported1": float64(10), "value_supported2": float64(20),
 		},
 		time1,
@@ -950,7 +952,7 @@ func TestTransformMetricsDifferentDimensionsSameTimestampsAreWrittenSeparate(t *
 	input2 := metric.New(
 		metricName2,
 		map[string]string{"tag2": "value2"},
-		map[string]interface{}{
+		map[string]any{
 			"value_supported3": float64(30),
 		},
 		time1,
@@ -1005,7 +1007,7 @@ func TestTransformMetricsSameDimensionsDifferentDimensionValuesAreWrittenSeparat
 	input1 := metric.New(
 		metricName1,
 		map[string]string{"tag1": "value1"},
-		map[string]interface{}{
+		map[string]any{
 			"value_supported1": float64(10),
 		},
 		time1,
@@ -1013,7 +1015,7 @@ func TestTransformMetricsSameDimensionsDifferentDimensionValuesAreWrittenSeparat
 	input2 := metric.New(
 		metricName2,
 		map[string]string{"tag1": "value2"},
-		map[string]interface{}{
+		map[string]any{
 			"value_supported1": float64(20),
 		},
 		time1,
@@ -1067,7 +1069,7 @@ func TestTransformMetricsSameDimensionsDifferentTimestampsAreWrittenSeparate(t *
 	input1 := metric.New(
 		metricName1,
 		map[string]string{"tag1": "value1"},
-		map[string]interface{}{
+		map[string]any{
 			"value_supported1": float64(10), "value_supported2": float64(20),
 		},
 		time1,
@@ -1075,7 +1077,7 @@ func TestTransformMetricsSameDimensionsDifferentTimestampsAreWrittenSeparate(t *
 	input2 := metric.New(
 		metricName1,
 		map[string]string{"tag1": "value1"},
-		map[string]interface{}{
+		map[string]any{
 			"value_supported3": float64(30),
 		},
 		time2,
@@ -1138,7 +1140,7 @@ func TestTransformMetricsSameDimensionsSameTimestampsAreWrittenTogether(t *testi
 	input1 := metric.New(
 		metricName1,
 		map[string]string{"tag1": "value1"},
-		map[string]interface{}{
+		map[string]any{
 			"value_supported1": float64(10), "value_supported2": float64(20),
 		},
 		time1,
@@ -1146,7 +1148,7 @@ func TestTransformMetricsSameDimensionsSameTimestampsAreWrittenTogether(t *testi
 	input2 := metric.New(
 		metricName1,
 		map[string]string{"tag1": "value1"},
-		map[string]interface{}{
+		map[string]any{
 			"value_supported3": float64(30),
 		},
 		time1,
@@ -1179,7 +1181,7 @@ func TestTransformMetricsDifferentMetricsAreWrittenToDifferentTablesInMultiTable
 	input1 := metric.New(
 		metricName1,
 		map[string]string{"tag1": "value1"},
-		map[string]interface{}{
+		map[string]any{
 			"value_supported1": float64(10), "value_supported2": float64(20),
 		},
 		time1,
@@ -1187,7 +1189,7 @@ func TestTransformMetricsDifferentMetricsAreWrittenToDifferentTablesInMultiTable
 	input2 := metric.New(
 		metricName2,
 		map[string]string{"tag1": "value1"},
-		map[string]interface{}{
+		map[string]any{
 			"value_supported3": float64(30),
 		},
 		time1,
@@ -1241,7 +1243,7 @@ func TestTransformMetricsUnsupportedFieldsAreSkipped(t *testing.T) {
 	metricWithUnsupportedField := metric.New(
 		metricName1,
 		map[string]string{"tag1": "value1"},
-		map[string]interface{}{
+		map[string]any{
 			"value_supported1": float64(10), "value_unsupported": time.Now(),
 		},
 		time1,
@@ -1272,10 +1274,10 @@ func TestTransformMetricsUnsupportedFieldsAreSkipped(t *testing.T) {
 func TestCustomEndpoint(t *testing.T) {
 	customEndpoint := "http://test.custom.endpoint.com"
 	plugin := Timestream{
-		MappingMode:      MappingModeMultiTable,
-		DatabaseName:     tsDBName,
-		Log:              testutil.Logger{},
-		CredentialConfig: common_aws.CredentialConfig{EndpointURL: customEndpoint},
+		MappingMode:  MappingModeMultiTable,
+		DatabaseName: tsDBName,
+		Log:          testutil.Logger{},
+		EndpointURL:  customEndpoint,
 	}
 
 	// validate config correctness

@@ -461,15 +461,6 @@ func (c *Config) ListTags() string {
 	return strings.Join(tags, " ")
 }
 
-func sliceContains(name string, list []string) bool {
-	for _, b := range list {
-		if b == name {
-			return true
-		}
-	}
-	return false
-}
-
 // WalkDirectory collects all toml files that need to be loaded
 func WalkDirectory(path string) ([]string, error) {
 	// Check permissions of the directly specified directories and error
@@ -1037,7 +1028,7 @@ func (c *Config) addAggregator(name, source string, table *ast.Table) error {
 }
 
 func (c *Config) addSecretStore(name, source string, table *ast.Table) error {
-	if len(c.SecretStoreFilters) > 0 && !sliceContains(name, c.SecretStoreFilters) {
+	if len(c.SecretStoreFilters) > 0 && !slices.Contains(c.SecretStoreFilters, name) {
 		return nil
 	}
 
@@ -1299,7 +1290,7 @@ func (c *Config) setupProcessor(name string, creator processors.StreamingCreator
 
 	streamingProcessor := creator()
 
-	var processor interface{}
+	var processor any
 	if p, ok := streamingProcessor.(processors.HasUnwrap); ok {
 		processor = p.Unwrap()
 	} else {
@@ -1357,7 +1348,7 @@ func (c *Config) setupProcessor(name string, creator processors.StreamingCreator
 }
 
 func (c *Config) addOutput(name, source string, table *ast.Table) error {
-	if len(c.OutputFilters) > 0 && !sliceContains(name, c.OutputFilters) {
+	if len(c.OutputFilters) > 0 && !slices.Contains(c.OutputFilters, name) {
 		return nil
 	}
 
@@ -1425,7 +1416,7 @@ func (c *Config) addOutput(name, source string, table *ast.Table) error {
 		return err
 	}
 
-	if c, ok := interface{}(output).(interface{ TLSConfig() (*tls.Config, error) }); ok {
+	if c, ok := any(output).(interface{ TLSConfig() (*tls.Config, error) }); ok {
 		if _, err := c.TLSConfig(); err != nil {
 			return err
 		}
@@ -1451,7 +1442,7 @@ func (c *Config) addOutput(name, source string, table *ast.Table) error {
 }
 
 func (c *Config) addInput(name, source string, table *ast.Table) error {
-	if len(c.InputFilters) > 0 && !sliceContains(name, c.InputFilters) {
+	if len(c.InputFilters) > 0 && !slices.Contains(c.InputFilters, name) {
 		return nil
 	}
 
@@ -1520,7 +1511,7 @@ func (c *Config) addInput(name, source string, table *ast.Table) error {
 		return err
 	}
 
-	if c, ok := interface{}(input).(interface{ TLSConfig() (*tls.Config, error) }); ok {
+	if c, ok := any(input).(interface{ TLSConfig() (*tls.Config, error) }); ok {
 		if _, err := c.TLSConfig(); err != nil {
 			return err
 		}

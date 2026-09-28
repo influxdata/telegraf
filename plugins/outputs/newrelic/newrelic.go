@@ -32,7 +32,7 @@ type NewRelic struct {
 
 	harvestor   *telemetry.Harvester
 	dc          *cumulative.DeltaCalculator
-	savedErrors map[int]interface{}
+	savedErrors map[int]any
 	errorCount  int
 	client      http.Client
 }
@@ -58,7 +58,7 @@ func (nr *NewRelic) Connect() error {
 			cfg.ProductVersion = "1.0"
 			cfg.HarvestTimeout = time.Duration(nr.Timeout)
 			cfg.Client = &nr.client
-			cfg.ErrorLogger = func(e map[string]interface{}) {
+			cfg.ErrorLogger = func(e map[string]any) {
 				var b strings.Builder
 				for k, v := range e {
 					fmt.Fprintf(&b, "%s = %s ", k, v)
@@ -88,11 +88,11 @@ func (nr *NewRelic) Close() error {
 // Write takes in group of points to be written to the Output
 func (nr *NewRelic) Write(metrics []telegraf.Metric) error {
 	nr.errorCount = 0
-	nr.savedErrors = make(map[int]interface{})
+	nr.savedErrors = make(map[int]any)
 
 	for _, metric := range metrics {
 		// create tag map
-		tags := make(map[string]interface{})
+		tags := make(map[string]any)
 		for _, tag := range metric.TagList() {
 			tags[tag.Key] = tag.Value
 		}

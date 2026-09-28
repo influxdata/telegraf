@@ -20,7 +20,7 @@ func TestAddFields(t *testing.T) {
 	a := NewAccumulator(&TestMetricMaker{}, metrics)
 
 	tags := map[string]string{"foo": "bar"}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"usage": float64(99),
 	}
 	now := time.Now()
@@ -112,7 +112,7 @@ func TestSetPrecision(t *testing.T) {
 			}
 
 			a.AddFields("acctest",
-				map[string]interface{}{"value": float64(101)},
+				map[string]any{"value": float64(101)},
 				map[string]string{},
 				tt.timestamp,
 			)

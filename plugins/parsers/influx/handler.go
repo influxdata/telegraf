@@ -65,8 +65,7 @@ func (h *MetricHandler) AddInt(key, value []byte) error {
 	fk := unescape(key)
 	fv, err := parseIntBytes(bytes.TrimSuffix(value, []byte("i")), 10, 64)
 	if err != nil {
-		var numErr *strconv.NumError
-		if errors.As(err, &numErr) {
+		if numErr, ok := errors.AsType[*strconv.NumError](err); ok {
 			return numErr.Err
 		}
 		return err
@@ -79,8 +78,7 @@ func (h *MetricHandler) AddUint(key, value []byte) error {
 	fk := unescape(key)
 	fv, err := parseUintBytes(bytes.TrimSuffix(value, []byte("u")), 10, 64)
 	if err != nil {
-		var numErr *strconv.NumError
-		if errors.As(err, &numErr) {
+		if numErr, ok := errors.AsType[*strconv.NumError](err); ok {
 			return numErr.Err
 		}
 		return err
@@ -93,8 +91,7 @@ func (h *MetricHandler) AddFloat(key, value []byte) error {
 	fk := unescape(key)
 	fv, err := parseFloatBytes(value, 64)
 	if err != nil {
-		var numErr *strconv.NumError
-		if errors.As(err, &numErr) {
+		if numErr, ok := errors.AsType[*strconv.NumError](err); ok {
 			return numErr.Err
 		}
 		return err
@@ -123,8 +120,7 @@ func (h *MetricHandler) AddBool(key, value []byte) error {
 func (h *MetricHandler) SetTimestamp(tm []byte) error {
 	v, err := parseIntBytes(tm, 10, 64)
 	if err != nil {
-		var numErr *strconv.NumError
-		if errors.As(err, &numErr) {
+		if numErr, ok := errors.AsType[*strconv.NumError](err); ok {
 			return numErr.Err
 		}
 		return err

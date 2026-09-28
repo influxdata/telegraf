@@ -28,7 +28,7 @@ const (
 
 // DerivePgDatatype returns the appropriate PostgreSQL data type
 // that could hold the value.
-func (p *Postgresql) derivePgDatatype(value interface{}) string {
+func (p *Postgresql) derivePgDatatype(value any) string {
 	if p.Uint64Type == PgUint8 {
 		if _, ok := value.(uint64); ok {
 			return PgUint8

@@ -59,7 +59,7 @@ func TestGather(t *testing.T) {
 						"stream":            "tty",
 						"source":            "deadbeef",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"container_id": "deadbeef",
 						"message":      "hello",
 					},
@@ -102,7 +102,7 @@ func TestGather(t *testing.T) {
 						"stream":            "stdout",
 						"source":            "deadbeef",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"container_id": "deadbeef",
 						"message":      "hello from stdout",
 					},

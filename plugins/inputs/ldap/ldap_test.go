@@ -11,7 +11,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
-	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -45,7 +44,7 @@ func TestMockResult(t *testing.T) {
 				"server": "localhost",
 				"port":   "389",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"total_connections": int64(1),
 			},
 			time.Unix(0, 0),
@@ -87,7 +86,7 @@ func TestMockLDAPI(t *testing.T) {
 			map[string]string{
 				"path": "/tmp/socket?",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"total_connections": int64(1),
 			},
 			time.Unix(0, 0),
@@ -177,7 +176,7 @@ func TestOpenLDAPIntegration(t *testing.T) {
 				"server": container.Address,
 				"port":   port,
 			},
-			map[string]interface{}{
+			map[string]any{
 				"abandon_operations_completed":     int64(0),
 				"abandon_operations_initiated":     int64(0),
 				"active_threads":                   int64(0),
@@ -269,7 +268,7 @@ func TestOpenLDAPReverseDNIntegration(t *testing.T) {
 				"server": container.Address,
 				"port":   port,
 			},
-			map[string]interface{}{
+			map[string]any{
 				"connections_max_file_descriptors": int64(0),
 				"connections_total":                int64(0),
 				"connections_current":              int64(0),
@@ -359,13 +358,11 @@ func TestOpenLDAPStartTLSIntegration(t *testing.T) {
 	// Setup the plugin
 	port := container.Ports[servicePortOpenLDAP]
 	plugin := &LDAP{
-		Server:       "starttls://" + container.Address + ":" + port,
-		BindDn:       "CN=manager,DC=example,DC=org",
-		BindPassword: config.NewSecret([]byte("secret")),
-		ClientConfig: common_tls.ClientConfig{
-			TLSCA:              pkiPaths.ClientCert,
-			InsecureSkipVerify: true,
-		},
+		Server:             "starttls://" + container.Address + ":" + port,
+		BindDn:             "CN=manager,DC=example,DC=org",
+		BindPassword:       config.NewSecret([]byte("secret")),
+		TLSCA:              pkiPaths.ClientCert,
+		InsecureSkipVerify: true,
 	}
 	require.NoError(t, plugin.Init())
 
@@ -377,7 +374,7 @@ func TestOpenLDAPStartTLSIntegration(t *testing.T) {
 				"server": container.Address,
 				"port":   port,
 			},
-			map[string]interface{}{
+			map[string]any{
 				"abandon_operations_completed":     int64(0),
 				"abandon_operations_initiated":     int64(0),
 				"active_threads":                   int64(0),
@@ -467,12 +464,10 @@ func TestOpenLDAPLDAPSIntegration(t *testing.T) {
 	// Setup the plugin
 	port := container.Ports[servicePortOpenLDAPSecure]
 	plugin := &LDAP{
-		Server:       "ldaps://" + container.Address + ":" + port,
-		BindDn:       "CN=manager,DC=example,DC=org",
-		BindPassword: config.NewSecret([]byte("secret")),
-		ClientConfig: common_tls.ClientConfig{
-			InsecureSkipVerify: true,
-		},
+		Server:             "ldaps://" + container.Address + ":" + port,
+		BindDn:             "CN=manager,DC=example,DC=org",
+		BindPassword:       config.NewSecret([]byte("secret")),
+		InsecureSkipVerify: true,
 	}
 	require.NoError(t, plugin.Init())
 
@@ -484,7 +479,7 @@ func TestOpenLDAPLDAPSIntegration(t *testing.T) {
 				"server": container.Address,
 				"port":   port,
 			},
-			map[string]interface{}{
+			map[string]any{
 				"abandon_operations_completed":     int64(0),
 				"abandon_operations_initiated":     int64(0),
 				"active_threads":                   int64(0),
@@ -575,7 +570,7 @@ func Test389dsIntegration(t *testing.T) {
 				"server": container.Address,
 				"port":   port,
 			},
-			map[string]interface{}{
+			map[string]any{
 				"add_operations":                     int64(0),
 				"anonymous_binds":                    int64(0),
 				"backends":                           int64(0),

@@ -183,7 +183,7 @@ func TestBuildMetricDatums(t *testing.T) {
 			input: metric.New(
 				"test1",
 				map[string]string{"tag1": "value1"},
-				map[string]interface{}{
+				map[string]any{
 					"value_max":   float64(10),
 					"value_min":   float64(0),
 					"value_sum":   float64(100),
@@ -198,7 +198,7 @@ func TestBuildMetricDatums(t *testing.T) {
 			input: metric.New(
 				"test1",
 				map[string]string{"tag1": "value1"},
-				map[string]interface{}{
+				map[string]any{
 					"valueA": float64(10),
 					"valueB": float64(0),
 					"valueC": float64(100),
@@ -214,7 +214,7 @@ func TestBuildMetricDatums(t *testing.T) {
 			input: metric.New(
 				"test1",
 				map[string]string{"tag1": "value1"},
-				map[string]interface{}{
+				map[string]any{
 					"valueA_max":   float64(10),
 					"valueA_min":   float64(0),
 					"valueA_sum":   float64(100),
@@ -305,7 +305,7 @@ func TestBuildMetricDatumsSkipEmptyTags(t *testing.T) {
 			"host": "example.org",
 			"foo":  "",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"value": int64(42),
 		},
 		time.Unix(0, 0),

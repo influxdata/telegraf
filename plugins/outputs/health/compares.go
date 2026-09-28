@@ -57,7 +57,7 @@ func (c *Compares) Check(metrics []telegraf.Metric) bool {
 	return success
 }
 
-func asFloat(fv interface{}) (float64, bool) {
+func asFloat(fv any) (float64, bool) {
 	switch v := fv.(type) {
 	case int64:
 		return float64(v), true

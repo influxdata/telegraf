@@ -59,11 +59,9 @@ func NewTicker(interval, jitter, offset time.Duration, opt ...Option) *Ticker {
 	ctx, cancel := context.WithCancel(context.Background())
 	t.cancel = cancel
 
-	t.wg.Add(1)
-	go func() {
-		defer t.wg.Done()
+	t.wg.Go(func() {
 		t.run(ctx)
-	}()
+	})
 
 	return t
 }

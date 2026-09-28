@@ -97,7 +97,7 @@ func (a *AzureStorageQueue) Gather(acc telegraf.Accumulator) error {
 				"account": a.StorageAccountName,
 				"queue":   strings.TrimSpace(name),
 			}
-			fields := map[string]interface{}{
+			fields := map[string]any{
 				"size": *props.ApproximateMessagesCount,
 			}
 			now := time.Now()

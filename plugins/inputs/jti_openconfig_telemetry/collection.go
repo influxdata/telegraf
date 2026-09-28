@@ -1,11 +1,14 @@
 package jti_openconfig_telemetry
 
-import "sort"
+import (
+	"maps"
+	"sort"
+)
 
 type dataGroup struct {
 	numKeys int
 	tags    map[string]string
-	data    map[string]interface{}
+	data    map[string]any
 }
 
 // Sort the data groups by number of keys
@@ -45,12 +48,10 @@ func (a collectionByKeys) isAvailable(tags map[string]string) *dataGroup {
 }
 
 // Inserts into already existing group or creates a new group
-func (a collectionByKeys) insert(tags map[string]string, data map[string]interface{}) collectionByKeys {
+func (a collectionByKeys) insert(tags map[string]string, data map[string]any) collectionByKeys {
 	// If there is already a group with this set of tags, insert into it. Otherwise create a new group and insert
 	if group := a.isAvailable(tags); group != nil {
-		for k, v := range data {
-			group.data[k] = v
-		}
+		maps.Copy(group.data, data)
 	} else {
 		a = append(a, dataGroup{len(tags), tags, data})
 	}

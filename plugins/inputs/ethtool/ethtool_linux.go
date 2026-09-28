@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 
@@ -166,7 +167,7 @@ func (e *Ethtool) gatherEthtoolStats(iface namespacedInterface, acc telegraf.Acc
 
 	tags[tagDriverName] = driverName
 
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	stats, err := e.command.stats(iface)
 	if err != nil {
 		acc.AddError(fmt.Errorf("%q stats: %w", iface.Name, err))
@@ -196,17 +197,17 @@ func (e *Ethtool) gatherEthtoolStats(iface namespacedInterface, acc telegraf.Acc
 // camelcase before trying to lower case things.
 func (e *Ethtool) normalizeKey(key string) string {
 	// must trim whitespace or this will have a leading _
-	if inStringSlice(e.NormalizeKeys, "snakecase") {
+	if slices.Contains(e.NormalizeKeys, "snakecase") {
 		key = camelCase2SnakeCase(strings.TrimSpace(key))
 	}
 	// must occur before underscore, otherwise nothing to trim
-	if inStringSlice(e.NormalizeKeys, "trim") {
+	if slices.Contains(e.NormalizeKeys, "trim") {
 		key = strings.TrimSpace(key)
 	}
-	if inStringSlice(e.NormalizeKeys, "lower") {
+	if slices.Contains(e.NormalizeKeys, "lower") {
 		key = strings.ToLower(key)
 	}
-	if inStringSlice(e.NormalizeKeys, "underscore") {
+	if slices.Contains(e.NormalizeKeys, "underscore") {
 		key = strings.ReplaceAll(key, " ", "_")
 	}
 	// aws has a conflicting name that needs to be renamed
@@ -224,16 +225,6 @@ func camelCase2SnakeCase(value string) string {
 	snake := matchFirstCap.ReplaceAllString(value, "${1}_${2}")
 	snake = matchAllCap.ReplaceAllString(snake, "${1}_${2}")
 	return strings.ToLower(snake)
-}
-
-func inStringSlice(slice []string, value string) bool {
-	for _, item := range slice {
-		if item == value {
-			return true
-		}
-	}
-
-	return false
 }
 
 func isLoopback(iface namespacedInterface) bool {

@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	ping "github.com/prometheus-community/pro-bing"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/config"
@@ -258,7 +257,7 @@ func TestPingGather(t *testing.T) {
 
 	require.NoError(t, acc.GatherError(p.Gather))
 	tags := map[string]string{"url": "localhost"}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"packets_transmitted":   5,
 		"packets_received":      5,
 		"percent_packet_loss":   0.0,
@@ -305,7 +304,7 @@ func TestLossyPingGather(t *testing.T) {
 
 	require.NoError(t, acc.GatherError(p.Gather))
 	tags := map[string]string{"url": "www.google.com"}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"packets_transmitted":   5,
 		"packets_received":      3,
 		"percent_packet_loss":   40.0,
@@ -331,7 +330,7 @@ func TestBadPingGather(t *testing.T) {
 
 	require.NoError(t, acc.GatherError(p.Gather))
 	tags := map[string]string{"url": "www.amazon.com"}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"packets_transmitted": 2,
 		"packets_received":    0,
 		"percent_packet_loss": 100.0,
@@ -418,16 +417,14 @@ func TestPingGatherNative(t *testing.T) {
 
 	fakePingFunc := func(string, int) (*pingStats, error) {
 		s := &pingStats{
-			Statistics: ping.Statistics{
-				PacketsSent: 5,
-				PacketsRecv: 5,
-				Rtts: []time.Duration{
-					3 * time.Millisecond,
-					4 * time.Millisecond,
-					1 * time.Millisecond,
-					5 * time.Millisecond,
-					2 * time.Millisecond,
-				},
+			PacketsSent: 5,
+			PacketsRecv: 5,
+			Rtts: []time.Duration{
+				3 * time.Millisecond,
+				4 * time.Millisecond,
+				1 * time.Millisecond,
+				5 * time.Millisecond,
+				2 * time.Millisecond,
 			},
 			ttl: 1,
 		}
@@ -505,10 +502,8 @@ func TestNoPacketsSent(t *testing.T) {
 		Percentiles: []int{50, 95, 99},
 		nativePingFunc: func(string, int) (*pingStats, error) {
 			s := &pingStats{
-				Statistics: ping.Statistics{
-					PacketsSent: 0,
-					PacketsRecv: 0,
-				},
+				PacketsSent: 0,
+				PacketsRecv: 0,
 			}
 
 			return s, nil

@@ -19,7 +19,7 @@ func newM1() telegraf.Metric {
 			"verb":           "GET",
 			"s-computername": "MIXEDCASE_hostname",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"request":    "/mixed/CASE/paTH/?from=-1D&to=now",
 			"whitespace": "  whitespace\t",
 		},
@@ -34,7 +34,7 @@ func newM2() telegraf.Metric {
 			"verb":           "GET",
 			"S-ComputerName": "MIXEDCASE_hostname",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"Request":      "/mixed/CASE/paTH/?from=-1D&to=now",
 			"req/sec":      5,
 			" whitespace ": "  whitespace\t", //nolint:gocritic // additional whitespace on purpose for testing
@@ -806,7 +806,7 @@ func TestMultipleConversions(t *testing.T) {
 			"foo":            "a",
 			"bar":            "b",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"request":       "/mixed/CASE/paTH/?from=-1D&to=now",
 			"cs-host":       "AAAbbb",
 			"ignore_number": int64(200),
@@ -818,7 +818,7 @@ func TestMultipleConversions(t *testing.T) {
 
 	processed := plugin.Apply(m)
 
-	expectedFields := map[string]interface{}{
+	expectedFields := map[string]any{
 		"request":           "/mixed/case/path/?from=-1d&to=now",
 		"ignore_number":     int64(200),
 		"ignore_bool":       true,
@@ -864,7 +864,7 @@ func TestReadmeExample(t *testing.T) {
 			"verb":     "get",
 			"uri_stem": "/API/HealthCheck",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"cs-host":      "MIXEDCASE_host",
 			"referrer":     "-",
 			"ident":        "-",
@@ -881,7 +881,7 @@ func TestReadmeExample(t *testing.T) {
 		"verb":     "get",
 		"uri_stem": "healthcheck",
 	}
-	expectedFields := map[string]interface{}{
+	expectedFields := map[string]any{
 		"cs-host":            "MIXEDCASE_host",
 		"cs-host_normalised": "MIXEDCASE_HOST",
 		"referrer":           "-",
@@ -897,7 +897,7 @@ func TestReadmeExample(t *testing.T) {
 
 func newMetric(name string) telegraf.Metric {
 	tags := map[string]string{}
-	fields := map[string]interface{}{}
+	fields := map[string]any{}
 	m := metric.New(name, tags, fields, time.Now())
 	return m
 }
@@ -964,7 +964,7 @@ func TestBase64Decode(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"message": "aG93ZHk=",
 					},
 					time.Unix(0, 0),
@@ -974,7 +974,7 @@ func TestBase64Decode(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"message": "howdy",
 					},
 					time.Unix(0, 0),
@@ -994,7 +994,7 @@ func TestBase64Decode(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"message": "_not_base64_",
 					},
 					time.Unix(0, 0),
@@ -1004,7 +1004,7 @@ func TestBase64Decode(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"message": "_not_base64_",
 					},
 					time.Unix(0, 0),
@@ -1024,7 +1024,7 @@ func TestBase64Decode(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"message": "//5oAG8AdwBkAHkA",
 					},
 					time.Unix(0, 0),
@@ -1034,7 +1034,7 @@ func TestBase64Decode(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"message": "//5oAG8AdwBkAHkA",
 					},
 					time.Unix(0, 0),
@@ -1072,7 +1072,7 @@ func TestValidUTF8(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"message": "howdy",
 					},
 					time.Unix(0, 0),
@@ -1082,7 +1082,7 @@ func TestValidUTF8(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"message": "howdy",
 					},
 					time.Unix(0, 0),
@@ -1103,7 +1103,7 @@ func TestValidUTF8(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"message": "ho" + string([]byte{0xff}) + "wdy",
 					},
 					time.Unix(0, 0),
@@ -1113,7 +1113,7 @@ func TestValidUTF8(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"message": "horwdy",
 					},
 					time.Unix(0, 0),
@@ -1134,7 +1134,7 @@ func TestValidUTF8(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"message": "ho" + string([]byte{0xff}) + "wdy",
 					},
 					time.Unix(0, 0),
@@ -1144,7 +1144,7 @@ func TestValidUTF8(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"message": "howdy",
 					},
 					time.Unix(0, 0),
@@ -1171,14 +1171,14 @@ func TestTrackedMetricNotLost(t *testing.T) {
 	}
 	input := make([]telegraf.Metric, 0, 3)
 	expected := make([]telegraf.Metric, 0, 6)
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		strI := strconv.Itoa(i)
 
-		m := metric.New("m"+strI, map[string]string{}, map[string]interface{}{"message": "test" + string([]byte{0xff}) + strI}, time.Unix(0, 0))
+		m := metric.New("m"+strI, map[string]string{}, map[string]any{"message": "test" + string([]byte{0xff}) + strI}, time.Unix(0, 0))
 		tm, _ := metric.WithTracking(m, notify)
 		input = append(input, tm)
 
-		m = metric.New("m"+strI, map[string]string{}, map[string]interface{}{"message": "test" + strI}, time.Unix(0, 0))
+		m = metric.New("m"+strI, map[string]string{}, map[string]any{"message": "test" + strI}, time.Unix(0, 0))
 		expected = append(expected, m)
 	}
 

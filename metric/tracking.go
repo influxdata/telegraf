@@ -24,12 +24,12 @@ func WithGroupTracking(metric []telegraf.Metric, fn NotifyFunc) ([]telegraf.Metr
 }
 
 var (
-	lastID    uint64
+	lastID    atomic.Uint64
 	finalizer func(*trackingData)
 )
 
 func newTrackingID() telegraf.TrackingID {
-	return telegraf.TrackingID(atomic.AddUint64(&lastID, 1))
+	return telegraf.TrackingID(lastID.Add(1))
 }
 
 type trackingData struct {

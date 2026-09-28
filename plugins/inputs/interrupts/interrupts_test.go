@@ -17,14 +17,14 @@ import (
 func expectCPUAsTags(m *testutil.Accumulator, t *testing.T, measurement string, irq irq) {
 	for idx, value := range irq.cpus {
 		m.AssertContainsTaggedFields(t, measurement,
-			map[string]interface{}{"count": value},
+			map[string]any{"count": value},
 			map[string]string{"irq": irq.id, "type": irq.typ, "device": irq.device, "cpu": fmt.Sprintf("cpu%d", idx)},
 		)
 	}
 }
 
 func expectCPUAsFields(m *testutil.Accumulator, t *testing.T, measurement string, irq irq) {
-	fields := map[string]interface{}{}
+	fields := map[string]any{}
 	total := int64(0)
 	for idx, count := range irq.cpus {
 		fields[fmt.Sprintf("CPU%d", idx)] = count

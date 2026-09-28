@@ -31,7 +31,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Query record type.
   ## Possible values: A, AAAA, CNAME, MX, NS, PTR, TXT, SOA, SPF, SRV.
-  # record_type = "A"
+  # record_type = "NS"
 
   ## Dns server port.
   # port = 53

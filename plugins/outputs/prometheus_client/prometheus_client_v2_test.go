@@ -44,7 +44,7 @@ func TestMetricVersion2(t *testing.T) {
 					map[string]string{
 						"host": "example.org",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle": 42.0,
 					},
 					time.Unix(0, 0),
@@ -69,7 +69,7 @@ cpu_time_idle{host="example.org"} 42
 				metric.New(
 					"prometheus",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"rpc_duration_seconds_sum":   1.7560473e+07,
 						"rpc_duration_seconds_count": 2693,
 					},
@@ -100,7 +100,7 @@ rpc_duration_seconds_count 2693
 					map[string]string{
 						"host": "example.org",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle": 42.0,
 					},
 					time.Unix(0, 0),
@@ -126,7 +126,7 @@ cpu_time_idle{host="example.org"} 42 0
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle": 42.0,
 						"host":      "example.org",
 					},
@@ -153,7 +153,7 @@ cpu_time_idle{host="example.org"} 42
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle": 42.0,
 						"host":      "example.org",
 					},
@@ -182,7 +182,7 @@ cpu_time_idle 42
 					map[string]string{
 						"主机-名": "example.org",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"数值-值": 42.0,
 					},
 					time.Unix(0, 0),
@@ -210,7 +210,7 @@ cpu_time_idle 42
 					map[string]string{
 						"host": "example.org",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"cpu_time_idle": 42.0,
 					},
 					time.Unix(0, 0),
@@ -237,7 +237,7 @@ cpu_time_idle{host="example.org"} 42
 					map[string]string{
 						"cpu": "cpu1",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"usage_idle_sum":   2000.0,
 						"usage_idle_count": 20.0,
 					},
@@ -250,7 +250,7 @@ cpu_time_idle{host="example.org"} 42
 						"cpu": "cpu1",
 						"le":  "0.0",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"usage_idle_bucket": 0.0,
 					},
 					time.Unix(0, 0),
@@ -262,7 +262,7 @@ cpu_time_idle{host="example.org"} 42
 						"cpu": "cpu1",
 						"le":  "50.0",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"usage_idle_bucket": 7.0,
 					},
 					time.Unix(0, 0),
@@ -274,7 +274,7 @@ cpu_time_idle{host="example.org"} 42
 						"cpu": "cpu1",
 						"le":  "100.0",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"usage_idle_bucket": 20.0,
 					},
 					time.Unix(0, 0),
@@ -286,7 +286,7 @@ cpu_time_idle{host="example.org"} 42
 						"cpu": "cpu1",
 						"le":  "+Inf",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"usage_idle_bucket": 20.0,
 					},
 					time.Unix(0, 0),
@@ -319,7 +319,7 @@ cpu_usage_idle_count{cpu="cpu1"} 20
 					map[string]string{
 						"cpu": "cpu1",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"usage_idle_sum":   2000.0,
 						"usage_idle_count": 20.0,
 					},
@@ -351,7 +351,7 @@ cpu_usage_idle_count{cpu="cpu1"} 20
 					map[string]string{
 						"host": "example.org",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"cpu_time_idle": 42,
 					},
 					time.Unix(0, 0),
@@ -379,7 +379,7 @@ cpu_time_idle{host="example.org"} 42
 					map[string]string{
 						"host": "example.org",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"cpu_time_idle": 42.0,
 					},
 					time.Unix(0, 0),

@@ -13,7 +13,7 @@ func TestConvertGlobalStatus(t *testing.T) {
 		name        string
 		key         string
 		value       sql.RawBytes
-		expected    interface{}
+		expected    any
 		expectedErr error
 	}{
 		{
@@ -41,7 +41,7 @@ func TestConvertGlobalStatus(t *testing.T) {
 			name:  "multiple values in one metric converted to a map",
 			key:   "wsrep_evs_repl_latency",
 			value: []byte("0.000160108/0.000386178/0.00964884/0.000488261/816"),
-			expected: map[string]interface{}{
+			expected: map[string]any{
 				"min":         0.000160108,
 				"avg":         0.000386178,
 				"max":         0.00964884,
@@ -65,7 +65,7 @@ func TestConvertGlobalVariables(t *testing.T) {
 		name        string
 		key         string
 		value       sql.RawBytes
-		expected    interface{}
+		expected    any
 		expectedErr error
 	}{
 		{
@@ -112,7 +112,7 @@ func TestConvertGlobalVariables(t *testing.T) {
 					"protonet.backend = asio; protonet.version = 0; repl.causal_read_timeout = PT30S; repl.commit_order = 3; repl.key_format = FLAT8; " +
 					"repl.max_ws_size = 2147483647; repl.proto_max = 11; socket.checksum = 2; socket.recv_buf_size = auto; socket.send_buf_size = auto; ",
 			),
-			expected: map[string]interface{}{
+			expected: map[string]any{
 				"gcache_size": uint64(134217728),
 			},
 			expectedErr: nil,
@@ -130,7 +130,7 @@ func TestConvertGlobalVariables(t *testing.T) {
 func TestParseValue(t *testing.T) {
 	testCases := []struct {
 		rawByte sql.RawBytes
-		output  interface{}
+		output  any
 		err     string
 	}{
 		{sql.RawBytes("123"), int64(123), ""},

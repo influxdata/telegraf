@@ -118,7 +118,7 @@ func (cb *Couchbase) gatherServer(acc telegraf.Accumulator, addr string) error {
 	for i := 0; i < len(pool.Nodes); i++ {
 		node := pool.Nodes[i]
 		tags := map[string]string{"cluster": escapedAddr, "hostname": node.Hostname}
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		fields["memory_free"] = node.MemoryFree
 		fields["memory_total"] = node.MemoryTotal
 		acc.AddFields("couchbase_node", fields, tags)
@@ -197,8 +197,8 @@ func (cb *Couchbase) gatherAutoFailoverStats(server string) (map[string]any, err
 }
 
 // basicBucketStats gets the basic bucket statistics
-func (cb *Couchbase) basicBucketStats(basicStats map[string]interface{}) map[string]interface{} {
-	fields := make(map[string]interface{})
+func (cb *Couchbase) basicBucketStats(basicStats map[string]any) map[string]any {
+	fields := make(map[string]any)
 	cb.addBucketField(fields, "quota_percent_used", basicStats["quotaPercentUsed"])
 	cb.addBucketField(fields, "ops_per_sec", basicStats["opsPerSec"])
 	cb.addBucketField(fields, "disk_fetches", basicStats["diskFetches"])
@@ -209,7 +209,7 @@ func (cb *Couchbase) basicBucketStats(basicStats map[string]interface{}) map[str
 	return fields
 }
 
-func (cb *Couchbase) gatherDetailedBucketStats(server, bucket, nodeHostname string, fields map[string]interface{}) error {
+func (cb *Couchbase) gatherDetailedBucketStats(server, bucket, nodeHostname string, fields map[string]any) error {
 	extendedBucketStats := &bucketStats{}
 	err := cb.queryDetailedBucketStats(server, bucket, nodeHostname, extendedBucketStats)
 	if err != nil {
@@ -434,7 +434,7 @@ func (cb *Couchbase) gatherDetailedBucketStats(server, bucket, nodeHostname stri
 	return nil
 }
 
-func (cb *Couchbase) addBucketField(fields map[string]interface{}, fieldKey string, value interface{}) {
+func (cb *Couchbase) addBucketField(fields map[string]any, fieldKey string, value any) {
 	if !cb.bucketInclude.Match(fieldKey) {
 		return
 	}
@@ -442,7 +442,7 @@ func (cb *Couchbase) addBucketField(fields map[string]interface{}, fieldKey stri
 	fields[fieldKey] = value
 }
 
-func (cb *Couchbase) addBucketFieldChecked(fields map[string]interface{}, fieldKey string, values []float64) {
+func (cb *Couchbase) addBucketFieldChecked(fields map[string]any, fieldKey string, values []float64) {
 	if values == nil {
 		return
 	}

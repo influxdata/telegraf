@@ -53,7 +53,7 @@ type program struct {
 	prog   cel.Program
 }
 
-func (p *program) eval(vars map[string]interface{}) (bool, error) {
+func (p *program) eval(vars map[string]any) (bool, error) {
 	result, _, err := p.prog.Eval(vars)
 	if err != nil {
 		return false, err

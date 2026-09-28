@@ -88,7 +88,7 @@ func TestMetricsCorrect(t *testing.T) {
 	n := &Nats{Server: srv.URL}
 	require.NoError(t, n.Gather(&acc))
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"in_msgs":           int64(74148556),
 		"out_msgs":          int64(68863261),
 		"in_bytes":          int64(946267004717),

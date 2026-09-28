@@ -25,10 +25,11 @@ var sampleConfig string
 const timeLayout = "2006-01-02 15:04:05 -0700 MST"
 
 type Vault struct {
-	URL       string          `toml:"url"`
-	TokenFile string          `toml:"token_file"`
-	Token     string          `toml:"token"`
-	Log       telegraf.Logger `toml:"-"`
+	URL         string          `toml:"url"`
+	TokenFile   string          `toml:"token_file"`
+	Token       string          `toml:"token"`
+	FloatValues *bool           `toml:"float_values"`
+	Log         telegraf.Logger `toml:"-"`
 	common_http.HTTPClientConfig
 
 	client *http.Client
@@ -49,6 +50,12 @@ func (n *Vault) Init() error {
 
 	if n.TokenFile != "" && n.Token != "" {
 		return errors.New("both token_file and token are set")
+	}
+
+	if n.FloatValues == nil {
+		n.Log.Warn("Option 'float_values' is not set; the default will change from 'false' to 'true' in v1.45.0. " +
+			"Set it explicitly to lock in the behavior and silence this warning.")
+		n.FloatValues = new(false)
 	}
 
 	if n.TokenFile != "" {
@@ -79,7 +86,7 @@ func (n *Vault) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	return buildVaultMetrics(acc, sysMetrics)
+	return n.buildVaultMetrics(acc, sysMetrics)
 }
 
 func (n *Vault) Stop() {
@@ -117,7 +124,7 @@ func (n *Vault) loadJSON(url string) (*sysMetrics, error) {
 }
 
 // buildVaultMetrics, it builds all the metrics and adds them to the accumulator
-func buildVaultMetrics(acc telegraf.Accumulator, sysMetrics *sysMetrics) error {
+func (n *Vault) buildVaultMetrics(acc telegraf.Accumulator, sysMetrics *sysMetrics) error {
 	t, err := internal.ParseTimestamp(timeLayout, sysMetrics.Timestamp, nil)
 	if err != nil {
 		return fmt.Errorf("error parsing time: %w", err)
@@ -133,7 +140,7 @@ func buildVaultMetrics(acc telegraf.Accumulator, sysMetrics *sysMetrics) error {
 			tags[key] = convertedVal
 		}
 
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"count":  counters.Count,
 			"rate":   counters.Rate,
 			"sum":    counters.Sum,
@@ -141,6 +148,16 @@ func buildVaultMetrics(acc telegraf.Accumulator, sysMetrics *sysMetrics) error {
 			"max":    counters.Max,
 			"mean":   counters.Mean,
 			"stddev": counters.Stddev,
+		}
+		if !*n.FloatValues {
+			// Keep the integer type of former releases, truncating the values
+			for _, key := range []string{"sum", "min", "max"} {
+				v, err := internal.ToInt64(fields[key])
+				if err != nil {
+					return fmt.Errorf("converting counter %s field %s failed: %w", counters.Name, key, err)
+				}
+				fields[key] = v
+			}
 		}
 		acc.AddCounter(counters.baseInfo.Name, fields, tags, t)
 	}
@@ -155,8 +172,16 @@ func buildVaultMetrics(acc telegraf.Accumulator, sysMetrics *sysMetrics) error {
 			tags[key] = convertedVal
 		}
 
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"value": gauges.Value,
+		}
+		if !*n.FloatValues {
+			// Keep the integer type of former releases, truncating the value
+			v, err := internal.ToInt64(gauges.Value)
+			if err != nil {
+				return fmt.Errorf("converting gauge %s value failed: %w", gauges.Name, err)
+			}
+			fields["value"] = v
 		}
 
 		acc.AddGauge(gauges.Name, fields, tags, t)
@@ -172,7 +197,7 @@ func buildVaultMetrics(acc telegraf.Accumulator, sysMetrics *sysMetrics) error {
 			tags[key] = convertedVal
 		}
 
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"count":  summary.Count,
 			"rate":   summary.Rate,
 			"sum":    summary.Sum,
@@ -190,11 +215,7 @@ func buildVaultMetrics(acc telegraf.Accumulator, sysMetrics *sysMetrics) error {
 func init() {
 	inputs.Add("vault", func() telegraf.Input {
 		return &Vault{
-			HTTPClientConfig: common_http.HTTPClientConfig{
-				TransportConfig: common_http.TransportConfig{
-					ResponseHeaderTimeout: config.Duration(5 * time.Second),
-				},
-			},
+			ResponseHeaderTimeout: config.Duration(5 * time.Second),
 		}
 	})
 }

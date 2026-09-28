@@ -97,10 +97,10 @@ func (s *Serializer) batchMetrics(metrics []telegraf.Metric) ([]byte, error) {
 
 	// Serialize the metrics
 	var earliest, latest time.Time
-	data := make([]map[string]interface{}, 0, len(metrics))
+	data := make([]map[string]any, 0, len(metrics))
 	for _, m := range metrics {
 		ts := m.Time()
-		data = append(data, map[string]interface{}{
+		data = append(data, map[string]any{
 			"name":      m.Name(),
 			"tags":      m.Tags(),
 			"fields":    m.Fields(),
@@ -165,7 +165,7 @@ func (s *Serializer) createEvent(m telegraf.Metric) (*cloudevents.Event, error) 
 	}
 
 	// Serialize the metric
-	data := map[string]interface{}{
+	data := map[string]any{
 		"name":      m.Name(),
 		"tags":      m.Tags(),
 		"fields":    m.Fields(),

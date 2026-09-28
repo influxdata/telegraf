@@ -46,6 +46,10 @@ store usage.
   ## paths is handled automatically and should not be included.
   secret_path = ""
 
+  ## Namespace of the secrets; no namespace is used when empty
+  ## Ignored if the server does not support namespaces such as Vault Community
+  # namespace = ""
+
   ## Secret store engine to use.
   ## Supports 'kv-v1' and 'kv-v2' engines.
   ## By default will use the kv-v2 engine.

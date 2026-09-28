@@ -18,7 +18,7 @@ import (
 
 type testSNMPConnection struct {
 	host   string
-	values map[string]interface{}
+	values map[string]any
 }
 
 func (tsc *testSNMPConnection) Host() string {
@@ -64,7 +64,7 @@ func (*testSNMPConnection) Reconnect() error {
 
 var tsc = &testSNMPConnection{
 	host: "tsc",
-	values: map[string]interface{}{
+	values: map[string]any{
 		".1.0.0.0.1.1.0":         "foo",
 		".1.0.0.0.1.1.1":         []byte("bar"),
 		".1.0.0.0.1.1.2":         []byte(""),
@@ -106,9 +106,7 @@ var tsc = &testSNMPConnection{
 
 func TestSnmpInit(t *testing.T) {
 	s := &Snmp{
-		ClientConfig: snmp.ClientConfig{
-			Translator: "netsnmp",
-		},
+		Translator: "netsnmp",
 	}
 
 	require.NoError(t, s.Init())
@@ -129,10 +127,8 @@ func TestSnmpInit_noTranslate(t *testing.T) {
 					{Oid: ".1.1.1.6"},
 				}},
 		},
-		ClientConfig: snmp.ClientConfig{
-			Translator: "netsnmp",
-		},
-		Log: testutil.Logger{Name: "inputs.snmp"},
+		Translator: "netsnmp",
+		Log:        testutil.Logger{Name: "inputs.snmp"},
 	}
 
 	err := s.Init()
@@ -179,14 +175,12 @@ func TestSnmpInit_noName_noOid(t *testing.T) {
 
 func TestGetSNMPConnection_v2(t *testing.T) {
 	s := &Snmp{
-		Agents: []string{"1.2.3.4:567", "1.2.3.4", "udp://127.0.0.1"},
-		ClientConfig: snmp.ClientConfig{
-			Timeout:    config.Duration(3 * time.Second),
-			Retries:    4,
-			Version:    2,
-			Community:  "foo",
-			Translator: "netsnmp",
-		},
+		Agents:     []string{"1.2.3.4:567", "1.2.3.4", "udp://127.0.0.1"},
+		Timeout:    config.Duration(3 * time.Second),
+		Retries:    4,
+		Version:    2,
+		Community:  "foo",
+		Translator: "netsnmp",
 	}
 	require.NoError(t, s.Init())
 
@@ -223,10 +217,8 @@ func TestGetSNMPConnectionTCP(t *testing.T) {
 	defer tcpServer.Close()
 
 	s := &Snmp{
-		Agents: []string{fmt.Sprintf("tcp://%s", tcpServer.Addr())},
-		ClientConfig: snmp.ClientConfig{
-			Translator: "netsnmp",
-		},
+		Agents:     []string{fmt.Sprintf("tcp://%s", tcpServer.Addr())},
+		Translator: "netsnmp",
 	}
 	require.NoError(t, s.Init())
 
@@ -239,22 +231,20 @@ func TestGetSNMPConnectionTCP(t *testing.T) {
 
 func TestGetSNMPConnection_v3(t *testing.T) {
 	s := &Snmp{
-		Agents: []string{"1.2.3.4"},
-		ClientConfig: snmp.ClientConfig{
-			Version:        3,
-			MaxRepetitions: 20,
-			ContextName:    "mycontext",
-			SecLevel:       "authPriv",
-			SecName:        "myuser",
-			AuthProtocol:   "md5",
-			AuthPassword:   config.NewSecret([]byte("password123")),
-			PrivProtocol:   "des",
-			PrivPassword:   config.NewSecret([]byte("321drowssap")),
-			EngineID:       "myengineid",
-			EngineBoots:    1,
-			EngineTime:     2,
-			Translator:     "netsnmp",
-		},
+		Agents:         []string{"1.2.3.4"},
+		Version:        3,
+		MaxRepetitions: 20,
+		ContextName:    "mycontext",
+		SecLevel:       "authPriv",
+		SecName:        "myuser",
+		AuthProtocol:   "md5",
+		AuthPassword:   config.NewSecret([]byte("password123")),
+		PrivProtocol:   "des",
+		PrivPassword:   config.NewSecret([]byte("321drowssap")),
+		EngineID:       "myengineid",
+		EngineBoots:    1,
+		EngineTime:     2,
+		Translator:     "netsnmp",
 	}
 	err := s.Init()
 	require.NoError(t, err)
@@ -288,88 +278,80 @@ func TestGetSNMPConnection_v3_blumenthal(t *testing.T) {
 			Name:      "AES192",
 			Algorithm: gosnmp.AES192,
 			Config: &Snmp{
-				Agents: []string{"1.2.3.4"},
-				ClientConfig: snmp.ClientConfig{
-					Version:        3,
-					MaxRepetitions: 20,
-					ContextName:    "mycontext",
-					SecLevel:       "authPriv",
-					SecName:        "myuser",
-					AuthProtocol:   "md5",
-					AuthPassword:   config.NewSecret([]byte("password123")),
-					PrivProtocol:   "AES192",
-					PrivPassword:   config.NewSecret([]byte("password123")),
-					EngineID:       "myengineid",
-					EngineBoots:    1,
-					EngineTime:     2,
-					Translator:     "netsnmp",
-				},
+				Agents:         []string{"1.2.3.4"},
+				Version:        3,
+				MaxRepetitions: 20,
+				ContextName:    "mycontext",
+				SecLevel:       "authPriv",
+				SecName:        "myuser",
+				AuthProtocol:   "md5",
+				AuthPassword:   config.NewSecret([]byte("password123")),
+				PrivProtocol:   "AES192",
+				PrivPassword:   config.NewSecret([]byte("password123")),
+				EngineID:       "myengineid",
+				EngineBoots:    1,
+				EngineTime:     2,
+				Translator:     "netsnmp",
 			},
 		},
 		{
 			Name:      "AES192C",
 			Algorithm: gosnmp.AES192C,
 			Config: &Snmp{
-				Agents: []string{"1.2.3.4"},
-				ClientConfig: snmp.ClientConfig{
-					Version:        3,
-					MaxRepetitions: 20,
-					ContextName:    "mycontext",
-					SecLevel:       "authPriv",
-					SecName:        "myuser",
-					AuthProtocol:   "md5",
-					AuthPassword:   config.NewSecret([]byte("password123")),
-					PrivProtocol:   "AES192C",
-					PrivPassword:   config.NewSecret([]byte("password123")),
-					EngineID:       "myengineid",
-					EngineBoots:    1,
-					EngineTime:     2,
-					Translator:     "netsnmp",
-				},
+				Agents:         []string{"1.2.3.4"},
+				Version:        3,
+				MaxRepetitions: 20,
+				ContextName:    "mycontext",
+				SecLevel:       "authPriv",
+				SecName:        "myuser",
+				AuthProtocol:   "md5",
+				AuthPassword:   config.NewSecret([]byte("password123")),
+				PrivProtocol:   "AES192C",
+				PrivPassword:   config.NewSecret([]byte("password123")),
+				EngineID:       "myengineid",
+				EngineBoots:    1,
+				EngineTime:     2,
+				Translator:     "netsnmp",
 			},
 		},
 		{
 			Name:      "AES256",
 			Algorithm: gosnmp.AES256,
 			Config: &Snmp{
-				Agents: []string{"1.2.3.4"},
-				ClientConfig: snmp.ClientConfig{
-					Version:        3,
-					MaxRepetitions: 20,
-					ContextName:    "mycontext",
-					SecLevel:       "authPriv",
-					SecName:        "myuser",
-					AuthProtocol:   "md5",
-					AuthPassword:   config.NewSecret([]byte("password123")),
-					PrivProtocol:   "AES256",
-					PrivPassword:   config.NewSecret([]byte("password123")),
-					EngineID:       "myengineid",
-					EngineBoots:    1,
-					EngineTime:     2,
-					Translator:     "netsnmp",
-				},
+				Agents:         []string{"1.2.3.4"},
+				Version:        3,
+				MaxRepetitions: 20,
+				ContextName:    "mycontext",
+				SecLevel:       "authPriv",
+				SecName:        "myuser",
+				AuthProtocol:   "md5",
+				AuthPassword:   config.NewSecret([]byte("password123")),
+				PrivProtocol:   "AES256",
+				PrivPassword:   config.NewSecret([]byte("password123")),
+				EngineID:       "myengineid",
+				EngineBoots:    1,
+				EngineTime:     2,
+				Translator:     "netsnmp",
 			},
 		},
 		{
 			Name:      "AES256C",
 			Algorithm: gosnmp.AES256C,
 			Config: &Snmp{
-				Agents: []string{"1.2.3.4"},
-				ClientConfig: snmp.ClientConfig{
-					Version:        3,
-					MaxRepetitions: 20,
-					ContextName:    "mycontext",
-					SecLevel:       "authPriv",
-					SecName:        "myuser",
-					AuthProtocol:   "md5",
-					AuthPassword:   config.NewSecret([]byte("password123")),
-					PrivProtocol:   "AES256C",
-					PrivPassword:   config.NewSecret([]byte("password123")),
-					EngineID:       "myengineid",
-					EngineBoots:    1,
-					EngineTime:     2,
-					Translator:     "netsnmp",
-				},
+				Agents:         []string{"1.2.3.4"},
+				Version:        3,
+				MaxRepetitions: 20,
+				ContextName:    "mycontext",
+				SecLevel:       "authPriv",
+				SecName:        "myuser",
+				AuthProtocol:   "md5",
+				AuthPassword:   config.NewSecret([]byte("password123")),
+				PrivProtocol:   "AES256C",
+				PrivPassword:   config.NewSecret([]byte("password123")),
+				EngineID:       "myengineid",
+				EngineBoots:    1,
+				EngineTime:     2,
+				Translator:     "netsnmp",
 			},
 		},
 	}
@@ -403,10 +385,8 @@ func TestGetSNMPConnection_v3_blumenthal(t *testing.T) {
 
 func TestGetSNMPConnection_caching(t *testing.T) {
 	s := &Snmp{
-		Agents: []string{"1.2.3.4", "1.2.3.5", "1.2.3.5"},
-		ClientConfig: snmp.ClientConfig{
-			Translator: "netsnmp",
-		},
+		Agents:     []string{"1.2.3.4", "1.2.3.5", "1.2.3.5"},
+		Translator: "netsnmp",
 	}
 	err := s.Init()
 	require.NoError(t, err)
@@ -435,9 +415,7 @@ func TestGosnmpWrapper_walk_retry(t *testing.T) {
 	// Even though simultaneous access is impossible because the server will be
 	// blocked on ReadFrom, without this the race detector gets unhappy.
 	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		buf := make([]byte, 256)
 		for {
 			_, addr, err := srvr.ReadFrom(buf)
@@ -451,7 +429,7 @@ func TestGosnmpWrapper_walk_retry(t *testing.T) {
 				return
 			}
 		}
-	}()
+	})
 
 	gs := &gosnmp.GoSNMP{
 		Target:    srvr.LocalAddr().(*net.UDPAddr).IP.String(),
@@ -488,9 +466,7 @@ func TestGosnmpWrapper_get_retry(t *testing.T) {
 	// Even though simultaneous access is impossible because the server will be
 	// blocked on ReadFrom, without this the race detector gets unhappy.
 	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		buf := make([]byte, 256)
 		for {
 			_, addr, err := srvr.ReadFrom(buf)
@@ -504,7 +480,7 @@ func TestGosnmpWrapper_get_retry(t *testing.T) {
 				return
 			}
 		}
-	}()
+	})
 
 	gs := &gosnmp.GoSNMP{
 		Target:    srvr.LocalAddr().(*net.UDPAddr).IP.String(),
@@ -631,10 +607,8 @@ func TestSnmpInitGosmi(t *testing.T) {
 		Fields: []snmp.Field{
 			{Oid: "RFC1213-MIB::atPhysAddress"},
 		},
-		ClientConfig: snmp.ClientConfig{
-			Path:       []string{testDataPath},
-			Translator: "gosmi",
-		},
+		Path:       []string{testDataPath},
+		Translator: "gosmi",
 	}
 
 	require.NoError(t, s.Init())
@@ -677,9 +651,7 @@ func TestSnmpInit_noTranslateGosmi(t *testing.T) {
 					{Oid: ".9.1.1.1.6"},
 				}},
 		},
-		ClientConfig: snmp.ClientConfig{
-			Translator: "gosmi",
-		},
+		Translator: "gosmi",
 	}
 
 	require.NoError(t, s.Init())
@@ -743,9 +715,7 @@ func TestGatherGosmi(t *testing.T) {
 
 		connectionCache: []snmp.Connection{tsc},
 
-		ClientConfig: snmp.ClientConfig{
-			Translator: "gosmi",
-		},
+		Translator: "gosmi",
 	}
 	acc := &testutil.Accumulator{}
 

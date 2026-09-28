@@ -20,7 +20,7 @@ func TestSlab(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, slabStats.Gather(&acc))
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"ext4_allocation_context_size": int(16384),
 		"ext4_extent_status_size":      int(8160),
 		"ext4_free_data_size":          int(0),

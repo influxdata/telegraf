@@ -68,7 +68,7 @@ func TestWrite(t *testing.T) {
 				metric.New(
 					"cluster",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"cpu": 42.0,
 					},
 					time.Unix(0, 0),
@@ -90,7 +90,7 @@ func TestWrite(t *testing.T) {
 				metric.New(
 					"cluster",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"value": int64(9223372036854775806),
 					},
 					time.Unix(0, 0),
@@ -112,7 +112,7 @@ func TestWrite(t *testing.T) {
 				metric.New(
 					"cluster",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"value": 9226,
 					},
 					time.Unix(0, 0),
@@ -136,7 +136,7 @@ func TestWrite(t *testing.T) {
 					map[string]string{
 						"name": "accounts-daemon.service",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 9226,
 					},
 					time.Unix(0, 0),

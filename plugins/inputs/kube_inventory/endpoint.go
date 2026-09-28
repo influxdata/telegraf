@@ -26,7 +26,7 @@ func gatherEndpoint(e discoveryv1.EndpointSlice, acc telegraf.Accumulator) {
 		return
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"created":    e.GetCreationTimestamp().UnixNano(),
 		"generation": e.Generation,
 	}

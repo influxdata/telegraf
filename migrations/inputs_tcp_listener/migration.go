@@ -15,7 +15,7 @@ const allowPendingMessagesMsg = `
 `
 
 // Define "old" data structure
-type tcpListener map[string]interface{}
+type tcpListener map[string]any
 
 // Migration function
 func migrate(tbl *ast.Table) ([]byte, string, error) {
@@ -28,7 +28,7 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 	// Copy the setting except the special plugin ones to preserve
 	// all parser settings of the existing (deprecated) config.
 	var msg string
-	plugin := make(map[string]interface{}, len(old))
+	plugin := make(map[string]any, len(old))
 	for k, v := range old {
 		switch k {
 		case "service_address":

@@ -1,10 +1,13 @@
 package filter
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/gobwas/glob"
 )
+
+const WildcardCharacters = "*?{}[]!"
 
 type Filter interface {
 	Match(string) bool
@@ -28,19 +31,15 @@ type Filter interface {
 //
 // Compile will return nil if the filter list is empty.
 func Compile(filters []string, separators ...rune) (Filter, error) {
-	// return if there is nothing to compile
 	if len(filters) == 0 {
 		return nil, nil
 	}
 
-	// check if we can compile a non-glob filter
+	// Check if we can compile a non-glob filter
 	wildcards := len(separators) != 0
-	for _, filter := range filters {
-		if strings.ContainsAny(filter, "*?[") {
-			wildcards = true
-			break
-		}
-	}
+	wildcards = wildcards || slices.ContainsFunc(filters, func(filter string) bool {
+		return strings.ContainsAny(filter, WildcardCharacters)
+	})
 
 	switch {
 	case !wildcards && len(filters) == 1:
@@ -50,6 +49,8 @@ func Compile(filters []string, separators ...rune) (Filter, error) {
 	case wildcards && len(filters) == 1:
 		return glob.Compile(filters[0], separators...)
 	default:
+		// Implement this manually as it is significantly faster than using
+		// gobwas/glob's pattern list
 		return newFilterGlobMultiple(filters, separators...)
 	}
 }

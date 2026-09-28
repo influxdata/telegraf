@@ -114,7 +114,7 @@ func (ipt *Iptables) parseAndGather(data string, acc telegraf.Accumulator) error
 		comment := matches[4]
 
 		tags := map[string]string{"table": ipt.Table, "chain": mchain[1], "target": target, "ruleid": comment}
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 
 		var err error
 		fields["pkts"], err = strconv.ParseUint(pkts, 10, 64)

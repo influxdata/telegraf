@@ -59,7 +59,7 @@ func (s *Minecraft) Gather(acc telegraf.Accumulator) error {
 			"port":   s.Port,
 		}
 
-		var fields = make(map[string]interface{}, len(scores))
+		var fields = make(map[string]any, len(scores))
 		for _, score := range scores {
 			fields[score.name] = score.value
 		}

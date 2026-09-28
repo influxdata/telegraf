@@ -22,7 +22,7 @@ func TestMetricStructure(t *testing.T) {
 			map[string]string{
 				"status": "error",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"offset_ns":                    int64(0),
 				"frequency_offset_ppm":         float64(0),
 				"maxerror_ns":                  int64(0),

@@ -14,7 +14,7 @@ import (
 // Migration function to migrate deprecated RabbitMQ options
 func migrate(tbl *ast.Table) ([]byte, string, error) {
 	// Decode the old data structure
-	var plugin map[string]interface{}
+	var plugin map[string]any
 	if err := toml.UnmarshalTable(tbl, &plugin); err != nil {
 		return nil, "", err
 	}
@@ -33,9 +33,9 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 		}
 
 		// Merge with potentially existing tags
-		var tags map[string]interface{}
+		var tags map[string]any
 		if rawTags, found := plugin["tags"]; found {
-			if tags, ok = rawTags.(map[string]interface{}); !ok {
+			if tags, ok = rawTags.(map[string]any); !ok {
 				return nil, "", fmt.Errorf("unexpected type %T for 'tags'", rawTags)
 			} else if rawName, found := tags["name"]; found {
 				if name, ok := rawName.(string); !ok {
@@ -47,7 +47,7 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 				tags["name"] = oldName
 			}
 		} else {
-			tags = map[string]interface{}{"name": oldName}
+			tags = map[string]any{"name": oldName}
 		}
 
 		// Remove the deprecated setting

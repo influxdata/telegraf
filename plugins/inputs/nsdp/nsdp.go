@@ -115,7 +115,7 @@ func gatherDevice(acc telegraf.Accumulator, device string, response *nsdp.Messag
 			"device_model": deviceModel,
 			"device_port":  strconv.FormatUint(uint64(port), 10),
 		}
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"bytes_sent":       stat.Sent,
 			"bytes_recv":       stat.Received,
 			"packets_total":    stat.Packets,

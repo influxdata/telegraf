@@ -9,11 +9,11 @@ type mqttLogger struct {
 }
 
 // Printf implements mqtt.Logger
-func (l mqttLogger) Printf(fmt string, args ...interface{}) {
+func (l mqttLogger) Printf(fmt string, args ...any) {
 	l.Logger.Debugf(fmt, args...)
 }
 
 // Println implements mqtt.Logger
-func (l mqttLogger) Println(args ...interface{}) {
+func (l mqttLogger) Println(args ...any) {
 	l.Logger.Debug(args...)
 }

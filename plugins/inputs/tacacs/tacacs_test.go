@@ -218,7 +218,7 @@ func TestTacacsLocal(t *testing.T) {
 					metric.New(
 						"tacacs",
 						map[string]string{"source": srvLocal},
-						map[string]interface{}{
+						map[string]any{
 							"responsetime_ms": int64(0),
 							"response_status": tt.reqRespStatus,
 						},
@@ -288,7 +288,7 @@ func TestTacacsLocalTimeout(t *testing.T) {
 		metric.New(
 			"tacacs",
 			map[string]string{"source": "unreachable.test:49"},
-			map[string]interface{}{
+			map[string]any{
 				"response_status": string("Timeout"),
 				"responsetime_ms": int64(0),
 			},
@@ -372,7 +372,7 @@ func TestTacacsIntegration(t *testing.T) {
 				metric.New(
 					"tacacs",
 					map[string]string{"source": container.Address + ":" + port},
-					map[string]interface{}{
+					map[string]any{
 						"responsetime_ms": int64(0),
 						"response_status": tt.reqRespStatus,
 					},

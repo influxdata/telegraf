@@ -59,7 +59,7 @@ func TestGatherActivity(t *testing.T) {
 		metric.New(
 			"chrony_activity",
 			map[string]string{"source": addr},
-			map[string]interface{}{
+			map[string]any{
 				"online":        34,
 				"offline":       6,
 				"burst_online":  2,
@@ -131,7 +131,7 @@ func TestGatherTracking(t *testing.T) {
 				"leap_status":  "not synchronized",
 				"stratum":      "3",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"system_time":     0.000020390,
 				"last_offset":     0.000012651,
 				"rms_offset":      0.000025577,
@@ -246,7 +246,7 @@ func TestGatherServerStats(t *testing.T) {
 		metric.New(
 			"chrony_serverstats",
 			map[string]string{"source": addr},
-			map[string]interface{}{
+			map[string]any{
 				"ntp_hits":  uint64(2542),
 				"ntp_drops": uint64(42),
 				"cmd_hits":  uint64(112),
@@ -307,7 +307,7 @@ func TestGatherServerStats2(t *testing.T) {
 		metric.New(
 			"chrony_serverstats",
 			map[string]string{"source": addr},
-			map[string]interface{}{
+			map[string]any{
 				"ntp_hits":      uint64(2542),
 				"ntp_drops":     uint64(42),
 				"ntp_auth_hits": uint64(9),
@@ -374,7 +374,7 @@ func TestGatherServerStats3(t *testing.T) {
 		metric.New(
 			"chrony_serverstats",
 			map[string]string{"source": addr},
-			map[string]interface{}{
+			map[string]any{
 				"ntp_hits":             uint64(2542),
 				"ntp_drops":            uint64(42),
 				"ntp_auth_hits":        uint64(9),
@@ -484,7 +484,7 @@ func TestGatherSources(t *testing.T) {
 				"source": addr,
 				"peer":   "ntp1.my.org",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"index":                    0,
 				"ip":                       "192.168.0.1",
 				"poll":                     64,
@@ -505,7 +505,7 @@ func TestGatherSources(t *testing.T) {
 				"source": addr,
 				"peer":   "ntp2.my.org",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"index":                    1,
 				"ip":                       "192.168.0.2",
 				"poll":                     64,
@@ -526,7 +526,7 @@ func TestGatherSources(t *testing.T) {
 				"source": addr,
 				"peer":   "ntp3.my.org",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"index":                    2,
 				"ip":                       "192.168.0.3",
 				"poll":                     512,
@@ -634,7 +634,7 @@ func TestGatherSourceStats(t *testing.T) {
 				"peer":         "ntp1.my.org",
 				"reference_id": "19E3B986",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"index":              0,
 				"ip":                 "192.168.0.1",
 				"samples":            uint64(1254),
@@ -655,7 +655,7 @@ func TestGatherSourceStats(t *testing.T) {
 				"peer":         "ntp2.my.org",
 				"reference_id": "0431731B",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"index":              1,
 				"ip":                 "192.168.0.2",
 				"samples":            uint64(23135),
@@ -676,7 +676,7 @@ func TestGatherSourceStats(t *testing.T) {
 				"peer":         "ntp3.my.org",
 				"reference_id": "3A9EDF86",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"index":              2,
 				"ip":                 "192.168.0.3",
 				"samples":            uint64(23),
@@ -746,7 +746,7 @@ func TestIntegration(t *testing.T) {
 				"reference_id": "A29FC87B",
 				"stratum":      "4",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"frequency":       float64(0),
 				"last_offset":     float64(0),
 				"residual_freq":   float64(0),
@@ -779,7 +779,7 @@ type source struct {
 type Server struct {
 	ActivityInfo   *fbchrony.Activity
 	TrackingInfo   *fbchrony.Tracking
-	ServerStatInfo interface{}
+	ServerStatInfo any
 	SourcesInfo    []source
 
 	conn   net.PacketConn
@@ -1332,7 +1332,7 @@ func TestConcurrentGather(t *testing.T) {
 	var wg sync.WaitGroup
 	errors := make(chan error, numConcurrent)
 
-	for i := 0; i < numConcurrent; i++ {
+	for i := range numConcurrent {
 		wg.Add(1)
 		go func(iteration int) {
 			defer wg.Done()
@@ -1391,15 +1391,13 @@ func TestRaceDetector(t *testing.T) {
 	var wg sync.WaitGroup
 	errors := make(chan error, iterations)
 
-	for i := 0; i < iterations; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range iterations {
+		wg.Go(func() {
 			var acc testutil.Accumulator
 			if err := plugin.Gather(&acc); err != nil {
 				errors <- err
 			}
-		}()
+		})
 	}
 
 	wg.Wait()

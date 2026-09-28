@@ -72,7 +72,7 @@ func (v *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		vStr = values[len(values)-1]
 	}
 
-	var value interface{}
+	var value any
 	var err error
 	switch v.DataType {
 	case "int":
@@ -102,7 +102,7 @@ func (v *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		return nil, err
 	}
 
-	fields := map[string]interface{}{v.FieldName: value}
+	fields := map[string]any{v.FieldName: value}
 	m := metric.New(v.MetricName, v.DefaultTags, fields, v.timeFunc())
 
 	return []telegraf.Metric{m}, nil

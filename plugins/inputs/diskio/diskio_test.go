@@ -18,7 +18,7 @@ func TestDiskIO(t *testing.T) {
 	}
 	type Metric struct {
 		tags   map[string]string
-		fields map[string]interface{}
+		fields map[string]any
 	}
 
 	tests := []struct {
@@ -55,7 +55,7 @@ func TestDiskIO(t *testing.T) {
 						"name":   "sda",
 						"serial": "ab-123-ad",
 					},
-					fields: map[string]interface{}{
+					fields: map[string]any{
 						"reads":            uint64(888),
 						"writes":           uint64(5341),
 						"read_bytes":       uint64(100000),
@@ -91,7 +91,7 @@ func TestDiskIO(t *testing.T) {
 						"name":   "sdb",
 						"serial": "INTEL SSDPE21K100GA _PHKE831600AC100EGN",
 					},
-					fields: map[string]interface{}{
+					fields: map[string]any{
 						"reads": uint64(1),
 					},
 				},
@@ -120,7 +120,7 @@ func TestDiskIO(t *testing.T) {
 						"name":   "sda",
 						"serial": "unknown",
 					},
-					fields: map[string]interface{}{
+					fields: map[string]any{
 						"reads": uint64(42),
 					},
 				},

@@ -31,7 +31,7 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 	}
 
 	// Fill common options
-	plugin := make(map[string]interface{})
+	plugin := make(map[string]any)
 	old.InputOptions.Migrate()
 	general, err := toml.Marshal(old.InputOptions)
 	if err != nil {
@@ -43,6 +43,7 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 
 	// Use a map for the new plugin and fill in the data
 	plugin["service_address"] = old.ServiceAddress
+	plugin["protocol"] = "sflow v5"
 	if old.ReadBufferSize != "" {
 		plugin["read_buffer_size"] = old.ReadBufferSize
 	}

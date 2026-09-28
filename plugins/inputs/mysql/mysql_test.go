@@ -12,7 +12,6 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -383,8 +382,8 @@ func TestMysqlTLSCustomization(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			s := config.NewSecret([]byte(test.input))
 			plugin := &Mysql{
-				Servers:      []*config.Secret{&s},
-				ClientConfig: tls.ClientConfig{InsecureSkipVerify: true},
+				Servers:            []*config.Secret{&s},
+				InsecureSkipVerify: true,
 			}
 			err := plugin.Init()
 			if test.errmsg != "" {
@@ -430,7 +429,7 @@ func TestGatherGlobalVariables(t *testing.T) {
 	type fields []struct {
 		key         string
 		rawValue    string
-		parsedValue interface{}
+		parsedValue any
 	}
 	type tags map[string]string
 	testCases := []struct {

@@ -55,7 +55,7 @@ func TestCPUStats(t *testing.T) {
 			map[string]string{
 				"host": server.Addr(),
 			},
-			map[string]interface{}{
+			map[string]any{
 				"cpu":            10.0,
 				"fps":            120.2,
 				"maps":           1.0,

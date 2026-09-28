@@ -92,13 +92,13 @@ func (a *Arc) Write(metrics []telegraf.Metric) error {
 		name := m.Name()
 		if _, found := groups[name]; !found {
 			numCols := len(m.FieldList()) + len(m.TagList()) + 1
-			groups[name] = &group{name: name, columns: make(map[string][]interface{}, numCols)}
+			groups[name] = &group{name: name, columns: make(map[string][]any, numCols)}
 		}
 		groups[name].add(m)
 	}
 
 	// Extract the output messages from the groups
-	messages := make([]map[string]interface{}, 0, len(groups))
+	messages := make([]map[string]any, 0, len(groups))
 	for _, g := range groups {
 		msg, err := g.produceMessage()
 		if err != nil {
@@ -109,7 +109,7 @@ func (a *Arc) Write(metrics []telegraf.Metric) error {
 	}
 
 	// Prepare the data for serialization
-	var data interface{}
+	var data any
 	switch len(messages) {
 	case 0:
 		// If no valid message was produced, drop all metrics
@@ -200,9 +200,7 @@ func (a *Arc) Write(metrics []telegraf.Metric) error {
 func init() {
 	outputs.Add("arc", func() telegraf.Output {
 		return &Arc{
-			HTTPClientConfig: common_http.HTTPClientConfig{
-				Timeout: config.Duration(5 * time.Second),
-			},
+			Timeout: config.Duration(5 * time.Second),
 		}
 	})
 }

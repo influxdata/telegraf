@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -52,13 +53,13 @@ func TestExternalProcessorWorks(t *testing.T) {
 
 	// Setup the input and expected output metrucs
 	now := time.Now()
-	var input []telegraf.Metric
-	var expected []telegraf.Metric
-	for i := 0; i < 10; i++ {
+	input := make([]telegraf.Metric, 0, 10)
+	expected := make([]telegraf.Metric, 0, 10)
+	for i := range 10 {
 		m := metric.New(
 			"test",
 			map[string]string{"city": "Toronto"},
-			map[string]interface{}{"population": 6000000, "count": 1},
+			map[string]any{"population": 6000000, "count": 1},
 			now.Add(time.Duration(i)),
 		)
 		input = append(input, m)
@@ -116,7 +117,7 @@ func TestParseLinesWithNewLines(t *testing.T) {
 		map[string]string{
 			"author": "Mr. Gopher",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"phrase": "Gophers are amazing creatures.\nAbsolutely amazing.",
 			"count":  3,
 		},
@@ -126,7 +127,7 @@ func TestParseLinesWithNewLines(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{"author": "Mr. Gopher"},
-			map[string]interface{}{
+			map[string]any{
 				"phrase": "Gophers are amazing creatures.\nAbsolutely amazing.",
 				"count":  6,
 			},
@@ -178,14 +179,14 @@ func TestLongLinesForLineProtocol(t *testing.T) {
 	input := metric.New(
 		"test",
 		map[string]string{"author": "Mr. Gopher"},
-		map[string]interface{}{"count": 3},
+		map[string]any{"count": 3},
 		now,
 	)
 	expected := []telegraf.Metric{
 		metric.New(
 			"test",
 			map[string]string{"author": "Mr. Gopher"},
-			map[string]interface{}{
+			map[string]any{
 				"long":  strings.Repeat("foobar", 280_000/6),
 				"count": 3,
 			},
@@ -218,6 +219,12 @@ func TestCases(t *testing.T) {
 	processors.AddStreaming("execd", func() telegraf.StreamingProcessor {
 		return &Execd{RestartDelay: config.Duration(10 * time.Second)}
 	})
+
+	// Use the test executable to mock the external program so no helper
+	// needs to be compiled when starting the cases
+	exe, err := os.Executable()
+	require.NoError(t, err)
+	t.Setenv("PLUGINS_PROCESSORS_EXECD_TEST_EXECUTABLE", exe)
 
 	for _, f := range folders {
 		// Only handle folders
@@ -277,7 +284,7 @@ func TestTracking(t *testing.T) {
 			map[string]string{
 				"city": "Toronto",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"population": 6000000,
 				"count":      1,
 			},
@@ -288,7 +295,7 @@ func TestTracking(t *testing.T) {
 			map[string]string{
 				"city": "Tokio",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"population": 14000000,
 				"count":      8,
 			},
@@ -302,7 +309,7 @@ func TestTracking(t *testing.T) {
 			map[string]string{
 				"city": "Toronto",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"population": 6000000,
 				"count":      2,
 			},
@@ -313,7 +320,7 @@ func TestTracking(t *testing.T) {
 			map[string]string{
 				"city": "Tokio",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"population": 14000000,
 				"count":      16,
 			},
@@ -391,7 +398,7 @@ func TestTracking(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	var testcase, field string
-	flag.StringVar(&testcase, "case", "", "test-case to mock [multiply, long]")
+	flag.StringVar(&testcase, "case", "", "test-case to mock [multiply, long, pass-through]")
 	flag.StringVar(&field, "field", "count", "name of the field to multiply")
 	flag.Parse()
 
@@ -404,6 +411,8 @@ func TestMain(m *testing.M) {
 		os.Exit(runTestCaseMultiply(field))
 	case "long":
 		os.Exit(runTestCaseLong(field))
+	case "pass-through":
+		os.Exit(runTestCasePassThrough())
 	}
 	os.Exit(5)
 }
@@ -422,8 +431,7 @@ func runTestCaseMultiply(field string) int {
 			if errors.Is(err, influx.EOF) {
 				return 0
 			}
-			var parseErr *influx.ParseError
-			if errors.As(err, &parseErr) {
+			if parseErr, ok := errors.AsType[*influx.ParseError](err); ok {
 				fmt.Fprintf(os.Stderr, "parse ERR %v\n", parseErr)
 				return 1
 			}
@@ -471,8 +479,7 @@ func runTestCaseLong(field string) int {
 			if errors.Is(err, influx.EOF) {
 				return 0
 			}
-			var parseErr *influx.ParseError
-			if errors.As(err, &parseErr) {
+			if parseErr, ok := errors.AsType[*influx.ParseError](err); ok {
 				fmt.Fprintf(os.Stderr, "parse ERR %v\n", parseErr)
 				return 1
 			}
@@ -489,4 +496,12 @@ func runTestCaseLong(field string) int {
 		}
 		fmt.Fprint(os.Stdout, string(b))
 	}
+}
+
+func runTestCasePassThrough() int {
+	if _, err := io.Copy(os.Stdout, os.Stdin); err != nil {
+		fmt.Fprintf(os.Stderr, "ERR %v\n", err)
+		return 1
+	}
+	return 0
 }

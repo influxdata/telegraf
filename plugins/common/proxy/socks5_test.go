@@ -7,6 +7,7 @@ import (
 
 	"github.com/armon/go-socks5"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/net/proxy"
 )
 
 func TestSocks5ProxyConfigIntegration(t *testing.T) {
@@ -44,11 +45,11 @@ func TestSocks5ProxyConfigIntegration(t *testing.T) {
 		Socks5ProxyUsername: proxyUsername,
 		Socks5ProxyPassword: proxyPassword,
 	}
-	dialer, err := conf.GetDialer()
+	dialer, err := conf.GetDialer(proxy.Direct)
 	require.NoError(t, err)
 
 	var proxyConn net.Conn
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		proxyConn, err = dialer.Dial("tcp", l.Addr().String())
 		if err == nil {
 			break

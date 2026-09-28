@@ -166,8 +166,7 @@ func (c *client) write(ctx context.Context, metrics []telegraf.Metric) error {
 		}
 
 		// Check if the request was too large and split it
-		var apiErr *APIError
-		if errors.As(err, &apiErr) {
+		if apiErr, ok := errors.AsType[*APIError](err); ok {
 			if apiErr.StatusCode == http.StatusRequestEntityTooLarge {
 				// TODO: Need a testcase to verify rejected metrics are not retried...
 				return c.splitAndWriteBatch(ctx, database, batch)
@@ -183,8 +182,7 @@ func (c *client) write(ctx context.Context, metrics []telegraf.Metric) error {
 		// Check if we got a write error and if so, translate the returned
 		// metric indices to return the original indices in case of dynamic
 		// database targets
-		var writeErr *internal.PartialWriteError
-		if errors.As(err, &writeErr) {
+		if writeErr, ok := errors.AsType[*internal.PartialWriteError](err); ok {
 			wErr.Err = writeErr.Err
 			for _, idx := range writeErr.MetricsAccept {
 				wErr.MetricsAccept = append(wErr.MetricsAccept, batchIndices[database][idx])

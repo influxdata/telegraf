@@ -31,7 +31,7 @@ func TestService(t *testing.T) {
 		{
 			name: "no service",
 			handler: &mockHandler{
-				responseMap: map[string]interface{}{
+				responseMap: map[string]any{
 					"/service/": &corev1.ServiceList{},
 				},
 			},
@@ -40,7 +40,7 @@ func TestService(t *testing.T) {
 		{
 			name: "collect service",
 			handler: &mockHandler{
-				responseMap: map[string]interface{}{
+				responseMap: map[string]any{
 					"/service/": &corev1.ServiceList{
 						Items: []corev1.Service{
 							{
@@ -62,12 +62,10 @@ func TestService(t *testing.T) {
 										"select2": "s2",
 									},
 								},
-								ObjectMeta: metav1.ObjectMeta{
-									Generation:        12,
-									Namespace:         "ns1",
-									Name:              "checker",
-									CreationTimestamp: metav1.Time{Time: now},
-								},
+								Generation:        12,
+								Namespace:         "ns1",
+								Name:              "checker",
+								CreationTimestamp: metav1.Time{Time: now},
 							},
 						},
 					},
@@ -87,7 +85,7 @@ func TestService(t *testing.T) {
 						"selector_select1": "s1",
 						"selector_select2": "s2",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"port":        int32(8080),
 						"target_port": int32(1234),
 						"generation":  int64(12),
@@ -132,7 +130,7 @@ func TestServiceSelectorFilter(t *testing.T) {
 	now := time.Now()
 	now = time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 1, 36, 0, now.Location())
 
-	responseMap := map[string]interface{}{
+	responseMap := map[string]any{
 		"/service/": &corev1.ServiceList{
 			Items: []corev1.Service{
 				{
@@ -154,12 +152,10 @@ func TestServiceSelectorFilter(t *testing.T) {
 							"select2": "s2",
 						},
 					},
-					ObjectMeta: metav1.ObjectMeta{
-						Generation:        12,
-						Namespace:         "ns1",
-						Name:              "checker",
-						CreationTimestamp: metav1.Time{Time: now},
-					},
+					Generation:        12,
+					Namespace:         "ns1",
+					Name:              "checker",
+					CreationTimestamp: metav1.Time{Time: now},
 				},
 			},
 		},

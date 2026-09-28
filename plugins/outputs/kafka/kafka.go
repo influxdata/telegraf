@@ -13,11 +13,13 @@ import (
 
 	"github.com/IBM/sarama"
 	"github.com/gofrs/uuid/v5"
+	"golang.org/x/net/proxy"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/kafka"
-	"github.com/influxdata/telegraf/plugins/common/proxy"
+	common_proxy "github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -38,7 +40,7 @@ type Kafka struct {
 	MetricNameHeader  string            `toml:"metric_name_header" deprecated:"1.39.0;1.45.0;please use 'headers' instead"`
 	Headers           map[string]string `toml:"headers"`
 	Log               telegraf.Logger   `toml:"-"`
-	proxy.Socks5ProxyConfig
+	common_proxy.Socks5ProxyConfig
 	kafka.WriteConfig
 
 	saramaConfig *sarama.Config
@@ -83,21 +85,21 @@ func (k *Kafka) Init() error {
 	}
 
 	// Create new configuration
-	config := sarama.NewConfig()
-	if err := k.SetConfig(config, k.Log); err != nil {
+	cfg := sarama.NewConfig()
+	if err := k.SetConfig(cfg, k.Log); err != nil {
 		return err
 	}
 
 	if k.Socks5ProxyEnabled {
-		config.Net.Proxy.Enable = true
+		cfg.Net.Proxy.Enable = true
 
-		dialer, err := k.Socks5ProxyConfig.GetDialer()
+		dialer, err := k.Socks5ProxyConfig.GetDialer(proxy.Direct)
 		if err != nil {
 			return fmt.Errorf("connecting to proxy server failed: %w", err)
 		}
-		config.Net.Proxy.Dialer = dialer
+		cfg.Net.Proxy.Dialer = dialer
 	}
-	k.saramaConfig = config
+	k.saramaConfig = cfg
 
 	switch k.ProducerTimestamp {
 	case "":
@@ -266,11 +268,13 @@ func (k *Kafka) routingKey(metric telegraf.Metric) (string, error) {
 func init() {
 	outputs.Add("kafka", func() telegraf.Output {
 		return &Kafka{
-			WriteConfig: kafka.WriteConfig{
-				MaxRetry:     3,
-				RequiredAcks: -1,
-			},
-			producerFunc: sarama.NewSyncProducer,
+			MaxRetry:        3,
+			RequiredAcks:    -1,
+			NetDialTimeout:  config.Duration(30 * time.Second),
+			NetReadTimeout:  config.Duration(30 * time.Second),
+			NetWriteTimeout: config.Duration(30 * time.Second),
+			ProducerTimeout: config.Duration(10 * time.Second),
+			producerFunc:    sarama.NewSyncProducer,
 		}
 	})
 }

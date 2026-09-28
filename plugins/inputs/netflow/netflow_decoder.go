@@ -17,7 +17,7 @@ import (
 
 var regexpIPFIXPENMapping = regexp.MustCompile(`\d+\.\d+`)
 
-type decoderFunc func([]byte) (interface{}, error)
+type decoderFunc func([]byte) (any, error)
 
 type fieldMapping struct {
 	name    string
@@ -583,7 +583,7 @@ func (d *netflowDecoder) decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 						"source":  src,
 						"version": "NetFlowV9",
 					}
-					fields := make(map[string]interface{})
+					fields := make(map[string]any)
 					for _, value := range record.ScopesValues {
 						decodedFields, err := d.decodeValueV9(value)
 						if err != nil {
@@ -612,7 +612,7 @@ func (d *netflowDecoder) decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 						"source":  src,
 						"version": "NetFlowV9",
 					}
-					fields := make(map[string]interface{})
+					fields := make(map[string]any)
 					for _, value := range record.Values {
 						decodedFields, err := d.decodeValueV9(value)
 						if err != nil {
@@ -639,7 +639,7 @@ func (d *netflowDecoder) decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 						"source":  src,
 						"version": "IPFIX",
 					}
-					fields := make(map[string]interface{})
+					fields := make(map[string]any)
 					for _, value := range record.ScopesValues {
 						decodedFields, err := d.decodeValueIPFIX(value)
 						if err != nil {
@@ -668,7 +668,7 @@ func (d *netflowDecoder) decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 						"source":  srcIP.String(),
 						"version": "IPFIX",
 					}
-					fields := make(map[string]interface{})
+					fields := make(map[string]any)
 					t := time.Now()
 					for _, value := range record.Values {
 						decodedFields, err := d.decodeValueIPFIX(value)

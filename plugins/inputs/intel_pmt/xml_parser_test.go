@@ -51,7 +51,7 @@ func TestParseXML(t *testing.T) {
 		name   string
 		source string
 		sr     sourceReader
-		v      interface{}
+		v      any
 		err    bool
 	}{
 		{

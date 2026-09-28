@@ -161,7 +161,7 @@ func (i *InfluxDB) gatherURL(acc telegraf.Accumulator, url string) error {
 			}
 
 			acc.AddFields("influxdb_system",
-				map[string]interface{}{
+				map[string]any{
 					"current_time": p.CurrentTime,
 					"started":      p.Started,
 					"uptime":       p.Uptime,
@@ -176,7 +176,7 @@ func (i *InfluxDB) gatherURL(acc telegraf.Accumulator, url string) error {
 				continue
 			}
 			acc.AddFields("influxdb_memstats",
-				map[string]interface{}{
+				map[string]any{
 					"alloc":           m.Alloc,
 					"total_alloc":     m.TotalAlloc,
 					"sys":             m.Sys,
@@ -214,7 +214,7 @@ func (i *InfluxDB) gatherURL(acc telegraf.Accumulator, url string) error {
 				continue
 			}
 			acc.AddFields("influxdb_build",
-				map[string]interface{}{
+				map[string]any{
 					"branch":     d.Branch,
 					"build_time": d.BuildTime,
 					"commit":     d.Commit,
@@ -229,7 +229,7 @@ func (i *InfluxDB) gatherURL(acc telegraf.Accumulator, url string) error {
 				continue
 			}
 			acc.AddFields("influxdb_cmdline",
-				map[string]interface{}{"value": strings.Join(d, " ")},
+				map[string]any{"value": strings.Join(d, " ")},
 				map[string]string{"url": url},
 				now,
 			)
@@ -239,7 +239,7 @@ func (i *InfluxDB) gatherURL(acc telegraf.Accumulator, url string) error {
 				continue
 			}
 			acc.AddFields("influxdb_crypto",
-				map[string]interface{}{
+				map[string]any{
 					"fips":           d.FIPS,
 					"ensure_fips":    d.EnsureFIPS,
 					"implementation": d.Implementation,
@@ -278,7 +278,7 @@ func (i *InfluxDB) gatherURL(acc telegraf.Accumulator, url string) error {
 	}
 
 	// Add a metric for the number of shards
-	acc.AddFields("influxdb", map[string]interface{}{"n_shards": shardCounter}, nil, now)
+	acc.AddFields("influxdb", map[string]any{"n_shards": shardCounter}, nil, now)
 
 	return nil
 }

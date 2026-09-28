@@ -25,7 +25,7 @@ func (p *AuthMap) Password(user string) (string, error) {
 type metricData struct {
 	name   string
 	tags   map[string]string
-	fields map[string]interface{}
+	fields map[string]any
 }
 
 type testCase struct {
@@ -36,13 +36,11 @@ type testCase struct {
 var singleMetric = testCase{
 	[]api.ValueList{
 		{
-			Identifier: api.Identifier{
-				Host:           "xyzzy",
-				Plugin:         "cpu",
-				PluginInstance: "1",
-				Type:           "cpu",
-				TypeInstance:   "user",
-			},
+			Host:           "xyzzy",
+			Plugin:         "cpu",
+			PluginInstance: "1",
+			Type:           "cpu",
+			TypeInstance:   "user",
 			Values: []api.Value{
 				api.Counter(42),
 			},
@@ -58,7 +56,7 @@ var singleMetric = testCase{
 				"instance":      "1",
 				"type":          "cpu",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(42),
 			},
 		},
@@ -68,13 +66,11 @@ var singleMetric = testCase{
 var multiMetric = testCase{
 	[]api.ValueList{
 		{
-			Identifier: api.Identifier{
-				Host:           "xyzzy",
-				Plugin:         "cpu",
-				PluginInstance: "0",
-				Type:           "cpu",
-				TypeInstance:   "user",
-			},
+			Host:           "xyzzy",
+			Plugin:         "cpu",
+			PluginInstance: "0",
+			Type:           "cpu",
+			TypeInstance:   "user",
 			Values: []api.Value{
 				api.Derive(42),
 				api.Gauge(42),
@@ -91,7 +87,7 @@ var multiMetric = testCase{
 				"instance":      "0",
 				"type":          "cpu",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(42),
 			},
 		},
@@ -103,7 +99,7 @@ var multiMetric = testCase{
 				"instance":      "0",
 				"type":          "cpu",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(42),
 			},
 		},
@@ -323,26 +319,22 @@ func assertEqualMetrics(t *testing.T, expected []metricData, received []telegraf
 
 var benchmarkData = []api.ValueList{
 	{
-		Identifier: api.Identifier{
-			Host:           "xyzzy",
-			Plugin:         "cpu",
-			PluginInstance: "1",
-			Type:           "cpu",
-			TypeInstance:   "user",
-		},
+		Host:           "xyzzy",
+		Plugin:         "cpu",
+		PluginInstance: "1",
+		Type:           "cpu",
+		TypeInstance:   "user",
 		Values: []api.Value{
 			api.Counter(4),
 		},
 		DSNames: []string(nil),
 	},
 	{
-		Identifier: api.Identifier{
-			Host:           "xyzzy",
-			Plugin:         "cpu",
-			PluginInstance: "2",
-			Type:           "cpu",
-			TypeInstance:   "user",
-		},
+		Host:           "xyzzy",
+		Plugin:         "cpu",
+		PluginInstance: "2",
+		Type:           "cpu",
+		TypeInstance:   "user",
 		Values: []api.Value{
 			api.Counter(5),
 		},
@@ -360,7 +352,7 @@ func TestBenchmarkData(t *testing.T) {
 				"type":          "cpu",
 				"type_instance": "user",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 4.0,
 			},
 			time.Unix(0, 0),
@@ -373,7 +365,7 @@ func TestBenchmarkData(t *testing.T) {
 				"type":          "cpu",
 				"type_instance": "user",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 5.0,
 			},
 			time.Unix(0, 0),

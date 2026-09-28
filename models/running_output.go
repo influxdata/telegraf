@@ -337,7 +337,7 @@ func (r *RunningOutput) Write() error {
 	// because 'doTransaction' will abort early for empty batches.
 	nBuffer := r.buffer.Len()
 	nBatches := nBuffer/r.MetricBatchSize + 1
-	for i := 0; i < nBatches; i++ {
+	for range nBatches {
 		if err := r.doTransaction(); err != nil {
 			return err
 		}

@@ -95,7 +95,7 @@ func parseXML(acc telegraf.Accumulator, data []byte) error {
 		return fmt.Errorf("unable to unmarshal XML: %w\nXML DATA: %q", err, data)
 	}
 
-	mainFields := map[string]interface{}{
+	mainFields := map[string]any{
 		"serial": r.Serial,
 	}
 	var reportTime time.Time
@@ -130,7 +130,7 @@ func parseXML(acc telegraf.Accumulator, data []byte) error {
 			"software":  r.SoftwareVersion,
 			"hardware":  r.HardwareVersion,
 		}
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"state": o.State,
 		}
 		// Find Amp and Watt probes and add them as fields.
@@ -190,7 +190,7 @@ func parseXML(acc telegraf.Accumulator, data []byte) error {
 			acc.AddError(fmt.Errorf("cannot convert string value %q to float64: %w", p.Value, err))
 			continue
 		}
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"value": value,
 		}
 		tags := map[string]string{

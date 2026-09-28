@@ -22,8 +22,8 @@ import (
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
-	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/influxdata/telegraf/testutil/serializers"
 )
 
 func TestCases(t *testing.T) {
@@ -59,7 +59,7 @@ func TestCases(t *testing.T) {
 			input, err := testutil.ParseMetricsFromFile(inputFilename, parser)
 			require.NoError(t, err)
 
-			var expected []map[string]interface{}
+			var expected []map[string]any
 			ebuf, err := os.ReadFile(expectedFilename)
 			require.NoError(t, err)
 			require.NoError(t, json.Unmarshal(ebuf, &expected))
@@ -90,7 +90,7 @@ func TestCases(t *testing.T) {
 			default:
 				joined = "[" + string(bytes.Join(plugin.output, []byte(","))) + "]"
 			}
-			var actual []map[string]interface{}
+			var actual []map[string]any
 			require.NoError(t, json.Unmarshal([]byte(joined), &actual))
 			require.Len(t, actual, len(expected))
 			require.ElementsMatch(t, expected, actual)
@@ -147,7 +147,7 @@ func checkEvents(messages [][]byte) error {
 		if err != nil {
 			return fmt.Errorf("serializing raw event %d: %w", i, err)
 		}
-		var rawEvent interface{}
+		var rawEvent any
 		if err := json.Unmarshal(serializedEvent, &rawEvent); err != nil {
 			return fmt.Errorf("deserializing raw event %d: %w", i, err)
 		}
@@ -254,7 +254,7 @@ func (*dummygen) NewV8(_, _, _ []byte) (uuid.UUID, error) {
 func BenchmarkSerialize(b *testing.B) {
 	s := &Serializer{}
 	require.NoError(b, s.Init())
-	metrics := serializers.BenchmarkMetrics(b)
+	metrics := serializers.BenchmarkMetrics()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := s.Serialize(metrics[i%len(metrics)])
@@ -265,7 +265,7 @@ func BenchmarkSerialize(b *testing.B) {
 func BenchmarkSerializeBatch(b *testing.B) {
 	s := &Serializer{}
 	require.NoError(b, s.Init())
-	m := serializers.BenchmarkMetrics(b)
+	m := serializers.BenchmarkMetrics()
 	metrics := m[:]
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

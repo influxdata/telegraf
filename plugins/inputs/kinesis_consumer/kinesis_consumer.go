@@ -174,18 +174,14 @@ func (k *KinesisConsumer) Start(acc telegraf.Accumulator) error {
 	}
 
 	// Start the go-routine handling metrics delivered to the output
-	k.wg.Add(1)
-	go func() {
-		defer k.wg.Done()
+	k.wg.Go(func() {
 		k.onDelivery(ctx)
-	}()
+	})
 
 	// Start the go-routine handling message consumption
-	k.wg.Add(1)
-	go func() {
-		defer k.wg.Done()
+	k.wg.Go(func() {
 		k.consumer.start(ctx)
-	}()
+	})
 
 	return nil
 }

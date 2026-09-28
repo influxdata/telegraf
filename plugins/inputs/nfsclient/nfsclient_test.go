@@ -30,7 +30,7 @@ func TestNFSClientParsev3(t *testing.T) {
 	err := nfsclient.parseStat("1.2.3.4:/storage/NFS", "/A", "3", data, &acc)
 	require.NoError(t, err)
 
-	fieldsOps := map[string]interface{}{
+	fieldsOps := map[string]any{
 		"ops":           uint64(500),
 		"trans":         uint64(501),
 		"timeouts":      uint64(502),
@@ -53,7 +53,7 @@ func TestNFSClientParsev4(t *testing.T) {
 	err := nfsclient.parseStat("2.2.2.2:/nfsdata/", "/B", "4", data, &acc)
 	require.NoError(t, err)
 
-	fieldsOps := map[string]interface{}{
+	fieldsOps := map[string]any{
 		"ops":           uint64(500),
 		"trans":         uint64(501),
 		"timeouts":      uint64(502),
@@ -76,7 +76,7 @@ func TestNFSClientParseLargeValue(t *testing.T) {
 	err := nfsclient.parseStat("2.2.2.2:/nfsdata/", "/B", "4", data, &acc)
 	require.NoError(t, err)
 
-	fieldsOps := map[string]interface{}{
+	fieldsOps := map[string]any{
 		"ops":           uint64(218),
 		"trans":         uint64(216),
 		"timeouts":      uint64(0),
@@ -104,7 +104,7 @@ func TestNFSClientProcessStat(t *testing.T) {
 	err = nfsclient.processText(scanner, &acc)
 	require.NoError(t, err)
 
-	fieldsReadstat := map[string]interface{}{
+	fieldsReadstat := map[string]any{
 		"ops":        uint64(600),
 		"retrans":    uint64(1),
 		"bytes":      uint64(1207),
@@ -121,7 +121,7 @@ func TestNFSClientProcessStat(t *testing.T) {
 
 	acc.AssertContainsTaggedFields(t, "nfsstat", fieldsReadstat, readTags)
 
-	fieldsWritestat := map[string]interface{}{
+	fieldsWritestat := map[string]any{
 		"ops":        uint64(700),
 		"retrans":    uint64(1),
 		"bytes":      uint64(1407),
@@ -153,7 +153,7 @@ func TestNFSClientProcessFull(t *testing.T) {
 	err = nfsclient.processText(scanner, &acc)
 	require.NoError(t, err)
 
-	fieldsEvents := map[string]interface{}{
+	fieldsEvents := map[string]any{
 		"inoderevalidates":  uint64(301736),
 		"dentryrevalidates": uint64(22838),
 		"datainvalidates":   uint64(410979),
@@ -182,7 +182,7 @@ func TestNFSClientProcessFull(t *testing.T) {
 		"pnfsreads":         uint64(0),
 		"pnfswrites":        uint64(0),
 	}
-	fieldsBytes := map[string]interface{}{
+	fieldsBytes := map[string]any{
 		"normalreadbytes":  uint64(204440464584),
 		"normalwritebytes": uint64(110857586443),
 		"directreadbytes":  uint64(783170354688),
@@ -192,7 +192,7 @@ func TestNFSClientProcessFull(t *testing.T) {
 		"readpages":        uint64(85749323),
 		"writepages":       uint64(30784819),
 	}
-	fieldsXprtTCP := map[string]interface{}{
+	fieldsXprtTCP := map[string]any{
 		"bind_count":    uint64(1),
 		"connect_count": uint64(1),
 		"connect_time":  uint64(0),

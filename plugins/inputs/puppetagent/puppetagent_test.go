@@ -17,7 +17,7 @@ func TestGather(t *testing.T) {
 	require.NoError(t, pa.Gather(&acc))
 
 	tags := map[string]string{"location": "last_run_summary.yaml"}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"events_failure":             int64(0),
 		"events_noop":                int64(0),
 		"events_success":             int64(0),

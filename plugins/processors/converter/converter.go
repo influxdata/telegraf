@@ -271,7 +271,7 @@ func (p *Converter) convertFields(metric telegraf.Metric) {
 	}
 }
 
-func toInteger(v interface{}) (int64, error) {
+func toInteger(v any) (int64, error) {
 	switch value := v.(type) {
 	case float32:
 		if value < float32(math.MinInt64) {
@@ -309,7 +309,7 @@ func toInteger(v interface{}) (int64, error) {
 	}
 }
 
-func toUnsigned(v interface{}) (uint64, error) {
+func toUnsigned(v any) (uint64, error) {
 	switch value := v.(type) {
 	case float32:
 		if value < 0 {
@@ -347,7 +347,7 @@ func toUnsigned(v interface{}) (uint64, error) {
 	}
 }
 
-func toFloat(v interface{}) (float64, error) {
+func toFloat(v any) (float64, error) {
 	if v, ok := v.(string); ok && strings.HasPrefix(v, "0x") {
 		var i big.Int
 		if _, success := i.SetString(v, 0); !success {

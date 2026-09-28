@@ -50,10 +50,10 @@ type info struct {
 }
 
 type stats struct {
-	Beat     map[string]interface{} `json:"beat"`
-	FileBeat interface{}            `json:"filebeat"`
-	LibBeat  interface{}            `json:"libbeat"`
-	System   interface{}            `json:"system"`
+	Beat     map[string]any `json:"beat"`
+	FileBeat any            `json:"filebeat"`
+	LibBeat  any            `json:"libbeat"`
+	System   any            `json:"system"`
 }
 
 func (*Beat) SampleConfig() string {
@@ -109,7 +109,7 @@ func (beat *Beat) Gather(accumulator telegraf.Accumulator) error {
 	}
 
 	for _, name := range beat.Includes {
-		var stats interface{}
+		var stats any
 		var metric string
 
 		switch name {
@@ -157,7 +157,7 @@ func (beat *Beat) createHTTPClient() (*http.Client, error) {
 }
 
 // gatherJSONData query the data source and parse the response JSON
-func (beat *Beat) gatherJSONData(address string, value interface{}) error {
+func (beat *Beat) gatherJSONData(address string, value any) error {
 	request, err := http.NewRequest(beat.Method, address, nil)
 	if err != nil {
 		return err

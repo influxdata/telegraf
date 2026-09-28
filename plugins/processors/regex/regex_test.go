@@ -19,7 +19,7 @@ func newM1() telegraf.Metric {
 			"verb":      "GET",
 			"resp_code": "200",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"request": "/users/42/",
 		},
 		time.Now(),
@@ -33,7 +33,7 @@ func newM2() telegraf.Metric {
 			"verb":      "GET",
 			"resp_code": "200",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"request":       "/api/search/?category=plugins&q=regex&sort=asc",
 			"ignore_number": int64(200),
 			"ignore_bool":   true,
@@ -49,7 +49,7 @@ func newUUIDTags() telegraf.Metric {
 			"simple":   "d60be57c-2f43-4e4f-a68a-4ca8204bae41",
 			"control":  "not_uuid",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"request": "/users/42/",
 		},
 		time.Now(),
@@ -61,7 +61,7 @@ func TestFieldConversions(t *testing.T) {
 	tests := []struct {
 		message        string
 		converter      converter
-		expectedFields map[string]interface{}
+		expectedFields map[string]any
 	}{
 		{
 			message: "Should change existing field",
@@ -70,7 +70,7 @@ func TestFieldConversions(t *testing.T) {
 				Pattern:     "^/users/\\d+/$",
 				Replacement: "/users/{id}/",
 			},
-			expectedFields: map[string]interface{}{
+			expectedFields: map[string]any{
 				"request": "/users/{id}/",
 			},
 		},
@@ -82,7 +82,7 @@ func TestFieldConversions(t *testing.T) {
 				Replacement: "/users/{id}/",
 				ResultKey:   "normalized_request",
 			},
-			expectedFields: map[string]interface{}{
+			expectedFields: map[string]any{
 				"request":            "/users/42/",
 				"normalized_request": "/users/{id}/",
 			},
@@ -168,7 +168,7 @@ func TestTagConversions(t *testing.T) {
 
 		processed := regex.Apply(newM1())
 
-		expectedFields := map[string]interface{}{
+		expectedFields := map[string]any{
 			"request": "/users/42/",
 		}
 
@@ -186,7 +186,7 @@ func TestMetricNameConversions(t *testing.T) {
 				"verb":      "GET",
 				"resp_code": "200",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"request": "/users/42/",
 			},
 			time.Unix(1627646243, 0),
@@ -197,7 +197,7 @@ func TestMetricNameConversions(t *testing.T) {
 				"verb":      "GET",
 				"resp_code": "200",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"request":       "/api/search/?category=plugins&q=regex&sort=asc",
 				"ignore_number": int64(200),
 				"ignore_bool":   true,
@@ -210,7 +210,7 @@ func TestMetricNameConversions(t *testing.T) {
 				"verb":      "GET",
 				"resp_code": "404",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"request":       "/api/search/?category=plugins&q=regex&sort=asc",
 				"ignore_number": int64(404),
 				"ignore_flag":   true,
@@ -238,7 +238,7 @@ func TestMetricNameConversions(t *testing.T) {
 						"verb":      "GET",
 						"resp_code": "200",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"request": "/users/42/",
 					},
 					time.Unix(1627646243, 0),
@@ -249,7 +249,7 @@ func TestMetricNameConversions(t *testing.T) {
 						"verb":      "GET",
 						"resp_code": "200",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"request":       "/api/search/?category=plugins&q=regex&sort=asc",
 						"ignore_number": int64(200),
 						"ignore_bool":   true,
@@ -262,7 +262,7 @@ func TestMetricNameConversions(t *testing.T) {
 						"verb":      "GET",
 						"resp_code": "404",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"request":       "/api/search/?category=plugins&q=regex&sort=asc",
 						"ignore_number": int64(404),
 						"ignore_flag":   true,
@@ -302,7 +302,7 @@ func TestFieldRenameConversions(t *testing.T) {
 				"verb":      "GET",
 				"resp_code": "200",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"request": "/users/42/",
 			},
 			time.Unix(1627646243, 0),
@@ -313,7 +313,7 @@ func TestFieldRenameConversions(t *testing.T) {
 				"verb":      "GET",
 				"resp_code": "200",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"request":       "/api/search/?category=plugins&q=regex&sort=asc",
 				"ignore_number": int64(200),
 				"ignore_bool":   true,
@@ -326,7 +326,7 @@ func TestFieldRenameConversions(t *testing.T) {
 				"verb":      "GET",
 				"resp_code": "404",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"request":       "/api/search/?category=plugins&q=regex&sort=asc",
 				"ignore_number": int64(404),
 				"ignore_flag":   true,
@@ -354,7 +354,7 @@ func TestFieldRenameConversions(t *testing.T) {
 						"verb":      "GET",
 						"resp_code": "200",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"request": "/users/42/",
 					},
 					time.Unix(1627646243, 0),
@@ -365,7 +365,7 @@ func TestFieldRenameConversions(t *testing.T) {
 						"verb":      "GET",
 						"resp_code": "200",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"request":       "/api/search/?category=plugins&q=regex&sort=asc",
 						"result_number": int64(200),
 						"result_bool":   true,
@@ -378,7 +378,7 @@ func TestFieldRenameConversions(t *testing.T) {
 						"verb":      "GET",
 						"resp_code": "404",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"request":        "/api/search/?category=plugins&q=regex&sort=asc",
 						"result_number":  int64(404),
 						"result_flag":    true,
@@ -401,7 +401,7 @@ func TestFieldRenameConversions(t *testing.T) {
 						"verb":      "GET",
 						"resp_code": "200",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"request": "/users/42/",
 					},
 					time.Unix(1627646243, 0),
@@ -412,7 +412,7 @@ func TestFieldRenameConversions(t *testing.T) {
 						"verb":      "GET",
 						"resp_code": "200",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"request":       "/api/search/?category=plugins&q=regex&sort=asc",
 						"ignore_number": int64(200),
 						"ignore_bool":   true,
@@ -425,7 +425,7 @@ func TestFieldRenameConversions(t *testing.T) {
 						"verb":      "GET",
 						"resp_code": "404",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"request":       "/api/search/?category=plugins&q=regex&sort=asc",
 						"ignore_number": int64(404),
 						"ignore_flag":   true,
@@ -449,7 +449,7 @@ func TestFieldRenameConversions(t *testing.T) {
 						"verb":      "GET",
 						"resp_code": "200",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"request": "/users/42/",
 					},
 					time.Unix(1627646243, 0),
@@ -460,7 +460,7 @@ func TestFieldRenameConversions(t *testing.T) {
 						"verb":      "GET",
 						"resp_code": "200",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"ignore_number": int64(200),
 						"request":       true,
 					},
@@ -472,7 +472,7 @@ func TestFieldRenameConversions(t *testing.T) {
 						"verb":      "GET",
 						"resp_code": "404",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"request":       "/api/search/?category=plugins&q=regex&sort=asc",
 						"ignore_number": int64(404),
 						"ignore_flag":   true,
@@ -512,7 +512,7 @@ func TestTagRenameConversions(t *testing.T) {
 				"verb":      "GET",
 				"resp_code": "200",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"request": "/users/42/",
 			},
 			time.Unix(1627646243, 0),
@@ -523,7 +523,7 @@ func TestTagRenameConversions(t *testing.T) {
 				"verb":      "GET",
 				"resp_code": "200",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"request":       "/api/search/?category=plugins&q=regex&sort=asc",
 				"ignore_number": int64(200),
 				"ignore_bool":   true,
@@ -536,7 +536,7 @@ func TestTagRenameConversions(t *testing.T) {
 				"verb":      "GET",
 				"resp_code": "404",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"request":       "/api/search/?category=plugins&q=regex&sort=asc",
 				"ignore_number": int64(404),
 				"ignore_flag":   true,
@@ -564,7 +564,7 @@ func TestTagRenameConversions(t *testing.T) {
 						"verb": "GET",
 						"code": "200",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"request": "/users/42/",
 					},
 					time.Unix(1627646243, 0),
@@ -575,7 +575,7 @@ func TestTagRenameConversions(t *testing.T) {
 						"verb": "GET",
 						"code": "200",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"request":       "/api/search/?category=plugins&q=regex&sort=asc",
 						"ignore_number": int64(200),
 						"ignore_bool":   true,
@@ -588,7 +588,7 @@ func TestTagRenameConversions(t *testing.T) {
 						"verb": "GET",
 						"code": "404",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"request":       "/api/search/?category=plugins&q=regex&sort=asc",
 						"ignore_number": int64(404),
 						"ignore_flag":   true,
@@ -611,7 +611,7 @@ func TestTagRenameConversions(t *testing.T) {
 						"verb":      "GET",
 						"resp_code": "200",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"request": "/users/42/",
 					},
 					time.Unix(1627646243, 0),
@@ -622,7 +622,7 @@ func TestTagRenameConversions(t *testing.T) {
 						"verb":      "GET",
 						"resp_code": "200",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"request":       "/api/search/?category=plugins&q=regex&sort=asc",
 						"ignore_number": int64(200),
 						"ignore_bool":   true,
@@ -635,7 +635,7 @@ func TestTagRenameConversions(t *testing.T) {
 						"verb":      "GET",
 						"resp_code": "404",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"request":       "/api/search/?category=plugins&q=regex&sort=asc",
 						"ignore_number": int64(404),
 						"ignore_flag":   true,
@@ -658,7 +658,7 @@ func TestTagRenameConversions(t *testing.T) {
 					map[string]string{
 						"verb": "200",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"request": "/users/42/",
 					},
 					time.Unix(1627646243, 0),
@@ -668,7 +668,7 @@ func TestTagRenameConversions(t *testing.T) {
 					map[string]string{
 						"verb": "200",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"request":       "/api/search/?category=plugins&q=regex&sort=asc",
 						"ignore_number": int64(200),
 						"ignore_bool":   true,
@@ -680,7 +680,7 @@ func TestTagRenameConversions(t *testing.T) {
 					map[string]string{
 						"verb": "404",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"request":       "/api/search/?category=plugins&q=regex&sort=asc",
 						"ignore_number": int64(404),
 						"ignore_flag":   true,
@@ -748,7 +748,7 @@ func TestMultipleConversions(t *testing.T) {
 
 	processed := regex.Apply(newM2())
 
-	expectedFields := map[string]interface{}{
+	expectedFields := map[string]any{
 		"request":         "/api/search/?category=plugins&q=regex&sort=asc",
 		"method":          "/search/",
 		"search_category": "plugins",
@@ -790,7 +790,7 @@ func TestNamedGroups(t *testing.T) {
 			"verb":      "GET",
 			"resp_code": "200",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"request":       "/api/search/?category=plugins&q=regex&sort=asc",
 			"ignore_number": int64(200),
 			"ignore_bool":   true,
@@ -806,7 +806,7 @@ func TestNamedGroups(t *testing.T) {
 				"resp_code":       "200",
 				"resp_code_group": "2",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"request":         "/api/search/?category=plugins&q=regex&sort=asc",
 				"method":          "search",
 				"search_category": "plugins",
@@ -824,7 +824,7 @@ func TestNoMatches(t *testing.T) {
 	tests := []struct {
 		message        string
 		converter      converter
-		expectedFields map[string]interface{}
+		expectedFields map[string]any
 	}{
 		{
 			message: "Should not change anything if there is no field with given key",
@@ -833,7 +833,7 @@ func TestNoMatches(t *testing.T) {
 				Pattern:     "\\.*",
 				Replacement: "x",
 			},
-			expectedFields: map[string]interface{}{
+			expectedFields: map[string]any{
 				"request": "/users/42/",
 			},
 		},
@@ -844,7 +844,7 @@ func TestNoMatches(t *testing.T) {
 				Pattern:     "not_match",
 				Replacement: "x",
 			},
-			expectedFields: map[string]interface{}{
+			expectedFields: map[string]any{
 				"request": "/users/42/",
 			},
 		},
@@ -856,7 +856,7 @@ func TestNoMatches(t *testing.T) {
 				Replacement: "x",
 				ResultKey:   "new_field",
 			},
-			expectedFields: map[string]interface{}{
+			expectedFields: map[string]any{
 				"request": "/users/42/",
 			},
 		},
@@ -932,7 +932,7 @@ func TestAnyTagConversion(t *testing.T) {
 
 		processed := regex.Apply(newUUIDTags())
 
-		expectedFields := map[string]interface{}{
+		expectedFields := map[string]any{
 			"request": "/users/42/",
 		}
 
@@ -946,7 +946,7 @@ func TestAnyFieldConversion(t *testing.T) {
 	tests := []struct {
 		message        string
 		converter      converter
-		expectedFields map[string]interface{}
+		expectedFields map[string]any
 	}{
 		{
 			message: "Should change existing fields",
@@ -955,7 +955,7 @@ func TestAnyFieldConversion(t *testing.T) {
 				Pattern:     "[0-9]{4}",
 				Replacement: "{ID}",
 			},
-			expectedFields: map[string]interface{}{
+			expectedFields: map[string]any{
 				"counter": int64(42),
 				"id":      "{ID}",
 				"user_id": "{ID}",
@@ -974,7 +974,7 @@ func TestAnyFieldConversion(t *testing.T) {
 
 		input := metric.New("access_log",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"counter": int64(42),
 				"id":      "1234",
 				"user_id": "2300",
@@ -1002,7 +1002,7 @@ func TestTrackedMetricNotLost(t *testing.T) {
 			"verb":      "GET",
 			"resp_code": "200",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"request":       "/api/search/?category=plugins&q=regex&sort=asc",
 			"ignore_number": int64(200),
 			"ignore_bool":   true,
@@ -1019,7 +1019,7 @@ func TestTrackedMetricNotLost(t *testing.T) {
 				"resp_code_group": "2xx",
 				"resp_code_text":  "OK",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"request":         "/api/search/?category=plugins&q=regex&sort=asc",
 				"method":          "/search/",
 				"search_category": "plugins",

@@ -16,7 +16,7 @@ func TestParseValidValues(t *testing.T) {
 		name     string
 		dtype    string
 		input    []byte
-		expected interface{}
+		expected any
 	}{
 		{
 			name:     "integer",
@@ -97,7 +97,7 @@ func TestParseValidValues(t *testing.T) {
 			expected := metric.New(
 				"value_test",
 				map[string]string{},
-				map[string]interface{}{"value": tt.expected},
+				map[string]any{"value": tt.expected},
 				time.Unix(0, 0),
 			)
 
@@ -119,7 +119,7 @@ func TestParseLineValidValues(t *testing.T) {
 		name     string
 		dtype    string
 		input    string
-		expected interface{}
+		expected any
 	}{
 		{
 			name:     "integer",
@@ -164,7 +164,7 @@ func TestParseLineValidValues(t *testing.T) {
 			expected := metric.New(
 				"value_test",
 				map[string]string{},
-				map[string]interface{}{"value": tt.expected},
+				map[string]any{"value": tt.expected},
 				time.Unix(0, 0),
 			)
 
@@ -190,7 +190,7 @@ func TestParseCustomFieldName(t *testing.T) {
 
 	metrics, err := parser.Parse([]byte(`55`))
 	require.NoError(t, err)
-	require.Equal(t, map[string]interface{}{"penguin": int64(55)}, metrics[0].Fields())
+	require.Equal(t, map[string]any{"penguin": int64(55)}, metrics[0].Fields())
 }
 
 func TestParseInvalidValues(t *testing.T) {
@@ -271,7 +271,7 @@ func TestParseValidValuesDefaultTags(t *testing.T) {
 	expected := metric.New(
 		"value_test",
 		map[string]string{"test": "tag"},
-		map[string]interface{}{"value": int64(55)},
+		map[string]any{"value": int64(55)},
 		time.Unix(0, 0),
 	)
 
@@ -299,7 +299,7 @@ func TestParseValuesWithNullCharacter(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, metrics, 1)
 	require.Equal(t, "value_test", metrics[0].Name())
-	require.Equal(t, map[string]interface{}{
+	require.Equal(t, map[string]any{
 		"value": int64(55),
 	}, metrics[0].Fields())
 	require.Equal(t, map[string]string{}, metrics[0].Tags())
@@ -323,7 +323,7 @@ func TestBenchmarkData(t *testing.T) {
 		metric.New(
 			"",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"value": 5,
 			},
 			time.Unix(0, 0),

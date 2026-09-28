@@ -62,7 +62,7 @@ func (ts *Teamspeak) Gather(acc telegraf.Accumulator) error {
 			"name":           sm.Name,
 		}
 
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"uptime":                 sm.Uptime,
 			"clients_online":         sm.ClientsOnline,
 			"total_ping":             sm.TotalPing,

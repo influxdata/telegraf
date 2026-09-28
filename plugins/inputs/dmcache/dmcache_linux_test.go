@@ -37,7 +37,7 @@ func TestPerDeviceGoodOutput(t *testing.T) {
 	tags1 := map[string]string{
 		"device": "cs-1",
 	}
-	fields1 := map[string]interface{}{
+	fields1 := map[string]any{
 		"length":             int64(4883791872),
 		"metadata_blocksize": int64(8),
 		"metadata_used":      int64(1018),
@@ -58,7 +58,7 @@ func TestPerDeviceGoodOutput(t *testing.T) {
 	tags2 := map[string]string{
 		"device": "cs-2",
 	}
-	fields2 := map[string]interface{}{
+	fields2 := map[string]any{
 		"length":             int64(4294967296),
 		"metadata_blocksize": int64(8),
 		"metadata_used":      int64(72352),
@@ -80,7 +80,7 @@ func TestPerDeviceGoodOutput(t *testing.T) {
 		"device": "all",
 	}
 
-	fields3 := map[string]interface{}{
+	fields3 := map[string]any{
 		"length":             int64(9178759168),
 		"metadata_blocksize": int64(16),
 		"metadata_used":      int64(73370),
@@ -115,7 +115,7 @@ func TestNotPerDeviceGoodOutput(t *testing.T) {
 		"device": "all",
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"length":             int64(9178759168),
 		"metadata_blocksize": int64(16),
 		"metadata_used":      int64(73370),

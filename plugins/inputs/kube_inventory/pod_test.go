@@ -32,7 +32,7 @@ func TestPod(t *testing.T) {
 		{
 			name: "no pods",
 			handler: &mockHandler{
-				responseMap: map[string]interface{}{
+				responseMap: map[string]any{
 					"/pods/": &corev1.PodList{},
 				},
 			},
@@ -41,7 +41,7 @@ func TestPod(t *testing.T) {
 		{
 			name: "collect pods",
 			handler: &mockHandler{
-				responseMap: map[string]interface{}{
+				responseMap: map[string]any{
 					"/pods/": &corev1.PodList{
 						Items: []corev1.Pod{
 							{
@@ -106,11 +106,9 @@ func TestPod(t *testing.T) {
 									Volumes: []corev1.Volume{
 										{
 											Name: "vol1",
-											VolumeSource: corev1.VolumeSource{
-												PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-													ClaimName: "pc1",
-													ReadOnly:  true,
-												},
+											PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+												ClaimName: "pc1",
+												ReadOnly:  true,
 											},
 										},
 										{
@@ -188,24 +186,22 @@ func TestPod(t *testing.T) {
 										},
 									},
 								},
-								ObjectMeta: metav1.ObjectMeta{
-									OwnerReferences: []metav1.OwnerReference{
-										{
-											APIVersion: "apps/v1",
-											Kind:       "DaemonSet",
-											Name:       "forwarder",
-											Controller: new(true),
-										},
+								OwnerReferences: []metav1.OwnerReference{
+									{
+										APIVersion: "apps/v1",
+										Kind:       "DaemonSet",
+										Name:       "forwarder",
+										Controller: new(true),
 									},
-									Generation: 11232,
-									Namespace:  "ns1",
-									Name:       "pod1",
-									Labels: map[string]string{
-										"lab1": "v1",
-										"lab2": "v2",
-									},
-									CreationTimestamp: metav1.Time{Time: created},
 								},
+								Generation: 11232,
+								Namespace:  "ns1",
+								Name:       "pod1",
+								Labels: map[string]string{
+									"lab1": "v1",
+									"lab2": "v2",
+								},
+								CreationTimestamp: metav1.Time{Time: created},
 							},
 						},
 					},
@@ -223,7 +219,7 @@ func TestPod(t *testing.T) {
 						"namespace":      "ns1",
 						"container_name": "running",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"status_condition": int64(1),
 						"ready":            int64(0),
 					},
@@ -240,7 +236,7 @@ func TestPod(t *testing.T) {
 						"namespace":      "ns1",
 						"container_name": "running",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"status_condition": int64(1),
 						"ready":            int64(1),
 					},
@@ -257,7 +253,7 @@ func TestPod(t *testing.T) {
 						"namespace":      "ns1",
 						"container_name": "running",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"status_condition": int64(1),
 						"ready":            int64(0),
 					},
@@ -277,7 +273,7 @@ func TestPod(t *testing.T) {
 						"node_selector_select1": "s1",
 						"node_selector_select2": "s2",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"restarts_total":                   int32(3),
 						"state_code":                       0,
 						"resource_requests_millicpu_units": int64(100),
@@ -296,7 +292,7 @@ func TestPod(t *testing.T) {
 						"namespace":      "ns1",
 						"container_name": "completed",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"status_condition": int64(1),
 						"ready":            int64(0),
 					},
@@ -313,7 +309,7 @@ func TestPod(t *testing.T) {
 						"namespace":      "ns1",
 						"container_name": "completed",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"status_condition": int64(1),
 						"ready":            int64(1),
 					},
@@ -330,7 +326,7 @@ func TestPod(t *testing.T) {
 						"namespace":      "ns1",
 						"container_name": "completed",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"status_condition": int64(1),
 						"ready":            int64(0),
 					},
@@ -350,7 +346,7 @@ func TestPod(t *testing.T) {
 						"node_selector_select1": "s1",
 						"node_selector_select2": "s2",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"restarts_total":                   int32(3),
 						"state_code":                       1,
 						"state_reason":                     "Completed",
@@ -371,7 +367,7 @@ func TestPod(t *testing.T) {
 						"namespace":      "ns1",
 						"container_name": "waiting",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"status_condition": int64(1),
 						"ready":            int64(0),
 					},
@@ -388,7 +384,7 @@ func TestPod(t *testing.T) {
 						"namespace":      "ns1",
 						"container_name": "waiting",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"status_condition": int64(1),
 						"ready":            int64(1),
 					},
@@ -405,7 +401,7 @@ func TestPod(t *testing.T) {
 						"namespace":      "ns1",
 						"container_name": "waiting",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"status_condition": int64(1),
 						"ready":            int64(0),
 					},
@@ -425,7 +421,7 @@ func TestPod(t *testing.T) {
 						"node_selector_select1": "s1",
 						"node_selector_select2": "s2",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"restarts_total":                   int32(3),
 						"state_code":                       2,
 						"state_reason":                     "PodUninitialized",
@@ -471,7 +467,7 @@ func TestPodSelectorFilter(t *testing.T) {
 	cond1 := time.Date(now.Year(), 7, 5, 7, 53, 29, 0, now.Location())
 	cond2 := time.Date(now.Year(), 7, 5, 7, 53, 31, 0, now.Location())
 
-	responseMap := map[string]interface{}{
+	responseMap := map[string]any{
 		"/pods/": &corev1.PodList{
 			Items: []corev1.Pod{
 				{
@@ -500,11 +496,9 @@ func TestPodSelectorFilter(t *testing.T) {
 						Volumes: []corev1.Volume{
 							{
 								Name: "vol1",
-								VolumeSource: corev1.VolumeSource{
-									PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-										ClaimName: "pc1",
-										ReadOnly:  true,
-									},
+								PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+									ClaimName: "pc1",
+									ReadOnly:  true,
 								},
 							},
 							{
@@ -554,24 +548,22 @@ func TestPodSelectorFilter(t *testing.T) {
 							},
 						},
 					},
-					ObjectMeta: metav1.ObjectMeta{
-						OwnerReferences: []metav1.OwnerReference{
-							{
-								APIVersion: "apps/v1",
-								Kind:       "DaemonSet",
-								Name:       "forwarder",
-								Controller: new(true),
-							},
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "apps/v1",
+							Kind:       "DaemonSet",
+							Name:       "forwarder",
+							Controller: new(true),
 						},
-						Generation: 11232,
-						Namespace:  "ns1",
-						Name:       "pod1",
-						Labels: map[string]string{
-							"lab1": "v1",
-							"lab2": "v2",
-						},
-						CreationTimestamp: metav1.Time{Time: created},
 					},
+					Generation: 11232,
+					Namespace:  "ns1",
+					Name:       "pod1",
+					Labels: map[string]string{
+						"lab1": "v1",
+						"lab2": "v2",
+					},
+					CreationTimestamp: metav1.Time{Time: created},
 				},
 			},
 		},
@@ -710,7 +702,7 @@ func TestPodPendingContainers(t *testing.T) {
 		{
 			name: "collect pods",
 			handler: &mockHandler{
-				responseMap: map[string]interface{}{
+				responseMap: map[string]any{
 					"/pods/": &corev1.PodList{
 						Items: []corev1.Pod{
 							{
@@ -757,11 +749,9 @@ func TestPodPendingContainers(t *testing.T) {
 									Volumes: []corev1.Volume{
 										{
 											Name: "vol1",
-											VolumeSource: corev1.VolumeSource{
-												PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-													ClaimName: "pc1",
-													ReadOnly:  true,
-												},
+											PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+												ClaimName: "pc1",
+												ReadOnly:  true,
 											},
 										},
 										{
@@ -797,24 +787,22 @@ func TestPodPendingContainers(t *testing.T) {
 										},
 									},
 								},
-								ObjectMeta: metav1.ObjectMeta{
-									OwnerReferences: []metav1.OwnerReference{
-										{
-											APIVersion: "apps/v1",
-											Kind:       "DaemonSet",
-											Name:       "forwarder",
-											Controller: new(true),
-										},
+								OwnerReferences: []metav1.OwnerReference{
+									{
+										APIVersion: "apps/v1",
+										Kind:       "DaemonSet",
+										Name:       "forwarder",
+										Controller: new(true),
 									},
-									Generation: 11232,
-									Namespace:  "ns1",
-									Name:       "pod1",
-									Labels: map[string]string{
-										"lab1": "v1",
-										"lab2": "v2",
-									},
-									CreationTimestamp: metav1.Time{Time: created},
 								},
+								Generation: 11232,
+								Namespace:  "ns1",
+								Name:       "pod1",
+								Labels: map[string]string{
+									"lab1": "v1",
+									"lab2": "v2",
+								},
+								CreationTimestamp: metav1.Time{Time: created},
 							},
 						},
 					},
@@ -832,7 +820,7 @@ func TestPodPendingContainers(t *testing.T) {
 						"namespace":      "ns1",
 						"container_name": "waiting",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"status_condition": int64(1),
 						"ready":            int64(0),
 					},
@@ -849,7 +837,7 @@ func TestPodPendingContainers(t *testing.T) {
 						"namespace":      "ns1",
 						"container_name": "waiting",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"status_condition": int64(1),
 						"ready":            int64(1),
 					},
@@ -866,7 +854,7 @@ func TestPodPendingContainers(t *testing.T) {
 						"namespace":      "ns1",
 						"container_name": "waiting",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"status_condition": int64(1),
 						"ready":            int64(0),
 					},
@@ -886,7 +874,7 @@ func TestPodPendingContainers(t *testing.T) {
 						"node_selector_select1": "s1",
 						"node_selector_select2": "s2",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"phase_reason":                     "NetworkNotReady",
 						"restarts_total":                   int32(0),
 						"state_code":                       3,
@@ -906,7 +894,7 @@ func TestPodPendingContainers(t *testing.T) {
 						"namespace":      "ns1",
 						"container_name": "terminated",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"status_condition": int64(1),
 						"ready":            int64(0),
 					},
@@ -923,7 +911,7 @@ func TestPodPendingContainers(t *testing.T) {
 						"namespace":      "ns1",
 						"container_name": "terminated",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"status_condition": int64(1),
 						"ready":            int64(1),
 					},
@@ -940,7 +928,7 @@ func TestPodPendingContainers(t *testing.T) {
 						"namespace":      "ns1",
 						"container_name": "terminated",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"status_condition": int64(1),
 						"ready":            int64(0),
 					},
@@ -960,7 +948,7 @@ func TestPodPendingContainers(t *testing.T) {
 						"node_selector_select1": "s1",
 						"node_selector_select2": "s2",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"phase_reason":                     "NetworkNotReady",
 						"restarts_total":                   int32(0),
 						"state_code":                       3,

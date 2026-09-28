@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -251,14 +252,10 @@ func (c *CtrlXDataLayer) createMetric(em *sseEventData, sub *subscription) (tele
 	}
 
 	// add tags of subscription if user has defined
-	for key, value := range sub.Tags {
-		tags[key] = value
-	}
+	maps.Copy(tags, sub.Tags)
 
 	// add tags of node if user has defined
-	for key, value := range node.Tags {
-		tags[key] = value
-	}
+	maps.Copy(tags, node.Tags)
 
 	// set measurement of subscription
 	measurement := sub.Measurement
@@ -275,7 +272,7 @@ func (c *CtrlXDataLayer) createMetric(em *sseEventData, sub *subscription) (tele
 		if err != nil {
 			return nil, err
 		}
-		fields := map[string]interface{}{fieldKey: string(b)}
+		fields := map[string]any{fieldKey: string(b)}
 		m := metric.New(measurement, tags, fields, t)
 		return m, nil
 	}
@@ -298,9 +295,9 @@ func (c *CtrlXDataLayer) createMetric(em *sseEventData, sub *subscription) (tele
 		"arfloat", "ardouble",
 		"arstring",
 		"artimestamp":
-		fields := make(map[string]interface{})
-		values := em.Value.([]interface{})
-		for i := 0; i < len(values); i++ {
+		fields := make(map[string]any)
+		values := em.Value.([]any)
+		for i := range values {
 			index := strconv.Itoa(i)
 			key := fieldKey + "_" + index
 			fields[key] = values[i]
@@ -315,7 +312,7 @@ func (c *CtrlXDataLayer) createMetric(em *sseEventData, sub *subscription) (tele
 		"float", "double",
 		"string",
 		"timestamp":
-		fields := map[string]interface{}{fieldKey: em.Value}
+		fields := map[string]any{fieldKey: em.Value}
 		m := metric.New(measurement, tags, fields, t)
 		return m, nil
 	}

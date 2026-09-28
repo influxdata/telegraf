@@ -34,7 +34,7 @@ func (e artifactDeploymentOrDeletedEvent) newMetric() telegraf.Metric {
 		"path":       e.Data.Path,
 		"name":       e.Data.Name,
 	}
-	f := map[string]interface{}{
+	f := map[string]any{
 		"size":   e.Data.Size,
 		"sha256": e.Data.Sha,
 	}
@@ -63,7 +63,7 @@ func (e artifactMovedOrCopiedEvent) newMetric() telegraf.Metric {
 		"path":       e.Data.Path,
 		"name":       e.Data.Name,
 	}
-	f := map[string]interface{}{
+	f := map[string]any{
 		"size":        e.Data.Size,
 		"source_path": e.Data.SourcePath,
 		"target_path": e.Data.TargetPath,
@@ -94,7 +94,7 @@ func (e artifactPropertiesEvent) newMetric() telegraf.Metric {
 		"name":       e.Data.Name,
 	}
 
-	f := map[string]interface{}{
+	f := map[string]any{
 		"property_key":    e.Data.PropertyKey,
 		"property_values": strings.Join(e.Data.PropertyValues, ","),
 	}
@@ -129,7 +129,7 @@ func (e dockerEvent) newMetric() telegraf.Metric {
 		"name":       e.Data.Name,
 		"image_name": e.Data.ImageName,
 	}
-	f := map[string]interface{}{
+	f := map[string]any{
 		"size":      e.Data.Size,
 		"sha256":    e.Data.Sha,
 		"tag":       e.Data.Tag,
@@ -154,7 +154,7 @@ func (e buildEvent) newMetric() telegraf.Metric {
 		"domain":     e.Domain,
 		"event_type": e.Event,
 	}
-	f := map[string]interface{}{
+	f := map[string]any{
 		"build_name":    e.Data.BuildName,
 		"build_number":  e.Data.BuildNumber,
 		"build_started": e.Data.BuildStarted,
@@ -182,7 +182,7 @@ func (e releaseBundleEvent) newMetric() telegraf.Metric {
 		"destination":         e.Destination,
 		"release_bundle_name": e.Data.ReleaseBundleName,
 	}
-	f := map[string]interface{}{
+	f := map[string]any{
 		"release_bundle_size":    e.Data.ReleaseBundleSize,
 		"release_bundle_version": e.Data.ReleaseBundleVersion,
 		"jpd_origin":             e.JpdOrigin,
@@ -216,7 +216,7 @@ func (e distributionEvent) newMetric() telegraf.Metric {
 		"destination":         e.Destination,
 		"release_bundle_name": e.Data.Name,
 	}
-	f := map[string]interface{}{
+	f := map[string]any{
 		"release_bundle_size":    e.Data.Size,
 		"release_bundle_version": e.Data.Version,
 		"status_message":         e.Data.Message,
@@ -246,7 +246,7 @@ func (e destinationEvent) newMetric() telegraf.Metric {
 		"destination":         e.Destination,
 		"release_bundle_name": e.Data.Name,
 	}
-	f := map[string]interface{}{
+	f := map[string]any{
 		"release_bundle_version": e.Data.Version,
 		"status_message":         e.Data.Message,
 		"jpd_origin":             e.OriginURL,

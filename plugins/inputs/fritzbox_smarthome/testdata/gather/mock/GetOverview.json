@@ -1,0 +1,402 @@
+{
+    "devices": [
+      {
+        "UID": "16000 0039609",
+        "ain": "16000 0039609",
+        "batteryState": "known",
+        "batteryValue": 100,
+        "firmwareVersion": "03.76",
+        "hardwareModelId": "0x6000E",
+        "icons": [],
+        "isBatteryLow": false,
+        "isBatteryPowered": true,
+        "isConnected": true,
+        "isDeviceDeletable": true,
+        "isDeviceSubscribedLocally": true,
+        "isExternallyPowered": false,
+        "isUpdateAvailable": false,
+        "isZigbeeDevice": false,
+        "manufacturer": "AVM",
+        "name": "Name#1",
+        "productCategory": "sensor",
+        "productName": "FRITZ!Smart Energy 250",
+        "pushMail": {
+          "enabled": false,
+          "recipient": "",
+          "units": [
+            {
+              "UID": "16000 0039609-1",
+              "intervalDriven": "disabled",
+              "unitUid": "16000 0039609-1"
+            }
+          ]
+        },
+        "radioBaseSerial": "DC396F3ABC43",
+        "unitUids": [
+          "16000 0039609-1"
+        ]
+      },
+      {
+        "UID": "Z001788010D08385C",
+        "ain": "Z001788010D08385C",
+        "batteryState": "unknown",
+        "firmwareVersion": "1.93.7",
+        "hardwareModelId": "0xA0D00000",
+        "icons": [],
+        "isBatteryPowered": false,
+        "isConnected": true,
+        "isDeviceDeletable": true,
+        "isDeviceSubscribedLocally": false,
+        "isExternallyPowered": false,
+        "isUpdateAvailable": false,
+        "isZigbeeDevice": true,
+        "lastConnectionTime": 1787464806,
+        "manufacturer": "PHILIPS",
+        "name": "Name#2",
+        "productCategory": "lamp",
+        "productName": "Signify Netherlands B.V. LWA028",
+        "pushMail": {
+          "enabled": false,
+          "recipient": "",
+          "units": [
+            {
+              "UID": "Z001788010D08385C0B",
+              "eventDrivenEnabled": false,
+              "unitUid": "Z001788010D08385C0B"
+            }
+          ]
+        },
+        "radioBaseSerial": "D424DDA357BF",
+        "unitUids": [
+          "Z001788010D08385C0B"
+        ]
+      }
+    ],
+    "globals": {
+      "avmPresets": {
+        "colorTemperaturePaletteList": [
+          2700,
+          3000,
+          3400,
+          3800,
+          4200,
+          4700,
+          5300,
+          5900,
+          6500
+        ],
+        "hsColorPalette": [
+          {
+            "hueFromPalette": 358,
+            "nameId": 5569,
+            "presetId": 1,
+            "saturationFromPalette": 180
+          },
+          {
+            "hueFromPalette": 35,
+            "nameId": 5570,
+            "presetId": 2,
+            "saturationFromPalette": 214
+          },
+          {
+            "hueFromPalette": 52,
+            "nameId": 5571,
+            "presetId": 3,
+            "saturationFromPalette": 153
+          },
+          {
+            "hueFromPalette": 92,
+            "nameId": 5572,
+            "presetId": 4,
+            "saturationFromPalette": 123
+          },
+          {
+            "hueFromPalette": 120,
+            "nameId": 5573,
+            "presetId": 5,
+            "saturationFromPalette": 160
+          },
+          {
+            "hueFromPalette": 160,
+            "nameId": 5574,
+            "presetId": 6,
+            "saturationFromPalette": 145
+          },
+          {
+            "hueFromPalette": 195,
+            "nameId": 5575,
+            "presetId": 7,
+            "saturationFromPalette": 179
+          },
+          {
+            "hueFromPalette": 212,
+            "nameId": 5576,
+            "presetId": 8,
+            "saturationFromPalette": 169
+          },
+          {
+            "hueFromPalette": 225,
+            "nameId": 5577,
+            "presetId": 9,
+            "saturationFromPalette": 204
+          },
+          {
+            "hueFromPalette": 266,
+            "nameId": 5578,
+            "presetId": 10,
+            "saturationFromPalette": 169
+          },
+          {
+            "hueFromPalette": 296,
+            "nameId": 5579,
+            "presetId": 11,
+            "saturationFromPalette": 140
+          },
+          {
+            "hueFromPalette": 335,
+            "nameId": 5580,
+            "presetId": 12,
+            "saturationFromPalette": 180
+          },
+          {
+            "hueFromPalette": 358,
+            "nameId": 5569,
+            "presetId": 13,
+            "saturationFromPalette": 112
+          },
+          {
+            "hueFromPalette": 35,
+            "nameId": 5570,
+            "presetId": 14,
+            "saturationFromPalette": 140
+          },
+          {
+            "hueFromPalette": 52,
+            "nameId": 5571,
+            "presetId": 15,
+            "saturationFromPalette": 102
+          },
+          {
+            "hueFromPalette": 92,
+            "nameId": 5572,
+            "presetId": 16,
+            "saturationFromPalette": 79
+          },
+          {
+            "hueFromPalette": 120,
+            "nameId": 5573,
+            "presetId": 17,
+            "saturationFromPalette": 82
+          },
+          {
+            "hueFromPalette": 160,
+            "nameId": 5574,
+            "presetId": 18,
+            "saturationFromPalette": 84
+          },
+          {
+            "hueFromPalette": 195,
+            "nameId": 5575,
+            "presetId": 19,
+            "saturationFromPalette": 118
+          },
+          {
+            "hueFromPalette": 212,
+            "nameId": 5576,
+            "presetId": 20,
+            "saturationFromPalette": 110
+          },
+          {
+            "hueFromPalette": 225,
+            "nameId": 5577,
+            "presetId": 21,
+            "saturationFromPalette": 135
+          },
+          {
+            "hueFromPalette": 266,
+            "nameId": 5578,
+            "presetId": 22,
+            "saturationFromPalette": 110
+          },
+          {
+            "hueFromPalette": 296,
+            "nameId": 5579,
+            "presetId": 23,
+            "saturationFromPalette": 92
+          },
+          {
+            "hueFromPalette": 335,
+            "nameId": 5580,
+            "presetId": 24,
+            "saturationFromPalette": 107
+          },
+          {
+            "hueFromPalette": 358,
+            "nameId": 5569,
+            "presetId": 25,
+            "saturationFromPalette": 54
+          },
+          {
+            "hueFromPalette": 35,
+            "nameId": 5570,
+            "presetId": 26,
+            "saturationFromPalette": 72
+          },
+          {
+            "hueFromPalette": 52,
+            "nameId": 5571,
+            "presetId": 27,
+            "saturationFromPalette": 51
+          },
+          {
+            "hueFromPalette": 92,
+            "nameId": 5572,
+            "presetId": 28,
+            "saturationFromPalette": 38
+          },
+          {
+            "hueFromPalette": 120,
+            "nameId": 5573,
+            "presetId": 29,
+            "saturationFromPalette": 38
+          },
+          {
+            "hueFromPalette": 160,
+            "nameId": 5574,
+            "presetId": 30,
+            "saturationFromPalette": 41
+          },
+          {
+            "hueFromPalette": 195,
+            "nameId": 5575,
+            "presetId": 31,
+            "saturationFromPalette": 59
+          },
+          {
+            "hueFromPalette": 212,
+            "nameId": 5576,
+            "presetId": 32,
+            "saturationFromPalette": 56
+          },
+          {
+            "hueFromPalette": 225,
+            "nameId": 5577,
+            "presetId": 33,
+            "saturationFromPalette": 67
+          },
+          {
+            "hueFromPalette": 266,
+            "nameId": 5578,
+            "presetId": 34,
+            "saturationFromPalette": 54
+          },
+          {
+            "hueFromPalette": 296,
+            "nameId": 5579,
+            "presetId": 35,
+            "saturationFromPalette": 46
+          },
+          {
+            "hueFromPalette": 335,
+            "nameId": 5580,
+            "presetId": 36,
+            "saturationFromPalette": 51
+          }
+        ]
+      },
+      "energyKeyFigures": {
+        "co2emmissions": 550,
+        "electricityRate": 25
+      },
+      "location": {
+        "latitude": 52,
+        "longitude": 13
+      }
+    },
+    "groups": [
+      {
+        "UID": "grp3abc43-4296B3DF8",
+        "ain": "grp3abc43-4296B3DF8",
+        "groupCategory": "switchable",
+        "icons": [],
+        "isConnected": true,
+        "memberUnitUids": [
+          "Z001788010D08385C0B"
+        ],
+        "name": "Name#3",
+        "unitUid": "grp3abc43-4296B3DF8"
+      }
+    ],
+    "templates": [],
+    "triggers": [],
+    "units": [
+      {
+        "UID": "16000 0039609-1",
+        "ain": "16000 0039609-1",
+        "deviceUid": "16000 0039609",
+        "groupUid": "",
+        "icons": [],
+        "interfaces": {
+          "multimeterInterface": {
+            "energy": 325528,
+            "energyKeyFigures": {
+              "co2emmissions": 550,
+              "electricityRate": 25
+            },
+            "power": 289130,
+            "state": "valid"
+          },
+          "smartmeterInterface": {
+            "smartmeterState": [],
+            "state": "valid"
+          }
+        },
+        "isConnected": true,
+        "isGroupUnit": false,
+        "name": "Name#1",
+        "parentUid": "16000 0039609",
+        "unitType": "avmMeter"
+      },
+      {
+        "UID": "Z001788010D08385C0B",
+        "ain": "Z001788010D08385C0B",
+        "deviceUid": "Z001788010D08385C",
+        "groupUid": "grp3abc43-4296B3DF8",
+        "icons": [],
+        "interfaces": {
+          "levelControlInterface": {
+            "level": 100,
+            "state": "valid"
+          },
+          "onOffInterface": {
+            "active": false,
+            "state": "valid"
+          }
+        },
+        "isConnected": true,
+        "isGroupUnit": false,
+        "name": "Name#2",
+        "parentUid": "Z001788010D08385C",
+        "unitType": "dimmableLight"
+      },
+      {
+        "UID": "grp3abc43-4296B3DF8",
+        "ain": "grp3abc43-4296B3DF8",
+        "icons": [],
+        "interfaces": {
+          "levelControlInterface": {
+            "state": "unknown"
+          },
+          "onOffInterface": {
+            "active": false,
+            "state": "valid"
+          }
+        },
+        "isConnected": true,
+        "isGroupUnit": true,
+        "name": "Name#3",
+        "parentUid": "grp3abc43-4296B3DF8",
+        "unitType": "switchableGroup"
+      }
+    ]
+  }

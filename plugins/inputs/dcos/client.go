@@ -80,8 +80,8 @@ type dataPoint struct {
 
 // metrics are the DCOS metrics
 type metrics struct {
-	Datapoints []dataPoint            `json:"datapoints"`
-	Dimensions map[string]interface{} `json:"dimensions"`
+	Datapoints []dataPoint    `json:"datapoints"`
+	Dimensions map[string]any `json:"dimensions"`
 }
 
 // authToken is the authentication token.
@@ -266,7 +266,7 @@ func createGetRequest(address, token string) (*http.Request, error) {
 	return req, nil
 }
 
-func (c *clusterClient) doGet(ctx context.Context, address string, v interface{}) error {
+func (c *clusterClient) doGet(ctx context.Context, address string, v any) error {
 	req, err := createGetRequest(address, c.token)
 	if err != nil {
 		return err
@@ -319,10 +319,8 @@ func (c *clusterClient) toURL(path string) string {
 func createLoginToken(sa *serviceAccount) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims{
 		UID: sa.accountID,
-		RegisteredClaims: jwt.RegisteredClaims{
-			// How long we have to login with this token
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 5)),
-		},
+		// How long we have to login with this token
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 5)),
 	})
 	return token.SignedString(sa.privateKey)
 }

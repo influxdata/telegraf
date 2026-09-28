@@ -232,7 +232,7 @@ func TestRetryLaterEarlyExit(t *testing.T) {
 			map[string]string{
 				"bucket": "foo",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 0.0,
 			},
 			time.Unix(0, 0),
@@ -242,7 +242,7 @@ func TestRetryLaterEarlyExit(t *testing.T) {
 			map[string]string{
 				"bucket": "my_bucket",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 42.0,
 			},
 			time.Unix(0, 1),
@@ -252,7 +252,7 @@ func TestRetryLaterEarlyExit(t *testing.T) {
 			map[string]string{
 				"bucket": "my_bucket",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 43.0,
 			},
 			time.Unix(0, 2),
@@ -262,7 +262,7 @@ func TestRetryLaterEarlyExit(t *testing.T) {
 			map[string]string{
 				"bucket": "foo",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 0.0,
 			},
 			time.Unix(0, 3),

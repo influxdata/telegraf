@@ -72,7 +72,7 @@ func TestMariaDBIntegration(t *testing.T) {
 						"tag_one": "tag1",
 						"tag_two": "tag2",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"int64_one": int64(1234),
 						"int64_two": int64(2345),
 					},
@@ -170,7 +170,7 @@ func TestPostgreSQLIntegration(t *testing.T) {
 						"tag_one": "tag1",
 						"tag_two": "tag2",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"int64_one": int64(1234),
 						"int64_two": int64(2345),
 					},
@@ -264,7 +264,7 @@ func TestClickHouseIntegration(t *testing.T) {
 						"tag_one": "tag1",
 						"tag_two": "tag2",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"int64_one": int64(1234),
 						"int64_two": int64(2345),
 					},

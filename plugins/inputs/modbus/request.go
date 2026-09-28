@@ -1,6 +1,7 @@
 package modbus
 
 import (
+	"maps"
 	"math"
 	"sort"
 
@@ -216,9 +217,7 @@ func groupFieldsToRequests(fields []field, params groupingParams) []request {
 		if f.tags == nil {
 			f.tags = make(map[string]string, len(params.tags))
 		}
-		for k, v := range params.tags {
-			f.tags[k] = v
-		}
+		maps.Copy(f.tags, params.tags)
 
 		// Check if we need to interrupt the current chunk and require a new one
 		if current.length > 0 && f.address == current.address+current.length {

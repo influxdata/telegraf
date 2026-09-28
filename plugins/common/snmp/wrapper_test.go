@@ -4,7 +4,7 @@ import "github.com/gosnmp/gosnmp"
 
 type testSNMPConnection struct {
 	host   string
-	values map[string]interface{}
+	values map[string]any
 }
 
 func (tsc *testSNMPConnection) Host() string {
@@ -48,7 +48,7 @@ func (*testSNMPConnection) Reconnect() error {
 
 var tsc = &testSNMPConnection{
 	host: "tsc",
-	values: map[string]interface{}{
+	values: map[string]any{
 		".1.0.0.0.1.1.0":         "foo",
 		".1.0.0.0.1.1.1":         []byte("bar"),
 		".1.0.0.0.1.1.2":         []byte(""),

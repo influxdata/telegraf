@@ -249,7 +249,7 @@ func computeMask(msb, lsb uint64) uint64 {
 	return msbMask & (^lsbMask)
 }
 
-func parseXML(source string, sr sourceReader, v interface{}) error {
+func parseXML(source string, sr sourceReader, v any) error {
 	if sr == nil {
 		return errors.New("xml reader has not been initialized")
 	}

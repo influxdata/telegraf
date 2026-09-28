@@ -15,12 +15,12 @@ import (
 
 type keyValuePair struct {
 	key   []string
-	value interface{}
+	value any
 }
 
 type updateField struct {
 	path  *pathInfo
-	value interface{}
+	value any
 }
 
 func (h *Handler) newFieldsFromUpdate(path *pathInfo, update *gnmi.Update) ([]updateField, error) {
@@ -55,7 +55,7 @@ func (h *Handler) newFieldsFromUpdate(path *pathInfo, update *gnmi.Update) ([]up
 }
 
 func (h *Handler) processJSON(path *pathInfo, data []byte) ([]updateField, error) {
-	var nested interface{}
+	var nested any
 	if err := json.Unmarshal(data, &nested); err != nil {
 		return nil, fmt.Errorf("failed to parse JSON value: %w", err)
 	}
@@ -81,7 +81,7 @@ func (h *Handler) processJSON(path *pathInfo, data []byte) ([]updateField, error
 }
 
 func (h *Handler) processJSONIETF(path *pathInfo, data []byte) ([]updateField, error) {
-	var nested interface{}
+	var nested any
 	if err := json.Unmarshal(data, &nested); err != nil {
 		return nil, fmt.Errorf("failed to parse JSON value: %w", err)
 	}
@@ -146,11 +146,11 @@ func (h *Handler) processJSONIETF(path *pathInfo, data []byte) ([]updateField, e
 	return fields, nil
 }
 
-func flatten(nested interface{}) []keyValuePair {
+func flatten(nested any) []keyValuePair {
 	var values []keyValuePair
 
 	switch n := nested.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		for k, child := range n {
 			for _, c := range flatten(child) {
 				values = append(values, keyValuePair{
@@ -159,7 +159,7 @@ func flatten(nested interface{}) []keyValuePair {
 				})
 			}
 		}
-	case []interface{}:
+	case []any:
 		for i, child := range n {
 			k := strconv.Itoa(i)
 			for _, c := range flatten(child) {

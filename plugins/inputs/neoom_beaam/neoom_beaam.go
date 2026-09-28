@@ -208,7 +208,7 @@ func (n *NeoomBeaam) queryEnergyFlow(acc telegraf.Accumulator) error {
 			"datapoint": s.Key,
 			"unit":      dp.Unit,
 		}
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"value": s.Value,
 		}
 		ts := time.Unix(0, int64(s.Timestamp*float64(time.Millisecond)))
@@ -278,14 +278,14 @@ func (n *NeoomBeaam) queryThing(acc telegraf.Accumulator, thing thingDefinition)
 			"datapoint": s.Key,
 			"unit":      dp.Unit,
 		}
-		var fields map[string]interface{}
-		if elements, ok := s.Value.([]interface{}); ok {
-			fields = make(map[string]interface{}, len(elements))
+		var fields map[string]any
+		if elements, ok := s.Value.([]any); ok {
+			fields = make(map[string]any, len(elements))
 			for i, v := range elements {
 				fields["value_"+strconv.Itoa(i)] = v
 			}
 		} else {
-			fields = map[string]interface{}{
+			fields = map[string]any{
 				"value": s.Value,
 			}
 		}
@@ -301,12 +301,8 @@ func (n *NeoomBeaam) queryThing(acc telegraf.Accumulator, thing thingDefinition)
 func init() {
 	inputs.Add("neoom_beaam", func() telegraf.Input {
 		return &NeoomBeaam{
-			HTTPClientConfig: chttp.HTTPClientConfig{
-				Timeout: config.Duration(5 * time.Second),
-				TransportConfig: chttp.TransportConfig{
-					ResponseHeaderTimeout: config.Duration(5 * time.Second),
-				},
-			},
+			Timeout:               config.Duration(5 * time.Second),
+			ResponseHeaderTimeout: config.Duration(5 * time.Second),
 		}
 	})
 }
