@@ -387,6 +387,39 @@ func TestGather(t *testing.T) {
 	}
 }
 
+func TestGatherClusterTag(t *testing.T) {
+	cluster := newMockCluster(t)
+	defer cluster.close()
+
+	plugin := newPlugin()
+	plugin.Brokers = cluster.brokers()
+	plugin.Cluster = "prod-eu"
+
+	acc := gather(t, plugin)
+
+	require.NotEmpty(t, acc.GetTelegrafMetrics())
+	for _, m := range acc.GetTelegrafMetrics() {
+		value, ok := m.GetTag("cluster")
+		require.Truef(t, ok, "metric %q has no cluster tag", m.Name())
+		require.Equal(t, "prod-eu", value)
+	}
+}
+
+func TestGatherWithoutClusterTag(t *testing.T) {
+	cluster := newMockCluster(t)
+	defer cluster.close()
+
+	plugin := newPlugin()
+	plugin.Brokers = cluster.brokers()
+
+	acc := gather(t, plugin)
+
+	require.NotEmpty(t, acc.GetTelegrafMetrics())
+	for _, m := range acc.GetTelegrafMetrics() {
+		require.False(t, m.HasTag("cluster"), "metric %q has an unexpected cluster tag", m.Name())
+	}
+}
+
 func TestGatherMetadataFullDisabled(t *testing.T) {
 	cluster := newMockCluster(t)
 	defer cluster.close()

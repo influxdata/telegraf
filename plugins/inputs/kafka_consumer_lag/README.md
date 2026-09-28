@@ -85,6 +85,11 @@ to use them.
   ## the maximum over the contained partitions.
   # metric_levels = ["partition", "topic", "group"]
 
+  ## Name of the cluster, added as a "cluster" tag to every metric. Set this
+  ## when collecting from more than one cluster, otherwise metrics of groups
+  ## and topics sharing a name collide.
+  # cluster = ""
+
   ## Only collect groups whose coordinator is the broker with this ID. This
   ## is intended for deployments running Telegraf on every broker host, so
   ## that each group is collected exactly once and collection follows
@@ -249,6 +254,7 @@ creates topics, even if the brokers allow automatic topic creation.
 
 - `kafka_consumer_group_partition` (one metric per group, topic and partition)
   - tags:
+    - `cluster` (name of the cluster, only if `cluster` is set)
     - `group` (name of the consumer group)
     - `topic` (name of the topic)
     - `partition` (partition number)
@@ -260,6 +266,7 @@ creates topics, even if the brokers allow automatic topic creation.
 
 - `kafka_consumer_group_topic` (one metric per group and topic)
   - tags:
+    - `cluster` (name of the cluster, only if `cluster` is set)
     - `group` (name of the consumer group)
     - `topic` (name of the topic)
   - fields:
@@ -269,6 +276,7 @@ creates topics, even if the brokers allow automatic topic creation.
 
 - `kafka_consumer_group` (one metric per group)
   - tags:
+    - `cluster` (name of the cluster, only if `cluster` is set)
     - `group` (name of the consumer group)
   - fields:
     - `lag_sum` (int64, sum of the lag over all partitions)
