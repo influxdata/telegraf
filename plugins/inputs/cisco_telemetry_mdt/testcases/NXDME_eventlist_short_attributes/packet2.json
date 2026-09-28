@@ -1,0 +1,46 @@
+{
+    "nodeIdStr": "test-node",
+    "subscriptionIdStr": "1",
+    "encodingPath": "EVENT-LIST",
+    "msgTimestamp": "1769120146205",
+    "dataGpbkv": [
+        {
+            "fields": [
+                {
+                    "name": "keys",
+                    "fields": [
+                        {
+                            "name": "EVENT-LIST",
+                            "stringValue": "EVENT-LIST"
+                        }
+                    ]
+                },
+                {
+                    "name": "content",
+                    "fields": [
+                        {
+                            "fields": [
+                                {
+                                    "name": "children",
+                                    "fields": [
+                                        {
+                                            "fields": [
+                                                {
+                                                    "name": "events"
+                                                },
+                                                {
+                                                    "name": "subscriptionId",
+                                                    "stringValue": "1"
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
