@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/client"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -298,4 +299,60 @@ func TestStatePersistenceMux(t *testing.T) {
 
 	require.Contains(t, state, id)
 	require.Equal(t, ts.UTC(), state[id])
+}
+
+func TestStartLegacyAPIVersion(t *testing.T) {
+	server := &mock.Server{
+		APIVersion: "1.39",
+		List: []container.Summary{
+			{
+				ID:    "deadbeef",
+				Names: []string{"/telegraf"},
+				Image: "influxdata/telegraf:1.11.0",
+				State: "running",
+			},
+		},
+		Inspect: map[string]container.InspectResponse{
+			"deadbeef": {
+				Config: &container.Config{Tty: true},
+			},
+		},
+		Logs: map[string]mock.Logs{
+			"deadbeef": {Content: "2020-04-28T18:43:16.432691200Z hello\n"},
+		},
+	}
+	addr := server.Start(t)
+	defer server.Close()
+
+	plugin := &DockerLogs{
+		Endpoint: addr,
+		Timeout:  config.Duration(time.Second * 5),
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	require.NoError(t, plugin.Gather(&acc))
+	require.Empty(t, acc.Errors)
+	require.Equal(t, "1.39", plugin.client.ClientVersion())
+}
+
+func TestStartCurrentAPIVersionNotPinned(t *testing.T) {
+	server := &mock.Server{}
+	addr := server.Start(t)
+	defer server.Close()
+
+	plugin := &DockerLogs{
+		Endpoint: addr,
+		Timeout:  config.Duration(time.Second * 5),
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	require.Equal(t, client.MaxAPIVersion, plugin.client.ClientVersion())
 }

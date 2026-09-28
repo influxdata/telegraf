@@ -13,6 +13,7 @@ import (
 
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/client"
+	"github.com/moby/moby/client/pkg/versions"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -40,6 +41,7 @@ type DockerLogs struct {
 	common_tls.ClientConfig
 
 	client          *client.Client
+	clientOptions   []client.Opt
 	labelFilter     filter.Filter
 	containerFilter filter.Filter
 	stateFilter     filter.Filter
@@ -63,15 +65,17 @@ func (d *DockerLogs) Init() error {
 		d.Endpoint = "unix:///var/run/docker.sock"
 	}
 
+	var options []client.Opt
 	switch d.Endpoint {
 	case "ENV":
-		c, err := client.New(client.FromEnv)
+		options = []client.Opt{client.FromEnv}
+		c, err := client.New(options...)
 		if err != nil {
 			return fmt.Errorf("creating client from environment failed: %w", err)
 		}
 		d.client = c
 	default:
-		options := []client.Opt{
+		options = []client.Opt{
 			client.WithUserAgent("engine-api-cli-1.0"),
 			client.WithHost(d.Endpoint),
 		}
@@ -89,6 +93,7 @@ func (d *DockerLogs) Init() error {
 		}
 		d.client = c
 	}
+	d.clientOptions = options
 
 	// Create label filter
 	labelFilter, err := filter.NewIncludeExcludeFilter(d.LabelInclude, d.LabelExclude)
@@ -121,9 +126,29 @@ func (d *DockerLogs) Init() error {
 	return nil
 }
 
-// Start is a noop which is required for a *DockerLogs to implement the telegraf.ServiceInput interface
 func (d *DockerLogs) Start(telegraf.Accumulator) error {
 	d.startupTime = time.Now().Format(time.RFC3339Nano)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.Timeout))
+	defer cancel()
+	ping, err := d.client.Ping(ctx, client.PingOptions{})
+	if err != nil {
+		// Connection errors are reported by the first gather, as before
+		return nil
+	}
+
+	// Negotiation refuses to go below client.MinAPIVersion and the library
+	// discards that error, leaving the client at a version the daemon rejects
+	if ping.APIVersion != "" && versions.LessThan(ping.APIVersion, client.MinAPIVersion) &&
+		versions.GreaterThan(d.client.ClientVersion(), ping.APIVersion) {
+		d.clientOptions = append(d.clientOptions, client.WithAPIVersion(ping.APIVersion))
+		c, err := client.New(d.clientOptions...)
+		if err != nil {
+			return fmt.Errorf("creating client for API version %s failed: %w", ping.APIVersion, err)
+		}
+		d.client.Close()
+		d.client = c
+	}
 
 	return nil
 }
