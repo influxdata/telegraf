@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -200,7 +201,7 @@ func (dpdk *Dpdk) validateAdditionalCommands() error {
 // Establishes connections do DPDK telemetry sockets
 func (dpdk *Dpdk) maintainConnections() error {
 	candidates := []string{dpdk.SocketPath}
-	if choice.Contains(dpdkPluginOptionInMemory, dpdk.PluginOptions) {
+	if slices.Contains(dpdk.PluginOptions, dpdkPluginOptionInMemory) {
 		candidates = dpdk.getDpdkInMemorySocketPaths()
 	}
 
@@ -208,7 +209,7 @@ func (dpdk *Dpdk) maintainConnections() error {
 	// the candidates anymore and thus need to be removed.
 	for i := 0; i < len(dpdk.connectors); i++ {
 		connector := dpdk.connectors[i]
-		if !choice.Contains(connector.pathToSocket, candidates) {
+		if !slices.Contains(candidates, connector.pathToSocket) {
 			dpdk.Log.Debugf("Close unused connection: %s", connector.pathToSocket)
 			if closeErr := connector.tryClose(); closeErr != nil {
 				dpdk.Log.Warnf("Failed to close unused connection: %v", closeErr)
@@ -259,7 +260,7 @@ func (dpdk *Dpdk) maintainConnections() error {
 // Gathers all unique commands
 func (dpdk *Dpdk) gatherCommands(acc telegraf.Accumulator, dpdkConnector *dpdkConnector) []string {
 	var commands []string
-	if choice.Contains("ethdev", dpdk.DeviceTypes) {
+	if slices.Contains(dpdk.DeviceTypes, "ethdev") {
 		ethdevCommands := removeSubset(dpdk.ethdevCommands, dpdk.ethdevExcludedCommandsFilter)
 		ethdevCommands, err := dpdkConnector.appendCommandsWithParamsFromList(ethdevListCommand, ethdevCommands)
 		if err != nil {
@@ -268,7 +269,7 @@ func (dpdk *Dpdk) gatherCommands(acc telegraf.Accumulator, dpdkConnector *dpdkCo
 		commands = append(commands, ethdevCommands...)
 	}
 
-	if choice.Contains("rawdev", dpdk.DeviceTypes) {
+	if slices.Contains(dpdk.DeviceTypes, "rawdev") {
 		rawdevCommands, err := dpdkConnector.appendCommandsWithParamsFromList(rawdevListCommand, dpdk.rawdevCommands)
 		if err != nil {
 			acc.AddError(fmt.Errorf("error occurred during fetching of %q params: %w", rawdevListCommand, err))

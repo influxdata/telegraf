@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"slices"
 	"sync"
 	"time"
 
@@ -14,7 +15,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
-	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -153,7 +153,7 @@ func (cb *Couchbase) gatherServer(acc telegraf.Accumulator, addr string) error {
 		}
 	}
 
-	if choice.Contains("autofailover", cb.AdditionalStats) {
+	if slices.Contains(cb.AdditionalStats, "autofailover") {
 		tags := map[string]string{"cluster": cluster}
 		fields, err := cb.gatherAutoFailoverStats(addr)
 		if err != nil {

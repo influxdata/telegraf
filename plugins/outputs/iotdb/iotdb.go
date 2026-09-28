@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -15,7 +16,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -64,13 +64,13 @@ func (s *IoTDB) Init() error {
 	if s.Timeout < 0 {
 		return errors.New("negative timeout")
 	}
-	if !choice.Contains(s.ConvertUint64To, []string{"int64", "int64_clip", "text"}) {
+	if !slices.Contains([]string{"int64", "int64_clip", "text"}, s.ConvertUint64To) {
 		return fmt.Errorf("unknown 'uint64_conversion' method %q", s.ConvertUint64To)
 	}
-	if !choice.Contains(s.TimeStampUnit, []string{"second", "millisecond", "microsecond", "nanosecond"}) {
+	if !slices.Contains([]string{"second", "millisecond", "microsecond", "nanosecond"}, s.TimeStampUnit) {
 		return fmt.Errorf("unknown 'timestamp_precision' method %q", s.TimeStampUnit)
 	}
-	if !choice.Contains(s.TreatTagsAs, []string{"fields", "device_id"}) {
+	if !slices.Contains([]string{"fields", "device_id"}, s.TreatTagsAs) {
 		return fmt.Errorf("unknown 'convert_tags_to' method %q", s.TreatTagsAs)
 	}
 
