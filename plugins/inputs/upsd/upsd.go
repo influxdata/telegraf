@@ -4,6 +4,7 @@ package upsd
 import (
 	_ "embed"
 	"fmt"
+	"slices"
 	"strings"
 
 	nut "github.com/robbiet480/go.nut"
@@ -11,7 +12,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -224,35 +224,35 @@ func mapStatus(metrics map[string]any, tags map[string]string) uint64 {
 	// 5	Overloaded output
 	// 6	Battery low
 	// 7	Replace battery
-	if choice.Contains("CAL", statuses) {
+	if slices.Contains(statuses, "CAL") {
 		status |= 1 << 0
 		tags["status_CAL"] = "true"
 	}
-	if choice.Contains("TRIM", statuses) {
+	if slices.Contains(statuses, "TRIM") {
 		status |= 1 << 1
 		tags["status_TRIM"] = "true"
 	}
-	if choice.Contains("BOOST", statuses) {
+	if slices.Contains(statuses, "BOOST") {
 		status |= 1 << 2
 		tags["status_BOOST"] = "true"
 	}
-	if choice.Contains("OL", statuses) {
+	if slices.Contains(statuses, "OL") {
 		status |= 1 << 3
 		tags["status_OL"] = "true"
 	}
-	if choice.Contains("OB", statuses) {
+	if slices.Contains(statuses, "OB") {
 		status |= 1 << 4
 		tags["status_OB"] = "true"
 	}
-	if choice.Contains("OVER", statuses) {
+	if slices.Contains(statuses, "OVER") {
 		status |= 1 << 5
 		tags["status_OVER"] = "true"
 	}
-	if choice.Contains("LB", statuses) {
+	if slices.Contains(statuses, "LB") {
 		status |= 1 << 6
 		tags["status_LB"] = "true"
 	}
-	if choice.Contains("RB", statuses) {
+	if slices.Contains(statuses, "RB") {
 		status |= 1 << 7
 		tags["status_RB"] = "true"
 	}

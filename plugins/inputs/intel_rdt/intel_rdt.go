@@ -23,7 +23,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -209,7 +208,7 @@ func (r *IntelRDT) associateProcessesWithPIDs(providedProcesses []string) (map[s
 
 	mapProcessPIDs := make(map[string]string, len(availableProcesses))
 	for _, availableProcess := range availableProcesses {
-		if choice.Contains(availableProcess.Name, providedProcesses) {
+		if slices.Contains(providedProcesses, availableProcess.Name) {
 			pid := availableProcess.PID
 			mapProcessPIDs[availableProcess.Name] = mapProcessPIDs[availableProcess.Name] + strconv.Itoa(pid) + ","
 		}

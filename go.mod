@@ -5,7 +5,7 @@ go 1.27.0
 godebug x509negativeserial=1
 
 require (
-	cloud.google.com/go/auth v0.23.2
+	cloud.google.com/go/auth v0.23.3
 	cloud.google.com/go/bigquery v1.84.0
 	cloud.google.com/go/monitoring v1.30.0
 	cloud.google.com/go/pubsub/v2 v2.7.0
@@ -34,7 +34,7 @@ require (
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/Mellanox/rdmamap v1.2.0
 	github.com/PaesslerAG/gval v1.2.4
-	github.com/SAP/go-hdb v1.18.4
+	github.com/SAP/go-hdb v1.18.9
 	github.com/alecthomas/units v0.0.0-20240927000941-0f3dac36c52b
 	github.com/alitto/pond v1.9.2
 	github.com/alitto/pond/v2 v2.7.1
@@ -180,14 +180,14 @@ require (
 	github.com/pborman/ansi v1.3.0
 	github.com/pcolladosoto/goslurm v0.1.0
 	github.com/peterbourgon/unixtransport v0.0.7
-	github.com/pion/dtls/v3 v3.1.8
+	github.com/pion/dtls/v3 v3.1.9
 	github.com/prometheus-community/pro-bing v0.9.1
 	github.com/prometheus/client_golang v1.24.1
 	github.com/prometheus/client_model v0.6.3
 	github.com/prometheus/common v0.71.0
 	github.com/prometheus/procfs v0.22.0
 	github.com/prometheus/prometheus v0.314.0
-	github.com/rabbitmq/amqp091-go v1.14.0
+	github.com/rabbitmq/amqp091-go v1.15.0
 	github.com/rclone/rclone v1.75.1
 	github.com/redis/go-redis/v9 v9.22.0
 	github.com/riemann/riemann-go-client v0.5.1-0.20211206220514-f58f10cdce16
@@ -525,7 +525,7 @@ require (
 	github.com/pierrec/lz4/v4 v4.1.29 // indirect
 	github.com/pion/logging v0.2.4 // indirect
 	github.com/pion/transport/v2 v2.2.10 // indirect
-	github.com/pion/transport/v4 v4.0.2 // indirect
+	github.com/pion/transport/v5 v5.0.0 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pkg/sftp v1.13.11 // indirect

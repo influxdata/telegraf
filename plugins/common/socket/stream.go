@@ -122,8 +122,8 @@ func (l *streamListener) setupVsock(u *url.URL) error {
 	}
 	// Parse CID and port number from address string both being 32-bit
 	// source: https://man7.org/linux/man-pages/man7/vsock.7.html
-	// The CID is only validated, listening always binds the local context ID.
-	if _, err := strconv.ParseUint(addrTuple[0], 10, 32); err != nil {
+	cid, err := strconv.ParseUint(addrTuple[0], 10, 32)
+	if err != nil {
 		return fmt.Errorf("failed to parse CID %s: %w", addrTuple[0], err)
 	}
 	port, err := strconv.ParseUint(addrTuple[1], 10, 32)
@@ -131,8 +131,11 @@ func (l *streamListener) setupVsock(u *url.URL) error {
 		return fmt.Errorf("failed to parse port number %s: %w", addrTuple[1], err)
 	}
 
-	l.listener, err = vsock.Listen(uint32(port), nil)
-	return err
+	l.listener, err = vsock.ListenContextID(uint32(cid), uint32(port), nil)
+	if err != nil {
+		return fmt.Errorf("listening on CID %d failed: %w", cid, err)
+	}
+	return nil
 }
 
 func (l *streamListener) setupConnection(conn net.Conn) error {

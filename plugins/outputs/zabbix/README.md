@@ -69,8 +69,8 @@ items configured in Zabbix are [Zabbix trapper][zabbixtrapper] or
 `agent_active = true` will send data as _agent data_, expecting active Zabbix
 agent items.
 
-[zabbixtrapper]: https://www.zabbix.com/documentation/6.4/en/manual/config/items/itemtypes/trapper?hl=Trapper
-[zabbixagentactive]: https://www.zabbix.com/documentation/6.4/en/manual/config/items/itemtypes/zabbix_agent
+[zabbixtrapper]: https://www.zabbix.com/documentation/current/en/manual/config/items/itemtypes/trapper?hl=Trapper
+[zabbixagentactive]: https://www.zabbix.com/documentation/current/en/manual/config/items/itemtypes/zabbix_agent
 
 ### key_prefix
 
@@ -228,7 +228,7 @@ the low-level discovery (LLD) data is sent.
 Sending LLD to Zabbix is a heavy-weight process and is only done at the interval
 per the lld_send_interval setting.
 
-[lld]: https://www.zabbix.com/documentation/current/manual/discovery/low_level_discovery
+[lld]: https://www.zabbix.com/documentation/current/en/manual/discovery/low_level_discovery
 
 ### Design
 

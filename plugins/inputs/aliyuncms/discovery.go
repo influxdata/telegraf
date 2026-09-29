@@ -64,16 +64,16 @@ func getRPCReqFromDiscoveryRequest(req discoveryRequest) (*requests.RpcRequest, 
 
 	ptrV := reflect.Indirect(reflect.ValueOf(req))
 
-	for i := 0; i < ptrV.NumField(); i++ {
-		if ptrV.Field(i).Type().String() == "*requests.RpcRequest" {
-			if !ptrV.Field(i).CanInterface() {
-				return nil, fmt.Errorf("can't get interface of %q", ptrV.Field(i))
+	for _, field := range ptrV.Fields() {
+		if field.Type().String() == "*requests.RpcRequest" {
+			if !field.CanInterface() {
+				return nil, fmt.Errorf("can't get interface of %q", field)
 			}
 
-			rpcReq, ok := ptrV.Field(i).Interface().(*requests.RpcRequest)
+			rpcReq, ok := reflect.TypeAssert[*requests.RpcRequest](field)
 
 			if !ok {
-				return nil, fmt.Errorf("can't convert interface of %q to '*requests.RpcRequest' type", ptrV.Field(i).Interface())
+				return nil, fmt.Errorf("can't convert interface of %q to '*requests.RpcRequest' type", field.Interface())
 			}
 
 			return rpcReq, nil

@@ -1,6 +1,16 @@
 <!-- markdownlint-disable MD013 MD024 -->
 # Changelog
 
+## Unreleased
+
+### Important Changes
+
+- PR [#19774](https://github.com/influxdata/telegraf/pull/19774) makes
+  `inputs.socket_listener` bind the context ID given in a `vsock` address
+  instead of the local one. A configuration naming a CID that does not belong
+  to the machine Telegraf runs on now fails on startup, so please check your
+  `vsock` addresses.
+
 ## v1.40.1 [2026-09-21]
 
 ### Bugfixes
