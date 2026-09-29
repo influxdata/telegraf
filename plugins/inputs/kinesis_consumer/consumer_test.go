@@ -20,8 +20,9 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-// kinesisStub serves the two operations a shard consumer performs, expiring
-// the iterator once so the consumer has to request a new one.
+// kinesisStub serves the two operations a shard consumer performs. It returns
+// one record, expires the iterator, then closes the shard with a second record
+// so the consumer has to resume after the record it already consumed.
 type kinesisStub struct {
 	t  *testing.T
 	mu sync.Mutex
@@ -30,9 +31,6 @@ type kinesisStub struct {
 	iteratorTypes []string
 	startingSeqnr []string
 
-	expired bool
-
-	// getRecords counts the GetRecords calls served.
 	getRecords int
 }
 
@@ -56,33 +54,33 @@ func (s *kinesisStub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s.startingSeqnr = append(s.startingSeqnr, seqnr)
 		writeJSON(s.t, w, map[string]any{"ShardIterator": "iterator"})
 	case strings.HasSuffix(target, "GetRecords"):
-		// Expire the iterator on the first call only, so the consumer has to
-		// recreate it and carry on from the last sequence number.
-		if !s.expired {
-			s.expired = true
+		s.getRecords++
+		switch s.getRecords {
+		case 1:
+			writeJSON(s.t, w, map[string]any{
+				"Records":           []map[string]any{record("43")},
+				"NextShardIterator": "iterator",
+			})
+		case 2:
 			w.WriteHeader(http.StatusBadRequest)
 			writeJSON(s.t, w, map[string]any{
 				"__type":  "ExpiredIteratorException",
 				"message": "iterator expired",
 			})
-			return
+		default:
+			// A nil iterator closes the shard and ends the consumer
+			writeJSON(s.t, w, map[string]any{"Records": []map[string]any{record("44")}})
 		}
-		s.getRecords++
-		response := map[string]any{
-			"Records": []map[string]any{{
-				"SequenceNumber": "43",
-				"Data":           base64.StdEncoding.EncodeToString([]byte("record")),
-				"PartitionKey":   "key",
-			}},
-		}
-		// Close the shard on the last call, which is how Kinesis delivers the
-		// final records of a shard that was split or merged.
-		if s.getRecords == 1 {
-			response["NextShardIterator"] = "iterator"
-		}
-		writeJSON(s.t, w, response)
 	default:
 		w.WriteHeader(http.StatusNotFound)
+	}
+}
+
+func record(seqnr string) map[string]any {
+	return map[string]any{
+		"SequenceNumber": seqnr,
+		"Data":           base64.StdEncoding.EncodeToString([]byte(seqnr)),
+		"PartitionKey":   "key",
 	}
 }
 
@@ -125,13 +123,13 @@ func TestConsumeResumesAfterIteratorExpired(t *testing.T) {
 	require.NoError(t, err)
 
 	// The expired iterator must be replaced rather than aborting the shard.
-	require.Equal(t, []string{"record", "record"}, records)
-	require.Equal(t, "43", consumer.seqnr)
+	require.Equal(t, []string{"43", "44"}, records)
+	require.Equal(t, "44", consumer.seqnr)
 
-	// Both iterators must resume after the last consumed record, otherwise
-	// the shard is replayed from the beginning after every expiry.
+	// The replacement iterator must resume after the last consumed record,
+	// otherwise the shard is replayed after every expiry.
 	require.Equal(t, []string{"AFTER_SEQUENCE_NUMBER", "AFTER_SEQUENCE_NUMBER"}, stub.iteratorTypes)
-	require.Equal(t, []string{"42", "42"}, stub.startingSeqnr)
+	require.Equal(t, []string{"42", "43"}, stub.startingSeqnr)
 }
 
 // closedShardStub serves a single GetRecords call that returns records
