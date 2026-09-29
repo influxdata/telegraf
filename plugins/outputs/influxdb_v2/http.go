@@ -259,6 +259,7 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 
 	// Handle the batches that need resending and remove the split instances
 	if !throttle.Load() {
+		start = time.Now()
 		slices.Reverse(split)
 		for _, idx := range split {
 			// Delete the split patch
@@ -267,6 +268,7 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 			batches = append(batches, s...)
 			batches = slices.Delete(batches, idx, idx+1)
 		}
+		c.log.Tracef("    Sending %d throttled batches took %.3fms...", len(split), time.Since(start).Seconds()*1000)
 	}
 
 	// Check the errors
