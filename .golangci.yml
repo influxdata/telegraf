@@ -32,6 +32,7 @@ linters:
     - lll
     - makezero
     - mirror
+    - modernize
     - nakedret
     - nilerr
     - nolintlint
@@ -262,6 +263,12 @@ linters:
       # Tab width in spaces.
       # Default: 1
       tab-width: 4
+
+    modernize:
+      # The embedlit analyzer is disabled as we intentionally keep the nested
+      # configuration literals for readability in a few places.
+      disable:
+        - embedlit
 
     nakedret:
       # Make an issue if func has more lines of code than this setting, and it has naked returns.
