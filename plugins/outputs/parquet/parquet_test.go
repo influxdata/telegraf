@@ -607,7 +607,7 @@ func TestRotationIgnoresExternalModifications(t *testing.T) {
 
 	write := func(value float64) {
 		require.NoError(t, plugin.Write([]telegraf.Metric{
-			metric.New("test", map[string]string{}, map[string]interface{}{"value": value}, time.Now()),
+			metric.New("test", map[string]string{}, map[string]any{"value": value}, time.Now()),
 		}))
 	}
 
@@ -643,7 +643,7 @@ func TestDeletedFileReappearsOnlyOnRotation(t *testing.T) {
 
 	write := func(value float64) {
 		require.NoError(t, plugin.Write([]telegraf.Metric{
-			metric.New("test", map[string]string{}, map[string]interface{}{"value": value}, time.Now()),
+			metric.New("test", map[string]string{}, map[string]any{"value": value}, time.Now()),
 		}))
 	}
 
