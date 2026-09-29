@@ -265,25 +265,10 @@ linters:
       tab-width: 4
 
     modernize:
-      # List of analyzers to disable.
-      # By default, all analyzers are enabled.
-      # Only analyzers whose rewrites are already applied to the codebase are enabled.
+      # The embedlit analyzer is disabled as we intentionally keep the nested
+      # configuration literals for readability in a few places.
       disable:
-        - atomictypes
         - embedlit
-        - errorsastype
-        - importcomment
-        - mapsloop
-        - minmax
-        - omitzero
-        - plusbuild
-        - reflecttypeassert
-        - reflecttypefor
-        - slicesclip
-        - stditerators
-        - testingcontext
-        - unsafefuncs
-        - waitgroupgo
 
     nakedret:
       # Make an issue if func has more lines of code than this setting, and it has naked returns.
