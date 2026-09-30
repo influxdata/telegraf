@@ -216,10 +216,6 @@ func (s *Sensors) parseLine(line string) (map[string]string, map[string]any, err
 		fields["status"] = status
 		fields["status_code"] = sensorStatuses[status]
 	}
-	if len(fields) == 0 {
-		// Unknown value without status: nothing numeric or named to report
-		return nil, nil, nil
-	}
 
 	return tags, fields, nil
 }
