@@ -903,10 +903,10 @@ func TestInterfaceNameFromServiceAddressInvalid(t *testing.T) {
 		address string
 		err     string
 	}{
-		{name: "empty string not allowed", address: "tcp://localhost:400%", err: "is not valid"},
+		{name: "empty string not allowed", address: "tcp://localhost:400%", err: "empty interface name"},
 		{name: "udp6 multicast with zone id and interface name", address: "udp6://[ff02::1%eth0]:8094%enp0",
 			err: "ipv6 zone id and interface name are mutually exclusive"},
-		{name: "udp6 multicast with empty zone id", address: "udp6://[ff02::1%]:8094", err: "is not valid"},
+		{name: "udp6 multicast with empty zone id", address: "udp6://[ff02::1%]:8094", err: "empty interface name"},
 		{name: "udp6 multicast with empty zone id and interface name", address: "udp6://[ff02::1%]:8094%eth0",
 			err: "ipv6 zone id and interface name are mutually exclusive"},
 	}
