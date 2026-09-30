@@ -1,0 +1,2 @@
+hw.sensors.acpitz0.temp0=27.80 degC (zone temperature)
+hw.sensors.cpu0.temp0=garbage degC

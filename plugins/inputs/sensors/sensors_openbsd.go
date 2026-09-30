@@ -61,14 +61,11 @@ func (s *Sensors) Gather(acc telegraf.Accumulator) error {
 			continue
 		}
 
-		tags, fields, err := parseLine(line)
+		tags, fields, err := s.parseLine(line)
 		if err != nil {
 			return err
 		}
 		if len(fields) == 0 {
-			continue
-		}
-		if s.deviceFilter != nil && !s.deviceFilter.Match(tags["device"]) {
 			continue
 		}
 		acc.AddFields("sensors", fields, tags)
@@ -87,7 +84,7 @@ func (s *Sensors) Gather(acc telegraf.Accumulator) error {
 //	hw.sensors.cpu0.temp0=43.00 degC
 //	hw.sensors.softraid0.drive0=online (sd2), OK
 //	hw.sensors.nmea0.timedelta0=-0.000104 secs (GPS differential), OK, Sun Jul 19 23:16:01.999
-func parseLine(line string) (map[string]string, map[string]any, error) {
+func (s *Sensors) parseLine(line string) (map[string]string, map[string]any, error) {
 	name, value, found := strings.Cut(line, "=")
 	if !found {
 		return nil, nil, fmt.Errorf("unexpected line %q", line)
@@ -100,6 +97,10 @@ func parseLine(line string) (map[string]string, map[string]any, error) {
 	device, sensor, found := strings.Cut(rest, ".")
 	if !found {
 		return nil, nil, fmt.Errorf("unexpected sensor name %q", name)
+	}
+
+	if s.deviceFilter != nil && !s.deviceFilter.Match(device) {
+		return nil, nil, nil
 	}
 
 	// The sensor type is the sensor name without the trailing index digits,
