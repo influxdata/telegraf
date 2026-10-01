@@ -62,7 +62,11 @@ func interfaceNameFromServiceAddress(address string) (string, error) {
 	// name, the trailing name itself might contain brackets
 	var host string
 	rest := address
-	if _, after, found := strings.Cut(address, "://"); found {
+	if scheme, after, found := strings.Cut(address, "://"); found {
+		// Unix socket paths are URL encoded, so a '%' starts an escape sequence
+		if strings.HasPrefix(scheme, "unix") {
+			return "", nil
+		}
 		rest = after
 	}
 	if strings.HasPrefix(rest, "[") {
