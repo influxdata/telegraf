@@ -871,6 +871,8 @@ func TestNewSocketServiceAddressParsing(t *testing.T) {
 		{name: "vsock with port", address: "vsock://3:80", url: "vsock://3:80"},
 		{name: "unix no interface name", address: "unix:///tmp/telegraf.sock", url: "unix:///tmp/telegraf.sock"},
 		{name: "unixgram no interface name", address: "unixgram:///tmp/telegraf.sock", url: "unixgram:///tmp/telegraf.sock"},
+		{name: "unix with encoded path", address: "unix:///tmp/my%20path.sock", url: "unix:///tmp/my%20path.sock"},
+		{name: "unixgram with encoded path", address: "unixgram:///tmp/my%20path.sock", url: "unixgram:///tmp/my%20path.sock"},
 		{name: "udp6 multicast no interface name", address: "udp6://[ff02::1]:8094", url: "udp6://[ff02::1]:8094"},
 		{name: "udp6 multicast with zone id", address: "udp6://[ff02::1%eth0]:8094", interfaceName: "eth0", url: "udp6://[ff02::1]:8094"},
 		{name: "udp6 ipv4 mapped host", address: "udp6://[::ffff:239.0.0.1]:8094%eth0",
