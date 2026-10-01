@@ -11,7 +11,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/system"
-	"github.com/moby/moby/client"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -1391,14 +1390,16 @@ func TestStartLegacyAPIVersion(t *testing.T) {
 func TestStartCurrentAPIVersionNotPinned(t *testing.T) {
 	server, err := mock.NewServerFromFiles("testdata")
 	require.NoError(t, err)
+	server.APIVersion = "1.45"
 
 	addr := server.Start(t)
 	defer server.Close()
 
+	logger := &testutil.CaptureLogger{}
 	plugin := &Docker{
 		Endpoint: addr,
 		Timeout:  config.Duration(time.Second * 5),
-		Log:      testutil.Logger{},
+		Log:      logger,
 	}
 	require.NoError(t, plugin.Init())
 
@@ -1406,5 +1407,9 @@ func TestStartCurrentAPIVersionNotPinned(t *testing.T) {
 	require.NoError(t, plugin.Start(&acc))
 	defer plugin.Stop()
 
-	require.Equal(t, client.MaxAPIVersion, plugin.client.ClientVersion())
+	require.NoError(t, acc.GatherError(plugin.Gather))
+	require.Equal(t, "1.45", plugin.client.ClientVersion())
+	for _, msg := range logger.Messages() {
+		require.NotContains(t, msg.Text, "pinning client")
+	}
 }
