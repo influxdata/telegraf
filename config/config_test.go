@@ -3,6 +3,7 @@ package config_test
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -1523,6 +1524,19 @@ func TestConfig_SkipProcessorsBeforeOmitsProcessors(t *testing.T) {
 
 	require.NoError(t, c.LoadAll(filepath.Join(".", "testdata", "processor_order", "multiple_processors.toml")))
 	require.Empty(t, c.Processors)
+}
+
+func TestConfig_SkipProcessorsBeforeWithoutAggregatorsWarns(t *testing.T) {
+	var buf bytes.Buffer
+	previous := log.Writer()
+	log.SetOutput(&buf)
+	defer log.SetOutput(previous)
+
+	c := config.NewConfig()
+	c.Agent.SkipProcessorsBeforeAggregators = true
+
+	require.NoError(t, c.LoadAll(filepath.Join(".", "testdata", "processor_order", "multiple_processors.toml")))
+	require.Contains(t, buf.String(), "Processors will not run as skip_processors_before_aggregators is set without any aggregators")
 }
 
 func TestConfig_SkipProcessorsBeforeIsOrderIndependent(t *testing.T) {

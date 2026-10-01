@@ -362,7 +362,8 @@ The agent table configures Telegraf and the defaults used across all plugins.
 
 - **skip_processors_before_aggregators**:
   By default, processors are run before aggregators. Changing
-  this setting to true will skip the first run of processors.
+  this setting to true will skip the first run of processors. Without any
+  aggregators there is no second run, so processors will not run at all.
 
 - **skip_processors_after_aggregators**:
   By default, processors are run a second time after aggregators. Changing

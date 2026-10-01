@@ -585,6 +585,10 @@ func (c *Config) LoadAll(configFiles ...string) error {
 	sort.Stable(c.AggProcessors)
 
 	if c.Agent.SkipProcessorsBeforeAggregators {
+		// Processors only run after aggregators if there are any
+		if len(c.Aggregators) == 0 && len(c.Processors) > 0 {
+			log.Printf("W! Processors will not run as skip_processors_before_aggregators is set without any aggregators")
+		}
 		c.Processors = make(models.RunningProcessors, 0)
 	}
 
