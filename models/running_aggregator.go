@@ -178,8 +178,9 @@ func (r *RunningAggregator) Add(m telegraf.Metric) bool {
 }
 
 func (r *RunningAggregator) Push(acc telegraf.Accumulator) {
+	collector := &pushCollector{log: r.log, precision: time.Nanosecond}
+
 	r.Lock()
-	defer r.Unlock()
 
 	since := r.periodEnd
 	until := r.periodEnd.Add(r.Config.Period)
@@ -197,10 +198,131 @@ func (r *RunningAggregator) Push(acc telegraf.Accumulator) {
 	r.UpdateWindow(since, until)
 
 	start := time.Now()
-	r.Aggregator.Push(acc)
+	// Push into an in-memory collector rather than the real accumulator.
+	// The real accumulator ultimately blocks on a bounded channel to the
+	// next stage; if that channel is momentarily full (e.g. a slow output,
+	// or a large/high-cardinality aggregation taking a while to drain),
+	// doing that send here would keep the lock held for the whole time,
+	// starving concurrent Add() calls -- and, transitively, any input
+	// plugin blocked delivering a metric via Add(). Collecting first lets
+	// us release the lock before delivery.
+	r.Aggregator.Push(collector)
 	elapsed := time.Since(start)
 	r.PushTime.Incr(elapsed.Nanoseconds())
 	r.Aggregator.Reset()
+
+	r.Unlock()
+
+	// Deliver the collected metrics without holding the lock. MakeMetric
+	// (name/tag prefixing, MetricsPushed accounting) and precision rounding
+	// still happen exactly once, inside acc.AddMetric, same as before.
+	for _, m := range collector.metrics {
+		acc.AddMetric(m)
+	}
+}
+
+// pushCollector is a telegraf.Accumulator that buffers metrics produced by
+// an aggregator's Push() call in memory instead of forwarding them
+// immediately. See RunningAggregator.Push for why this decoupling matters.
+type pushCollector struct {
+	log       telegraf.Logger
+	precision time.Duration
+	metrics   []telegraf.Metric
+}
+
+func (c *pushCollector) AddFields(measurement string, fields map[string]interface{}, tags map[string]string, t ...time.Time) {
+	c.append(metric.New(measurement, tags, fields, c.getTime(t), telegraf.Untyped))
+}
+
+func (c *pushCollector) AddGauge(measurement string, fields map[string]interface{}, tags map[string]string, t ...time.Time) {
+	c.append(metric.New(measurement, tags, fields, c.getTime(t), telegraf.Gauge))
+}
+
+func (c *pushCollector) AddCounter(measurement string, fields map[string]interface{}, tags map[string]string, t ...time.Time) {
+	c.append(metric.New(measurement, tags, fields, c.getTime(t), telegraf.Counter))
+}
+
+func (c *pushCollector) AddSummary(measurement string, fields map[string]interface{}, tags map[string]string, t ...time.Time) {
+	c.append(metric.New(measurement, tags, fields, c.getTime(t), telegraf.Summary))
+}
+
+func (c *pushCollector) AddHistogram(measurement string, fields map[string]interface{}, tags map[string]string, t ...time.Time) {
+	c.append(metric.New(measurement, tags, fields, c.getTime(t), telegraf.Histogram))
+}
+
+func (c *pushCollector) AddMetric(m telegraf.Metric) {
+	m.SetTime(m.Time().Round(c.precision))
+	c.append(m)
+}
+
+func (c *pushCollector) append(m telegraf.Metric) {
+	if m != nil {
+		c.metrics = append(c.metrics, m)
+	}
+}
+
+func (c *pushCollector) SetPrecision(precision time.Duration) {
+	c.precision = precision
+}
+
+func (c *pushCollector) AddError(err error) {
+	if err == nil {
+		return
+	}
+	if c.log != nil {
+		c.log.Errorf("Error in plugin: %v", err)
+	}
+}
+
+func (c *pushCollector) getTime(t []time.Time) time.Time {
+	var timestamp time.Time
+	if len(t) > 0 {
+		timestamp = t[0]
+	} else {
+		timestamp = time.Now()
+	}
+	return timestamp.Round(c.precision)
+}
+
+func (c *pushCollector) WithTracking(maxTracked int) telegraf.TrackingAccumulator {
+	return &pushTrackingCollector{
+		pushCollector: c,
+		delivered:     make(chan telegraf.DeliveryInfo, maxTracked),
+	}
+}
+
+// pushTrackingCollector supports the rare case of an aggregator requesting a
+// TrackingAccumulator from within Push(). Tracked metrics are still buffered
+// like any other metric; delivery information is reported immediately since
+// aggregated metrics are not tied to the original inputs' delivery guarantees.
+type pushTrackingCollector struct {
+	*pushCollector
+	delivered chan telegraf.DeliveryInfo
+}
+
+func (c *pushTrackingCollector) AddTrackingMetric(m telegraf.Metric) telegraf.TrackingID {
+	dm, id := metric.WithTracking(m, c.onDelivery)
+	c.AddMetric(dm)
+	return id
+}
+
+func (c *pushTrackingCollector) AddTrackingMetricGroup(group []telegraf.Metric) telegraf.TrackingID {
+	db, id := metric.WithGroupTracking(group, c.onDelivery)
+	for _, m := range db {
+		c.AddMetric(m)
+	}
+	return id
+}
+
+func (c *pushTrackingCollector) Delivered() <-chan telegraf.DeliveryInfo {
+	return c.delivered
+}
+
+func (c *pushTrackingCollector) onDelivery(info telegraf.DeliveryInfo) {
+	select {
+	case c.delivered <- info:
+	default:
+	}
 }
 
 func (r *RunningAggregator) Log() telegraf.Logger {
