@@ -4,7 +4,7 @@
 When distributed in a binary form, Telegraf may contain portions of the
 following works:
 
-- cel.dev/expr [Apache License 2.0](https://github.com/google/cel-spec/blob/master/LICENSE)
+- cel.dev/expr [Apache License 2.0](https://github.com/cel-expr/cel-spec/blob/master/LICENSE)
 - cloud.google.com/go [Apache License 2.0](https://github.com/googleapis/google-cloud-go/blob/master/LICENSE)
 - code.cloudfoundry.org/clock [Apache License 2.0](https://github.com/cloudfoundry/clock/blob/master/LICENSE)
 - collectd.org [ISC License](https://github.com/collectd/go-collectd/blob/master/LICENSE)
