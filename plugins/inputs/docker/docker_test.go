@@ -1362,3 +1362,54 @@ func TestStartupSuccess(t *testing.T) {
 	require.NoError(t, model.Start(&acc))
 	model.Stop()
 }
+
+func TestStartLegacyAPIVersion(t *testing.T) {
+	server, err := mock.NewServerFromFiles("testdata")
+	require.NoError(t, err)
+	server.APIVersion = "1.39"
+
+	addr := server.Start(t)
+	defer server.Close()
+
+	plugin := &Docker{
+		Endpoint: addr,
+		Timeout:  config.Duration(time.Second * 5),
+		Log:      testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	require.Equal(t, "1.39", plugin.client.ClientVersion())
+	require.NoError(t, acc.GatherError(plugin.Gather))
+	require.NotEmpty(t, acc.GetTelegrafMetrics())
+}
+
+func TestStartCurrentAPIVersionNotPinned(t *testing.T) {
+	server, err := mock.NewServerFromFiles("testdata")
+	require.NoError(t, err)
+	server.APIVersion = "1.45"
+
+	addr := server.Start(t)
+	defer server.Close()
+
+	logger := &testutil.CaptureLogger{}
+	plugin := &Docker{
+		Endpoint: addr,
+		Timeout:  config.Duration(time.Second * 5),
+		Log:      logger,
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	require.NoError(t, acc.GatherError(plugin.Gather))
+	require.Equal(t, "1.45", plugin.client.ClientVersion())
+	for _, msg := range logger.Messages() {
+		require.NotContains(t, msg.Text, "pinning client")
+	}
+}
