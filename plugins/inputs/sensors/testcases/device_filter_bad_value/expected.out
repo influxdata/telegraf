@@ -1,0 +1,1 @@
+sensors,description=zone\ temperature,device=acpitz0,sensor=temp0,type=temp,unit=degC value=27.8

@@ -1,0 +1,2 @@
+sensors,device=softraid0,sensor=drive0,type=drive state="unknown"
+sensors,description=sd3,device=softraid0,sensor=drive1,type=drive state="unknown",status="CRITICAL",status_code=3

@@ -1,0 +1,4 @@
+hw.sensors.lm0.volt0=1.50 VDC (+1.5V (Vccp))
+hw.sensors.lm0.volt1=3.34 VDC (+3.3V (VCC))
+hw.sensors.lm0.volt2=3.34 VDC (+3.3V (VTR))
+hw.sensors.lm0.volt3=3.30 VDC (+3V (Vbat))

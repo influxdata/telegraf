@@ -1,0 +1,2 @@
+sensors,device=foo0,sensor=temp1,type=temp status="UNKNOWN",status_code=4
+sensors,description=zone\ temperature,device=foo0,sensor=temp2,type=temp status="CRITICAL",status_code=3

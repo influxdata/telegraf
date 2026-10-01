@@ -1,0 +1,29 @@
+sensors,device=cpu0,sensor=temp0,type=temp,unit=degC value=29
+sensors,device=cpu0,sensor=frequency0,type=frequency,unit=Hz value=2450000000
+sensors,device=cpu1,sensor=frequency0,type=frequency,unit=Hz value=2350000000
+sensors,device=cpu2,sensor=frequency0,type=frequency,unit=Hz value=2300000000
+sensors,device=cpu3,sensor=frequency0,type=frequency,unit=Hz value=2250000000
+sensors,description=zone\ temperature,device=acpitz0,sensor=temp0,type=temp,unit=degC value=27.8
+sensors,description=zone\ temperature,device=acpitz1,sensor=temp0,type=temp,unit=degC value=29.8
+sensors,device=sdtemp0,sensor=temp0,type=temp,unit=degC value=29.75
+sensors,device=sdtemp1,sensor=temp0,type=temp,unit=degC value=29.5
+sensors,device=lm1,sensor=temp0,type=temp,unit=degC value=42
+sensors,device=lm1,sensor=temp1,type=temp,unit=degC value=0
+sensors,device=lm1,sensor=temp2,type=temp,unit=degC value=30
+sensors,device=lm1,sensor=fan0,type=fan,unit=RPM value=164
+sensors,device=lm1,sensor=fan1,type=fan,unit=RPM value=1666
+sensors,device=lm1,sensor=fan2,type=fan,unit=RPM value=1144
+sensors,device=lm1,sensor=fan3,type=fan,unit=RPM value=164
+sensors,device=lm1,sensor=fan4,type=fan,unit=RPM value=164
+sensors,description=VCore,device=lm1,sensor=volt0,type=volt,unit=VDC value=1.34
+sensors,description=+12V,device=lm1,sensor=volt1,type=volt,unit=VDC value=12.2
+sensors,description=+3.3V,device=lm1,sensor=volt2,type=volt,unit=VDC value=3.34
+sensors,description=+3.3V,device=lm1,sensor=volt3,type=volt,unit=VDC value=3.34
+sensors,description=-12V,device=lm1,sensor=volt4,type=volt,unit=VDC value=-14.8
+sensors,device=lm1,sensor=volt5,type=volt,unit=VDC value=1.3
+sensors,device=lm1,sensor=volt6,type=volt,unit=VDC value=1.48
+sensors,description=3.3VSB,device=lm1,sensor=volt7,type=volt,unit=VDC value=3.34
+sensors,description=VBAT,device=lm1,sensor=volt8,type=volt,unit=VDC value=1.62
+sensors,description=sd3,device=softraid0,sensor=drive0,type=drive state="degraded",status="WARNING",status_code=2,value=10
+sensors,description=sd4,device=softraid0,sensor=drive1,type=drive state="online",status="OK",status_code=1,value=4
+sensors,description=sd5,device=softraid0,sensor=drive2,type=drive state="online",status="OK",status_code=1,value=4

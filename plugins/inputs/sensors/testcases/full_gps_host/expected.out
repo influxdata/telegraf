@@ -1,0 +1,17 @@
+sensors,device=cpu0,sensor=temp0,type=temp,unit=degC value=36
+sensors,device=cpu0,sensor=frequency0,type=frequency,unit=Hz value=1000000000
+sensors,device=cpu1,sensor=frequency0,type=frequency,unit=Hz value=1000000000
+sensors,device=cpu2,sensor=frequency0,type=frequency,unit=Hz value=1000000000
+sensors,device=cpu3,sensor=frequency0,type=frequency,unit=Hz value=1000000000
+sensors,description=zone\ temperature,device=acpitz0,sensor=temp0,type=temp,unit=degC value=27.8
+sensors,description=zone\ temperature,device=acpitz1,sensor=temp0,type=temp,unit=degC value=29.8
+sensors,device=pchtemp0,sensor=temp0,type=temp,unit=degC value=35
+sensors,description=sd2,device=softraid0,sensor=drive0,type=drive state="online",status="OK",status_code=1,value=4
+sensors,description=sd3,device=softraid0,sensor=drive1,type=drive state="online",status="OK",status_code=1,value=4
+sensors,description=sd4,device=softraid0,sensor=drive2,type=drive state="online",status="OK",status_code=1,value=4
+sensors,description=Signal,device=nmea0,sensor=indicator0,type=indicator state="On",status="OK",status_code=1,value=true
+sensors,description=GPS\ differential,device=nmea0,sensor=timedelta0,type=timedelta,unit=secs status="OK",status_code=1,value=-0.000006
+sensors,description=Latitude,device=nmea0,sensor=angle0,type=angle,unit=degrees status="OK",status_code=1,value=51.4779
+sensors,description=Longitude,device=nmea0,sensor=angle1,type=angle,unit=degrees status="OK",status_code=1,value=-0.0015
+sensors,description=Altitude,device=nmea0,sensor=distance0,type=distance,unit=m status="OK",status_code=1,value=47
+sensors,description=Ground\ speed,device=nmea0,sensor=velocity0,type=velocity,unit=m/s status="OK",status_code=1,value=0
