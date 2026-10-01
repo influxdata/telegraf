@@ -82,7 +82,8 @@ indicators of a currency.
 
 A series the key does not cover is reported as an error for that series while
 the remaining series are still gathered, so a mixed `currencies` list stays
-usable. A series that does not exist for a currency is silently skipped.
+usable. A series that does not exist for a currency is logged once as a
+warning and is not queried again until Telegraf is restarted.
 
 Setting `response_timeout` to zero disables the timeout.
 

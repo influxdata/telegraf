@@ -41,14 +41,14 @@ func (*FXMacroData) SampleConfig() string {
 
 func (f *FXMacroData) Init() error {
 	// Set defaults
+	if f.URL == "" {
+		f.URL = "https://api.fxmacrodata.com/v1"
+	}
 	if len(f.Currencies) == 0 {
 		f.Currencies = []string{"USD"}
 	}
 
 	// Check settings
-	if f.URL == "" {
-		return errors.New("url must be set")
-	}
 	baseURL, err := url.Parse(f.URL)
 	if err != nil {
 		return fmt.Errorf("parsing url %q failed: %w", f.URL, err)
@@ -62,7 +62,7 @@ func (f *FXMacroData) Init() error {
 	}
 
 	for _, currency := range f.Currencies {
-		if !isCurrencyCode(currency) {
+		if isInvalidCurrency(currency) {
 			return fmt.Errorf("invalid currency %q, expected an uppercase three-letter code like \"USD\"", currency)
 		}
 	}
@@ -95,7 +95,7 @@ func (f *FXMacroData) Init() error {
 
 	for _, pair := range f.FXPairs {
 		base, quote, found := strings.Cut(pair, "/")
-		if !found || !isCurrencyCode(base) || !isCurrencyCode(quote) {
+		if !found || isInvalidCurrency(base) || isInvalidCurrency(quote) {
 			return fmt.Errorf("invalid fx_pair %q, expected the form \"BASE/QUOTE\" in uppercase like \"EUR/USD\"", pair)
 		}
 
@@ -123,24 +123,36 @@ func (f *FXMacroData) Init() error {
 }
 
 func (f *FXMacroData) Gather(acc telegraf.Accumulator) error {
+	// Series that do not exist are dropped from the list, so they are not
+	// queried again in the next cycles
+	active := make([]series, 0, len(f.series))
 	for _, s := range f.series {
-		acc.AddError(f.gatherSeries(acc, s))
+		exists, err := f.gatherSeries(acc, s)
+		acc.AddError(err)
+		if !exists {
+			f.Log.Warnf("Series %s does not exist, removing it from the list of queried series", s.endpoint)
+			continue
+		}
+		active = append(active, s)
 	}
+	f.series = active
 
 	return nil
 }
 
-func (f *FXMacroData) gatherSeries(acc telegraf.Accumulator, s series) error {
+// gatherSeries queries a single series and adds the latest data point to the
+// accumulator. The returned flag is false if the series does not exist.
+func (f *FXMacroData) gatherSeries(acc telegraf.Accumulator, s series) (bool, error) {
 	request, err := http.NewRequest("GET", s.endpoint, nil)
 	if err != nil {
-		return fmt.Errorf("creating request for %s failed: %w", s.endpoint, err)
+		return true, fmt.Errorf("creating request for %s failed: %w", s.endpoint, err)
 	}
 	request.Header.Set("Accept", "application/json")
 
 	if !f.APIKey.Empty() {
 		key, err := f.APIKey.Get()
 		if err != nil {
-			return fmt.Errorf("getting api_key failed: %w", err)
+			return true, fmt.Errorf("getting api_key failed: %w", err)
 		}
 
 		// Send the key as a header rather than a query parameter, so it
@@ -151,7 +163,7 @@ func (f *FXMacroData) gatherSeries(acc telegraf.Accumulator, s series) error {
 
 	resp, err := f.client.Do(request)
 	if err != nil {
-		return fmt.Errorf("querying %s failed: %w", s.endpoint, err)
+		return true, fmt.Errorf("querying %s failed: %w", s.endpoint, err)
 	}
 	defer resp.Body.Close()
 
@@ -161,26 +173,26 @@ func (f *FXMacroData) gatherSeries(acc telegraf.Accumulator, s series) error {
 	case http.StatusUnauthorized, http.StatusForbidden:
 		// The key does not cover this series. Report it and keep gathering
 		// the remaining series.
-		return fmt.Errorf("%s is not covered by the configured api_key", s.endpoint)
+		return true, fmt.Errorf("%s is not covered by the configured api_key", s.endpoint)
 	case http.StatusNotFound:
 		// The series does not exist for this currency
-		return nil
+		return false, nil
 	default:
-		return fmt.Errorf("querying %s returned %q", s.endpoint, http.StatusText(resp.StatusCode))
+		return true, fmt.Errorf("querying %s returned %q", s.endpoint, http.StatusText(resp.StatusCode))
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("reading response from %s failed: %w", s.endpoint, err)
+		return true, fmt.Errorf("reading response from %s failed: %w", s.endpoint, err)
 	}
 
 	var data seriesResponse
 	if err := json.Unmarshal(body, &data); err != nil {
-		return fmt.Errorf("parsing response from %s failed: %w", s.endpoint, err)
+		return true, fmt.Errorf("parsing response from %s failed: %w", s.endpoint, err)
 	}
 
 	if len(data.Data) == 0 {
-		return nil
+		return true, nil
 	}
 
 	point := data.Data[0]
@@ -189,8 +201,9 @@ func (f *FXMacroData) gatherSeries(acc telegraf.Accumulator, s series) error {
 		// we could write instead that is distinguishable from a real reading,
 		// so skip the point.
 		f.Log.Debugf("Skipping %s for %q as the value is not reported", s.endpoint, point.Date)
-		return nil
+		return true, nil
 	}
+	value := *point.Value
 
 	tags := make(map[string]string, len(s.tags)+1)
 	for k, v := range s.tags {
@@ -201,7 +214,7 @@ func (f *FXMacroData) gatherSeries(acc telegraf.Accumulator, s series) error {
 	}
 
 	fields := map[string]any{
-		s.field:          *point.Value,
+		s.field:          value,
 		"reference_date": point.Date,
 	}
 
@@ -214,26 +227,25 @@ func (f *FXMacroData) gatherSeries(acc telegraf.Accumulator, s series) error {
 
 	acc.AddFields(s.name, fields, tags, timestamp)
 
-	return nil
+	return true, nil
 }
 
-func isCurrencyCode(code string) bool {
+func isInvalidCurrency(code string) bool {
 	if len(code) != 3 {
-		return false
+		return true
 	}
 	for _, c := range code {
 		if c < 'A' || c > 'Z' {
-			return false
+			return true
 		}
 	}
 
-	return true
+	return false
 }
 
 func init() {
 	inputs.Add("fxmacrodata", func() telegraf.Input {
 		return &FXMacroData{
-			URL:             "https://api.fxmacrodata.com/v1",
 			ResponseTimeout: config.Duration(5 * time.Second),
 		}
 	})

@@ -25,11 +25,6 @@ func TestInitFail(t *testing.T) {
 		expected string
 	}{
 		{
-			name:     "empty url",
-			plugin:   &FXMacroData{Indicators: []string{"inflation"}},
-			expected: "url must be set",
-		},
-		{
 			name:     "invalid scheme",
 			plugin:   &FXMacroData{URL: "ftp://example.com", Indicators: []string{"inflation"}},
 			expected: `invalid scheme "ftp"`,
@@ -83,6 +78,17 @@ func TestInitFail(t *testing.T) {
 			require.ErrorContains(t, tt.plugin.Init(), tt.expected)
 		})
 	}
+}
+
+func TestInitDefaultURL(t *testing.T) {
+	plugin := &FXMacroData{
+		Indicators: []string{"inflation"},
+		Log:        testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+	require.Equal(t, "https://api.fxmacrodata.com/v1", plugin.URL)
+	require.Len(t, plugin.series, 1)
+	require.Equal(t, "https://api.fxmacrodata.com/v1/announcements/usd/inflation?limit=1", plugin.series[0].endpoint)
 }
 
 func TestInitZeroTimeout(t *testing.T) {
@@ -146,6 +152,40 @@ func TestNoAPIKeyHeader(t *testing.T) {
 	require.Empty(t, acc.Errors)
 
 	require.False(t, found)
+}
+
+func TestMissingSeriesRemoved(t *testing.T) {
+	requests := make(map[string]int)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests[r.URL.Path]++
+		if r.URL.Path == "/v1/announcements/usd/doesnotexist" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		if _, err := w.Write([]byte(`{"data":[]}`)); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+		}
+	}))
+	defer server.Close()
+
+	plugin := &FXMacroData{
+		URL:        server.URL + "/v1",
+		Indicators: []string{"inflation", "doesnotexist"},
+		Log:        testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Gather(&acc))
+	require.NoError(t, plugin.Gather(&acc))
+	require.Empty(t, acc.Errors)
+
+	require.Equal(t, map[string]int{
+		"/v1/announcements/usd/inflation":    2,
+		"/v1/announcements/usd/doesnotexist": 1,
+	}, requests)
+	require.Len(t, plugin.series, 1)
 }
 
 func TestCases(t *testing.T) {
