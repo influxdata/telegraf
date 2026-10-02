@@ -903,19 +903,21 @@ func TestInterfaceNameFromServiceAddressInvalid(t *testing.T) {
 		address string
 		err     string
 	}{
-		{name: "empty string not allowed", address: "tcp://localhost:400%", err: "empty interface name"},
+		{name: "empty string not allowed", address: "tcp://localhost:400%",
+			err: `empty interface name in address "tcp://localhost:400%"`},
 		{name: "udp6 multicast with zone id and interface name", address: "udp6://[ff02::1%eth0]:8094%enp0",
-			err: "ipv6 zone id and interface name are mutually exclusive"},
-		{name: "udp6 multicast with empty zone id", address: "udp6://[ff02::1%]:8094", err: "empty interface name"},
+			err: `ipv6 zone id and interface name are mutually exclusive in address "udp6://[ff02::1%eth0]:8094%enp0"`},
+		{name: "udp6 multicast with empty zone id", address: "udp6://[ff02::1%]:8094",
+			err: `empty interface name in address "udp6://[ff02::1%]:8094"`},
 		{name: "udp6 multicast with empty zone id and interface name", address: "udp6://[ff02::1%]:8094%eth0",
-			err: "ipv6 zone id and interface name are mutually exclusive"},
+			err: `ipv6 zone id and interface name are mutually exclusive in address "udp6://[ff02::1%]:8094%eth0"`},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			name, err := interfaceNameFromServiceAddress(tt.address)
 			require.Empty(t, name)
-			require.ErrorContains(t, err, tt.err)
+			require.EqualError(t, err, tt.err)
 		})
 	}
 }
