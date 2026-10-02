@@ -3,7 +3,6 @@ package config_test
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -27,6 +26,7 @@ import (
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/persister"
+	"github.com/influxdata/telegraf/plugins/aggregators"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -1522,33 +1522,32 @@ func TestConfig_SkipProcessorsBeforeOmitsProcessors(t *testing.T) {
 	c := config.NewConfig()
 	c.Agent.SkipProcessorsBeforeAggregators = true
 
-	require.NoError(t, c.LoadAll(filepath.Join(".", "testdata", "processor_order", "multiple_processors.toml")))
+	require.NoError(t, c.LoadAll(
+		filepath.Join(".", "testdata", "processor_order", "multiple_processors.toml"),
+		filepath.Join(".", "testdata", "processor_order", "aggregator.toml"),
+	))
 	require.Empty(t, c.Processors)
 }
 
-func TestConfig_SkipProcessorsBeforeWithoutAggregatorsWarns(t *testing.T) {
-	var buf bytes.Buffer
-	previous := log.Writer()
-	log.SetOutput(&buf)
-	defer log.SetOutput(previous)
-
+func TestConfig_SkipProcessorsBeforeWithoutAggregatorsKeepsProcessors(t *testing.T) {
 	c := config.NewConfig()
 	c.Agent.SkipProcessorsBeforeAggregators = true
 
 	require.NoError(t, c.LoadAll(filepath.Join(".", "testdata", "processor_order", "multiple_processors.toml")))
-	require.Contains(t, buf.String(), "Processors will not run as skip_processors_before_aggregators is set without any aggregators")
+	require.Len(t, c.Processors, 4)
 }
 
 func TestConfig_SkipProcessorsBeforeIsOrderIndependent(t *testing.T) {
 	agentFile := filepath.Join(".", "testdata", "processor_order", "skip_processors_before_agent.toml")
 	processorFile := filepath.Join(".", "testdata", "processor_order", "multiple_processors.toml")
+	aggregatorFile := filepath.Join(".", "testdata", "processor_order", "aggregator.toml")
 
 	cAgentFirst := config.NewConfig()
-	require.NoError(t, cAgentFirst.LoadAll(agentFile, processorFile))
+	require.NoError(t, cAgentFirst.LoadAll(agentFile, processorFile, aggregatorFile))
 	require.Empty(t, cAgentFirst.Processors, "processors should be cleared when agent file is loaded first")
 
 	cProcessorFirst := config.NewConfig()
-	require.NoError(t, cProcessorFirst.LoadAll(processorFile, agentFile))
+	require.NoError(t, cProcessorFirst.LoadAll(processorFile, aggregatorFile, agentFile))
 	require.Empty(t, cProcessorFirst.Processors, "processors should be cleared when processor file is loaded first")
 }
 
@@ -1657,6 +1656,16 @@ func (m *MockupProcessorPluginParser) SetParser(parser telegraf.Parser) {
 func (m *MockupProcessorPluginParser) SetParserFunc(f telegraf.ParserFunc) {
 	m.ParserFunc = f
 }
+
+// Mockup AGGREGATOR plugin for testing to avoid cyclic dependencies
+type MockupAggregatorPlugin struct{}
+
+func (*MockupAggregatorPlugin) SampleConfig() string {
+	return "Mockup test aggregator plugin"
+}
+func (*MockupAggregatorPlugin) Add(telegraf.Metric)       {}
+func (*MockupAggregatorPlugin) Push(telegraf.Accumulator) {}
+func (*MockupAggregatorPlugin) Reset()                    {}
 
 // Mockup PROCESSOR plugin without parser
 type MockupProcessorPlugin struct {
@@ -1883,6 +1892,11 @@ func init() {
 	})
 	processors.Add("statetest", func() telegraf.Processor {
 		return &MockupProcessorPlugin{}
+	})
+
+	// Register the mockup aggregator plugin for the required names
+	aggregators.Add("aggregator", func() telegraf.Aggregator {
+		return &MockupAggregatorPlugin{}
 	})
 
 	// Register the mockup output plugin for the required names
