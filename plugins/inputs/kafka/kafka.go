@@ -1,5 +1,5 @@
 //go:generate ../../../tools/readme_config_includer/generator
-package kafka_consumer_lag
+package kafka
 
 import (
 	_ "embed"
@@ -31,7 +31,7 @@ const (
 	logEndOffsetAttempts = 2
 )
 
-type KafkaConsumerLag struct {
+type Kafka struct {
 	Brokers             []string        `toml:"brokers"`
 	Cluster             string          `toml:"cluster"`
 	GroupsInclude       []string        `toml:"groups_include"`
@@ -77,11 +77,11 @@ func (a *lagAggregate) add(lag int64) {
 	a.max = max(a.max, lag)
 }
 
-func (*KafkaConsumerLag) SampleConfig() string {
+func (*Kafka) SampleConfig() string {
 	return sampleConfig
 }
 
-func (k *KafkaConsumerLag) Init() error {
+func (k *Kafka) Init() error {
 	if len(k.Brokers) == 0 {
 		return errors.New("brokers must not be empty")
 	}
@@ -133,7 +133,7 @@ func (k *KafkaConsumerLag) Init() error {
 	return nil
 }
 
-func (k *KafkaConsumerLag) Start(telegraf.Accumulator) error {
+func (k *Kafka) Start(telegraf.Accumulator) error {
 	client, err := sarama.NewClient(k.Brokers, k.config)
 	if err != nil {
 		return &internal.StartupError{
@@ -172,7 +172,7 @@ func (k *KafkaConsumerLag) Start(telegraf.Accumulator) error {
 	return nil
 }
 
-func (k *KafkaConsumerLag) Stop() {
+func (k *Kafka) Stop() {
 	// Closing the admin also closes the underlying client.
 	if k.admin != nil {
 		if err := k.admin.Close(); err != nil {
@@ -183,7 +183,7 @@ func (k *KafkaConsumerLag) Stop() {
 	k.client = nil
 }
 
-func (k *KafkaConsumerLag) Gather(acc telegraf.Accumulator) error {
+func (k *Kafka) Gather(acc telegraf.Accumulator) error {
 	groups := k.selectGroups(acc)
 	if len(groups) == 0 {
 		return nil
@@ -226,7 +226,7 @@ func (k *KafkaConsumerLag) Gather(acc telegraf.Accumulator) error {
 }
 
 // selectGroups returns the sorted consumer groups matching the group filter.
-func (k *KafkaConsumerLag) selectGroups(acc telegraf.Accumulator) []string {
+func (k *Kafka) selectGroups(acc telegraf.Accumulator) []string {
 	var brokers []*sarama.Broker
 	if k.CoordinatorBrokerID >= 0 {
 		// If a coordinator broker is configured, only that broker is asked.
@@ -266,7 +266,7 @@ func (k *KafkaConsumerLag) selectGroups(acc telegraf.Accumulator) []string {
 }
 
 // coordinatorBroker returns the broker configured as coordinator_broker_id.
-func (k *KafkaConsumerLag) coordinatorBroker() (*sarama.Broker, error) {
+func (k *Kafka) coordinatorBroker() (*sarama.Broker, error) {
 	broker, err := k.client.Broker(k.CoordinatorBrokerID)
 	if errors.Is(err, sarama.ErrBrokerNotFound) {
 		// The broker might have rejoined the cluster since the last metadata
@@ -283,7 +283,7 @@ func (k *KafkaConsumerLag) coordinatorBroker() (*sarama.Broker, error) {
 }
 
 // listGroups asks a single broker for the consumer groups it coordinates.
-func (k *KafkaConsumerLag) listGroups(broker *sarama.Broker) (map[string]string, error) {
+func (k *Kafka) listGroups(broker *sarama.Broker) (map[string]string, error) {
 	if err := broker.Open(k.config); err != nil && !errors.Is(err, sarama.ErrAlreadyConnected) {
 		return nil, fmt.Errorf("connecting to broker %d failed: %w", broker.ID(), err)
 	}
@@ -317,7 +317,7 @@ func (k *KafkaConsumerLag) listGroups(broker *sarama.Broker) (map[string]string,
 
 // describeGroups returns the number of members of each group. Groups that
 // could not be described are missing from the result.
-func (k *KafkaConsumerLag) describeGroups(groups []string, acc telegraf.Accumulator) map[string]int64 {
+func (k *Kafka) describeGroups(groups []string, acc telegraf.Accumulator) map[string]int64 {
 	members := make(map[string]int64, len(groups))
 
 	descriptions, err := k.admin.DescribeConsumerGroups(groups)
@@ -347,7 +347,7 @@ func (k *KafkaConsumerLag) describeGroups(groups []string, acc telegraf.Accumula
 }
 
 // committedOffsets returns the committed offsets of every group.
-func (k *KafkaConsumerLag) committedOffsets(groups []string) (map[string]map[topicPartition]int64, []error) {
+func (k *Kafka) committedOffsets(groups []string) (map[string]map[topicPartition]int64, []error) {
 	committed := make(map[string]map[topicPartition]int64, len(groups))
 	var errs []error
 
@@ -401,7 +401,7 @@ func (k *KafkaConsumerLag) committedOffsets(groups []string) (map[string]map[top
 // filterOffsets extracts the committed offset of every partition the group
 // has an offset stored for from an OffsetFetch response, restricted by the
 // topic filter.
-func (k *KafkaConsumerLag) filterOffsets(group string, blocks map[string]map[int32]*sarama.OffsetFetchResponseBlock) map[topicPartition]int64 {
+func (k *Kafka) filterOffsets(group string, blocks map[string]map[int32]*sarama.OffsetFetchResponseBlock) map[topicPartition]int64 {
 	offsets := make(map[topicPartition]int64)
 	for topic, partitions := range blocks {
 		if !k.filterTopics.Match(topic) {
@@ -426,7 +426,7 @@ func (k *KafkaConsumerLag) filterOffsets(group string, blocks map[string]map[int
 
 // logEndOffsets resolves the log end offset of the given partitions using one
 // ListOffsets request per leader broker.
-func (k *KafkaConsumerLag) logEndOffsets(partitions map[topicPartition]struct{}) (map[topicPartition]int64, []error) {
+func (k *Kafka) logEndOffsets(partitions map[topicPartition]struct{}) (map[topicPartition]int64, []error) {
 	result := make(map[topicPartition]int64, len(partitions))
 	lastErr := make(map[topicPartition]error)
 	var errs []error
@@ -488,7 +488,7 @@ func (k *KafkaConsumerLag) logEndOffsets(partitions map[topicPartition]struct{})
 }
 
 // dropDeletedTopics removes the partitions of topics that no longer exist.
-func (k *KafkaConsumerLag) dropDeletedTopics(partitions map[topicPartition]struct{}) (map[topicPartition]struct{}, error) {
+func (k *Kafka) dropDeletedTopics(partitions map[topicPartition]struct{}) (map[topicPartition]struct{}, error) {
 	if len(partitions) == 0 {
 		return partitions, nil
 	}
@@ -519,7 +519,7 @@ func (k *KafkaConsumerLag) dropDeletedTopics(partitions map[topicPartition]struc
 }
 
 // describeTopics fetches the metadata of the given topics from any broker.
-func (k *KafkaConsumerLag) describeTopics(topics []string) ([]*sarama.TopicMetadata, error) {
+func (k *Kafka) describeTopics(topics []string) ([]*sarama.TopicMetadata, error) {
 	brokers := k.client.Brokers()
 	if len(brokers) == 0 {
 		return nil, errors.New("no broker available")
@@ -554,7 +554,7 @@ type offsetBatch struct {
 }
 
 // batchByLeader groups the partitions into one offset request per leader broker.
-func (k *KafkaConsumerLag) batchByLeader(
+func (k *Kafka) batchByLeader(
 	partitions, retry map[topicPartition]struct{},
 	lastErr map[topicPartition]error,
 ) map[int32]*offsetBatch {
@@ -588,14 +588,14 @@ func (k *KafkaConsumerLag) batchByLeader(
 }
 
 // tags adds the cluster tag to the given tags if a cluster name is configured.
-func (k *KafkaConsumerLag) tags(tags map[string]string) map[string]string {
+func (k *Kafka) tags(tags map[string]string) map[string]string {
 	if k.Cluster != "" {
 		tags["cluster"] = k.Cluster
 	}
 	return tags
 }
 
-func (k *KafkaConsumerLag) emit(
+func (k *Kafka) emit(
 	acc telegraf.Accumulator,
 	group string,
 	members map[string]int64,
@@ -709,8 +709,8 @@ func uniqueTopics(partitions map[topicPartition]struct{}) []string {
 }
 
 func init() {
-	inputs.Add("kafka_consumer_lag", func() telegraf.Input {
-		return &KafkaConsumerLag{
+	inputs.Add("kafka", func() telegraf.Input {
+		return &Kafka{
 			MetricLevels:        []string{levelPartition, levelTopic, levelGroup},
 			CoordinatorBrokerID: -1,
 		}
