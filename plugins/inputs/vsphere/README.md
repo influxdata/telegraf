@@ -988,7 +988,7 @@ For example :
 ```
 
 All that tag will be added to "internal" metric that always contain "1".
-It is recommended to use it with `processors.enum` to convert as metric.
+It is recommended to use it with `processors.enum` to convert as numeric fields.
 
 For example :
 
@@ -1004,6 +1004,17 @@ For example :
       poweredOn = 1
       suspended = 2
       poweredOff = 3
+```
+
+It is recommended to use it with `processors.converter` to convert as fields to measurement.
+
+For example :
+
+```toml
+[[processors.converter]]
+  [[processors.converter.tags]]
+    ## Names of the fields to map. Globs accepted.
+    measurement = ["powerstate"]
 ```
 
 ## Add a vSAN extension
