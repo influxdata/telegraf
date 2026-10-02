@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -20,80 +21,33 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-// kinesisStub serves the two operations a shard consumer performs. It returns
-// one record, expires the iterator, then closes the shard with a second record
-// so the consumer has to resume after the record it already consumed.
-type kinesisStub struct {
-	t  *testing.T
-	mu sync.Mutex
-
-	// requested starting points of every GetShardIterator call
-	iteratorTypes []string
-	startingSeqnr []string
-
-	getRecords int
-}
-
-func (s *kinesisStub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	var request map[string]any
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/x-amz-json-1.1")
-	target := r.Header.Get("X-Amz-Target")
-	switch {
-	case strings.HasSuffix(target, "GetShardIterator"):
-		iteratorType, _ := request["ShardIteratorType"].(string)
-		seqnr, _ := request["StartingSequenceNumber"].(string)
-		s.iteratorTypes = append(s.iteratorTypes, iteratorType)
-		s.startingSeqnr = append(s.startingSeqnr, seqnr)
-		writeJSON(s.t, w, map[string]any{"ShardIterator": "iterator"})
-	case strings.HasSuffix(target, "GetRecords"):
-		s.getRecords++
-		switch s.getRecords {
-		case 1:
-			writeJSON(s.t, w, map[string]any{
-				"Records":           []map[string]any{record("43")},
+func TestConsumeResumesAfterIteratorExpired(t *testing.T) {
+	// Return one record, expire the iterator, then close the shard with a
+	// second record so the consumer has to resume after the consumed record.
+	mock := &kinesisMock{
+		responses: []map[string]any{
+			{
+				"Records": []map[string]any{{
+					"SequenceNumber": "43",
+					"Data":           base64.StdEncoding.EncodeToString([]byte("43")),
+					"PartitionKey":   "key",
+				}},
 				"NextShardIterator": "iterator",
-			})
-		case 2:
-			w.WriteHeader(http.StatusBadRequest)
-			writeJSON(s.t, w, map[string]any{
+			},
+			{
 				"__type":  "ExpiredIteratorException",
 				"message": "iterator expired",
-			})
-		default:
-			// A nil iterator closes the shard and ends the consumer
-			writeJSON(s.t, w, map[string]any{"Records": []map[string]any{record("44")}})
-		}
-	default:
-		w.WriteHeader(http.StatusNotFound)
+			},
+			{
+				"Records": []map[string]any{{
+					"SequenceNumber": "44",
+					"Data":           base64.StdEncoding.EncodeToString([]byte("44")),
+					"PartitionKey":   "key",
+				}},
+			},
+		},
 	}
-}
-
-func record(seqnr string) map[string]any {
-	return map[string]any{
-		"SequenceNumber": seqnr,
-		"Data":           base64.StdEncoding.EncodeToString([]byte(seqnr)),
-		"PartitionKey":   "key",
-	}
-}
-
-func writeJSON(t *testing.T, w http.ResponseWriter, body map[string]any) {
-	if err := json.NewEncoder(w).Encode(body); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		t.Error(err)
-	}
-}
-
-func TestConsumeResumesAfterIteratorExpired(t *testing.T) {
-	stub := &kinesisStub{t: t}
-	server := httptest.NewServer(stub)
+	server := httptest.NewServer(mock)
 	defer server.Close()
 
 	client := kinesis.New(kinesis.Options{
@@ -128,39 +82,30 @@ func TestConsumeResumesAfterIteratorExpired(t *testing.T) {
 
 	// The replacement iterator must resume after the last consumed record,
 	// otherwise the shard is replayed after every expiry.
-	require.Equal(t, []string{"AFTER_SEQUENCE_NUMBER", "AFTER_SEQUENCE_NUMBER"}, stub.iteratorTypes)
-	require.Equal(t, []string{"42", "43"}, stub.startingSeqnr)
-}
-
-// closedShardStub serves a single GetRecords call that returns records
-// together with a nil iterator, which is how Kinesis delivers the tail of a
-// shard that was split or merged.
-type closedShardStub struct {
-	t *testing.T
-}
-
-func (s *closedShardStub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/x-amz-json-1.1")
-	if strings.HasSuffix(r.Header.Get("X-Amz-Target"), "GetShardIterator") {
-		writeJSON(s.t, w, map[string]any{"ShardIterator": "iterator"})
-		return
-	}
-	writeJSON(s.t, w, map[string]any{
-		"Records": []map[string]any{{
-			"SequenceNumber": "7",
-			"Data":           base64.StdEncoding.EncodeToString([]byte("last")),
-			"PartitionKey":   "key",
-		}},
-		"ChildShards": []map[string]any{{
-			"ShardId":      "shard-1",
-			"ParentShards": []string{"shard-0"},
-			"HashKeyRange": map[string]any{"StartingHashKey": "0", "EndingHashKey": "1"},
-		}},
-	})
+	require.Equal(t, []string{"AFTER_SEQUENCE_NUMBER", "AFTER_SEQUENCE_NUMBER"}, mock.iteratorTypes)
+	require.Equal(t, []string{"42", "43"}, mock.startingSeqnr)
 }
 
 func TestConsumeEmitsRecordsOfClosedShard(t *testing.T) {
-	server := httptest.NewServer(&closedShardStub{t: t})
+	// A nil iterator together with records is how Kinesis delivers the tail
+	// of a shard that was split or merged.
+	mock := &kinesisMock{
+		responses: []map[string]any{
+			{
+				"Records": []map[string]any{{
+					"SequenceNumber": "7",
+					"Data":           base64.StdEncoding.EncodeToString([]byte("last")),
+					"PartitionKey":   "key",
+				}},
+				"ChildShards": []map[string]any{{
+					"ShardId":      "shard-1",
+					"ParentShards": []string{"shard-0"},
+					"HashKeyRange": map[string]any{"StartingHashKey": "0", "EndingHashKey": "1"},
+				}},
+			},
+		},
+	}
+	server := httptest.NewServer(mock)
 	defer server.Close()
 
 	client := kinesis.New(kinesis.Options{
@@ -192,4 +137,57 @@ func TestConsumeEmitsRecordsOfClosedShard(t *testing.T) {
 	require.Equal(t, []string{"last"}, records)
 	require.Equal(t, "7", consumer.seqnr)
 	require.Len(t, children, 1)
+}
+
+// kinesisMock serves the two operations a shard consumer performs. Every
+// GetShardIterator call is recorded, GetRecords calls get the configured
+// responses in order where a response with "__type" is an AWS error.
+type kinesisMock struct {
+	responses []map[string]any
+
+	iteratorTypes []string
+	startingSeqnr []string
+
+	served int
+	sync.Mutex
+}
+
+func (m *kinesisMock) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	m.Lock()
+	defer m.Unlock()
+
+	var request map[string]any
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var response map[string]any
+	target := r.Header.Get("X-Amz-Target")
+	switch {
+	case strings.HasSuffix(target, "GetShardIterator"):
+		iteratorType, _ := request["ShardIteratorType"].(string)
+		seqnr, _ := request["StartingSequenceNumber"].(string)
+		m.iteratorTypes = append(m.iteratorTypes, iteratorType)
+		m.startingSeqnr = append(m.startingSeqnr, seqnr)
+		response = map[string]any{"ShardIterator": "iterator"}
+	case strings.HasSuffix(target, "GetRecords"):
+		if m.served >= len(m.responses) {
+			http.Error(w, fmt.Sprintf("unexpected GetRecords call %d", m.served+1), http.StatusInternalServerError)
+			return
+		}
+		response = m.responses[m.served]
+		m.served++
+	default:
+		http.Error(w, "unexpected target "+target, http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/x-amz-json-1.1")
+	if _, isError := response["__type"]; isError {
+		w.WriteHeader(http.StatusBadRequest)
+	}
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
