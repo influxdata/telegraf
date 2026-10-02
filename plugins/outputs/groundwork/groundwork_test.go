@@ -18,6 +18,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/logger"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -100,6 +101,8 @@ func TestWriteWithDebug(t *testing.T) {
 func TestWriteWithDefaults(t *testing.T) {
 	// Generate test metric with default name to test Write logic
 	intMetric := testutil.TestMetric(42, "IntMetric")
+	intMetric.AddTag("host_alias", "Host Alias")
+	intMetric.AddTag("service", "Service01")
 
 	// Simulate Groundwork server that should receive custom metrics
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -134,15 +137,27 @@ func TestWriteWithDefaults(t *testing.T) {
 			t.Errorf("Not equal, expected: %q, actual: %q", defaultHost, obj.Resources[0].Name)
 			return
 		}
+		if alias, ok := obj.Resources[0].Properties["Alias"]; !ok || *alias.StringValue != "Host Alias" {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Not equal, expected: %q, actual: %v", "Host Alias", obj.Resources[0].Properties["Alias"])
+			return
+		}
 		if obj.Resources[0].Services[0].Status != transit.MonitorStatus("SERVICE_OK") {
 			w.WriteHeader(http.StatusInternalServerError)
 			t.Errorf("Not equal, expected: %q, actual: %q", transit.MonitorStatus("SERVICE_OK"), obj.Resources[0].Services[0].Status)
 			return
 		}
-		if obj.Resources[0].Services[0].Name != "IntMetric" {
+		if obj.Resources[0].Services[0].Name != "Service01" {
 			w.WriteHeader(http.StatusInternalServerError)
-			t.Errorf("Not equal, expected: %q, actual: %q", "IntMetric", obj.Resources[0].Services[0].Name)
+			t.Errorf("Not equal, expected: %q, actual: %q", "Service01", obj.Resources[0].Services[0].Name)
 			return
+		}
+		for _, tag := range []string{"host_alias", "service"} {
+			if _, ok := obj.Resources[0].Services[0].Properties[tag]; ok {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Errorf("Unexpected service property %q", tag)
+				return
+			}
 		}
 		if *obj.Resources[0].Services[0].Metrics[0].Value.IntegerValue != int64(42) {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -169,6 +184,8 @@ func TestWriteWithDefaults(t *testing.T) {
 		DefaultHost:         defaultHost,
 		DefaultAppType:      customAppType,
 		DefaultServiceState: string(transit.ServiceOk),
+		AliasTag:            "host_alias",
+		ServiceTag:          "service",
 		client: clients.GWClient{
 			AppName: "telegraf",
 			AppType: customAppType,
@@ -182,6 +199,45 @@ func TestWriteWithDefaults(t *testing.T) {
 	require.NoError(t, err)
 
 	server.Close()
+}
+
+func TestWriteWithoutAliasTag(t *testing.T) {
+	// With the default empty alias_tag a host_alias tag stays a service property
+	intMetric := testutil.TestMetric(42, "IntMetric")
+	intMetric.AddTag("host_alias", "Host Alias")
+
+	var obj transit.ResourcesWithServicesRequest
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := json.NewDecoder(r.Body).Decode(&obj); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
+		if _, err := fmt.Fprintln(w, "OK"); err != nil {
+			t.Error(err)
+		}
+	}))
+	defer server.Close()
+
+	i := outputs.Outputs["groundwork"]().(*Groundwork)
+	require.Empty(t, i.AliasTag)
+	i.Log = testutil.Logger{}
+	i.Server = server.URL
+	i.AgentID = defaultTestAgentID
+	i.DefaultHost = defaultHost
+	i.client = clients.GWClient{
+		AppName:      "telegraf",
+		AppType:      defaultAppType,
+		GWConnection: &clients.GWConnection{HostName: server.URL},
+	}
+
+	require.NoError(t, i.Write([]telegraf.Metric{intMetric}))
+	require.Len(t, obj.Resources, 1)
+	require.NotContains(t, obj.Resources[0].Properties, "Alias")
+	require.Len(t, obj.Resources[0].Services, 1)
+	alias, ok := obj.Resources[0].Services[0].Properties["host_alias"]
+	require.True(t, ok)
+	require.Equal(t, "Host Alias", *alias.StringValue)
 }
 
 func TestWriteWithFields(t *testing.T) {
@@ -282,7 +338,8 @@ func TestWriteWithTags(t *testing.T) {
 	floatMetric.AddTag("status", "SERVICE_PENDING")
 	floatMetric.AddTag("group-tag", "Group01")
 	floatMetric.AddTag("resource-tag", "Host01")
-	floatMetric.AddTag("service", "Service01")
+	floatMetric.AddTag("alias-tag", "Host01 Alias")
+	floatMetric.AddTag("service-tag", "Service01")
 	floatMetric.AddTag("facility", "FACILITY")
 	floatMetric.AddTag("severity", "SEVERITY")
 
@@ -318,6 +375,18 @@ func TestWriteWithTags(t *testing.T) {
 			w.WriteHeader(http.StatusInternalServerError)
 			t.Errorf("Not equal, expected: %q, actual: %q", "Host01", obj.Resources[0].Name)
 			return
+		}
+		if alias, ok := obj.Resources[0].Properties["Alias"]; !ok || *alias.StringValue != "Host01 Alias" {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Not equal, expected: %q, actual: %v", "Host01 Alias", obj.Resources[0].Properties["Alias"])
+			return
+		}
+		for _, tag := range []string{"alias-tag", "service-tag"} {
+			if _, ok := obj.Resources[0].Services[0].Properties[tag]; ok {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Errorf("Unexpected service property %q", tag)
+				return
+			}
 		}
 		if obj.Resources[0].Services[0].Name != "Service01" {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -388,6 +457,8 @@ func TestWriteWithTags(t *testing.T) {
 		DefaultAppType: defaultAppType,
 		GroupTag:       "group-tag",
 		ResourceTag:    "resource-tag",
+		AliasTag:       "alias-tag",
+		ServiceTag:     "service-tag",
 		client: clients.GWClient{
 			AppName: "telegraf",
 			AppType: defaultAppType,
