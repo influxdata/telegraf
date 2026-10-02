@@ -29,36 +29,43 @@ type VSphere struct {
 	DatacenterMetricExclude     []string        `toml:"datacenter_metric_exclude"`
 	DatacenterInclude           []string        `toml:"datacenter_include"`
 	DatacenterExclude           []string        `toml:"datacenter_exclude"`
+	DatacenterPropertyInclude   []string        `toml:"datacenter_property_include"`
 	ClusterInstances            bool            `toml:"cluster_instances"`
 	ClusterMetricInclude        []string        `toml:"cluster_metric_include"`
 	ClusterMetricExclude        []string        `toml:"cluster_metric_exclude"`
 	ClusterInclude              []string        `toml:"cluster_include"`
 	ClusterExclude              []string        `toml:"cluster_exclude"`
+	ClusterPropertyInclude      []string        `toml:"cluster_property_include"`
 	ResourcePoolInstances       bool            `toml:"resource_pool_instances"`
 	ResourcePoolMetricInclude   []string        `toml:"resource_pool_metric_include"`
 	ResourcePoolMetricExclude   []string        `toml:"resource_pool_metric_exclude"`
 	ResourcePoolInclude         []string        `toml:"resource_pool_include"`
 	ResourcePoolExclude         []string        `toml:"resource_pool_exclude"`
+	ResourcePoolPropertyInclude []string        `toml:"resource_pool_property_include"`
 	HostInstances               bool            `toml:"host_instances"`
 	HostMetricInclude           []string        `toml:"host_metric_include"`
 	HostMetricExclude           []string        `toml:"host_metric_exclude"`
 	HostInclude                 []string        `toml:"host_include"`
 	HostExclude                 []string        `toml:"host_exclude"`
+	HostPropertyInclude         []string        `toml:"host_property_include"`
 	VMInstances                 bool            `toml:"vm_instances"`
 	VMMetricInclude             []string        `toml:"vm_metric_include"`
 	VMMetricExclude             []string        `toml:"vm_metric_exclude"`
 	VMInclude                   []string        `toml:"vm_include"`
 	VMExclude                   []string        `toml:"vm_exclude"`
+	VMPropertyInclude           []string        `toml:"vm_property_include"`
 	DatastoreInstances          bool            `toml:"datastore_instances"`
 	DatastoreMetricInclude      []string        `toml:"datastore_metric_include"`
 	DatastoreMetricExclude      []string        `toml:"datastore_metric_exclude"`
 	DatastoreInclude            []string        `toml:"datastore_include"`
 	DatastoreExclude            []string        `toml:"datastore_exclude"`
+	DatastorePropertyInclude    []string        `toml:"datastore_property_include"`
 	VSANMetricInclude           []string        `toml:"vsan_metric_include"`
 	VSANMetricExclude           []string        `toml:"vsan_metric_exclude"`
 	VSANMetricSkipVerify        bool            `toml:"vsan_metric_skip_verify"`
 	VSANClusterInclude          []string        `toml:"vsan_cluster_include"`
 	VSANInterval                config.Duration `toml:"vsan_interval"`
+	VSANPropertyInclude         []string        `toml:"vsan_property_include"`
 	Separator                   string          `toml:"separator"`
 	CustomAttributeInclude      []string        `toml:"custom_attribute_include"`
 	CustomAttributeExclude      []string        `toml:"custom_attribute_exclude"`
@@ -157,6 +164,7 @@ func init() {
 			ResourcePoolInclude:         []string{"/*/host/**"},
 			VMInstances:                 true,
 			VMInclude:                   []string{"/*/vm/**"},
+			VMPropertyInclude:           []string{"runtime.powerState", "summary.config.MemorySizeMB", "summary.config.MemoryReservation"},
 			DatastoreInclude:            []string{"/*/datastore/**"},
 			VSANMetricExclude:           []string{"*"},
 			VSANClusterInclude:          []string{"/*/host/**"},
