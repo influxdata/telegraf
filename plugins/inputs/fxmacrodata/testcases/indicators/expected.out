@@ -1,0 +1,2 @@
+fxmacrodata_indicator,currency=USD,indicator=inflation,source=BLS value=3.4,reference_date="2026-08-31" 1789129800000000000
+fxmacrodata_indicator,currency=USD,indicator=policy_rate,source=Federal\ Reserve value=4.0,reference_date="2026-09-16" 1789581600000000000

@@ -1,0 +1,7 @@
+{
+  "currency": "USD",
+  "indicator": "unemployment",
+  "name": "Unemployment Rate",
+  "source": "BLS",
+  "data": []
+}
