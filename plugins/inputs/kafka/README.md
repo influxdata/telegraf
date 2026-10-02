@@ -10,11 +10,6 @@ offset (fetched via `ListOffsets`) and the offset committed by the consumer
 group (fetched via `OffsetFetch`). Metrics are emitted per partition and
 aggregated per topic and per group, each level can be disabled.
 
-> [!NOTE]
-> Consumer group lag cannot be obtained from broker JMX metrics as brokers do
-> not expose committed offsets there. This plugin fetches the committed
-> offsets the same way `kafka-consumer-groups.sh --describe` does.
-
 ⭐ Telegraf v1.41.0
 🏷️ messaging
 💻 all
