@@ -57,6 +57,13 @@ to use them.
 
   ## The name of the tag that contains the host group name.
   # group_tag = "group"
+
+  ## The name of the tag that contains the host alias (display name).
+  ## Empty by default, so no alias is sent.
+  # alias_tag = ""
+
+  ## The name of the tag that contains the service name.
+  # service_tag = "service"
 ```
 
 ## List of tags used by the plugin
@@ -65,7 +72,8 @@ to use them.
   can be changed with config.
 * __host__ - to define the name of the host you want to monitor,
   can be changed with config.
-* __service__ - to define the name of the service you want to monitor.
+* __service__ - to define the name of the service you want to monitor,
+  can be changed with config.
 * __status__ - to define the status of the service. Supported statuses:
   "SERVICE_OK", "SERVICE_WARNING", "SERVICE_UNSCHEDULED_CRITICAL",
   "SERVICE_PENDING", "SERVICE_SCHEDULED_CRITICAL", "SERVICE_UNKNOWN".
