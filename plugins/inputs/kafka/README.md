@@ -1,8 +1,9 @@
-# Kafka Consumer Lag Input Plugin
+# Kafka Input Plugin
 
-This plugin collects the lag of [Kafka][kafka] consumer groups directly from
-the brokers using the Kafka protocol, without requiring an external component
-such as Burrow or a Prometheus exporter.
+This plugin collects metrics from [Kafka][kafka] clusters directly from the
+brokers using the Kafka protocol, without requiring an external component such
+as Burrow or a Prometheus exporter. Currently, the plugin collects the lag of
+consumer groups.
 
 The lag of a partition is the difference between the partition's log end
 offset (fetched via `ListOffsets`) and the offset committed by the consumer
@@ -57,8 +58,8 @@ to use them.
 ## Configuration
 
 ```toml @sample.conf
-# Collect consumer group lag directly from Kafka brokers
-[[inputs.kafka_consumer_lag]]
+# Collect metrics from Kafka brokers
+[[inputs.kafka]]
   ## Kafka brokers.
   brokers = ["localhost:9092"]
 

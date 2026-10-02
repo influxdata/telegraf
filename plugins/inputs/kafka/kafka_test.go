@@ -1,4 +1,4 @@
-package kafka_consumer_lag
+package kafka
 
 import (
 	"errors"
@@ -19,7 +19,7 @@ import (
 func TestInit(t *testing.T) {
 	tests := []struct {
 		name     string
-		plugin   *KafkaConsumerLag
+		plugin   *Kafka
 		expected string
 	}{
 		{
@@ -28,7 +28,7 @@ func TestInit(t *testing.T) {
 		},
 		{
 			name: "no brokers",
-			plugin: &KafkaConsumerLag{
+			plugin: &Kafka{
 				MetricLevels:        []string{levelPartition},
 				CoordinatorBrokerID: -1,
 			},
@@ -36,7 +36,7 @@ func TestInit(t *testing.T) {
 		},
 		{
 			name: "no metric levels",
-			plugin: &KafkaConsumerLag{
+			plugin: &Kafka{
 				Brokers:             []string{"localhost:9092"},
 				CoordinatorBrokerID: -1,
 			},
@@ -44,7 +44,7 @@ func TestInit(t *testing.T) {
 		},
 		{
 			name: "invalid metric level",
-			plugin: &KafkaConsumerLag{
+			plugin: &Kafka{
 				Brokers:             []string{"localhost:9092"},
 				MetricLevels:        []string{"cluster"},
 				CoordinatorBrokerID: -1,
@@ -53,7 +53,7 @@ func TestInit(t *testing.T) {
 		},
 		{
 			name: "invalid group filter",
-			plugin: &KafkaConsumerLag{
+			plugin: &Kafka{
 				Brokers:             []string{"localhost:9092"},
 				MetricLevels:        []string{levelPartition},
 				GroupsInclude:       []string{"[invalid"},
@@ -63,7 +63,7 @@ func TestInit(t *testing.T) {
 		},
 		{
 			name: "invalid version",
-			plugin: &KafkaConsumerLag{
+			plugin: &Kafka{
 				Brokers:             []string{"localhost:9092"},
 				MetricLevels:        []string{levelPartition},
 				CoordinatorBrokerID: -1,
@@ -73,7 +73,7 @@ func TestInit(t *testing.T) {
 		},
 		{
 			name: "version too old",
-			plugin: &KafkaConsumerLag{
+			plugin: &Kafka{
 				Brokers:             []string{"localhost:9092"},
 				MetricLevels:        []string{levelPartition},
 				CoordinatorBrokerID: -1,
@@ -273,8 +273,8 @@ func countRequests[T any](broker *sarama.MockBroker) int {
 	return n
 }
 
-func newPlugin() *KafkaConsumerLag {
-	return &KafkaConsumerLag{
+func newPlugin() *Kafka {
+	return &Kafka{
 		Brokers:             []string{"localhost:9092"},
 		MetricLevels:        []string{levelPartition, levelTopic, levelGroup},
 		CoordinatorBrokerID: -1,
@@ -282,7 +282,7 @@ func newPlugin() *KafkaConsumerLag {
 	}
 }
 
-func gather(t *testing.T, plugin *KafkaConsumerLag) *testutil.Accumulator {
+func gather(t *testing.T, plugin *Kafka) *testutil.Accumulator {
 	t.Helper()
 
 	acc := gatherWithErrors(t, plugin)
@@ -293,7 +293,7 @@ func gather(t *testing.T, plugin *KafkaConsumerLag) *testutil.Accumulator {
 
 // gatherWithErrors runs one collection cycle and leaves checking the
 // accumulated errors to the caller.
-func gatherWithErrors(t *testing.T, plugin *KafkaConsumerLag) *testutil.Accumulator {
+func gatherWithErrors(t *testing.T, plugin *Kafka) *testutil.Accumulator {
 	t.Helper()
 
 	require.NoError(t, plugin.Init())
@@ -801,7 +801,7 @@ func TestGatherIntegration(t *testing.T) {
 	// Run against both the per-group and the batched OffsetFetch protocol.
 	// Init replaces the global sarama logger, so initialize the plugins before
 	// any sarama goroutine starts reading it.
-	plugins := make(map[string]*KafkaConsumerLag)
+	plugins := make(map[string]*Kafka)
 	loggers := make(map[string]*testutil.CaptureLogger)
 	for _, version := range []string{"", "3.5.0"} {
 		logger := &testutil.CaptureLogger{}
