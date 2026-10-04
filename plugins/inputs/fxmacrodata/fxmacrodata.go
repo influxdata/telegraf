@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
@@ -67,10 +68,8 @@ func (f *FXMacroData) Init() error {
 		}
 	}
 
-	for _, indicator := range f.Indicators {
-		if indicator == "" {
-			return errors.New("empty entry in indicators")
-		}
+	if slices.Contains(f.Indicators, "") {
+		return errors.New("empty entry in indicators")
 	}
 
 	if f.ResponseTimeout < 0 {
