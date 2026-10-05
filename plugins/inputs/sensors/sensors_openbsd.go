@@ -20,7 +20,7 @@ import (
 // Sensor status strings as printed by print_sensor() in OpenBSD's
 // sbin/sysctl/sysctl.c; sensors with an unspecified status omit it.
 // Numeric codes match enum sensor_status (SENSOR_S_OK = 1, ...).
-var sensorStatuses = map[string]float64{
+var sensorStatuses = map[string]int64{
 	"OK":       1,
 	"WARNING":  2,
 	"CRITICAL": 3,

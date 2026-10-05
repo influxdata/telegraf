@@ -104,7 +104,7 @@ the sensor type as printed by `sysctl`, and that unit is kept as a tag.
     - status_code (numeric form of `status`, matching OpenBSD
       `SENSOR_S_*`: OK=1, WARNING=2, CRITICAL=3, UNKNOWN=4; emitted
       whenever `status` is, since Prometheus drops string-only
-      fields; `float`)
+      fields; `integer`)
 
 ## Example Output
 
@@ -143,8 +143,8 @@ sensors,device=cpu0,sensor=temp0,type=temp,unit=degC value=36 175812240800000000
 sensors,device=cpu0,sensor=frequency0,type=frequency,unit=Hz value=1000000000 1758122408000000000
 sensors,description=zone\ temperature,device=acpitz0,sensor=temp0,type=temp,unit=degC value=27.8 1758122408000000000
 sensors,description=VCore,device=lm1,sensor=volt0,type=volt,unit=VDC value=1.34 1758122408000000000
-sensors,description=sd3,device=softraid0,sensor=drive0,type=drive state="degraded",status="WARNING",status_code=2,value=10 1758122408000000000
-sensors,description=Signal,device=nmea0,sensor=indicator0,type=indicator state="On",status="OK",status_code=1,value=true 1758122408000000000
-sensors,description=GPS\ differential,device=nmea0,sensor=timedelta0,type=timedelta,unit=secs status="OK",status_code=1,value=-0.000006 1758122408000000000
-sensors,device=foo0,sensor=temp1,type=temp status="UNKNOWN",status_code=4 1758122408000000000
+sensors,description=sd3,device=softraid0,sensor=drive0,type=drive state="degraded",status="WARNING",status_code=2i,value=10 1758122408000000000
+sensors,description=Signal,device=nmea0,sensor=indicator0,type=indicator state="On",status="OK",status_code=1i,value=true 1758122408000000000
+sensors,description=GPS\ differential,device=nmea0,sensor=timedelta0,type=timedelta,unit=secs status="OK",status_code=1i,value=-0.000006 1758122408000000000
+sensors,device=foo0,sensor=temp1,type=temp status="UNKNOWN",status_code=4i 1758122408000000000
 ```

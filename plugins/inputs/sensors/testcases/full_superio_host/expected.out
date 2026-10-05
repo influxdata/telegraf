@@ -24,6 +24,6 @@ sensors,device=lm1,sensor=volt5,type=volt,unit=VDC value=1.3
 sensors,device=lm1,sensor=volt6,type=volt,unit=VDC value=1.48
 sensors,description=3.3VSB,device=lm1,sensor=volt7,type=volt,unit=VDC value=3.34
 sensors,description=VBAT,device=lm1,sensor=volt8,type=volt,unit=VDC value=1.62
-sensors,description=sd3,device=softraid0,sensor=drive0,type=drive state="degraded",status="WARNING",status_code=2,value=10
-sensors,description=sd4,device=softraid0,sensor=drive1,type=drive state="online",status="OK",status_code=1,value=4
-sensors,description=sd5,device=softraid0,sensor=drive2,type=drive state="online",status="OK",status_code=1,value=4
+sensors,description=sd3,device=softraid0,sensor=drive0,type=drive state="degraded",status="WARNING",status_code=2i,value=10
+sensors,description=sd4,device=softraid0,sensor=drive1,type=drive state="online",status="OK",status_code=1i,value=4
+sensors,description=sd5,device=softraid0,sensor=drive2,type=drive state="online",status="OK",status_code=1i,value=4
