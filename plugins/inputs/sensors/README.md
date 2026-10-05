@@ -64,8 +64,10 @@ Fields are created dynamically depending on the sensors. All fields are float.
 
 ### Linux with new tag names
 
-Same fields as with the legacy names. Tags use the unified names; `type` is the
-feature name with trailing digits removed (e.g. `temp1` -> `temp`).
+Same fields as with the legacy names. Tags use the unified names. `sensor` is the
+lm-sensors feature, which is usually a label such as `core_0`, while `type` comes
+from the subfeature name, which lm-sensors formats as `<type><index>_<attribute>`
+(e.g. `temp1_input` gives `temp`).
 
 - sensors:
   - tags:
@@ -131,6 +133,7 @@ sensors,chip=k10temp-pci-00db,feature=temp1 temp1_crit=70,temp1_crit_hyst=65,tem
 ```text
 sensors,device=k10temp-pci-00c3,sensor=temp1,type=temp temp_crit=70,temp_input=29,temp_max=70 1466751326000000000
 sensors,device=power_meter-acpi-0,sensor=power1,type=power power_average=0,power_average_interval=300 1466751326000000000
+sensors,device=coretemp-isa-0000,sensor=core_0,type=temp temp_crit=92,temp_input=75,temp_max=82 1466751326000000000
 ```
 
 ### OpenBSD example

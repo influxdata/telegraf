@@ -199,7 +199,7 @@ func TestGatherNewTagNames(t *testing.T) {
 			map[string]string{
 				"device": "coretemp-isa-0000",
 				"sensor": "physical_id_0",
-				"type":   "physical_id_",
+				"type":   "temp",
 			},
 			map[string]any{
 				"temp_input":      77.0,
@@ -210,9 +210,22 @@ func TestGatherNewTagNames(t *testing.T) {
 		},
 		{
 			map[string]string{
+				"device": "coretemp-isa-0000",
+				"sensor": "core_0",
+				"type":   "temp",
+			},
+			map[string]any{
+				"temp_input":      75.0,
+				"temp_max":        82.0,
+				"temp_crit":       92.0,
+				"temp_crit_alarm": 0.0,
+			},
+		},
+		{
+			map[string]string{
 				"device": "atk0110-acpi-0",
 				"sensor": "vcore_voltage",
-				"type":   "vcore_voltage",
+				"type":   "in",
 			},
 			map[string]any{
 				"in_input": 1.136,

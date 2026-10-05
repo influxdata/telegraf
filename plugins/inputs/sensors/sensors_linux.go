@@ -96,6 +96,12 @@ func (s *Sensors) parse(acc telegraf.Accumulator) error {
 		} else {
 			splitted := strings.Split(line, ":")
 			fieldName := strings.TrimSpace(splitted[0])
+			if !s.LinuxLegacyTagNames {
+				// lm-sensors features are labels such as "Core 0", so the type
+				// is taken from the subfeature name, e.g. temp1_input gives temp.
+				prefix, _, _ := strings.Cut(fieldName, "_")
+				tags["type"] = strings.TrimRightFunc(prefix, unicode.IsDigit)
+			}
 			if s.RemoveNumbers {
 				fieldName = numberRegp.ReplaceAllString(fieldName, "")
 			}
@@ -130,7 +136,6 @@ func (s *Sensors) linuxTags(chip, feature string) map[string]string {
 	return map[string]string{
 		"device": chip,
 		"sensor": feature,
-		"type":   strings.TrimRightFunc(feature, unicode.IsDigit),
 	}
 }
 
