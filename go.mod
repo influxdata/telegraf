@@ -56,9 +56,9 @@ require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.20.6
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.20.1
 	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.73.0
-	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.88.1
-	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.69.1
-	github.com/aws/aws-sdk-go-v2/service/ec2 v1.336.1
+	github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.89.0
+	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.70.0
+	github.com/aws/aws-sdk-go-v2/service/ec2 v1.338.1
 	github.com/aws/aws-sdk-go-v2/service/kinesis v1.56.1
 	github.com/aws/aws-sdk-go-v2/service/sts v1.51.1
 	github.com/aws/aws-sdk-go-v2/service/timestreamwrite v1.43.1
