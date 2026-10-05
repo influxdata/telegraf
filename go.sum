@@ -2326,8 +2326,8 @@ github.com/smartystreets/goconvey v1.6.4/go.mod h1:syvi0/a8iFYH4r/RixwvyeAJjdLS9
 github.com/smartystreets/goconvey v1.8.1 h1:qGjIddxOk4grTu9JPOU31tVfq3cNdBlNa5sSznIX1xY=
 github.com/smartystreets/goconvey v1.8.1/go.mod h1:+/u4qLyY6x1jReYOp7GOM2FSt8aP9CzCZL03bI28W60=
 github.com/smartystreets/gunit v1.0.0/go.mod h1:qwPWnhz6pn0NnRBP++URONOVyNkPyr4SauJk4cUOwJs=
-github.com/snowflakedb/gosnowflake/v2 v2.2.0 h1:zm0fhoAknhZ+DZ9crMGbIrTxFZhS2yVlPbJ6EqjyWdE=
-github.com/snowflakedb/gosnowflake/v2 v2.2.0/go.mod h1:poUMAfesYFh8piXMqKVPW304tekACzv1cfskxMdpikY=
+github.com/snowflakedb/gosnowflake/v2 v2.3.0 h1:uYELDDyjm2A/hrv+Lfc/ZPbohgcN5k8o72V1qtlCoVc=
+github.com/snowflakedb/gosnowflake/v2 v2.3.0/go.mod h1:poUMAfesYFh8piXMqKVPW304tekACzv1cfskxMdpikY=
 github.com/soheilhy/cmux v0.1.4/go.mod h1:IM3LyeVVIOuxMH7sFAkER9+bJ4dT7Ms6E4xg4kGIyLM=
 github.com/sony/gobreaker/v2 v2.4.0 h1:g2KJRW1Ubty3+ZOcSEUN7K+REQJdN6yo6XvaML+jptg=
 github.com/sony/gobreaker/v2 v2.4.0/go.mod h1:pTyFJgcZ3h2tdQVLZZruK2C0eoFL1fb/G83wK1ZQl+s=
