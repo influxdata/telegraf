@@ -186,9 +186,9 @@ func (s *Sensors) parseLine(line string) (map[string]string, map[string]any, err
 		fields["state"] = payload
 		switch payload {
 		case "On":
-			fields["value"] = true
+			fields["value"] = float64(1)
 		case "Off":
-			fields["value"] = false
+			fields["value"] = float64(0)
 		}
 	default:
 		if payload != "unknown" {
