@@ -122,6 +122,28 @@ func TestParsesLinesContainingNewline(t *testing.T) {
 	}
 }
 
+func TestParsesInfluxWithTimestampPrecision(t *testing.T) {
+	parser := models.NewRunningParser(&influx.Parser{InfluxTimestampPrecision: config.Duration(time.Second)}, &models.ParserConfig{})
+	require.NoError(t, parser.Init())
+
+	metrics := make(chan telegraf.Metric, 10)
+	defer close(metrics)
+	acc := agent.NewAccumulator(&TestMetricMaker{}, metrics)
+
+	e := &Execd{
+		RestartDelay: config.Duration(5 * time.Second),
+		Signal:       "STDIN",
+		acc:          acc,
+		Log:          testutil.Logger{},
+	}
+	e.SetParser(parser)
+
+	e.outputReader(strings.NewReader("my_series,my_tag_key=my_tag_value my_field=987i 12345"))
+
+	m := readChanWithTimeout(t, metrics, 1*time.Second)
+	require.Equal(t, time.Unix(12345, 0), m.Time())
+}
+
 func TestParsesPrometheus(t *testing.T) {
 	parser := models.NewRunningParser(&prometheus.Parser{}, &models.ParserConfig{})
 	require.NoError(t, parser.Init())
