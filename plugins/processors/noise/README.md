@@ -24,7 +24,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 [[processors.noise]]
   ## Specified the type of the random distribution.
   ## Can be "laplacian", "gaussian" or "uniform".
-  # type = "laplacian
+  # type = "laplacian"
 
   ## Center of the distribution.
   ## Only used for Laplacian and Gaussian distributions.
@@ -44,7 +44,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```
 
 Depending on the choice of the distribution function, the respective parameters
-must be set. Default settings are `noise_type = "laplacian"` with `mu = 0.0` and
+must be set. Default settings are `type = "laplacian"` with `mu = 0.0` and
 `scale = 1.0`:
 
 Using the `include_fields` and `exclude_fields` options a filter can be
@@ -53,7 +53,7 @@ distribution functions are available.
 
 ### Laplacian
 
-- `noise_type = laplacian`
+- `type = laplacian`
 - `scale`: also referred to as _diversity_ parameter, regulates the width and
            height of the function, a bigger `scale` value means a higher
            probability of larger noise, default set to 1.0
@@ -61,13 +61,13 @@ distribution functions are available.
 
 ### Gaussian
 
-- `noise_type = gaussian`
+- `type = gaussian`
 - `mu`: mean value, default set to 0.0
 - `scale`: standard deviation, default set to 1.0
 
 ### Uniform
 
-- `noise_type = uniform`
+- `type = uniform`
 - `min`: minimal interval value, default set to -1.0
 - `max`: maximal interval value, default set to 1.0
 
@@ -87,7 +87,7 @@ fields of the metrics _swap_, _disk_ and _net_:
 [[processors.noise]]
   scale = 1.0
   mu = 0.0
-  noise_type = "laplacian"
+  type = "laplacian"
   include_fields = []
   exclude_fields = ["usage_steal", "usage_user", "uptime_format", "usage_idle" ]
   namedrop = ["swap", "disk", "net"]
