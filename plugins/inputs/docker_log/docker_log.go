@@ -42,6 +42,7 @@ type DockerLogs struct {
 
 	client          *client.Client
 	clientOptions   []client.Opt
+	clientVerified  bool
 	labelFilter     filter.Filter
 	containerFilter filter.Filter
 	stateFilter     filter.Filter
@@ -126,29 +127,9 @@ func (d *DockerLogs) Init() error {
 	return nil
 }
 
+// Start is a noop which is required for a *DockerLogs to implement the telegraf.ServiceInput interface
 func (d *DockerLogs) Start(telegraf.Accumulator) error {
 	d.startupTime = time.Now().Format(time.RFC3339Nano)
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(d.Timeout))
-	defer cancel()
-	ping, err := d.client.Ping(ctx, client.PingOptions{})
-	if err != nil {
-		// Connection errors are reported by the first gather, as before
-		return nil
-	}
-
-	// Negotiation refuses to go below client.MinAPIVersion and the library
-	// discards that error, leaving the client at a version the daemon rejects
-	if ping.APIVersion != "" && versions.LessThan(ping.APIVersion, client.MinAPIVersion) &&
-		versions.GreaterThan(d.client.ClientVersion(), ping.APIVersion) {
-		d.clientOptions = append(d.clientOptions, client.WithAPIVersion(ping.APIVersion))
-		c, err := client.New(d.clientOptions...)
-		if err != nil {
-			return fmt.Errorf("creating client for API version %s failed: %w", ping.APIVersion, err)
-		}
-		d.client.Close()
-		d.client = c
-	}
 
 	return nil
 }
@@ -189,10 +170,19 @@ func (d *DockerLogs) Gather(acc telegraf.Accumulator) error {
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(d.Timeout))
 	defer cancel()
 
+	if !d.clientVerified {
+		if ping, err := d.client.Ping(ctx, client.PingOptions{}); err == nil {
+			if err := d.pinAPIVersion(ping.APIVersion); err != nil {
+				return err
+			}
+		}
+	}
+
 	containers, err := d.client.ContainerList(ctx, client.ContainerListOptions{})
 	if err != nil {
 		return fmt.Errorf("listing containers failed: %w", err)
 	}
+	d.clientVerified = true
 
 	for _, cntnr := range containers.Items {
 		d.mu.Lock()
@@ -237,6 +227,24 @@ func (d *DockerLogs) Gather(acc telegraf.Accumulator) error {
 			}
 		}(cntnr)
 	}
+	return nil
+}
+
+func (d *DockerLogs) pinAPIVersion(version string) error {
+	// Negotiation refuses to go below client.MinAPIVersion and the library
+	// discards that error, leaving the client at a version the daemon rejects
+	if version == "" || !versions.LessThan(version, client.MinAPIVersion) ||
+		!versions.GreaterThan(d.client.ClientVersion(), version) {
+		return nil
+	}
+
+	c, err := client.New(append(d.clientOptions, client.WithAPIVersion(version))...)
+	if err != nil {
+		return fmt.Errorf("creating client for API version %s failed: %w", version, err)
+	}
+	d.client.Close()
+	d.client = c
+
 	return nil
 }
 

@@ -3,6 +3,11 @@ package docker_log
 import (
 	"fmt"
 	"maps"
+	"net/http"
+	"net/http/httptest"
+	"net/http/httputil"
+	"net/url"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -301,7 +306,7 @@ func TestStatePersistenceMux(t *testing.T) {
 	require.Equal(t, ts.UTC(), state[id])
 }
 
-func TestStartLegacyAPIVersion(t *testing.T) {
+func TestGatherLegacyAPIVersion(t *testing.T) {
 	server := &mock.Server{
 		APIVersion: "1.39",
 		List: []container.Summary{
@@ -336,6 +341,43 @@ func TestStartLegacyAPIVersion(t *testing.T) {
 
 	require.NoError(t, plugin.Gather(&acc))
 	require.Empty(t, acc.Errors)
+	require.Equal(t, "1.39", plugin.client.ClientVersion())
+}
+
+func TestGatherLegacyAPIVersionDaemonUnavailable(t *testing.T) {
+	server := &mock.Server{APIVersion: "1.39"}
+	addr := server.Start(t)
+	defer server.Close()
+
+	target, err := url.Parse(addr)
+	require.NoError(t, err)
+	backend := httputil.NewSingleHostReverseProxy(target)
+
+	var unavailable atomic.Bool
+	unavailable.Store(true)
+	proxy := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if unavailable.Load() {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		backend.ServeHTTP(w, r)
+	}))
+	defer proxy.Close()
+
+	plugin := &DockerLogs{
+		Endpoint: proxy.URL,
+		Timeout:  config.Duration(time.Second * 5),
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	require.Error(t, plugin.Gather(&acc))
+
+	unavailable.Store(false)
+	require.NoError(t, plugin.Gather(&acc))
 	require.Equal(t, "1.39", plugin.client.ClientVersion())
 }
 
