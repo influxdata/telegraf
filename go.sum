@@ -2593,8 +2593,8 @@ go.opentelemetry.io/proto/otlp v0.15.0/go.mod h1:H7XAot3MsfNsj7EXtrA2q5xSNQ10UqI
 go.opentelemetry.io/proto/otlp v0.19.0/go.mod h1:H7XAot3MsfNsj7EXtrA2q5xSNQ10UqI405h3+duxN4U=
 go.opentelemetry.io/proto/otlp v1.11.1 h1:SCrPqH9NE5CmBrOqpjNCiT0X5mGwMyGERXdogfR7Yjw=
 go.opentelemetry.io/proto/otlp v1.11.1/go.mod h1:wq8W4aSf6bOy8RZyESOeQFr9Pu7wydWX/TY4sgvrTPg=
-go.opentelemetry.io/proto/otlp/collector/profiles/v1development v0.4.0 h1:bJQIZnyUB2qsRnbQBO0q5BSym96WCGEv48q2ATLI4b0=
-go.opentelemetry.io/proto/otlp/collector/profiles/v1development v0.4.0/go.mod h1:fdbY5aZcJlGPp9LnmKOhyHm3IXwu8l5hQT5gcuTtSGY=
+go.opentelemetry.io/proto/otlp/collector/profiles/v1development v0.4.1 h1:buJojifhJDy1KxIGqMTJZi2ofe4ePWmrMAvP/XwbD+Y=
+go.opentelemetry.io/proto/otlp/collector/profiles/v1development v0.4.1/go.mod h1:GQ77lWay7cMMRLKiZQV1ZKTERQWI+Lub4yoeD55yOE0=
 go.opentelemetry.io/proto/otlp/profiles/v1development v0.4.1 h1:/r6OKUO8PmUMAfAG0lIIZEWQZHa3o56LHMulrusszYo=
 go.opentelemetry.io/proto/otlp/profiles/v1development v0.4.1/go.mod h1:iXB90dhIyHY9OFlaMA3a4pCftOIs6gxbN4kXoLQEtmU=
 go.opentelemetry.io/proto/slim/otlp v1.11.0 h1:zB37f+f99+y6UIZR4h7UpwbXd5kFNyip35U7GaJ/Jik=

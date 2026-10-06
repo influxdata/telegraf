@@ -235,7 +235,7 @@ require (
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.44.0
 	go.opentelemetry.io/otel/sdk/metric v1.46.0
 	go.opentelemetry.io/proto/otlp v1.11.1
-	go.opentelemetry.io/proto/otlp/collector/profiles/v1development v0.4.0
+	go.opentelemetry.io/proto/otlp/collector/profiles/v1development v0.4.1
 	go.opentelemetry.io/proto/otlp/profiles/v1development v0.4.1
 	go.starlark.net v0.0.0-20260908191801-89a6a09411d5
 	go.step.sm/crypto v0.91.0
