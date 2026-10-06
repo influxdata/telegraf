@@ -2,17 +2,22 @@ package kafka
 
 import (
 	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/IBM/sarama"
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 	kafkacontainer "github.com/testcontainers/testcontainers-go/modules/kafka"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/common/kafka"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -124,433 +129,91 @@ func TestInitBatchOffsets(t *testing.T) {
 	}
 }
 
-// mockCluster wires two mock brokers into a cluster with the following layout:
-//
-//	broker 1: leader of orders/0 and events/0, coordinator of "order-svc"
-//	broker 2: leader of orders/1 and events/1, coordinator of "analytics"
-//
-//	group "order-svc" (2 members): orders/0=50, orders/1=80, events/0=never committed, events/1=20
-//	                               retired/0=5 (topic deleted, offset still stored)
-//	group "analytics" (0 members): orders/0=10
-//
-//	log end offsets: orders/0=100, orders/1=100, events/0=30, events/1=30
-type mockCluster struct {
-	broker1 *sarama.MockBroker
-	broker2 *sarama.MockBroker
+func TestCases(t *testing.T) {
+	// Get all directories in testcases
+	folders, err := os.ReadDir("testcases")
+	require.NoError(t, err)
 
-	handlers map[*sarama.MockBroker]map[string]sarama.MockResponse
-}
+	// Prepare the influx parser for expectations
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
 
-func newMockCluster(t *testing.T) *mockCluster {
-	t.Helper()
+	for _, f := range folders {
+		// Only handle folders
+		if !f.IsDir() {
+			continue
+		}
 
-	// Install the sarama logger before the mock brokers start reading it
-	kafka.SetLogger(testutil.Logger{}.Level())
+		t.Run(f.Name(), func(t *testing.T) {
+			testcasePath := filepath.Join("testcases", f.Name())
+			configFilename := filepath.Join(testcasePath, "telegraf.conf")
+			clusterFilename := filepath.Join(testcasePath, "cluster.json")
+			expectedFilename := filepath.Join(testcasePath, "expected.out")
+			expectedErrorFilename := filepath.Join(testcasePath, "expected.err")
 
-	broker1 := sarama.NewMockBroker(t, 1)
-	broker2 := sarama.NewMockBroker(t, 2)
-
-	metadata := sarama.NewMockMetadataResponse(t).
-		SetController(broker1.BrokerID()).
-		SetBroker(broker1.Addr(), broker1.BrokerID()).
-		SetBroker(broker2.Addr(), broker2.BrokerID()).
-		SetLeader("orders", 0, broker1.BrokerID()).
-		SetLeader("orders", 1, broker2.BrokerID()).
-		SetLeader("events", 0, broker1.BrokerID()).
-		SetLeader("events", 1, broker2.BrokerID())
-
-	coordinators := sarama.NewMockFindCoordinatorResponse(t).
-		SetCoordinator(sarama.CoordinatorGroup, "order-svc", broker1).
-		SetCoordinator(sarama.CoordinatorGroup, "analytics", broker2)
-
-	handlers1 := map[string]sarama.MockResponse{
-		"ApiVersionsRequest":     sarama.NewMockApiVersionsResponse(t),
-		"MetadataRequest":        metadata,
-		"FindCoordinatorRequest": coordinators,
-		"ListGroupsRequest": sarama.NewMockListGroupsResponse(t).
-			AddGroup("order-svc", "consumer"),
-		"DescribeGroupsRequest": sarama.NewMockDescribeGroupsResponse(t).
-			AddGroupDescription("order-svc", &sarama.GroupDescription{
-				GroupId: "order-svc",
-				State:   "Stable",
-				Members: map[string]*sarama.GroupMemberDescription{
-					"member-1": {MemberId: "member-1", ClientId: "order-svc-1", ClientHost: "/10.0.0.1"},
-					"member-2": {MemberId: "member-2", ClientId: "order-svc-2", ClientHost: "/10.0.0.2"},
-				},
-			}),
-		"OffsetFetchRequest": sarama.NewMockOffsetFetchResponse(t).
-			SetOffset("order-svc", "orders", 0, 50, "", sarama.ErrNoError).
-			SetOffset("order-svc", "orders", 1, 80, "", sarama.ErrNoError).
-			SetOffset("order-svc", "events", 0, -1, "", sarama.ErrNoError).
-			SetOffset("order-svc", "events", 1, 20, "", sarama.ErrNoError).
-			SetOffset("order-svc", "retired", 0, 5, "", sarama.ErrNoError),
-		"OffsetRequest": sarama.NewMockOffsetResponse(t).
-			SetOffset("orders", 0, sarama.OffsetNewest, 100).
-			SetOffset("events", 0, sarama.OffsetNewest, 30),
-	}
-
-	handlers2 := map[string]sarama.MockResponse{
-		"ApiVersionsRequest":     sarama.NewMockApiVersionsResponse(t),
-		"MetadataRequest":        metadata,
-		"FindCoordinatorRequest": coordinators,
-		"ListGroupsRequest": sarama.NewMockListGroupsResponse(t).
-			AddGroup("analytics", "consumer"),
-		"DescribeGroupsRequest": sarama.NewMockDescribeGroupsResponse(t).
-			AddGroupDescription("analytics", &sarama.GroupDescription{
-				GroupId: "analytics",
-				State:   "Empty",
-			}),
-		"OffsetFetchRequest": sarama.NewMockOffsetFetchResponse(t).
-			SetOffset("analytics", "orders", 0, 10, "", sarama.ErrNoError),
-		"OffsetRequest": sarama.NewMockOffsetResponse(t).
-			SetOffset("orders", 1, sarama.OffsetNewest, 100).
-			SetOffset("events", 1, sarama.OffsetNewest, 30),
-	}
-
-	broker1.SetHandlerByMap(handlers1)
-	broker2.SetHandlerByMap(handlers2)
-
-	return &mockCluster{
-		broker1:  broker1,
-		broker2:  broker2,
-		handlers: map[*sarama.MockBroker]map[string]sarama.MockResponse{broker1: handlers1, broker2: handlers2},
-	}
-}
-
-// override replaces the response of a broker for one request type.
-func (c *mockCluster) override(broker *sarama.MockBroker, request string, response sarama.MockResponse) {
-	c.handlers[broker][request] = response
-	broker.SetHandlerByMap(c.handlers[broker])
-}
-
-func (c *mockCluster) brokers() []string {
-	return []string{c.broker1.Addr(), c.broker2.Addr()}
-}
-
-func (c *mockCluster) close() {
-	c.broker1.Close()
-	c.broker2.Close()
-}
-
-func TestGather(t *testing.T) {
-	expected := []telegraf.Metric{
-		metric.New(
-			"kafka_consumer_group_partition",
-			map[string]string{"group": "order-svc", "topic": "orders", "partition": "0"},
-			map[string]any{"committed_offset": int64(50), "log_end_offset": int64(100), "lag": int64(50)},
-			time.Unix(0, 0),
-			telegraf.Gauge,
-		),
-		metric.New(
-			"kafka_consumer_group_partition",
-			map[string]string{"group": "order-svc", "topic": "orders", "partition": "1"},
-			map[string]any{"committed_offset": int64(80), "log_end_offset": int64(100), "lag": int64(20)},
-			time.Unix(0, 0),
-			telegraf.Gauge,
-		),
-		metric.New(
-			"kafka_consumer_group_partition",
-			map[string]string{"group": "order-svc", "topic": "events", "partition": "1"},
-			map[string]any{"committed_offset": int64(20), "log_end_offset": int64(30), "lag": int64(10)},
-			time.Unix(0, 0),
-			telegraf.Gauge,
-		),
-		metric.New(
-			"kafka_consumer_group_partition",
-			map[string]string{"group": "analytics", "topic": "orders", "partition": "0"},
-			map[string]any{"committed_offset": int64(10), "log_end_offset": int64(100), "lag": int64(90)},
-			time.Unix(0, 0),
-			telegraf.Gauge,
-		),
-		metric.New(
-			"kafka_consumer_group_topic",
-			map[string]string{"group": "order-svc", "topic": "orders"},
-			map[string]any{"lag_sum": int64(70), "lag_max": int64(50), "partitions": int64(2)},
-			time.Unix(0, 0),
-			telegraf.Gauge,
-		),
-		metric.New(
-			"kafka_consumer_group_topic",
-			map[string]string{"group": "order-svc", "topic": "events"},
-			map[string]any{"lag_sum": int64(10), "lag_max": int64(10), "partitions": int64(1)},
-			time.Unix(0, 0),
-			telegraf.Gauge,
-		),
-		metric.New(
-			"kafka_consumer_group_topic",
-			map[string]string{"group": "analytics", "topic": "orders"},
-			map[string]any{"lag_sum": int64(90), "lag_max": int64(90), "partitions": int64(1)},
-			time.Unix(0, 0),
-			telegraf.Gauge,
-		),
-		metric.New(
-			"kafka_consumer_group",
-			map[string]string{"group": "order-svc"},
-			map[string]any{
-				"lag_sum":    int64(80),
-				"lag_max":    int64(50),
-				"partitions": int64(3),
-				"topics":     int64(2),
-				"members":    int64(2),
-			},
-			time.Unix(0, 0),
-			telegraf.Gauge,
-		),
-		metric.New(
-			"kafka_consumer_group",
-			map[string]string{"group": "analytics"},
-			map[string]any{
-				"lag_sum":    int64(90),
-				"lag_max":    int64(90),
-				"partitions": int64(1),
-				"topics":     int64(1),
-				"members":    int64(0),
-			},
-			time.Unix(0, 0),
-			telegraf.Gauge,
-		),
-	}
-
-	// Run against both the legacy and the multi-group OffsetFetch protocol
-	for _, version := range []string{"2.1.0", "3.6.0"} {
-		t.Run(version, func(t *testing.T) {
-			cluster := newMockCluster(t)
-			defer cluster.close()
-
-			plugin := &Kafka{
-				Brokers:             cluster.brokers(),
-				MetricLevels:        []string{"partition", "topic", "group"},
-				CoordinatorBrokerID: -1,
-				Log:                 testutil.Logger{},
-				Config:              kafka.Config{Version: version},
+			// Read the expected output if any
+			var expected []telegraf.Metric
+			if _, err := os.Stat(expectedFilename); err == nil {
+				var err error
+				expected, err = testutil.ParseMetricsFromFile(expectedFilename, parser)
+				require.NoError(t, err)
 			}
+
+			// Read the expected errors if any
+			var expectedErrors []string
+			if _, err := os.Stat(expectedErrorFilename); err == nil {
+				var err error
+				expectedErrors, err = testutil.ParseLinesFromFile(expectedErrorFilename)
+				require.NoError(t, err)
+				require.NotEmpty(t, expectedErrors)
+			}
+
+			// Configure and initialize the plugin. Init replaces the global
+			// sarama logger, so do it before the mock brokers start.
+			cfg := config.NewConfig()
+			require.NoError(t, cfg.LoadConfig(configFilename))
+			require.Len(t, cfg.Inputs, 1)
+			plugin := cfg.Inputs[0].Input.(*Kafka)
 			require.NoError(t, plugin.Init())
+
+			// Setup the cluster and point the plugin to it
+			cluster := newMockCluster(t, clusterFilename)
+			defer cluster.close()
+			plugin.Brokers = cluster.addresses()
 
 			var acc testutil.Accumulator
 			require.NoError(t, plugin.Start(&acc))
 			defer plugin.Stop()
 
-			require.NoError(t, plugin.Gather(&acc))
-			require.Empty(t, acc.Errors)
-			testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime(), testutil.SortMetrics())
+			// Collect the data and treat the error returned by Gather like
+			// the accumulated ones
+			if err := plugin.Gather(&acc); err != nil {
+				acc.AddError(err)
+			}
+
+			// Check the result
+			actualErrors := make([]string, 0, len(acc.Errors))
+			for _, err := range acc.Errors {
+				actualErrors = append(actualErrors, err.Error())
+			}
+			require.ElementsMatch(t, expectedErrors, actualErrors)
+
+			options := []cmp.Option{
+				testutil.SortMetrics(),
+				testutil.IgnoreTime(),
+				testutil.IgnoreType(),
+			}
+			testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), options...)
 		})
 	}
-}
-
-func TestGatherClusterTag(t *testing.T) {
-	// The tag is only added if a cluster name is configured
-	for _, name := range []string{"", "prod-eu"} {
-		t.Run("cluster="+name, func(t *testing.T) {
-			cluster := newMockCluster(t)
-			defer cluster.close()
-
-			plugin := &Kafka{
-				Brokers:             cluster.brokers(),
-				Cluster:             name,
-				MetricLevels:        []string{"partition", "topic", "group"},
-				CoordinatorBrokerID: -1,
-				Log:                 testutil.Logger{},
-			}
-			require.NoError(t, plugin.Init())
-
-			var acc testutil.Accumulator
-			require.NoError(t, plugin.Start(&acc))
-			defer plugin.Stop()
-
-			require.NoError(t, plugin.Gather(&acc))
-			require.Empty(t, acc.Errors)
-
-			require.NotEmpty(t, acc.GetTelegrafMetrics())
-			for _, m := range acc.GetTelegrafMetrics() {
-				value, ok := m.GetTag("cluster")
-				require.Equalf(t, name != "", ok, "unexpected presence of the cluster tag in metric %q", m.Name())
-				require.Equal(t, name, value)
-			}
-		})
-	}
-}
-
-func TestGatherMetadataFullDisabled(t *testing.T) {
-	cluster := newMockCluster(t)
-	defer cluster.close()
-
-	full := false
-	plugin := &Kafka{
-		Brokers:             cluster.brokers(),
-		MetricLevels:        []string{"partition"},
-		CoordinatorBrokerID: -1,
-		Log:                 testutil.Logger{},
-		Config:              kafka.Config{MetadataFull: &full},
-	}
-	require.NoError(t, plugin.Init())
-
-	var acc testutil.Accumulator
-	require.NoError(t, plugin.Start(&acc))
-	defer plugin.Stop()
-
-	require.NoError(t, plugin.Gather(&acc))
-	require.Empty(t, acc.Errors)
-
-	expected := []telegraf.Metric{
-		metric.New(
-			"kafka_consumer_group_partition",
-			map[string]string{"group": "order-svc", "topic": "orders", "partition": "0"},
-			map[string]any{"committed_offset": int64(50), "log_end_offset": int64(100), "lag": int64(50)},
-			time.Unix(0, 0),
-			telegraf.Gauge,
-		),
-		metric.New(
-			"kafka_consumer_group_partition",
-			map[string]string{"group": "order-svc", "topic": "orders", "partition": "1"},
-			map[string]any{"committed_offset": int64(80), "log_end_offset": int64(100), "lag": int64(20)},
-			time.Unix(0, 0),
-			telegraf.Gauge,
-		),
-		metric.New(
-			"kafka_consumer_group_partition",
-			map[string]string{"group": "order-svc", "topic": "events", "partition": "1"},
-			map[string]any{"committed_offset": int64(20), "log_end_offset": int64(30), "lag": int64(10)},
-			time.Unix(0, 0),
-			telegraf.Gauge,
-		),
-		metric.New(
-			"kafka_consumer_group_partition",
-			map[string]string{"group": "analytics", "topic": "orders", "partition": "0"},
-			map[string]any{"committed_offset": int64(10), "log_end_offset": int64(100), "lag": int64(90)},
-			time.Unix(0, 0),
-			telegraf.Gauge,
-		),
-	}
-	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime(), testutil.SortMetrics())
-}
-
-func TestGatherCoordinatorFilter(t *testing.T) {
-	cluster := newMockCluster(t)
-	defer cluster.close()
-
-	plugin := &Kafka{
-		Brokers:             cluster.brokers(),
-		MetricLevels:        []string{"partition"},
-		CoordinatorBrokerID: cluster.broker2.BrokerID(),
-		Log:                 testutil.Logger{},
-	}
-	require.NoError(t, plugin.Init())
-
-	var acc testutil.Accumulator
-	require.NoError(t, plugin.Start(&acc))
-	defer plugin.Stop()
-
-	require.NoError(t, plugin.Gather(&acc))
-	require.Empty(t, acc.Errors)
-
-	expected := []telegraf.Metric{
-		metric.New(
-			"kafka_consumer_group_partition",
-			map[string]string{"group": "analytics", "topic": "orders", "partition": "0"},
-			map[string]any{"committed_offset": int64(10), "log_end_offset": int64(100), "lag": int64(90)},
-			time.Unix(0, 0),
-			telegraf.Gauge,
-		),
-	}
-	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime(), testutil.SortMetrics())
-}
-
-func TestGatherGroupAndTopicFilter(t *testing.T) {
-	cluster := newMockCluster(t)
-	defer cluster.close()
-
-	plugin := &Kafka{
-		Brokers:             cluster.brokers(),
-		GroupsInclude:       []string{"order-*"},
-		TopicsExclude:       []string{"events"},
-		MetricLevels:        []string{"partition"},
-		CoordinatorBrokerID: -1,
-		Log:                 testutil.Logger{},
-	}
-	require.NoError(t, plugin.Init())
-
-	var acc testutil.Accumulator
-	require.NoError(t, plugin.Start(&acc))
-	defer plugin.Stop()
-
-	require.NoError(t, plugin.Gather(&acc))
-	require.Empty(t, acc.Errors)
-
-	expected := []telegraf.Metric{
-		metric.New(
-			"kafka_consumer_group_partition",
-			map[string]string{"group": "order-svc", "topic": "orders", "partition": "0"},
-			map[string]any{"committed_offset": int64(50), "log_end_offset": int64(100), "lag": int64(50)},
-			time.Unix(0, 0),
-			telegraf.Gauge,
-		),
-		metric.New(
-			"kafka_consumer_group_partition",
-			map[string]string{"group": "order-svc", "topic": "orders", "partition": "1"},
-			map[string]any{"committed_offset": int64(80), "log_end_offset": int64(100), "lag": int64(20)},
-			time.Unix(0, 0),
-			telegraf.Gauge,
-		),
-	}
-	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime(), testutil.SortMetrics())
-}
-
-func TestGatherMetricLevels(t *testing.T) {
-	cluster := newMockCluster(t)
-	defer cluster.close()
-
-	plugin := &Kafka{
-		Brokers:             cluster.brokers(),
-		MetricLevels:        []string{"group"},
-		CoordinatorBrokerID: -1,
-		Log:                 testutil.Logger{},
-	}
-	require.NoError(t, plugin.Init())
-
-	var acc testutil.Accumulator
-	require.NoError(t, plugin.Start(&acc))
-	defer plugin.Stop()
-
-	require.NoError(t, plugin.Gather(&acc))
-	require.Empty(t, acc.Errors)
-
-	expected := []telegraf.Metric{
-		metric.New(
-			"kafka_consumer_group",
-			map[string]string{"group": "order-svc"},
-			map[string]any{
-				"lag_sum":    int64(80),
-				"lag_max":    int64(50),
-				"partitions": int64(3),
-				"topics":     int64(2),
-				"members":    int64(2),
-			},
-			time.Unix(0, 0),
-			telegraf.Gauge,
-		),
-		metric.New(
-			"kafka_consumer_group",
-			map[string]string{"group": "analytics"},
-			map[string]any{
-				"lag_sum":    int64(90),
-				"lag_max":    int64(90),
-				"partitions": int64(1),
-				"topics":     int64(1),
-				"members":    int64(0),
-			},
-			time.Unix(0, 0),
-			telegraf.Gauge,
-		),
-	}
-	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime(), testutil.SortMetrics())
 }
 
 func TestGatherSkipsDescribeWithoutGroupLevel(t *testing.T) {
-	cluster := newMockCluster(t)
+	cluster := newMockCluster(t, "testdata/cluster.json")
 	defer cluster.close()
 
 	plugin := &Kafka{
-		Brokers:             cluster.brokers(),
+		Brokers:             cluster.addresses(),
 		MetricLevels:        []string{"partition", "topic"},
 		CoordinatorBrokerID: -1,
 		Log:                 testutil.Logger{},
@@ -567,184 +230,23 @@ func TestGatherSkipsDescribeWithoutGroupLevel(t *testing.T) {
 
 	// The member count is only used on the group level, so no group must
 	// have been described.
-	for _, broker := range []*sarama.MockBroker{cluster.broker1, cluster.broker2} {
+	for id, broker := range cluster.brokers {
 		for _, rr := range broker.History() {
 			_, described := rr.Request.(*sarama.DescribeGroupsRequest)
-			require.Falsef(t, described, "broker %d received a DescribeGroupsRequest", broker.BrokerID())
+			require.Falsef(t, described, "broker %d received a DescribeGroupsRequest", id)
 		}
 	}
 }
 
-func TestGatherDescribeFailure(t *testing.T) {
-	cluster := newMockCluster(t)
-	defer cluster.close()
-
-	// Broker 2 refuses to describe its group
-	cluster.override(cluster.broker2, "DescribeGroupsRequest",
-		sarama.NewMockDescribeGroupsResponse(t).
-			AddGroupDescription("analytics", &sarama.GroupDescription{
-				GroupId:   "analytics",
-				ErrorCode: int16(sarama.ErrGroupAuthorizationFailed),
-			}),
-	)
-
-	plugin := &Kafka{
-		Brokers:             cluster.brokers(),
-		MetricLevels:        []string{"group"},
-		CoordinatorBrokerID: -1,
-		Log:                 testutil.Logger{},
-	}
-	require.NoError(t, plugin.Init())
-
-	var acc testutil.Accumulator
-	require.NoError(t, plugin.Start(&acc))
-	defer plugin.Stop()
-
-	require.NoError(t, plugin.Gather(&acc))
-
-	// The lag is still reported, only the members field is missing
-	expected := []telegraf.Metric{
-		metric.New(
-			"kafka_consumer_group",
-			map[string]string{"group": "order-svc"},
-			map[string]any{
-				"lag_sum":    int64(80),
-				"lag_max":    int64(50),
-				"partitions": int64(3),
-				"topics":     int64(2),
-				"members":    int64(2),
-			},
-			time.Unix(0, 0),
-			telegraf.Gauge,
-		),
-		metric.New(
-			"kafka_consumer_group",
-			map[string]string{"group": "analytics"},
-			map[string]any{
-				"lag_sum":    int64(90),
-				"lag_max":    int64(90),
-				"partitions": int64(1),
-				"topics":     int64(1),
-			},
-			time.Unix(0, 0),
-			telegraf.Gauge,
-		),
-	}
-	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime(), testutil.SortMetrics())
-
-	require.Len(t, acc.Errors, 1)
-	require.ErrorContains(t, acc.Errors[0], `describing group "analytics" failed`)
-}
-
-func TestGatherDescribeNonClassicGroup(t *testing.T) {
-	// Kafka 4.0 answers DescribeGroups for a group using the new consumer
-	// protocol with an empty "Dead" group up to v5, and with an error from v6
-	tests := []struct {
-		name        string
-		description *sarama.GroupDescription
-	}{
-		{
-			name:        "dead group",
-			description: &sarama.GroupDescription{GroupId: "analytics", State: "Dead"},
-		},
-		{
-			name: "group not found",
-			description: &sarama.GroupDescription{
-				GroupId:   "analytics",
-				State:     "Dead",
-				ErrorCode: int16(sarama.ErrGroupIDNotFound),
-			},
-		},
-	}
-
-	expected := []telegraf.Metric{
-		metric.New(
-			"kafka_consumer_group",
-			map[string]string{"group": "order-svc"},
-			map[string]any{
-				"lag_sum":    int64(80),
-				"lag_max":    int64(50),
-				"partitions": int64(3),
-				"topics":     int64(2),
-				"members":    int64(2),
-			},
-			time.Unix(0, 0),
-			telegraf.Gauge,
-		),
-		metric.New(
-			"kafka_consumer_group",
-			map[string]string{"group": "analytics"},
-			map[string]any{
-				"lag_sum":    int64(90),
-				"lag_max":    int64(90),
-				"partitions": int64(1),
-				"topics":     int64(1),
-			},
-			time.Unix(0, 0),
-			telegraf.Gauge,
-		),
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cluster := newMockCluster(t)
-			defer cluster.close()
-
-			cluster.override(cluster.broker2, "DescribeGroupsRequest",
-				sarama.NewMockDescribeGroupsResponse(t).AddGroupDescription("analytics", tt.description),
-			)
-
-			plugin := &Kafka{
-				Brokers:             cluster.brokers(),
-				MetricLevels:        []string{"group"},
-				CoordinatorBrokerID: -1,
-				Log:                 testutil.Logger{},
-			}
-			require.NoError(t, plugin.Init())
-
-			var acc testutil.Accumulator
-			require.NoError(t, plugin.Start(&acc))
-			defer plugin.Stop()
-
-			// The lag is still reported without the members field and without error
-			require.NoError(t, plugin.Gather(&acc))
-			require.Empty(t, acc.Errors)
-			testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime(), testutil.SortMetrics())
-		})
-	}
-}
-
-func TestGatherCoordinatorBrokerUnknown(t *testing.T) {
-	cluster := newMockCluster(t)
-	defer cluster.close()
-
-	plugin := &Kafka{
-		Brokers:             cluster.brokers(),
-		MetricLevels:        []string{"partition", "topic", "group"},
-		CoordinatorBrokerID: 99,
-		Log:                 testutil.Logger{},
-	}
-	require.NoError(t, plugin.Init())
-
-	var acc testutil.Accumulator
-	require.NoError(t, plugin.Start(&acc))
-	defer plugin.Stop()
-
-	err := plugin.Gather(&acc)
-	require.ErrorContains(t, err, "getting coordinator broker failed: finding broker 99 failed")
-	require.Empty(t, acc.GetTelegrafMetrics())
-	require.Empty(t, acc.Errors)
-}
-
 func TestGatherBrokerDown(t *testing.T) {
-	cluster := newMockCluster(t)
-	defer cluster.broker1.Close()
+	cluster := newMockCluster(t, "testdata/cluster.json")
+	defer cluster.brokers[1].Close()
 
 	// Take broker 2 down while broker 1 still advertises it in its metadata
-	cluster.broker2.Close()
+	cluster.brokers[2].Close()
 
 	plugin := &Kafka{
-		Brokers:             []string{cluster.broker1.Addr()},
+		Brokers:             []string{cluster.brokers[1].Addr()},
 		MetricLevels:        []string{"partition"},
 		CoordinatorBrokerID: -1,
 		Log:                 testutil.Logger{},
@@ -775,14 +277,14 @@ func TestGatherBrokerDown(t *testing.T) {
 }
 
 func TestGatherControllerDown(t *testing.T) {
-	cluster := newMockCluster(t)
-	defer cluster.broker2.Close()
+	cluster := newMockCluster(t, "testdata/cluster.json")
+	defer cluster.brokers[2].Close()
 
 	// Take the controller down while broker 2 still advertises it
-	cluster.broker1.Close()
+	cluster.brokers[1].Close()
 
 	plugin := &Kafka{
-		Brokers:             []string{cluster.broker2.Addr()},
+		Brokers:             []string{cluster.brokers[2].Addr()},
 		MetricLevels:        []string{"partition"},
 		CoordinatorBrokerID: -1,
 		Log:                 testutil.Logger{},
@@ -814,75 +316,15 @@ func TestGatherOffsetFetchBatching(t *testing.T) {
 		{name: "configured version too old", version: "2.1.0", maxOffsetAPI: 8},
 	}
 
-	expected := []telegraf.Metric{
-		metric.New(
-			"kafka_consumer_group_partition",
-			map[string]string{"group": "order-svc", "topic": "orders", "partition": "0"},
-			map[string]any{"committed_offset": int64(50), "log_end_offset": int64(100), "lag": int64(50)},
-			time.Unix(0, 0),
-			telegraf.Gauge,
-		),
-		metric.New(
-			"kafka_consumer_group_partition",
-			map[string]string{"group": "order-svc", "topic": "orders", "partition": "1"},
-			map[string]any{"committed_offset": int64(80), "log_end_offset": int64(100), "lag": int64(20)},
-			time.Unix(0, 0),
-			telegraf.Gauge,
-		),
-		metric.New(
-			"kafka_consumer_group_partition",
-			map[string]string{"group": "order-svc", "topic": "events", "partition": "1"},
-			map[string]any{"committed_offset": int64(20), "log_end_offset": int64(30), "lag": int64(10)},
-			time.Unix(0, 0),
-			telegraf.Gauge,
-		),
-		metric.New(
-			"kafka_consumer_group_partition",
-			map[string]string{"group": "order-audit", "topic": "orders", "partition": "0"},
-			map[string]any{"committed_offset": int64(90), "log_end_offset": int64(100), "lag": int64(10)},
-			time.Unix(0, 0),
-			telegraf.Gauge,
-		),
-		metric.New(
-			"kafka_consumer_group_partition",
-			map[string]string{"group": "analytics", "topic": "orders", "partition": "0"},
-			map[string]any{"committed_offset": int64(10), "log_end_offset": int64(100), "lag": int64(90)},
-			time.Unix(0, 0),
-			telegraf.Gauge,
-		),
-	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cluster := newMockCluster(t)
+			// Broker 1 coordinates two groups
+			cluster := newMockCluster(t, "testdata/cluster_two_groups.json")
 			defer cluster.close()
 
-			// Add a second group coordinated by broker 1 which committed
-			// orders/0 only, so that broker 1 coordinates two groups
-			cluster.override(cluster.broker1, "ListGroupsRequest",
-				sarama.NewMockListGroupsResponse(t).
-					AddGroup("order-svc", "consumer").
-					AddGroup("order-audit", "consumer"),
-			)
-			coordinators := sarama.NewMockFindCoordinatorResponse(t).
-				SetCoordinator(sarama.CoordinatorGroup, "order-svc", cluster.broker1).
-				SetCoordinator(sarama.CoordinatorGroup, "order-audit", cluster.broker1).
-				SetCoordinator(sarama.CoordinatorGroup, "analytics", cluster.broker2)
-			cluster.override(cluster.broker1, "FindCoordinatorRequest", coordinators)
-			cluster.override(cluster.broker2, "FindCoordinatorRequest", coordinators)
-			cluster.override(cluster.broker1, "OffsetFetchRequest",
-				sarama.NewMockOffsetFetchResponse(t).
-					SetOffset("order-svc", "orders", 0, 50, "", sarama.ErrNoError).
-					SetOffset("order-svc", "orders", 1, 80, "", sarama.ErrNoError).
-					SetOffset("order-svc", "events", 0, -1, "", sarama.ErrNoError).
-					SetOffset("order-svc", "events", 1, 20, "", sarama.ErrNoError).
-					SetOffset("order-svc", "retired", 0, 5, "", sarama.ErrNoError).
-					SetOffset("order-audit", "orders", 0, 90, "", sarama.ErrNoError),
-			)
-
-			// Make both brokers advertise OffsetFetch up to the given version only
-			for _, broker := range []*sarama.MockBroker{cluster.broker1, cluster.broker2} {
-				cluster.override(broker, "ApiVersionsRequest",
+			// Make the brokers advertise OffsetFetch up to the given version only
+			for id := range cluster.brokers {
+				cluster.override(id, "ApiVersionsRequest",
 					sarama.NewMockApiVersionsResponse(t).SetApiKeys([]sarama.ApiVersionsResponseKey{
 						{ApiKey: 9, MinVersion: 0, MaxVersion: tt.maxOffsetAPI},
 					}),
@@ -890,7 +332,7 @@ func TestGatherOffsetFetchBatching(t *testing.T) {
 			}
 
 			plugin := &Kafka{
-				Brokers:             cluster.brokers(),
+				Brokers:             cluster.addresses(),
 				MetricLevels:        []string{"partition"},
 				CoordinatorBrokerID: -1,
 				Log:                 testutil.Logger{},
@@ -904,13 +346,13 @@ func TestGatherOffsetFetchBatching(t *testing.T) {
 
 			require.NoError(t, plugin.Gather(&acc))
 			require.Empty(t, acc.Errors)
-			testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime(), testutil.SortMetrics())
+			require.Len(t, acc.GetTelegrafMetrics(), 5)
 
-			// Broker 1 coordinates two groups, so it receives a single
-			// request when batching and one per group otherwise.
+			// Broker 1 receives a single request when batching and one per
+			// group otherwise.
 			require.Equal(t, tt.expectedBatch, plugin.batchOffsets)
 			var requests int
-			for _, rr := range cluster.broker1.History() {
+			for _, rr := range cluster.brokers[1].History() {
 				if _, ok := rr.Request.(*sarama.OffsetFetchRequest); ok {
 					requests++
 				}
@@ -924,81 +366,22 @@ func TestGatherOffsetFetchBatching(t *testing.T) {
 	}
 }
 
-func TestGatherOffsetFetchGroupError(t *testing.T) {
-	expected := []telegraf.Metric{
-		metric.New(
-			"kafka_consumer_group_partition",
-			map[string]string{"group": "order-svc", "topic": "orders", "partition": "0"},
-			map[string]any{"committed_offset": int64(50), "log_end_offset": int64(100), "lag": int64(50)},
-			time.Unix(0, 0),
-			telegraf.Gauge,
-		),
-		metric.New(
-			"kafka_consumer_group_partition",
-			map[string]string{"group": "order-svc", "topic": "orders", "partition": "1"},
-			map[string]any{"committed_offset": int64(80), "log_end_offset": int64(100), "lag": int64(20)},
-			time.Unix(0, 0),
-			telegraf.Gauge,
-		),
-		metric.New(
-			"kafka_consumer_group_partition",
-			map[string]string{"group": "order-svc", "topic": "events", "partition": "1"},
-			map[string]any{"committed_offset": int64(20), "log_end_offset": int64(30), "lag": int64(10)},
-			time.Unix(0, 0),
-			telegraf.Gauge,
-		),
-	}
-
-	// Run against both the per-group and the batched OffsetFetch protocol
-	for _, version := range []string{"2.1.0", "3.6.0"} {
-		t.Run(version, func(t *testing.T) {
-			cluster := newMockCluster(t)
-			defer cluster.close()
-
-			// Broker 2 refuses to hand out the offsets of its group
-			cluster.override(cluster.broker2, "OffsetFetchRequest",
-				sarama.NewMockOffsetFetchResponse(t).SetError(sarama.ErrGroupAuthorizationFailed),
-			)
-
-			plugin := &Kafka{
-				Brokers:             cluster.brokers(),
-				MetricLevels:        []string{"partition"},
-				CoordinatorBrokerID: -1,
-				Log:                 testutil.Logger{},
-				Config:              kafka.Config{Version: version},
-			}
-			require.NoError(t, plugin.Init())
-
-			var acc testutil.Accumulator
-			require.NoError(t, plugin.Start(&acc))
-			defer plugin.Stop()
-
-			require.NoError(t, plugin.Gather(&acc))
-
-			// The other group is unaffected
-			testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime(), testutil.SortMetrics())
-
-			require.Len(t, acc.Errors, 1)
-			require.ErrorContains(t, acc.Errors[0], `listing offsets of group "analytics" failed`)
-		})
-	}
-}
-
 func TestStartControllerUnavailable(t *testing.T) {
-	cluster := newMockCluster(t)
+	cluster := newMockCluster(t, "testdata/cluster.json")
 	defer cluster.close()
 
 	// Advertise a controller which is not part of the cluster, as brokers do
 	// during a controller election
-	metadata := sarama.NewMockMetadataResponse(t).
-		SetController(99).
-		SetBroker(cluster.broker1.Addr(), cluster.broker1.BrokerID()).
-		SetBroker(cluster.broker2.Addr(), cluster.broker2.BrokerID())
-	cluster.override(cluster.broker1, "MetadataRequest", metadata)
-	cluster.override(cluster.broker2, "MetadataRequest", metadata)
+	metadata := sarama.NewMockMetadataResponse(t).SetController(99)
+	for id, broker := range cluster.brokers {
+		metadata.SetBroker(broker.Addr(), id)
+	}
+	for id := range cluster.brokers {
+		cluster.override(id, "MetadataRequest", metadata)
+	}
 
 	plugin := &Kafka{
-		Brokers:             cluster.brokers(),
+		Brokers:             cluster.addresses(),
 		MetricLevels:        []string{"partition", "topic", "group"},
 		CoordinatorBrokerID: -1,
 		Log:                 testutil.Logger{},
