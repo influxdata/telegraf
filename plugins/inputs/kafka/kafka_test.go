@@ -330,7 +330,12 @@ func TestGatherOffsetFetchBatching(t *testing.T) {
 			for id := range cluster.brokers {
 				cluster.override(id, "ApiVersionsRequest",
 					sarama.NewMockApiVersionsResponse(t).SetApiKeys([]sarama.ApiVersionsResponseKey{
+						{ApiKey: 2, MinVersion: 0, MaxVersion: 20},
+						{ApiKey: 3, MinVersion: 0, MaxVersion: 20},
 						{ApiKey: 9, MinVersion: 0, MaxVersion: tt.maxOffsetAPI},
+						{ApiKey: 10, MinVersion: 0, MaxVersion: 20},
+						{ApiKey: 15, MinVersion: 0, MaxVersion: 20},
+						{ApiKey: 16, MinVersion: 0, MaxVersion: 20},
 					}),
 				)
 			}
@@ -682,7 +687,14 @@ func newMockCluster(t *testing.T, filename string) *mockCluster {
 		}
 
 		cluster.handlers[id] = map[string]sarama.MockResponse{
-			"ApiVersionsRequest":     sarama.NewMockApiVersionsResponse(t),
+			"ApiVersionsRequest": sarama.NewMockApiVersionsResponse(t).SetApiKeys([]sarama.ApiVersionsResponseKey{
+				{ApiKey: 2, MinVersion: 0, MaxVersion: 20},
+				{ApiKey: 3, MinVersion: 0, MaxVersion: 20},
+				{ApiKey: 9, MinVersion: 0, MaxVersion: 20},
+				{ApiKey: 10, MinVersion: 0, MaxVersion: 20},
+				{ApiKey: 15, MinVersion: 0, MaxVersion: 20},
+				{ApiKey: 16, MinVersion: 0, MaxVersion: 20},
+			}),
 			"MetadataRequest":        metadata,
 			"FindCoordinatorRequest": coordinators,
 			"ListGroupsRequest":      listGroups,
