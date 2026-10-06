@@ -22,9 +22,6 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
-// Number of attempts for fetching log end offsets.
-const logEndOffsetAttempts = 2
-
 type Kafka struct {
 	Brokers             []string        `toml:"brokers"`
 	Cluster             string          `toml:"cluster"`
@@ -100,14 +97,14 @@ func (k *Kafka) Init() error {
 }
 
 func (k *Kafka) Start(telegraf.Accumulator) error {
-	var err error
-	k.client, err = sarama.NewClient(k.Brokers, k.config)
+	c, err := sarama.NewClient(k.Brokers, k.config)
 	if err != nil {
 		return &internal.StartupError{
 			Err:   fmt.Errorf("creating client failed: %w", err),
 			Retry: errors.Is(err, sarama.ErrOutOfBrokers),
 		}
 	}
+	k.client = c
 
 	// With metadata_full disabled sarama fetches no metadata on connect and
 	// creating the cluster admin fails as it cannot find the controller, so
@@ -122,7 +119,7 @@ func (k *Kafka) Start(telegraf.Accumulator) error {
 		}
 	}
 
-	k.admin, err = sarama.NewClusterAdminFromClient(k.client)
+	a, err := sarama.NewClusterAdminFromClient(k.client)
 	if err != nil {
 		k.Stop()
 		// This only fails if the controller cannot be resolved, e.g. during an
@@ -132,6 +129,7 @@ func (k *Kafka) Start(telegraf.Accumulator) error {
 			Retry: true,
 		}
 	}
+	k.admin = a
 
 	return nil
 }
@@ -142,12 +140,14 @@ func (k *Kafka) Stop() {
 		if err := k.admin.Close(); err != nil {
 			k.Log.Errorf("Closing cluster admin failed: %v", err)
 		}
-	} else if k.client != nil {
+	}
+	k.admin = nil
+
+	if k.client != nil && !k.client.Closed() {
 		if err := k.client.Close(); err != nil {
 			k.Log.Errorf("Closing client failed: %v", err)
 		}
 	}
-	k.admin = nil
 	k.client = nil
 }
 
@@ -155,8 +155,7 @@ func (k *Kafka) Gather(acc telegraf.Accumulator) error {
 	// List the consumer groups known to the brokers matching the group filter
 	groups, err := k.selectGroups(acc)
 	if err != nil {
-		acc.AddError(err)
-		return nil
+		return err
 	}
 	if len(groups) == 0 {
 		return nil
@@ -183,8 +182,12 @@ func (k *Kafka) Gather(acc telegraf.Accumulator) error {
 	}
 
 	// Committed offsets outlive their topic, so skip the partitions of topics
-	// that no longer exist
-	logEndNeeded = k.dropDeletedTopics(acc, logEndNeeded)
+	// that no longer exist. If the topics cannot be described, all partitions
+	// are kept as the leader lookup skips the ones of deleted topics as well.
+	logEndNeeded, err = k.dropDeletedTopics(logEndNeeded)
+	if err != nil {
+		acc.AddError(err)
+	}
 
 	// Get the log end offsets from the partition leaders
 	logEnd := k.logEndOffsets(acc, logEndNeeded)
@@ -323,11 +326,9 @@ func (k *Kafka) describeGroups(acc telegraf.Accumulator, groups []string) map[st
 // committedOffsets returns the committed offsets of every group for the
 // partitions of topics matching the topic filter.
 func (k *Kafka) committedOffsets(acc telegraf.Accumulator, groups []string) map[string]map[topicPartition]int64 {
-	// Offsets of each group as returned by the brokers, by topic and partition
-	results := make(map[string]map[string]map[int32]*sarama.OffsetFetchResponseBlock, len(groups))
+	committed := make(map[string]map[topicPartition]int64, len(groups))
 
 	// Fetch the offsets of all groups with one request per coordinator
-	var batched bool
 	if k.batchOffsets {
 		request := make(map[string]map[string][]int32, len(groups))
 		for _, group := range groups {
@@ -336,8 +337,7 @@ func (k *Kafka) committedOffsets(acc telegraf.Accumulator, groups []string) map[
 		}
 
 		responses, err := k.admin.ListConsumerGroupOffsetsBatch(request)
-		batched = err == nil
-		if batched {
+		if err == nil {
 			for _, group := range groups {
 				response, ok := responses[group]
 				if !ok {
@@ -348,8 +348,9 @@ func (k *Kafka) committedOffsets(acc telegraf.Accumulator, groups []string) map[
 					acc.AddError(fmt.Errorf("batch listing offsets of group %q failed: %w", group, response.Err))
 					continue
 				}
-				results[group] = response.Blocks
+				committed[group] = k.filterOffsets(group, response.Blocks)
 			}
+			return committed
 		}
 
 		// On error, fall back to fetching the groups with individual requests
@@ -358,60 +359,60 @@ func (k *Kafka) committedOffsets(acc telegraf.Accumulator, groups []string) map[
 			// speak OffsetFetch v8, so stick to one request per group.
 			k.Log.Debug("Brokers do not support batched offset fetching, falling back to per-group requests")
 			k.batchOffsets = false
-		} else if err != nil {
+		} else {
 			// Retry group by group to only lose the groups actually affected.
 			k.Log.Debugf("Batched offset fetching failed, falling back to per-group requests: %v", err)
 		}
 	}
 
-	if !batched {
-		for _, group := range groups {
-			response, err := k.admin.ListConsumerGroupOffsets(group, nil)
-			if err != nil {
-				acc.AddError(fmt.Errorf("listing offsets of group %q failed: %w", group, err))
-				continue
-			}
-			results[group] = response.Blocks
+	for _, group := range groups {
+		response, err := k.admin.ListConsumerGroupOffsets(group, nil)
+		if err != nil {
+			acc.AddError(fmt.Errorf("listing offsets of group %q failed: %w", group, err))
+			continue
 		}
-	}
-
-	// Extract the offsets of the partitions of topics matching the filter
-	committed := make(map[string]map[topicPartition]int64, len(results))
-	for group, topics := range results {
-		offsets := make(map[topicPartition]int64)
-		for topic, partitions := range topics {
-			if !k.filterTopics.Match(topic) {
-				continue
-			}
-			for partition, block := range partitions {
-				if !errors.Is(block.Err, sarama.ErrNoError) {
-					k.Log.Debugf("Skipping offset of group %q for %s/%d: %v", group, topic, partition, block.Err)
-					continue
-				}
-				// A negative offset means the group never committed on this
-				// partition, so there is nothing to compute a lag from.
-				if block.Offset < 0 {
-					continue
-				}
-				offsets[topicPartition{topic: topic, partition: partition}] = block.Offset
-			}
-		}
-		committed[group] = offsets
+		committed[group] = k.filterOffsets(group, response.Blocks)
 	}
 
 	return committed
 }
 
+// filterOffsets extracts the committed offset of every partition the group
+// has an offset stored for from an OffsetFetch response, restricted by the
+// topic filter.
+func (k *Kafka) filterOffsets(group string, blocks map[string]map[int32]*sarama.OffsetFetchResponseBlock) map[topicPartition]int64 {
+	offsets := make(map[topicPartition]int64)
+	for topic, partitions := range blocks {
+		if !k.filterTopics.Match(topic) {
+			continue
+		}
+		for partition, block := range partitions {
+			if !errors.Is(block.Err, sarama.ErrNoError) {
+				k.Log.Debugf("Skipping offset of group %q for %s/%d: %v", group, topic, partition, block.Err)
+				continue
+			}
+			// A negative offset means the group never committed on this
+			// partition, so there is nothing to compute a lag from.
+			if block.Offset < 0 {
+				continue
+			}
+			offsets[topicPartition{topic: topic, partition: partition}] = block.Offset
+		}
+	}
+
+	return offsets
+}
+
 // dropDeletedTopics removes the partitions of topics that no longer exist.
-func (k *Kafka) dropDeletedTopics(acc telegraf.Accumulator, partitions map[topicPartition]bool) map[topicPartition]bool {
+// On error, the partitions are returned unchanged.
+func (k *Kafka) dropDeletedTopics(partitions map[topicPartition]bool) (map[topicPartition]bool, error) {
 	if len(partitions) == 0 {
-		return partitions
+		return partitions, nil
 	}
 
 	descriptions, err := k.describeTopics(uniqueTopics(partitions))
 	if err != nil {
-		acc.AddError(fmt.Errorf("describing topics failed: %w", err))
-		return partitions
+		return partitions, fmt.Errorf("describing topics failed: %w", err)
 	}
 
 	deleted := make(map[string]bool)
@@ -422,7 +423,7 @@ func (k *Kafka) dropDeletedTopics(acc telegraf.Accumulator, partitions map[topic
 		}
 	}
 	if len(deleted) == 0 {
-		return partitions
+		return partitions, nil
 	}
 
 	remaining := make(map[topicPartition]bool, len(partitions))
@@ -431,7 +432,7 @@ func (k *Kafka) dropDeletedTopics(acc telegraf.Accumulator, partitions map[topic
 			remaining[tp] = true
 		}
 	}
-	return remaining
+	return remaining, nil
 }
 
 // describeTopics fetches the metadata of the given topics from any broker.
@@ -466,11 +467,15 @@ func (k *Kafka) describeTopics(topics []string) ([]*sarama.TopicMetadata, error)
 // logEndOffsets resolves the log end offset of the given partitions using one
 // ListOffsets request per leader broker.
 func (k *Kafka) logEndOffsets(acc telegraf.Accumulator, partitions map[topicPartition]bool) map[topicPartition]int64 {
+	// A failed partition is retried once after refreshing the metadata, which
+	// picks up a leader change. More attempts would only delay the gather.
+	const attempts = 2
+
 	result := make(map[topicPartition]int64, len(partitions))
 	lastErr := make(map[topicPartition]error)
 
 	pending := partitions
-	for attempt := 0; attempt < logEndOffsetAttempts && len(pending) > 0; attempt++ {
+	for attempt := 0; attempt < attempts && len(pending) > 0; attempt++ {
 		if attempt > 0 {
 			// Refresh the cached leaders before retrying, sarama does not do it on its own.
 			if err := k.client.RefreshMetadata(uniqueTopics(pending)...); err != nil {
@@ -525,12 +530,6 @@ func (k *Kafka) logEndOffsets(acc telegraf.Accumulator, partitions map[topicPart
 	return result
 }
 
-type offsetBatch struct {
-	broker     *sarama.Broker
-	request    *sarama.OffsetRequest
-	partitions []topicPartition
-}
-
 // batchByLeader groups the partitions into one offset request per leader broker.
 func (k *Kafka) batchByLeader(partitions, retry map[topicPartition]bool, lastErr map[topicPartition]error) map[int32]*offsetBatch {
 	batches := make(map[int32]*offsetBatch)
@@ -561,14 +560,6 @@ func (k *Kafka) batchByLeader(partitions, retry map[topicPartition]bool, lastErr
 	return batches
 }
 
-// tags adds the cluster tag to the given tags if a cluster name is configured.
-func (k *Kafka) tags(tags map[string]string) map[string]string {
-	if k.Cluster != "" {
-		tags["cluster"] = k.Cluster
-	}
-	return tags
-}
-
 func (k *Kafka) emit(
 	acc telegraf.Accumulator,
 	group string,
@@ -589,11 +580,14 @@ func (k *Kafka) emit(
 		lag := max(logEndOffset-committedOffset, 0)
 
 		if slices.Contains(k.MetricLevels, "partition") {
-			tags := k.tags(map[string]string{
+			tags := map[string]string{
 				"group":     group,
 				"topic":     tp.topic,
 				"partition": strconv.FormatInt(int64(tp.partition), 10),
-			})
+			}
+			if k.Cluster != "" {
+				tags["cluster"] = k.Cluster
+			}
 			fields := map[string]any{
 				"committed_offset": committedOffset,
 				"log_end_offset":   logEndOffset,
@@ -613,10 +607,13 @@ func (k *Kafka) emit(
 
 	if slices.Contains(k.MetricLevels, "topic") {
 		for topic, aggregate := range topicAggregates {
-			tags := k.tags(map[string]string{
+			tags := map[string]string{
 				"group": group,
 				"topic": topic,
-			})
+			}
+			if k.Cluster != "" {
+				tags["cluster"] = k.Cluster
+			}
 			fields := map[string]any{
 				"lag_sum":    aggregate.sum,
 				"lag_max":    aggregate.max,
@@ -627,7 +624,10 @@ func (k *Kafka) emit(
 	}
 
 	if slices.Contains(k.MetricLevels, "group") && groupAggregate.partitions > 0 {
-		tags := k.tags(map[string]string{"group": group})
+		tags := map[string]string{"group": group}
+		if k.Cluster != "" {
+			tags["cluster"] = k.Cluster
+		}
 		fields := map[string]any{
 			"lag_sum":    groupAggregate.sum,
 			"lag_max":    groupAggregate.max,

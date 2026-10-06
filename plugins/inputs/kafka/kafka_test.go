@@ -730,11 +730,10 @@ func TestGatherCoordinatorBrokerUnknown(t *testing.T) {
 	require.NoError(t, plugin.Start(&acc))
 	defer plugin.Stop()
 
-	require.NoError(t, plugin.Gather(&acc))
-
+	err := plugin.Gather(&acc)
+	require.ErrorContains(t, err, "getting coordinator broker failed: finding broker 99 failed")
 	require.Empty(t, acc.GetTelegrafMetrics())
-	require.Len(t, acc.Errors, 1)
-	require.ErrorContains(t, acc.Errors[0], "getting coordinator broker failed: finding broker 99 failed")
+	require.Empty(t, acc.Errors)
 }
 
 func TestGatherBrokerDown(t *testing.T) {
