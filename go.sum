@@ -2033,8 +2033,8 @@ github.com/ncruces/go-strftime v1.0.0 h1:HMFp8mLCTPp341M/ZnA4qaf7ZlsbTc+miZjCLOF
 github.com/ncruces/go-strftime v1.0.0/go.mod h1:Fwc5htZGVVkseilnfgOVb9mKy6w1naJmn9CehxcKcls=
 github.com/ncw/swift/v2 v2.0.5 h1:9o5Gsd7bInAFEqsGPcaUdsboMbqf8lnNtxqWKFT9iz8=
 github.com/ncw/swift/v2 v2.0.5/go.mod h1:cbAO76/ZwcFrFlHdXPjaqWZ9R7Hdar7HpjRXBfbjigk=
-github.com/netsampler/goflow2/v2 v2.2.6 h1:pm+UEykIYV+lGJzrunYLNehoQtHlipJTp3lFhBpUkj0=
-github.com/netsampler/goflow2/v2 v2.2.6/go.mod h1:sKVfADpYP0NvkEeMRMh8/vz6T1yq4z1JZqO+N0+RGqk=
+github.com/netsampler/goflow2/v2 v2.2.7 h1:4TYOgwHsdSCOCrS1GeoXCv4HA7naAhpSouyUeHe64aM=
+github.com/netsampler/goflow2/v2 v2.2.7/go.mod h1:sKVfADpYP0NvkEeMRMh8/vz6T1yq4z1JZqO+N0+RGqk=
 github.com/newrelic/newrelic-telemetry-sdk-go v0.8.1 h1:6OX5VXMuj2salqNBc41eXKz6K+nV6OB/hhlGnAKCbwU=
 github.com/newrelic/newrelic-telemetry-sdk-go v0.8.1/go.mod h1:2kY6OeOxrJ+RIQlVjWDc/pZlT3MIf30prs6drzMfJ6E=
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e/go.mod h1:zD1mROLANZcx1PVRCS0qkT7pwLkGfwJo4zjcN/Tysno=
