@@ -1371,10 +1371,11 @@ func TestStartLegacyAPIVersion(t *testing.T) {
 	addr := server.Start(t)
 	defer server.Close()
 
+	logger := &testutil.CaptureLogger{}
 	plugin := &Docker{
 		Endpoint: addr,
 		Timeout:  config.Duration(time.Second * 5),
-		Log:      testutil.Logger{},
+		Log:      logger,
 	}
 	require.NoError(t, plugin.Init())
 
@@ -1383,6 +1384,11 @@ func TestStartLegacyAPIVersion(t *testing.T) {
 	defer plugin.Stop()
 
 	require.Equal(t, "1.39", plugin.client.ClientVersion())
+	texts := make([]string, 0, logger.NMessages())
+	for _, msg := range logger.Messages() {
+		texts = append(texts, msg.Text)
+	}
+	require.Contains(t, texts, "Daemon supports API version 1.39 at most, client now uses 1.39")
 	require.NoError(t, acc.GatherError(plugin.Gather))
 	require.NotEmpty(t, acc.GetTelegrafMetrics())
 }
@@ -1410,6 +1416,6 @@ func TestStartCurrentAPIVersionNotPinned(t *testing.T) {
 	require.NoError(t, acc.GatherError(plugin.Gather))
 	require.Equal(t, "1.45", plugin.client.ClientVersion())
 	for _, msg := range logger.Messages() {
-		require.NotContains(t, msg.Text, "pinning client")
+		require.NotContains(t, msg.Text, "Daemon supports API version")
 	}
 }
