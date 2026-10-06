@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/moby/moby/api/types/container"
-	"github.com/moby/moby/client"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -381,8 +380,8 @@ func TestGatherLegacyAPIVersionDaemonUnavailable(t *testing.T) {
 	require.Equal(t, "1.39", plugin.client.ClientVersion())
 }
 
-func TestStartCurrentAPIVersionNotPinned(t *testing.T) {
-	server := &mock.Server{}
+func TestGatherCurrentAPIVersionNotPinned(t *testing.T) {
+	server := &mock.Server{APIVersion: "1.45"}
 	addr := server.Start(t)
 	defer server.Close()
 
@@ -396,5 +395,7 @@ func TestStartCurrentAPIVersionNotPinned(t *testing.T) {
 	require.NoError(t, plugin.Start(&acc))
 	defer plugin.Stop()
 
-	require.Equal(t, client.MaxAPIVersion, plugin.client.ClientVersion())
+	original := plugin.client
+	require.NoError(t, plugin.Gather(&acc))
+	require.Same(t, original, plugin.client)
 }
