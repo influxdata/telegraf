@@ -11,6 +11,10 @@
   to the machine Telegraf runs on now fails on startup, so please check your
   `vsock` addresses.
 
+### Features
+
+- `inputs` Use doas instead of sudo on OpenBSD when `use_sudo` is enabled
+
 ## v1.40.1 [2026-09-21]
 
 ### Bugfixes

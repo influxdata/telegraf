@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/common/sudo"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -72,7 +73,7 @@ func (f *Fail2ban) Gather(acc telegraf.Accumulator) error {
 	var args []string
 
 	if f.UseSudo {
-		name = "sudo"
+		name = sudo.Binary()
 		args = append(args, f.path)
 	}
 

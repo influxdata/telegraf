@@ -14,6 +14,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/common/sudo"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -337,7 +338,7 @@ func openntpdRunner(cmdName string, timeout config.Duration, useSudo bool) (*byt
 
 	if useSudo {
 		cmdArgs = append([]string{cmdName}, cmdArgs...)
-		cmd = exec.Command("sudo", cmdArgs...)
+		cmd = exec.Command(sudo.Binary(), cmdArgs...)
 	}
 
 	var out bytes.Buffer
