@@ -929,7 +929,7 @@ func (e *endpoint) loadCustomProperties(entity interface{}, propertyInclude []st
 	for _, property := range propertyInclude {
 		value := e.getExtraProperty(entity, property)
 		if value != nil {
-			key := e.makePropertyIdentifier(property)
+			key := strings.ReplaceAll(property, ".", e.parent.Separator)
 			cvs[key] = value
 		}
 	}
@@ -1319,7 +1319,7 @@ func (e *endpoint) collectChunk(
 				_, found := buckets[bKey]
 				if !found {
 					fields := map[string]interface{}{fn: true}
-					tags := make(map[string]string)
+					tags := make(map[string]string, len(t)+len(objectRef.customProperties))
 					for k, v := range t {
 						tags[k] = v
 					}
@@ -1499,8 +1499,4 @@ func (e *endpoint) getExtraProperty(entity interface{}, fieldPath string) interf
 	}
 	e.parent.Log.Warnf("Field %s of %s no interface. Skipping", fieldPath, reflect.TypeOf(entity))
 	return nil
-}
-
-func (e *endpoint) makePropertyIdentifier(input string) string {
-	return strings.ReplaceAll(input, ".", e.parent.Separator)
 }
