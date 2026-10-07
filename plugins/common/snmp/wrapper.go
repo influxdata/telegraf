@@ -32,9 +32,21 @@ func (gs GosnmpWrapper) Host() string {
 	return gs.Target
 }
 
+// Get wraps GoSNMP.Get() and reconnects first if the connection was closed.
+func (gs GosnmpWrapper) Get(oids []string) (*gosnmp.SnmpPacket, error) {
+	if err := gs.Reconnect(); err != nil {
+		return nil, err
+	}
+	return gs.GoSNMP.Get(oids)
+}
+
 // Walk wraps GoSNMP.Walk() or GoSNMP.BulkWalk(), depending on whether the
-// connection is using SNMPv1 or newer.
+// connection is using SNMPv1 or newer, and reconnects first if the
+// connection was closed.
 func (gs GosnmpWrapper) Walk(oid string, fn gosnmp.WalkFunc) error {
+	if err := gs.Reconnect(); err != nil {
+		return err
+	}
 	if gs.Version == gosnmp.Version1 {
 		return gs.GoSNMP.Walk(oid, fn)
 	}
@@ -201,10 +213,19 @@ func (gs *GosnmpWrapper) SetAgent(agent string) error {
 	return nil
 }
 
+// Reconnect connects again if the connection was closed. An SNMPv3 session
+// keeps the engine ID discovered on the first request, so it is reset to
+// discover the engine ID again, as the agent may have restarted with a new one.
 func (gs GosnmpWrapper) Reconnect() error {
-	if gs.Conn == nil {
-		return gs.Connect()
+	if gs.Conn != nil {
+		return nil
 	}
 
-	return nil
+	if usm, ok := gs.SecurityParameters.(*gosnmp.UsmSecurityParameters); ok {
+		usm.AuthoritativeEngineID = ""
+		usm.AuthoritativeEngineBoots = 0
+		usm.AuthoritativeEngineTime = 0
+	}
+
+	return gs.Connect()
 }

@@ -579,12 +579,9 @@ func TestGather(t *testing.T) {
 	require.Equal(t, "baz", m2.Tags["myfield1"])
 	require.Len(t, m2.Fields, 1)
 	require.Equal(t, 123456, m2.Fields["myOtherField"])
-
-	// The connection is kept for the next gather
-	require.Same(t, tsc, s.connectionCache[0])
 }
 
-func TestGatherDropsConnectionOnError(t *testing.T) {
+func TestGatherClosesConnectionOnError(t *testing.T) {
 	conn := &testSNMPConnection{
 		host: "tsc",
 		err:  errors.New("incoming packet is not authentic, discarding"),
@@ -607,10 +604,9 @@ func TestGatherDropsConnectionOnError(t *testing.T) {
 	require.Len(t, acc.Errors, 1)
 	require.ErrorContains(t, acc.Errors[0], "not authentic")
 
-	// The failed connection is closed and dropped so the next gather sets up
-	// a fresh one
+	// The failed connection is closed so the next request reconnects
 	require.True(t, conn.closed)
-	require.Nil(t, s.connectionCache[0])
+	require.Same(t, conn, s.connectionCache[0])
 }
 
 func TestGather_host(t *testing.T) {
