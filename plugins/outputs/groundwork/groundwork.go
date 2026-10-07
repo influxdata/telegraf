@@ -12,6 +12,7 @@ import (
 
 	"github.com/gwos/tcg/sdk/clients"
 	"github.com/gwos/tcg/sdk/log"
+	"github.com/gwos/tcg/sdk/mapping"
 	"github.com/gwos/tcg/sdk/transit"
 	"github.com/hashicorp/go-uuid"
 
@@ -31,18 +32,25 @@ type metricMeta struct {
 }
 
 type Groundwork struct {
-	Server              string          `toml:"url"`
-	AgentID             string          `toml:"agent_id"`
-	Username            config.Secret   `toml:"username"`
-	Password            config.Secret   `toml:"password"`
-	DefaultAppType      string          `toml:"default_app_type"`
-	DefaultHost         string          `toml:"default_host"`
-	DefaultServiceState string          `toml:"default_service_state"`
-	GroupTag            string          `toml:"group_tag"`
-	ResourceTag         string          `toml:"resource_tag"`
-	AliasTag            string          `toml:"alias_tag"`
-	ServiceTag          string          `toml:"service_tag"`
-	Log                 telegraf.Logger `toml:"-"`
+	Server              string           `toml:"url"`
+	AgentID             string           `toml:"agent_id"`
+	Username            config.Secret    `toml:"username"`
+	Password            config.Secret    `toml:"password"`
+	DefaultAppType      string           `toml:"default_app_type"`
+	DefaultHost         string           `toml:"default_host"`
+	DefaultServiceState string           `toml:"default_service_state"`
+	GroupTag            string           `toml:"group_tag"`
+	ResourceTag         string           `toml:"resource_tag"`
+	AliasTag            string           `toml:"alias_tag"`
+	ServiceTag          string           `toml:"service_tag"`
+	MapHostGroup        mapping.Mappings `toml:"map_hostgroup"`
+	MapHostAlias        mapping.Mappings `toml:"map_hostalias"`
+	MapHostName         mapping.Mappings `toml:"map_hostname"`
+	MapService          mapping.Mappings `toml:"map_service"`
+	MapStatus           mapping.Mappings `toml:"map_status"`
+	MapMessage          mapping.Mappings `toml:"map_message"`
+	MapIgnore           mapping.Mappings `toml:"map_ignore"`
+	Log                 telegraf.Logger  `toml:"-"`
 	client              clients.GWClient
 }
 
@@ -75,6 +83,22 @@ func (g *Groundwork) Init() error {
 	if !validStatus(g.DefaultServiceState) {
 		return errors.New(`invalid "default_service_state" provided`)
 	}
+	for _, m := range []struct {
+		name     string
+		mappings mapping.Mappings
+	}{
+		{"map_hostgroup", g.MapHostGroup},
+		{"map_hostalias", g.MapHostAlias},
+		{"map_hostname", g.MapHostName},
+		{"map_service", g.MapService},
+		{"map_status", g.MapStatus},
+		{"map_message", g.MapMessage},
+		{"map_ignore", g.MapIgnore},
+	} {
+		if err := m.mappings.Compile(); err != nil {
+			return fmt.Errorf("compiling %q failed: %w", m.name, err)
+		}
+	}
 
 	username, err := g.Username.Get()
 	if err != nil {
@@ -86,14 +110,12 @@ func (g *Groundwork) Init() error {
 		return fmt.Errorf("getting password failed: %w", err)
 	}
 	g.client = clients.GWClient{
-		AppName: "telegraf",
-		AppType: g.DefaultAppType,
-		GWConnection: &clients.GWConnection{
-			HostName:           g.Server,
-			UserName:           username.String(),
-			Password:           password.String(),
-			IsDynamicInventory: true,
-		},
+		AppName:            "telegraf",
+		AppType:            g.DefaultAppType,
+		HostName:           g.Server,
+		UserName:           username.String(),
+		Password:           password.String(),
+		IsDynamicInventory: true,
 	}
 	username.Destroy()
 	password.Destroy()
@@ -122,14 +144,27 @@ func (g *Groundwork) Close() error {
 
 func (g *Groundwork) Write(metrics []telegraf.Metric) error {
 	groupMap := make(map[string][]transit.ResourceRef)
-	resourceToServicesMap := make(map[string][]transit.MonitoredService)
-	resourceToAliasMap := make(map[string]string)
+	resourceMap := make(map[string]*transit.MonitoredResource)
 	for _, metric := range metrics {
-		meta, service := g.parseMetric(metric)
+		meta, service, err := g.parseMetric(metric)
+		if err != nil {
+			g.Log.Debugf("skipping metric %q: %v", metric.Name(), err)
+			continue
+		}
 		resource := meta.resource
-		resourceToServicesMap[resource] = append(resourceToServicesMap[resource], *service)
+		res, ok := resourceMap[resource]
+		if !ok {
+			res = &transit.MonitoredResource{
+				Name:          resource,
+				Type:          transit.ResourceTypeHost,
+				Status:        transit.HostUp,
+				LastCheckTime: transit.NewTimestamp(),
+			}
+			resourceMap[resource] = res
+		}
+		res.Services = append(res.Services, *service)
 		if meta.alias != "" {
-			resourceToAliasMap[resource] = meta.alias
+			res.SetProperty("Alias", meta.alias)
 		}
 
 		group := meta.group
@@ -156,19 +191,13 @@ func (g *Groundwork) Write(metrics []telegraf.Metric) error {
 		})
 	}
 
-	resources := make([]transit.MonitoredResource, 0, len(resourceToServicesMap))
-	for resourceName, services := range resourceToServicesMap {
-		res := transit.MonitoredResource{
-			Name:          resourceName,
-			Type:          transit.ResourceTypeHost,
-			Status:        transit.HostUp,
-			LastCheckTime: transit.NewTimestamp(),
-			Services:      services,
-		}
-		if alias, ok := resourceToAliasMap[resourceName]; ok {
-			res.SetProperty("Alias", alias)
-		}
-		resources = append(resources, res)
+	if len(resourceMap) == 0 {
+		return nil
+	}
+
+	resources := make([]transit.MonitoredResource, 0, len(resourceMap))
+	for _, res := range resourceMap {
+		resources = append(resources, *res)
 	}
 
 	traceToken, err := uuid.GenerateUUID()
@@ -176,7 +205,7 @@ func (g *Groundwork) Write(metrics []telegraf.Metric) error {
 		return err
 	}
 	requestJSON, err := json.Marshal(transit.ResourcesWithServicesRequest{
-		Context: &transit.TracerContext{
+		Context: transit.TracerContext{
 			AppType:    g.DefaultAppType,
 			AgentID:    g.AgentID,
 			TraceToken: traceToken,
@@ -213,19 +242,85 @@ func init() {
 	})
 }
 
-func (g *Groundwork) parseMetric(metric telegraf.Metric) (metricMeta, *transit.MonitoredService) {
+var errIgnored = errors.New("map_ignore matched")
+
+// mappingInput returns the metric tags and string fields for applying mappings.
+// Tags take precedence over fields with the same name.
+func mappingInput(metric telegraf.Metric) map[string]string {
+	input := metric.Tags()
+	for _, field := range metric.FieldList() {
+		if _, ok := input[field.Key]; ok {
+			continue
+		}
+		switch v := field.Value.(type) {
+		case string:
+			input[field.Key] = v
+		case []byte:
+			input[field.Key] = string(v)
+		}
+	}
+	return input
+}
+
+func (g *Groundwork) parseMetric(metric telegraf.Metric) (metricMeta, *transit.MonitoredService, error) {
+	var (
+		input map[string]string
+		err   error
+	)
+	// tags returns the metric tags and string fields, built once on first use.
+	tags := func() map[string]string {
+		if input == nil {
+			input = mappingInput(metric)
+		}
+		return input
+	}
+	// apply overrides *dst with the mapped value when m is configured and matches.
+	// A mismatch is recorded in err when required, otherwise *dst keeps its default.
+	apply := func(name string, m mapping.Mappings, valid func(string) bool, required bool, dst *string) {
+		if err != nil || len(m) == 0 {
+			return
+		}
+		v, ok, e := m.Lookup(tags())
+		if ok && valid != nil && !valid(v) {
+			ok, e = false, fmt.Errorf("invalid mapped value %q", v)
+		}
+		switch {
+		case ok:
+			*dst = v
+		case required:
+			err = fmt.Errorf("%s: %w", name, e)
+		default:
+			g.Log.Debugf("%s on metric %q: %v, using default", name, metric.Name(), e)
+		}
+	}
+
+	if len(g.MapIgnore) > 0 && g.MapIgnore.Matches(tags()) {
+		return metricMeta{}, nil, errIgnored
+	}
+
 	group, _ := metric.GetTag(g.GroupTag)
+	apply("map_hostgroup", g.MapHostGroup, nil, false, &group)
 
 	resource := g.DefaultHost
 	if v, ok := metric.GetTag(g.ResourceTag); ok {
 		resource = v
 	}
+	apply("map_hostname", g.MapHostName, nil, true, &resource)
 
 	alias, _ := metric.GetTag(g.AliasTag)
+	apply("map_hostalias", g.MapHostAlias, nil, false, &alias)
 
 	service := metric.Name()
 	if v, ok := metric.GetTag(g.ServiceTag); ok {
 		service = v
+	}
+	apply("map_service", g.MapService, nil, true, &service)
+
+	var mappedStatus, mappedMessage string
+	apply("map_status", g.MapStatus, validStatus, false, &mappedStatus)
+	apply("map_message", g.MapMessage, nil, false, &mappedMessage)
+	if err != nil {
+		return metricMeta{}, nil, err
 	}
 
 	unitType := string(transit.UnitCounter)
@@ -341,7 +436,9 @@ func (g *Groundwork) parseMetric(metric telegraf.Metric) (metricMeta, *transit.M
 		})
 	}
 
-	if m, ok := metric.GetTag("message"); ok {
+	if mappedMessage != "" {
+		serviceObject.LastPluginOutput = strings.ToValidUTF8(mappedMessage, "?")
+	} else if m, ok := metric.GetTag("message"); ok {
 		serviceObject.LastPluginOutput = strings.ToValidUTF8(m, "?")
 	} else if m, ok := metric.GetField("message"); ok {
 		switch m := m.(type) {
@@ -355,6 +452,10 @@ func (g *Groundwork) parseMetric(metric telegraf.Metric) (metricMeta, *transit.M
 	}
 
 	func() {
+		if mappedStatus != "" {
+			serviceObject.Status = transit.MonitorStatus(mappedStatus)
+			return
+		}
 		if s, ok := metric.GetTag("status"); ok && validStatus(s) {
 			serviceObject.Status = transit.MonitorStatus(s)
 			return
@@ -380,7 +481,7 @@ func (g *Groundwork) parseMetric(metric telegraf.Metric) (metricMeta, *transit.M
 		serviceObject.Status = status
 	}()
 
-	return metricMeta{alias: alias, group: group, resource: resource}, &serviceObject
+	return metricMeta{alias: alias, group: group, resource: resource}, &serviceObject, nil
 }
 
 func validStatus(status string) bool {

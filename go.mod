@@ -123,7 +123,7 @@ require (
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674
 	github.com/gosnmp/gosnmp v1.45.0
 	github.com/grid-x/modbus v1.5.1
-	github.com/gwos/tcg/sdk v0.0.0-20240830123415-f8a34bba6358
+	github.com/gwos/tcg/sdk v0.0.0-20261005080747-a1824c7ae098
 	github.com/hashicorp/consul/api v1.34.5
 	github.com/hashicorp/go-uuid v1.0.4
 	github.com/hashicorp/golang-lru/v2 v2.0.7
