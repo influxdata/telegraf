@@ -158,15 +158,20 @@ jobs:
           command: GOGC=80 GOMEMLIMIT=6144MiB GOOS=windows $GOPATH/bin/golangci-lint run --verbose --timeout=30m --concurrency 4
           no_output_timeout: 30m
       - run:
-          name: "golangci-lint/Windows arm64 and 386"
+          name: "golangci-lint/Windows arm64"
           # Files with an architecture suffix (e.g. pdh_arm64.go) are not part of the amd64 run above,
-          # so lint the packages containing them for the other shipped Windows architectures
+          # so lint the packages containing them for that architecture
           command: |
-            pkgs=$(git ls-files '*_arm64.go' '*_386.go' | xargs -n1 dirname | sort -u | sed 's|^|./|')
+            pkgs=$(git ls-files '*_arm64.go' | xargs -n1 dirname | sort -u | sed 's|^|./|')
             [ -n "$pkgs" ] || exit 0
-            for arch in arm64 386; do
-              GOGC=80 GOMEMLIMIT=6144MiB GOOS=windows GOARCH=$arch $GOPATH/bin/golangci-lint run --verbose --timeout=30m --concurrency 4 $pkgs
-            done
+            GOGC=80 GOMEMLIMIT=6144MiB GOOS=windows GOARCH=arm64 $GOPATH/bin/golangci-lint run --verbose --timeout=30m --concurrency 4 $pkgs
+          no_output_timeout: 30m
+      - run:
+          name: "golangci-lint/Windows 386"
+          command: |
+            pkgs=$(git ls-files '*_386.go' | xargs -n1 dirname | sort -u | sed 's|^|./|')
+            [ -n "$pkgs" ] || exit 0
+            GOGC=80 GOMEMLIMIT=6144MiB GOOS=windows GOARCH=386 $GOPATH/bin/golangci-lint run --verbose --timeout=30m --concurrency 4 $pkgs
           no_output_timeout: 30m
   test-go-linux:
     executor: telegraf-ci
