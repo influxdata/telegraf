@@ -34,6 +34,14 @@
   `<measurement>-<YYYYMMDDhhmmss>-<uuid>.parquet` and never reuses a file.
   This fixes an edge case where dataloss could occur when auto rotating
   parquet files and multiple writers using the same directory.
+- PR [#19868](https://github.com/influxdata/telegraf/pull/19868) makes
+  `outputs.groundwork` apply `default_service_state` to services whose status
+  is neither given by a `status` tag or field nor computed from thresholds.
+  With the default setting, services of metrics without numeric fields, such
+  as text-only log metrics, now get `SERVICE_OK` instead of `SERVICE_UNKNOWN`.
+  If you set `default_service_state`, it now also applies to metrics with
+  numeric fields but without thresholds, which used to get `SERVICE_OK`.
+  Please check alerts relying on these states.
 
 ## v1.40.2 [2026-10-12]
 
