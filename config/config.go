@@ -584,7 +584,9 @@ func (c *Config) LoadAll(configFiles ...string) error {
 	sort.Stable(c.Processors)
 	sort.Stable(c.AggProcessors)
 
-	if c.Agent.SkipProcessorsBeforeAggregators {
+	// Without aggregators there is no second processor run, so skipping the
+	// first one would drop processing altogether
+	if c.Agent.SkipProcessorsBeforeAggregators && len(c.Aggregators) > 0 {
 		c.Processors = make(models.RunningProcessors, 0)
 	}
 
