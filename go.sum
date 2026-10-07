@@ -2394,8 +2394,8 @@ github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62 h1:Oj2e7Sae4XrOs
 github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62/go.mod h1:qUzPVlSj2UgxJkVbH0ZwuuiR46U8RBMDT5KLY78Ifpw=
 github.com/tdrn-org/go-fritzsmarthome v0.1.1 h1:fKGUTFXv7OqnsCR+QFcOaRzxUcBJhrrnH1CMNgoooDw=
 github.com/tdrn-org/go-fritzsmarthome v0.1.1/go.mod h1:fOljtkC9qoSWTpYdj9Z8Bt/iC249TzxET0Rpl9sPddg=
-github.com/tdrn-org/go-hue v1.2.2 h1:HpCvEG9V6J9a8ZkrmotEGFH+gUlrWzecGgkhAsaWrMY=
-github.com/tdrn-org/go-hue v1.2.2/go.mod h1:q473Gr9f+7cIgT7qMff7IpEEUhCo/S41epzgtXDc17k=
+github.com/tdrn-org/go-hue v1.2.3 h1:uP7+o8msKw8ouYyrrW2UD+5+VMMBJiO13LwCnAx6BfY=
+github.com/tdrn-org/go-hue v1.2.3/go.mod h1:HIbN8NISg9q8tmFh4+FLPfJEGH0J6H0uusopRnfkDCc=
 github.com/tdrn-org/go-nsdp v0.5.3 h1:iiKLNUNRT1puinPtLst5Wz0mxXhIbHZk7BgBiMCfG9s=
 github.com/tdrn-org/go-nsdp v0.5.3/go.mod h1:m6vncy7adiWSn2p6tzJqPsn/bXV8+/Z0aDT5cDjZDnU=
 github.com/tdrn-org/go-tr064 v0.4.0 h1:9dtdL6ALvBxcol9zY/cNsxKuchXpke9xtnSzagjf5i0=
