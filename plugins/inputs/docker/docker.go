@@ -16,6 +16,7 @@ import (
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/api/types/system"
 	"github.com/moby/moby/client"
+	"github.com/moby/moby/client/pkg/versions"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -142,9 +143,11 @@ func (d *Docker) Init() error {
 
 func (d *Docker) Start(telegraf.Accumulator) error {
 	// Create a new client, this does not connect
+	var options []client.Opt
 	switch d.Endpoint {
 	case "ENV":
-		c, err := client.New(client.FromEnv)
+		options = []client.Opt{client.FromEnv}
+		c, err := client.New(options...)
 		if err != nil {
 			return fmt.Errorf("creating client from environment failed: %w", err)
 		}
@@ -155,7 +158,7 @@ func (d *Docker) Start(telegraf.Accumulator) error {
 			return fmt.Errorf("creating TLS configuration failed: %w", err)
 		}
 
-		options := []client.Opt{
+		options = []client.Opt{
 			client.WithUserAgent("engine-api-cli-1.0"),
 			client.WithHost(d.Endpoint),
 		}
@@ -175,12 +178,28 @@ func (d *Docker) Start(telegraf.Accumulator) error {
 	// Use Ping to check connectivity - this is a lightweight check
 	ctxPing, cancelPing := context.WithTimeout(context.Background(), time.Duration(d.Timeout))
 	defer cancelPing()
-	if _, err := d.client.Ping(ctxPing, client.PingOptions{}); err != nil {
+	ping, err := d.client.Ping(ctxPing, client.PingOptions{})
+	if err != nil {
 		d.Stop()
 		return &internal.StartupError{
 			Err:   fmt.Errorf("failed to ping daemon: %w", err),
 			Retry: client.IsErrConnectionFailed(err),
 		}
+	}
+
+	// Negotiation refuses to go below client.MinAPIVersion and the library
+	// discards that error, leaving the client at a version the daemon rejects
+	if ping.APIVersion != "" && versions.LessThan(ping.APIVersion, client.MinAPIVersion) &&
+		versions.GreaterThan(d.client.ClientVersion(), ping.APIVersion) {
+		options = append(options, client.WithAPIVersion(ping.APIVersion))
+		c, err := client.New(options...)
+		if err != nil {
+			d.Stop()
+			return fmt.Errorf("creating client for API version %s failed: %w", ping.APIVersion, err)
+		}
+		d.client.Close()
+		d.client = c
+		d.Log.Infof("Daemon supports API version %s at most, client now uses %s", ping.APIVersion, d.client.ClientVersion())
 	}
 
 	// Check API version compatibility
