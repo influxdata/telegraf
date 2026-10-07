@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -355,6 +356,13 @@ func (g *Groundwork) parseMetric(metric telegraf.Metric) (metricMeta, *transit.M
 				serviceObject.Status = transit.MonitorStatus(status)
 				return
 			}
+		}
+		// Without thresholds there is nothing to compute the status from,
+		// so the service keeps default_service_state.
+		if !slices.ContainsFunc(serviceObject.Metrics, func(ts transit.TimeSeries) bool {
+			return len(ts.Thresholds) > 0
+		}) {
+			return
 		}
 		status, err := transit.CalculateServiceStatus(&serviceObject.Metrics)
 		if err != nil {
