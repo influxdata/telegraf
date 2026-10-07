@@ -2,6 +2,7 @@ package starlark
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/gob"
 	"errors"
 	"fmt"
@@ -33,73 +34,72 @@ type Common struct {
 }
 
 func (s *Common) GetState() any {
-	// Return the actual byte-type instead of nil allowing the persister
-	// to guess instantiate variable of the appropriate type
+	// Return an empty string allowing the persister to guess the state type
+	// for later restore
 	if s.state == nil {
-		return make([]byte, 0)
+		return ""
 	}
 
-	// Convert the starlark dict into a golang dictionary for serialization
-	state := make(map[string]any, s.state.Len())
-	items := s.state.Items()
-	for _, item := range items {
-		if len(item) != 2 {
-			// We do expect key-value pairs in the state so there should be
-			// two items.
-			s.Log.Errorf("state item %+v does not contain a key-value pair", item)
-			continue
-		}
-		k, ok := item.Index(0).(starlark.String)
-		if !ok {
-			s.Log.Errorf("state item %+v has invalid key type %T", item, item.Index(0))
-			continue
-		}
-		v, err := asGoValue(item.Index(1))
-		if err != nil {
-			s.Log.Errorf("state item %+v value cannot be converted: %v", item, err)
-			continue
-		}
-		state[k.GoString()] = v
-	}
-
-	// Do a binary GOB encoding to preserve types
-	var buf bytes.Buffer
-	if err := gob.NewEncoder(&buf).Encode(state); err != nil {
+	// Marshal the state
+	state, err := marshal(s.state)
+	if err != nil {
 		s.Log.Errorf("encoding state failed: %v", err)
-		return make([]byte, 0)
+		return ""
 	}
-
-	return buf.Bytes()
+	return "v1:" + state
 }
 
 func (s *Common) SetState(state any) error {
-	data, ok := state.([]byte)
+	// Handle old and new serialization format
+	data, ok := state.(string)
 	if !ok {
 		return fmt.Errorf("unexpected type %T for state", state)
 	}
-	if len(data) == 0 {
+
+	// An empty string denotes an empty state
+	if data == "" {
 		return nil
 	}
 
-	// Decode the binary GOB encoding
-	var dict map[string]any
-	if err := gob.NewDecoder(bytes.NewBuffer(data)).Decode(&dict); err != nil {
-		return fmt.Errorf("decoding state failed: %w", err)
-	}
-
-	// Convert the golang dict back to starlark types
-	s.state = starlark.NewDict(len(dict))
-	for k, v := range dict {
-		sv, err := asStarlarkValue(v)
-		if err != nil {
-			return fmt.Errorf("value %v of state item %q cannot be set: %w", v, k, err)
+	// We need to handle the new format with a version prefix as well as the
+	// old format where data is encoded in GOB binary format. For the old format
+	// data is base64 encoded through JSON marshaling.
+	// So determine if we do see a version prefix and additionally check for
+	// base64 encoding for a robust guess.
+	if version, d, found := strings.Cut(data, ":"); found {
+		if version != "v1" {
+			return fmt.Errorf("invalid state format version %q, only supporting v1", version)
 		}
-		if err := s.state.SetKey(starlark.String(k), sv); err != nil {
-			return fmt.Errorf("state item %q cannot be set: %w", k, err)
+		// We got the new format
+		decodedState, err := unmarshal(d)
+		if err != nil {
+			return fmt.Errorf("decoding state failed: %w", err)
+		}
+		s.state = decodedState
+	} else {
+		// We likely got the old format so try old deserialization
+		buf, err := base64.StdEncoding.DecodeString(data)
+		if err != nil {
+			return errors.New("invalid state format")
+		}
+		var dict map[string]any
+		if err := gob.NewDecoder(bytes.NewBuffer(buf)).Decode(&dict); err != nil {
+			return fmt.Errorf("decoding state (old format) failed: %w", err)
+		}
+
+		// Convert the golang dict back to starlark types
+		s.state = starlark.NewDict(len(dict))
+		for k, v := range dict {
+			sv, err := asStarlarkValue(v)
+			if err != nil {
+				return fmt.Errorf("value %v of state item %q cannot be set: %w", v, k, err)
+			}
+			if err := s.state.SetKey(starlark.String(k), sv); err != nil {
+				return fmt.Errorf("state item %q cannot be set: %w", k, err)
+			}
 		}
 	}
 	s.builtins["state"] = s.state
-
 	return s.InitProgram()
 }
 

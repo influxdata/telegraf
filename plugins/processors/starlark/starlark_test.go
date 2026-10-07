@@ -1,8 +1,6 @@
 package starlark
 
 import (
-	"bytes"
-	"encoding/gob"
 	"errors"
 	"os"
 	"path/filepath"
@@ -3617,6 +3615,106 @@ def apply(metric):
 	testutil.RequireMetricsEqual(t, expected, actual)
 }
 
+// TestStatePersistenceCompatibility verifies that we can read states in all
+// released persistence formats so far
+func TestStatePersistenceCompatibility(t *testing.T) {
+	tests := []struct {
+		name      string
+		persisted string
+	}{
+		{
+			// On-disk data for initial format with after gob-encoding and serialization to JSON
+			name:      "v0 gob format",
+			persisted: "DX8EAQL/gAABDAEQAAAe/4AAAQhpbnN0YW5jZQZzdHJpbmcMCAAGbXlob3N0",
+		},
+		{
+			// On-disk data for v1 format supporting complex types
+			name:      "v1 format",
+			persisted: `v1:["D","s:instance","s:myhost"]`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			source := `
+def apply(metric):
+  count = state.get("count", 0)
+  count += 1
+  state["count"] = count
+
+  metric.fields["count"] = count
+  metric.tags["instance"] = state.get("instance", "unknown")
+
+  return metric
+`
+			// Define the metrics
+			input := []telegraf.Metric{
+				metric.New(
+					"test",
+					map[string]string{},
+					map[string]any{"value": 42},
+					time.Unix(1713188113, 10),
+				),
+				metric.New(
+					"test",
+					map[string]string{},
+					map[string]any{"value": 42},
+					time.Unix(1713188113, 20),
+				),
+				metric.New(
+					"test",
+					map[string]string{},
+					map[string]any{"value": 42},
+					time.Unix(1713188113, 30),
+				)}
+			expected := []telegraf.Metric{
+				metric.New(
+					"test",
+					map[string]string{"instance": "myhost"},
+					map[string]any{"value": 42, "count": 1},
+					time.Unix(1713188113, 10),
+				),
+				metric.New(
+					"test",
+					map[string]string{"instance": "myhost"},
+					map[string]any{"value": 42, "count": 2},
+					time.Unix(1713188113, 20),
+				),
+				metric.New(
+					"test",
+					map[string]string{"instance": "myhost"},
+					map[string]any{"value": 42, "count": 3},
+					time.Unix(1713188113, 30),
+				),
+			}
+
+			// Configure the plugin
+			plugin := &Starlark{
+				StarlarkLoadFunc: testLoadFunc,
+				Source:           source,
+				Log:              testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+
+			// Setup the "persisted", encoded state
+			var pi telegraf.StatefulPlugin = plugin
+			require.NoError(t, pi.SetState(tt.persisted))
+
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Start(&acc))
+
+			// Do the processing
+			for _, m := range input {
+				require.NoError(t, plugin.Add(m, &acc))
+			}
+			plugin.Stop()
+
+			// Check
+			actual := acc.GetTelegrafMetrics()
+			testutil.RequireMetricsEqual(t, expected, actual)
+		})
+	}
+}
+
 func TestStatePersistence(t *testing.T) {
 	source := `
 def apply(metric):
@@ -3679,10 +3777,9 @@ def apply(metric):
 	require.NoError(t, plugin.Init())
 
 	// Setup the "persisted" state
+	persisted := `v1:["D","s:instance","s:myhost"]`
 	var pi telegraf.StatefulPlugin = plugin
-	var buf bytes.Buffer
-	require.NoError(t, gob.NewEncoder(&buf).Encode(map[string]any{"instance": "myhost"}))
-	require.NoError(t, pi.SetState(buf.Bytes()))
+	require.NoError(t, pi.SetState(persisted))
 
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Start(&acc))
@@ -3698,12 +3795,9 @@ def apply(metric):
 	testutil.RequireMetricsEqual(t, expected, actual)
 
 	// Check getting the persisted state
-	expectedState := map[string]any{"instance": "myhost", "count": int64(3)}
-
-	var actualState map[string]any
-	stateData, ok := pi.GetState().([]byte)
-	require.True(t, ok, "state is not a bytes array")
-	require.NoError(t, gob.NewDecoder(bytes.NewBuffer(stateData)).Decode(&actualState))
+	expectedState := `v1:["D","s:instance","s:myhost","s:count","i:3"]`
+	actualState, ok := pi.GetState().(string)
+	require.True(t, ok, "state is not a string")
 	require.EqualValues(t, expectedState, actualState, "mismatch in state")
 }
 
