@@ -46,6 +46,10 @@ func (*testSNMPConnection) Reconnect() error {
 	return nil
 }
 
+func (*testSNMPConnection) Close() error {
+	return nil
+}
+
 var tsc = &testSNMPConnection{
 	host: "tsc",
 	values: map[string]any{

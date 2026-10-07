@@ -19,6 +19,7 @@ type Connection interface {
 	Walk(string, gosnmp.WalkFunc) error
 	Get(oids []string) (*gosnmp.SnmpPacket, error)
 	Reconnect() error
+	Close() error
 }
 
 // GosnmpWrapper wraps a *gosnmp.GoSNMP object so we can use it as a snmpConnection.

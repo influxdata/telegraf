@@ -109,6 +109,22 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 				return
 			}
 
+			// Drop the connection if gathering fails so the next interval
+			// sets up a fresh one. This resolves the agent address again and
+			// repeats the SNMPv3 engine discovery, which is the only way to
+			// recover from an agent restarting with a new engine ID as the
+			// stale session rejects the agent's reports as not authentic.
+			failed := false
+			defer func() {
+				if !failed {
+					return
+				}
+				if err := gs.Close(); err != nil {
+					s.Log.Errorf("Closing connection to agent %s failed: %v", agent, err)
+				}
+				s.connectionCache[i] = nil
+			}()
+
 			// First is the top-level fields. We treat the fields as table prefixes with an empty index.
 			t := snmp.Table{
 				Name:   s.Name,
@@ -117,6 +133,7 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 			topTags := make(map[string]string)
 			if err := s.gatherTable(acc, gs, t, topTags, false); err != nil {
 				acc.AddError(fmt.Errorf("agent %s: %w", agent, err))
+				failed = true
 				if s.StopOnError {
 					return
 				}
@@ -126,6 +143,7 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 			for _, t := range s.Tables {
 				if err := s.gatherTable(acc, gs, t, topTags, true); err != nil {
 					acc.AddError(fmt.Errorf("agent %s: gathering table %s: %w", agent, t.Name, err))
+					failed = true
 					if s.StopOnError {
 						return
 					}

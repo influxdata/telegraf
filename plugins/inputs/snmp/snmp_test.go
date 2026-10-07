@@ -1,6 +1,7 @@
 package snmp
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"path/filepath"
@@ -19,6 +20,9 @@ import (
 type testSNMPConnection struct {
 	host   string
 	values map[string]any
+	err    error
+
+	closed bool
 }
 
 func (tsc *testSNMPConnection) Host() string {
@@ -26,6 +30,9 @@ func (tsc *testSNMPConnection) Host() string {
 }
 
 func (tsc *testSNMPConnection) Get(oids []string) (*gosnmp.SnmpPacket, error) {
+	if tsc.err != nil {
+		return nil, tsc.err
+	}
 	sp := &gosnmp.SnmpPacket{}
 	for _, oid := range oids {
 		v, ok := tsc.values[oid]
@@ -45,6 +52,9 @@ func (tsc *testSNMPConnection) Get(oids []string) (*gosnmp.SnmpPacket, error) {
 }
 
 func (tsc *testSNMPConnection) Walk(oid string, wf gosnmp.WalkFunc) error {
+	if tsc.err != nil {
+		return tsc.err
+	}
 	for void, v := range tsc.values {
 		if void == oid || (len(void) > len(oid) && void[:len(oid)+1] == oid+".") {
 			if err := wf(gosnmp.SnmpPDU{
@@ -59,6 +69,11 @@ func (tsc *testSNMPConnection) Walk(oid string, wf gosnmp.WalkFunc) error {
 }
 
 func (*testSNMPConnection) Reconnect() error {
+	return nil
+}
+
+func (tsc *testSNMPConnection) Close() error {
+	tsc.closed = true
 	return nil
 }
 
@@ -564,6 +579,38 @@ func TestGather(t *testing.T) {
 	require.Equal(t, "baz", m2.Tags["myfield1"])
 	require.Len(t, m2.Fields, 1)
 	require.Equal(t, 123456, m2.Fields["myOtherField"])
+
+	// The connection is kept for the next gather
+	require.Same(t, tsc, s.connectionCache[0])
+}
+
+func TestGatherDropsConnectionOnError(t *testing.T) {
+	conn := &testSNMPConnection{
+		host: "tsc",
+		err:  errors.New("incoming packet is not authentic, discarding"),
+	}
+	s := &Snmp{
+		Agents: []string{"TestGather"},
+		Name:   "mytable",
+		Fields: []snmp.Field{
+			{
+				Name: "myfield",
+				Oid:  ".1.0.0.1.2",
+			},
+		},
+		Log:             testutil.Logger{},
+		connectionCache: []snmp.Connection{conn},
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, s.Gather(&acc))
+	require.Len(t, acc.Errors, 1)
+	require.ErrorContains(t, acc.Errors[0], "not authentic")
+
+	// The failed connection is closed and dropped so the next gather sets up
+	// a fresh one
+	require.True(t, conn.closed)
+	require.Nil(t, s.connectionCache[0])
 }
 
 func TestGather_host(t *testing.T) {
