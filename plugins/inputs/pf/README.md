@@ -27,6 +27,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 [[inputs.pf]]
   ## PF require root access on most systems.
   ## Setting 'use_sudo' to true will make use of sudo to run pfctl.
+  ## On OpenBSD, doas is used instead of sudo.
   ## Users must configure sudo to allow telegraf user to run pfctl with no password.
   ## pfctl can be restricted to only list command "pfctl -s info".
   use_sudo = false

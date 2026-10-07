@@ -27,6 +27,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 # Get standard NTP query metrics from OpenNTPD.
 [[inputs.openntpd]]
   ## Run ntpctl binary with sudo.
+  ## On OpenBSD, doas is used instead of sudo.
   # use_sudo = false
 
   ## Location of the ntpctl binary.
