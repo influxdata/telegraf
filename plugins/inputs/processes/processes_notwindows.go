@@ -15,6 +15,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/common/sudo"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -218,7 +219,7 @@ func execPS(useSudo bool) ([]byte, error) {
 
 	cmd := []string{bin, "axo", "state"}
 	if useSudo {
-		cmd = append([]string{"sudo", "-n"}, cmd...)
+		cmd = append([]string{sudo.Binary(), "-n"}, cmd...)
 	}
 
 	out, err := exec.Command(cmd[0], cmd[1:]...).Output()
