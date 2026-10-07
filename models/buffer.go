@@ -2,10 +2,8 @@ package models
 
 import (
 	"fmt"
-	"sync"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/selfstat"
 )
 
@@ -13,8 +11,6 @@ var (
 	AgentMetricsWritten  = selfstat.Register("agent", "metrics_written", make(map[string]string))
 	AgentMetricsRejected = selfstat.Register("agent", "metrics_rejected", make(map[string]string))
 	AgentMetricsDropped  = selfstat.Register("agent", "metrics_dropped", make(map[string]string))
-
-	registerGob = sync.OnceFunc(func() { metric.Init() })
 )
 
 type Transaction struct {
@@ -98,8 +94,6 @@ type BufferStats struct {
 //
 //nolint:revive //will move to structs later
 func NewBuffer(name, id, alias string, capacity int, strategy, path string, diskSync bool) (Buffer, error) {
-	registerGob()
-
 	tags := map[string]string{
 		"_id":    id,
 		"output": name,

@@ -2,6 +2,7 @@ package starlark
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 
 	"go.starlark.net/starlark"
@@ -206,20 +207,24 @@ func toTags(value starlark.Value) (map[string]string, error) {
 	if value == nil {
 		return nil, nil
 	}
-	items, err := items(value, "The type %T is unsupported as type of collection of tags")
+	items, err := items(value, "type %T is unsupported as type of collection of tags")
 	if err != nil {
 		return nil, err
 	}
 	result := make(map[string]string, len(items))
 	for _, item := range items {
-		key, err := toString(item[0], "The type %T is unsupported as type of key for tags")
-		if err != nil {
-			return nil, err
+		skey, ok := item[0].(starlark.String)
+		if !ok {
+			return nil, fmt.Errorf("type %T is unsupported as type of key for tags", item[0])
 		}
-		value, err := toString(item[1], "The type %T is unsupported as type of value for tags")
-		if err != nil {
-			return nil, err
+		key := skey.GoString()
+
+		sval, ok := item[1].(starlark.String)
+		if !ok {
+			return nil, fmt.Errorf("type %T is unsupported as type of value for tags", item[1])
 		}
+		value := sval.GoString()
+
 		result[key] = value
 	}
 	return result, nil
