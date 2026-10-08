@@ -115,6 +115,7 @@ func TestWrite(t *testing.T) {
 		useOpTypeCreate bool
 		forceDocumentID bool
 		enableGzip      bool
+		authBearerToken string
 		expected        []string
 		expectedHeaders map[string]string
 	}{
@@ -333,6 +334,35 @@ func TestWrite(t *testing.T) {
 			},
 		},
 		{
+			name:            "auth bearer token",
+			value:           1,
+			authBearerToken: "0123456789abcdef",
+			expected: []string{
+				`
+					{
+						"index": {
+							"_index": "test-2009.11.10",
+							"_type": "metrics"
+						}
+					}
+				`,
+				`{
+					"@timestamp": "2009-11-10T23:00:00Z",
+					"measurement_name": "test1",
+						"tag": {
+							"tag1": "value1"
+						},
+						"test1": {
+							"value": 1
+						}
+					}
+				`,
+			},
+			expectedHeaders: map[string]string{
+				"Authorization": "Bearer 0123456789abcdef",
+			},
+		},
+		{
 			name:            "use_optype_create",
 			value:           1,
 			useOpTypeCreate: true,
@@ -392,6 +422,9 @@ func TestWrite(t *testing.T) {
 				EnableGzip:       tt.enableGzip,
 				Timeout:          config.Duration(time.Second * 5),
 				Log:              testutil.Logger{},
+			}
+			if tt.authBearerToken != "" {
+				plugin.AuthBearerToken = config.NewSecret([]byte(tt.authBearerToken))
 			}
 			require.NoError(t, plugin.Connect())
 
@@ -854,43 +887,6 @@ func TestIndexSettings(t *testing.T) {
 			require.JSONEq(t, tt.expected, buf.String())
 		})
 	}
-}
-
-func TestAuthorizationHeaderWhenBearerTokenIsPresent(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case "/_bulk":
-			if authHeader := r.Header.Get("Authorization"); authHeader != "Bearer 0123456789abcdef" {
-				w.WriteHeader(http.StatusInternalServerError)
-				t.Errorf("Not equal, expected: %q, actual: %q", "Bearer 0123456789abcdef", authHeader)
-				return
-			}
-			if _, err := w.Write([]byte("{}")); err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				t.Error(err)
-			}
-			return
-		default:
-			if _, err := w.Write([]byte(`{"version": {"number": "7.8"}}`)); err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				t.Error(err)
-			}
-			return
-		}
-	}))
-	defer ts.Close()
-
-	// Setup plugin
-	plugin := &Elasticsearch{
-		URLs:            []string{"http://" + ts.Listener.Addr().String()},
-		IndexName:       "{{host}}-%Y.%m.%d",
-		Timeout:         config.Duration(time.Second * 5),
-		Log:             testutil.Logger{},
-		AuthBearerToken: config.NewSecret([]byte("0123456789abcdef")),
-	}
-	require.NoError(t, plugin.Connect())
-
-	require.NoError(t, plugin.Write(testutil.MockMetrics()))
 }
 
 func TestCustomHeaders(t *testing.T) {
