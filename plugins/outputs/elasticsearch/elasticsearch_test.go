@@ -2,12 +2,9 @@ package elasticsearch
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"math"
 	"net/http"
 	"net/http/httptest"
-	"reflect"
 	"testing"
 	"time"
 
@@ -21,8 +18,93 @@ import (
 
 const servicePort = "9200"
 
-func launchTestContainer(t *testing.T) *testutil.Container {
-	container := testutil.Container{
+func TestWriteFloatHandlingIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	tests := []struct {
+		floatHandling string
+		expected      string
+	}{
+		{
+			expected: "error sending bulk request to Elasticsearch: json: unsupported value: ",
+		},
+		{
+			floatHandling: "none",
+			expected:      "error sending bulk request to Elasticsearch: json: unsupported value: ",
+		},
+		{
+			floatHandling: "drop",
+		},
+		{
+			floatHandling: "replace",
+		},
+	}
+
+	for _, tt := range tests {
+		name := tt.floatHandling
+		if name == "" {
+			name = "empty"
+		}
+		t.Run(name, func(t *testing.T) {
+			// Setup container
+			container := &testutil.Container{
+				Image:        "elasticsearch:6.8.23",
+				ExposedPorts: []string{servicePort},
+				Env: map[string]string{
+					"discovery.type": "single-node",
+				},
+				WaitingFor: wait.ForAll(
+					wait.ForLog("] mode [basic] - valid"),
+					wait.ForListeningPort(servicePort),
+				),
+			}
+			require.NoError(t, container.Start(), "failed to start container")
+			defer container.Terminate()
+
+			// Setup plugin
+			plugin := &Elasticsearch{
+				URLs:                []string{"http://" + container.Address + ":" + container.Ports[servicePort]},
+				IndexName:           "test-%Y.%m.%d",
+				ManageTemplate:      true,
+				TemplateName:        "telegraf",
+				Timeout:             config.Duration(time.Second * 5),
+				HealthCheckInterval: config.Duration(time.Second * 10),
+				HealthCheckTimeout:  config.Duration(time.Second * 1),
+				FloatHandling:       tt.floatHandling,
+				FloatReplacement:    0.0,
+				Log:                 testutil.Logger{},
+			}
+			require.NoError(t, plugin.Connect())
+
+			metrics := map[string]telegraf.Metric{
+				"NaN":  testutil.TestMetric(math.NaN()),
+				"+Inf": testutil.TestMetric(math.Inf(1)),
+				"-Inf": testutil.TestMetric(math.Inf(-1)),
+			}
+
+			// Verify that we can fail for metric with unhandled NaN/inf/-inf values
+			if tt.expected != "" {
+				for k, m := range metrics {
+					require.ErrorContains(t, plugin.Write([]telegraf.Metric{m}), tt.expected+k)
+				}
+			} else {
+				for _, m := range metrics {
+					require.NoError(t, plugin.Write([]telegraf.Metric{m}))
+				}
+			}
+		})
+	}
+}
+
+func TestTemplateManagementEmptyTemplateIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	// Setup container
+	container := &testutil.Container{
 		Image:        "elasticsearch:6.8.23",
 		ExposedPorts: []string{servicePort},
 		Env: map[string]string{
@@ -33,255 +115,12 @@ func launchTestContainer(t *testing.T) *testutil.Container {
 			wait.ForListeningPort(servicePort),
 		),
 	}
-	err := container.Start()
-	require.NoError(t, err, "failed to start container")
-
-	return &container
-}
-
-func TestConnectAndWriteIntegration(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
-	container := launchTestContainer(t)
+	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
 
-	urls := []string{
-		fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
-	}
-
-	e := &Elasticsearch{
-		URLs:                urls,
-		IndexName:           "test-%Y.%m.%d",
-		Timeout:             config.Duration(time.Second * 5),
-		EnableGzip:          true,
-		ManageTemplate:      true,
-		TemplateName:        "telegraf",
-		OverwriteTemplate:   false,
-		HealthCheckInterval: config.Duration(time.Second * 10),
-		HealthCheckTimeout:  config.Duration(time.Second * 1),
-		Log:                 testutil.Logger{},
-	}
-
-	// Verify that we can connect to Elasticsearch
-	err := e.Connect()
-	require.NoError(t, err)
-
-	// Verify that we can successfully write data to Elasticsearch
-	err = e.Write(testutil.MockMetrics())
-	require.NoError(t, err)
-}
-
-func TestConnectAndWriteMetricWithNaNValueEmptyIntegration(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
-	container := launchTestContainer(t)
-	defer container.Terminate()
-
-	urls := []string{
-		fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
-	}
-
-	e := &Elasticsearch{
-		URLs:                urls,
-		IndexName:           "test-%Y.%m.%d",
-		Timeout:             config.Duration(time.Second * 5),
-		ManageTemplate:      true,
-		TemplateName:        "telegraf",
-		OverwriteTemplate:   false,
-		HealthCheckInterval: config.Duration(time.Second * 10),
-		HealthCheckTimeout:  config.Duration(time.Second * 1),
-		Log:                 testutil.Logger{},
-	}
-
-	metrics := []telegraf.Metric{
-		testutil.TestMetric(math.NaN()),
-		testutil.TestMetric(math.Inf(1)),
-		testutil.TestMetric(math.Inf(-1)),
-	}
-
-	// Verify that we can connect to Elasticsearch
-	err := e.Connect()
-	require.NoError(t, err)
-
-	// Verify that we can fail for metric with unhandled NaN/inf/-inf values
-	for _, m := range metrics {
-		err = e.Write([]telegraf.Metric{m})
-		require.Error(t, err, "error sending bulk request to Elasticsearch: json: unsupported value: NaN")
-	}
-}
-
-func TestConnectAndWriteMetricWithNaNValueNoneIntegration(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
-	container := launchTestContainer(t)
-	defer container.Terminate()
-
-	urls := []string{
-		fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
-	}
-
-	e := &Elasticsearch{
-		URLs:                urls,
-		IndexName:           "test-%Y.%m.%d",
-		Timeout:             config.Duration(time.Second * 5),
-		ManageTemplate:      true,
-		TemplateName:        "telegraf",
-		OverwriteTemplate:   false,
-		HealthCheckInterval: config.Duration(time.Second * 10),
-		HealthCheckTimeout:  config.Duration(time.Second * 1),
-		FloatHandling:       "none",
-		Log:                 testutil.Logger{},
-	}
-
-	metrics := []telegraf.Metric{
-		testutil.TestMetric(math.NaN()),
-		testutil.TestMetric(math.Inf(1)),
-		testutil.TestMetric(math.Inf(-1)),
-	}
-
-	// Verify that we can connect to Elasticsearch
-	err := e.Connect()
-	require.NoError(t, err)
-
-	// Verify that we can fail for metric with unhandled NaN/inf/-inf values
-	for _, m := range metrics {
-		err = e.Write([]telegraf.Metric{m})
-		require.Error(t, err, "error sending bulk request to Elasticsearch: json: unsupported value: NaN")
-	}
-}
-
-func TestConnectAndWriteMetricWithNaNValueDropIntegration(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
-	container := launchTestContainer(t)
-	defer container.Terminate()
-
-	urls := []string{
-		fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
-	}
-
-	e := &Elasticsearch{
-		URLs:                urls,
-		IndexName:           "test-%Y.%m.%d",
-		Timeout:             config.Duration(time.Second * 5),
-		ManageTemplate:      true,
-		TemplateName:        "telegraf",
-		OverwriteTemplate:   false,
-		HealthCheckInterval: config.Duration(time.Second * 10),
-		HealthCheckTimeout:  config.Duration(time.Second * 1),
-		FloatHandling:       "drop",
-		Log:                 testutil.Logger{},
-	}
-
-	metrics := []telegraf.Metric{
-		testutil.TestMetric(math.NaN()),
-		testutil.TestMetric(math.Inf(1)),
-		testutil.TestMetric(math.Inf(-1)),
-	}
-
-	// Verify that we can connect to Elasticsearch
-	err := e.Connect()
-	require.NoError(t, err)
-
-	// Verify that we can fail for metric with unhandled NaN/inf/-inf values
-	for _, m := range metrics {
-		err = e.Write([]telegraf.Metric{m})
-		require.NoError(t, err)
-	}
-}
-
-func TestConnectAndWriteMetricWithNaNValueReplacementIntegration(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
-	tests := []struct {
-		floatHandle      string
-		floatReplacement float64
-		expectError      bool
-	}{
-		{
-			"none",
-			0.0,
-			true,
-		},
-		{
-			"drop",
-			0.0,
-			false,
-		},
-		{
-			"replace",
-			0.0,
-			false,
-		},
-	}
-
-	container := launchTestContainer(t)
-	defer container.Terminate()
-
-	urls := []string{
-		fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
-	}
-
-	for _, test := range tests {
-		e := &Elasticsearch{
-			URLs:                urls,
-			IndexName:           "test-%Y.%m.%d",
-			Timeout:             config.Duration(time.Second * 5),
-			ManageTemplate:      true,
-			TemplateName:        "telegraf",
-			OverwriteTemplate:   false,
-			HealthCheckInterval: config.Duration(time.Second * 10),
-			HealthCheckTimeout:  config.Duration(time.Second * 1),
-			FloatHandling:       test.floatHandle,
-			FloatReplacement:    test.floatReplacement,
-			Log:                 testutil.Logger{},
-		}
-
-		metrics := []telegraf.Metric{
-			testutil.TestMetric(math.NaN()),
-			testutil.TestMetric(math.Inf(1)),
-			testutil.TestMetric(math.Inf(-1)),
-		}
-
-		err := e.Connect()
-		require.NoError(t, err)
-
-		for _, m := range metrics {
-			err = e.Write([]telegraf.Metric{m})
-
-			if test.expectError {
-				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
-			}
-		}
-	}
-}
-
-func TestTemplateManagementEmptyTemplateIntegration(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
-	container := launchTestContainer(t)
-	defer container.Terminate()
-
-	urls := []string{
-		fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
-	}
-
-	e := &Elasticsearch{
-		URLs:              urls,
+	// Setup plugin
+	plugin := &Elasticsearch{
+		URLs:              []string{"http://" + container.Address + ":" + container.Ports[servicePort]},
 		IndexName:         "test-%Y.%m.%d",
 		Timeout:           config.Duration(time.Second * 5),
 		EnableGzip:        true,
@@ -291,24 +130,32 @@ func TestTemplateManagementEmptyTemplateIntegration(t *testing.T) {
 		Log:               testutil.Logger{},
 	}
 
-	err := e.manageTemplate(t.Context())
-	require.Error(t, err)
+	require.ErrorContains(t, plugin.manageTemplate(t.Context()), "elasticsearch template_name configuration not defined")
 }
 
-func TestUseOpTypeCreate(t *testing.T) {
+func TestUseOpTypeCreateIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	container := launchTestContainer(t)
+	// Setup container
+	container := &testutil.Container{
+		Image:        "elasticsearch:6.8.23",
+		ExposedPorts: []string{servicePort},
+		Env: map[string]string{
+			"discovery.type": "single-node",
+		},
+		WaitingFor: wait.ForAll(
+			wait.ForLog("] mode [basic] - valid"),
+			wait.ForListeningPort(servicePort),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
 
-	urls := []string{
-		fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
-	}
-
-	e := &Elasticsearch{
-		URLs:              urls,
+	// Setup plugin
+	plugin := &Elasticsearch{
+		URLs:              []string{"http://" + container.Address + ":" + container.Ports[servicePort]},
 		IndexName:         "test-%Y.%m.%d",
 		Timeout:           config.Duration(time.Second * 5),
 		EnableGzip:        true,
@@ -316,27 +163,16 @@ func TestUseOpTypeCreate(t *testing.T) {
 		TemplateName:      "telegraf",
 		OverwriteTemplate: true,
 		UseOpTypeCreate:   true,
+		ForceDocumentID:   true,
 		Log:               testutil.Logger{},
 	}
+	require.NoError(t, plugin.Connect())
 
-	ctx, cancel := context.WithTimeout(t.Context(), time.Duration(e.Timeout))
+	ctx, cancel := context.WithTimeout(t.Context(), time.Duration(plugin.Timeout))
 	defer cancel()
 
-	metrics := []telegraf.Metric{
-		testutil.TestMetric(1),
-	}
-
-	err := e.Connect()
-	require.NoError(t, err)
-
-	err = e.manageTemplate(ctx)
-	require.NoError(t, err)
-
-	// Verify that we can fail for metric with unhandled NaN/inf/-inf values
-	for _, m := range metrics {
-		err = e.Write([]telegraf.Metric{m})
-		require.NoError(t, err)
-	}
+	require.NoError(t, plugin.manageTemplate(ctx))
+	require.NoError(t, plugin.Write([]telegraf.Metric{testutil.TestMetric(1)}))
 }
 
 func TestTemplateManagementIntegration(t *testing.T) {
@@ -344,15 +180,24 @@ func TestTemplateManagementIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	container := launchTestContainer(t)
+	// Setup container
+	container := &testutil.Container{
+		Image:        "elasticsearch:6.8.23",
+		ExposedPorts: []string{servicePort},
+		Env: map[string]string{
+			"discovery.type": "single-node",
+		},
+		WaitingFor: wait.ForAll(
+			wait.ForLog("] mode [basic] - valid"),
+			wait.ForListeningPort(servicePort),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
 
-	urls := []string{
-		fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
-	}
-
-	e := &Elasticsearch{
-		URLs:              urls,
+	// Setup plugin
+	plugin := &Elasticsearch{
+		URLs:              []string{"http://" + container.Address + ":" + container.Ports[servicePort]},
 		IndexName:         "test-%Y.%m.%d",
 		Timeout:           config.Duration(time.Second * 5),
 		EnableGzip:        true,
@@ -361,15 +206,12 @@ func TestTemplateManagementIntegration(t *testing.T) {
 		OverwriteTemplate: true,
 		Log:               testutil.Logger{},
 	}
+	require.NoError(t, plugin.Connect())
 
-	ctx, cancel := context.WithTimeout(t.Context(), time.Duration(e.Timeout))
+	ctx, cancel := context.WithTimeout(t.Context(), time.Duration(plugin.Timeout))
 	defer cancel()
 
-	err := e.Connect()
-	require.NoError(t, err)
-
-	err = e.manageTemplate(ctx)
-	require.NoError(t, err)
+	require.NoError(t, plugin.manageTemplate(ctx))
 }
 
 func TestTemplateInvalidIndexPatternIntegration(t *testing.T) {
@@ -377,15 +219,24 @@ func TestTemplateInvalidIndexPatternIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	container := launchTestContainer(t)
+	// Setup container
+	container := &testutil.Container{
+		Image:        "elasticsearch:6.8.23",
+		ExposedPorts: []string{servicePort},
+		Env: map[string]string{
+			"discovery.type": "single-node",
+		},
+		WaitingFor: wait.ForAll(
+			wait.ForLog("] mode [basic] - valid"),
+			wait.ForListeningPort(servicePort),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
 	defer container.Terminate()
 
-	urls := []string{
-		fmt.Sprintf("http://%s:%s", container.Address, container.Ports[servicePort]),
-	}
-
-	e := &Elasticsearch{
-		URLs:              urls,
+	// Setup plugin
+	plugin := &Elasticsearch{
+		URLs:              []string{"http://" + container.Address + ":" + container.Ports[servicePort]},
 		IndexName:         "{{host}}-%Y.%m.%d",
 		Timeout:           config.Duration(time.Second * 5),
 		EnableGzip:        true,
@@ -395,275 +246,397 @@ func TestTemplateInvalidIndexPatternIntegration(t *testing.T) {
 		Log:               testutil.Logger{},
 	}
 
-	err := e.Connect()
-	require.Error(t, err)
+	require.ErrorContains(t, plugin.Connect(), "template cannot be created for dynamic index names without an index prefix")
 }
 
 func TestGetTagKeys(t *testing.T) {
 	tests := []struct {
-		IndexName         string
-		ExpectedIndexName string
-		ExpectedTagKeys   []string
+		name              string
+		indexName         string
+		expectedIndexName string
+		expectedTagKeys   []string
 	}{
 		{
-			IndexName:         "indexname",
-			ExpectedIndexName: "indexname",
-			ExpectedTagKeys:   make([]string, 0),
+			name:              "novars",
+			indexName:         "indexname",
+			expectedIndexName: "indexname",
+			expectedTagKeys:   make([]string, 0),
 		}, {
-			IndexName:         "indexname-%Y",
-			ExpectedIndexName: "indexname-%Y",
-			ExpectedTagKeys:   make([]string, 0),
+			name:              "year",
+			indexName:         "indexname-%Y",
+			expectedIndexName: "indexname-%Y",
+			expectedTagKeys:   make([]string, 0),
 		}, {
-			IndexName:         "indexname-%Y-%m",
-			ExpectedIndexName: "indexname-%Y-%m",
-			ExpectedTagKeys:   make([]string, 0),
+			name:              "year-month",
+			indexName:         "indexname-%Y-%m",
+			expectedIndexName: "indexname-%Y-%m",
+			expectedTagKeys:   make([]string, 0),
 		}, {
-			IndexName:         "indexname-%Y-%m-%d",
-			ExpectedIndexName: "indexname-%Y-%m-%d",
-			ExpectedTagKeys:   make([]string, 0),
+			name:              "year-month-day",
+			indexName:         "indexname-%Y-%m-%d",
+			expectedIndexName: "indexname-%Y-%m-%d",
+			expectedTagKeys:   make([]string, 0),
 		}, {
-			IndexName:         "indexname-%Y-%m-%d-%H",
-			ExpectedIndexName: "indexname-%Y-%m-%d-%H",
-			ExpectedTagKeys:   make([]string, 0),
+			name:              "year-month-day-hour",
+			indexName:         "indexname-%Y-%m-%d-%H",
+			expectedIndexName: "indexname-%Y-%m-%d-%H",
+			expectedTagKeys:   make([]string, 0),
 		}, {
-			IndexName:         "indexname-%y-%m",
-			ExpectedIndexName: "indexname-%y-%m",
-			ExpectedTagKeys:   make([]string, 0),
+			name:              "2-digit-year-month",
+			indexName:         "indexname-%y-%m",
+			expectedIndexName: "indexname-%y-%m",
+			expectedTagKeys:   make([]string, 0),
 		}, {
-			IndexName:         "indexname-{{tag1}}-%y-%m",
-			ExpectedIndexName: "indexname-%s-%y-%m",
-			ExpectedTagKeys:   []string{"tag1"},
+			name:              "tag",
+			indexName:         "indexname-{{tag1}}-%y-%m",
+			expectedIndexName: "indexname-%s-%y-%m",
+			expectedTagKeys:   []string{"tag1"},
 		}, {
-			IndexName:         "indexname-{{tag1}}-{{tag2}}-%y-%m",
-			ExpectedIndexName: "indexname-%s-%s-%y-%m",
-			ExpectedTagKeys:   []string{"tag1", "tag2"},
+			name:              "two tags",
+			indexName:         "indexname-{{tag1}}-{{tag2}}-%y-%m",
+			expectedIndexName: "indexname-%s-%s-%y-%m",
+			expectedTagKeys:   []string{"tag1", "tag2"},
 		}, {
-			IndexName:         "indexname-{{tag1}}-{{tag2}}-{{tag3}}-%y-%m",
-			ExpectedIndexName: "indexname-%s-%s-%s-%y-%m",
-			ExpectedTagKeys:   []string{"tag1", "tag2", "tag3"},
+			name:              "three tags",
+			indexName:         "indexname-{{tag1}}-{{tag2}}-{{tag3}}-%y-%m",
+			expectedIndexName: "indexname-%s-%s-%s-%y-%m",
+			expectedTagKeys:   []string{"tag1", "tag2", "tag3"},
 		},
 	}
-	for _, test := range tests {
-		indexName, tagKeys := GetTagKeys(test.IndexName)
-		if indexName != test.ExpectedIndexName {
-			t.Errorf("Expected indexname %s, got %s\n", test.ExpectedIndexName, indexName)
-		}
-		if !reflect.DeepEqual(tagKeys, test.ExpectedTagKeys) {
-			t.Errorf("Expected tagKeys %s, got %s\n", test.ExpectedTagKeys, tagKeys)
-		}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			indexName, tagKeys := GetTagKeys(tt.indexName)
+			require.Equal(t, tt.expectedIndexName, indexName)
+			require.ElementsMatch(t, tt.expectedTagKeys, tagKeys)
+		})
 	}
 }
 
 func TestGetIndexName(t *testing.T) {
-	e := &Elasticsearch{
-		DefaultTagValue: "none",
-		Log:             testutil.Logger{},
-	}
-
 	tests := []struct {
-		EventTime time.Time
-		Tags      map[string]string
-		TagKeys   []string
-		IndexName string
-		Expected  string
+		name      string
+		indexName string
+		expected  string
+		tagKeys   []string
 	}{
 		{
-			EventTime: time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			Tags:      map[string]string{"tag1": "value1", "tag2": "value2"},
-			IndexName: "indexname",
-			Expected:  "indexname",
+			name:      "novars",
+			indexName: "indexname",
+			expected:  "indexname",
 		},
 		{
-			EventTime: time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			Tags:      map[string]string{"tag1": "value1", "tag2": "value2"},
-			IndexName: "indexname-%Y",
-			Expected:  "indexname-2014",
+			name:      "year",
+			indexName: "indexname-%Y",
+			expected:  "indexname-2014",
 		},
 		{
-			EventTime: time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			Tags:      map[string]string{"tag1": "value1", "tag2": "value2"},
-			IndexName: "indexname-%Y-%m",
-			Expected:  "indexname-2014-12",
+			name:      "year-month",
+			indexName: "indexname-%Y-%m",
+			expected:  "indexname-2014-12",
 		},
 		{
-			EventTime: time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			Tags:      map[string]string{"tag1": "value1", "tag2": "value2"},
-			IndexName: "indexname-%Y-%m-%d",
-			Expected:  "indexname-2014-12-01",
+			name:      "year-month-day",
+			indexName: "indexname-%Y-%m-%d",
+			expected:  "indexname-2014-12-01",
 		},
 		{
-			EventTime: time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			Tags:      map[string]string{"tag1": "value1", "tag2": "value2"},
-			IndexName: "indexname-%Y-%m-%d-%H",
-			Expected:  "indexname-2014-12-01-23",
+			name:      "year-month-day-hour",
+			indexName: "indexname-%Y-%m-%d-%H",
+			expected:  "indexname-2014-12-01-23",
 		},
 		{
-			EventTime: time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			Tags:      map[string]string{"tag1": "value1", "tag2": "value2"},
-			IndexName: "indexname-%y-%m",
-			Expected:  "indexname-14-12",
+			name:      "2-digit-year-month",
+			indexName: "indexname-%y-%m",
+			expected:  "indexname-14-12",
 		},
 		{
-			EventTime: time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			Tags:      map[string]string{"tag1": "value1", "tag2": "value2"},
-			IndexName: "indexname-%Y-%V",
-			Expected:  "indexname-2014-49",
+			name:      "year-week",
+			indexName: "indexname-%Y-%V",
+			expected:  "indexname-2014-49",
 		},
 		{
-			EventTime: time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			Tags:      map[string]string{"tag1": "value1", "tag2": "value2"},
-			TagKeys:   []string{"tag1"},
-			IndexName: "indexname-%s-%y-%m",
-			Expected:  "indexname-value1-14-12",
+			name:      "tag",
+			indexName: "indexname-%s-%y-%m",
+			expected:  "indexname-value1-14-12",
+			tagKeys:   []string{"tag1"},
 		},
 		{
-			EventTime: time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			Tags:      map[string]string{"tag1": "value1", "tag2": "value2"},
-			TagKeys:   []string{"tag1", "tag2"},
-			IndexName: "indexname-%s-%s-%y-%m",
-			Expected:  "indexname-value1-value2-14-12",
+			name:      "two tags",
+			indexName: "indexname-%s-%s-%y-%m",
+			expected:  "indexname-value1-value2-14-12",
+			tagKeys:   []string{"tag1", "tag2"},
 		},
 		{
-			EventTime: time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			Tags:      map[string]string{"tag1": "value1", "tag2": "value2"},
-			TagKeys:   []string{"tag1", "tag2", "tag3"},
-			IndexName: "indexname-%s-%s-%s-%y-%m",
-			Expected:  "indexname-value1-value2-none-14-12",
+			name:      "threee tags",
+			indexName: "indexname-%s-%s-%s-%y-%m",
+			expected:  "indexname-value1-value2-none-14-12",
+			tagKeys:   []string{"tag1", "tag2", "tag3"},
 		},
 	}
-	for _, test := range tests {
-		indexName := e.GetIndexName(test.IndexName, test.EventTime, test.TagKeys, test.Tags)
-		if indexName != test.Expected {
-			t.Errorf("Expected indexname %s, got %s\n", test.Expected, indexName)
-		}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			eventTime := time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC)
+			tags := map[string]string{"tag1": "value1", "tag2": "value2"}
+
+			// Setup plugin
+			plugin := &Elasticsearch{
+				DefaultTagValue: "none",
+				Log:             testutil.Logger{},
+			}
+
+			indexName := plugin.GetIndexName(tt.indexName, eventTime, tt.tagKeys, tags)
+			require.Equal(t, tt.expected, indexName)
+		})
 	}
 }
 
 func TestGetPipelineName(t *testing.T) {
-	e := &Elasticsearch{
-		UsePipeline:     "{{es-pipeline}}",
-		DefaultPipeline: "myDefaultPipeline",
-		Log:             testutil.Logger{},
-	}
-	e.pipelineName, e.pipelineTagKeys = GetTagKeys(e.UsePipeline)
-
 	tests := []struct {
-		EventTime       time.Time
-		Tags            map[string]string
-		PipelineTagKeys []string
-		Expected        string
+		name            string
+		pipeline        string
+		defaultPipeline string
+		tags            map[string]string
+		expected        string
 	}{
 		{
-			EventTime: time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			Tags:      map[string]string{"tag1": "value1", "tag2": "value2"},
-			Expected:  "myDefaultPipeline",
+			name: "default without pipeline or default",
+			tags: map[string]string{"tag1": "value1", "tag2": "value2"},
 		},
 		{
-			EventTime: time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			Tags:      map[string]string{"tag1": "value1", "tag2": "value2"},
-			Expected:  "myDefaultPipeline",
+			name:            "default only",
+			defaultPipeline: "myDefaultPipeline",
+			tags:            map[string]string{"tag1": "value1", "tag2": "value2"},
 		},
 		{
-			EventTime: time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			Tags:      map[string]string{"tag1": "value1", "es-pipeline": "myOtherPipeline"},
-			Expected:  "myOtherPipeline",
+			name:            "default only with pipeline tag",
+			defaultPipeline: "myDefaultPipeline",
+			tags:            map[string]string{"tag1": "value1", "es-pipeline": "pipeline2"},
 		},
 		{
-			EventTime: time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			Tags:      map[string]string{"tag1": "value1", "es-pipeline": "pipeline2"},
-			Expected:  "pipeline2",
+			name: "defined without pipeline",
+			tags: map[string]string{"tag1": "value1", "es-pipeline": "myOtherPipeline"},
+		},
+		{
+			name:     "missing tag without default",
+			pipeline: "{{es-pipeline}}",
+			tags:     map[string]string{"tag1": "value1"},
+		},
+		{
+			name:            "default with pipeline",
+			pipeline:        "{{es-pipeline}}",
+			defaultPipeline: "myDefaultPipeline",
+			tags:            map[string]string{"tag1": "value1", "tag2": "value2"},
+			expected:        "myDefaultPipeline",
+		},
+		{
+			name:            "defined with pipeline",
+			pipeline:        "{{es-pipeline}}",
+			defaultPipeline: "myDefaultPipeline",
+			tags:            map[string]string{"tag1": "value1", "es-pipeline": "myOtherPipeline"},
+			expected:        "myOtherPipeline",
+		},
+		{
+			name:     "static pipeline",
+			pipeline: "myDefaultPipeline",
+			tags:     map[string]string{"tag1": "value1", "es-pipeline": "myOtherPipeline"},
+			expected: "myDefaultPipeline",
+		},
+		{
+			name:     "tag pipeline without default",
+			pipeline: "{{es-pipeline}}",
+			tags:     map[string]string{"tag1": "value1", "es-pipeline": "pipeline2"},
+			expected: "pipeline2",
+		},
+		{
+			name:     "multiple tags in pipeline",
+			pipeline: "{{tag1}}-{{es-pipeline}}",
+			tags:     map[string]string{"tag1": "value1", "es-pipeline": "pipeline2"},
+			expected: "value1-pipeline2",
 		},
 	}
-	for _, test := range tests {
-		pipelineName := e.getPipelineName(e.pipelineName, e.pipelineTagKeys, test.Tags)
-		require.Equal(t, test.Expected, pipelineName)
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pn, ptags := GetTagKeys(tt.pipeline)
 
-	// Setup testing for testing no pipeline set. All the tests in this case should return "".
-	e = &Elasticsearch{
-		Log: testutil.Logger{},
-	}
-	e.pipelineName, e.pipelineTagKeys = GetTagKeys(e.UsePipeline)
+			// Setup plugin
+			plugin := &Elasticsearch{
+				UsePipeline:     tt.pipeline,
+				DefaultPipeline: tt.defaultPipeline,
+				Log:             testutil.Logger{},
+				pipelineName:    pn,
+				pipelineTagKeys: ptags,
+			}
 
-	for _, test := range tests {
-		pipelineName := e.getPipelineName(e.pipelineName, e.pipelineTagKeys, test.Tags)
-		require.Empty(t, pipelineName)
+			pipelineName := plugin.getPipelineName(plugin.pipelineName, plugin.pipelineTagKeys, tt.tags)
+			require.Equal(t, tt.expected, pipelineName)
+		})
 	}
 }
 
-func TestPipelineConfigs(t *testing.T) {
+func TestIndexSettings(t *testing.T) {
 	tests := []struct {
-		EventTime       time.Time
-		Tags            map[string]string
-		PipelineTagKeys []string
-		Expected        string
-		Elastic         *Elasticsearch
+		name     string
+		template map[string]any
+		expected string
 	}{
 		{
-			EventTime: time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			Tags:      map[string]string{"tag1": "value1", "tag2": "value2"},
-			Elastic: &Elasticsearch{
-				Log: testutil.Logger{},
-			},
+			name: "standard",
+			expected: `
+				{
+					"template": "test*",
+					"settings": {
+						"index": {
+							"refresh_interval": "10s",
+							"mapping.total_fields.limit": 5000,
+							"auto_expand_replicas": "0-1",
+							"codec": "best_compression"
+						}
+					},
+					"mappings": {
+						"metrics": {
+							"_all": {
+								"enabled": false
+							},
+							"properties": {
+								"@timestamp": {
+									"type": "date"
+								},
+								"measurement_name": {
+									"type": "keyword"
+								}
+							},
+							"dynamic_templates": [
+								{
+									"tags": {
+										"match_mapping_type": "string",
+										"path_match": "tag.*",
+										"mapping": {
+											"ignore_above": 512,
+											"type": "keyword"
+										}
+									}
+								},
+								{
+									"metrics_long": {
+										"match_mapping_type": "long",
+										"mapping": {
+											"type": "float",
+											"index": false
+										}
+									}
+								},
+								{
+									"metrics_double": {
+										"match_mapping_type": "double",
+										"mapping": {
+											"type": "float",
+											"index": false
+										}
+									}
+								},
+								{
+									"text_fields": {
+										"match": "*",
+										"mapping": {
+											"norms": false
+										}
+									}
+								}
+							]
+						}
+					}
+				}
+			`,
 		},
 		{
-			EventTime: time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			Tags:      map[string]string{"tag1": "value1", "tag2": "value2"},
-			Elastic: &Elasticsearch{
-				DefaultPipeline: "myDefaultPipeline",
-				Log:             testutil.Logger{},
+			name: "custom index",
+			template: map[string]any{
+				"refresh_interval":           "20s",
+				"mapping.total_fields.limit": 1000,
+				"codec":                      "best_compression",
 			},
-		},
-		{
-			EventTime: time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			Tags:      map[string]string{"tag1": "value1", "es-pipeline": "myOtherPipeline"},
-			Expected:  "myDefaultPipeline",
-			Elastic: &Elasticsearch{
-				UsePipeline: "myDefaultPipeline",
-				Log:         testutil.Logger{},
-			},
-		},
-		{
-			EventTime: time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			Tags:      map[string]string{"tag1": "value1", "es-pipeline": "pipeline2"},
-			Elastic: &Elasticsearch{
-				DefaultPipeline: "myDefaultPipeline",
-				Log:             testutil.Logger{},
-			},
-		},
-		{
-			EventTime: time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			Tags:      map[string]string{"tag1": "value1", "es-pipeline": "pipeline2"},
-			Expected:  "pipeline2",
-			Elastic: &Elasticsearch{
-				UsePipeline: "{{es-pipeline}}",
-				Log:         testutil.Logger{},
-			},
-		},
-		{
-			EventTime: time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			Tags:      map[string]string{"tag1": "value1", "es-pipeline": "pipeline2"},
-			Expected:  "value1-pipeline2",
-			Elastic: &Elasticsearch{
-				UsePipeline: "{{tag1}}-{{es-pipeline}}",
-				Log:         testutil.Logger{},
-			},
-		},
-		{
-			EventTime: time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
-			Tags:      map[string]string{"tag1": "value1"},
-			Elastic: &Elasticsearch{
-				UsePipeline: "{{es-pipeline}}",
-				Log:         testutil.Logger{},
-			},
+			expected: `
+				{
+					"template": "test*",
+					"settings": {
+						"index": {
+							"codec": "best_compression",
+							"mapping.total_fields.limit": 1000,
+							"refresh_interval": "20s"
+						}
+					},
+					"mappings": {
+						"metrics": {
+							"_all": {
+								"enabled": false
+							},
+							"properties": {
+								"@timestamp": {
+									"type": "date"
+								},
+								"measurement_name": {
+									"type": "keyword"
+								}
+							},
+							"dynamic_templates": [
+								{
+									"tags": {
+										"match_mapping_type": "string",
+										"path_match": "tag.*",
+										"mapping": {
+											"ignore_above": 512,
+											"type": "keyword"
+										}
+									}
+								},
+								{
+									"metrics_long": {
+										"match_mapping_type": "long",
+										"mapping": {
+											"type": "float",
+											"index": false
+										}
+									}
+								},
+								{
+									"metrics_double": {
+										"match_mapping_type": "double",
+										"mapping": {
+											"type": "float",
+											"index": false
+										}
+									}
+								},
+								{
+									"text_fields": {
+										"match": "*",
+										"mapping": {
+											"norms": false
+										}
+									}
+								}
+							]
+						}
+					}
+				}
+			`,
 		},
 	}
 
-	for _, test := range tests {
-		e := test.Elastic
-		e.pipelineName, e.pipelineTagKeys = GetTagKeys(e.UsePipeline)
-		pipelineName := e.getPipelineName(e.pipelineName, e.pipelineTagKeys, test.Tags)
-		require.Equal(t, test.Expected, pipelineName)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup plugin
+			plugin := &Elasticsearch{
+				TemplateName:  "test",
+				IndexName:     "telegraf-%Y.%m.%d",
+				IndexTemplate: tt.template,
+				Log:           testutil.Logger{},
+			}
+
+			buf, err := plugin.createNewTemplate("test")
+			require.NoError(t, err)
+			require.JSONEq(t, tt.expected, buf.String())
+		})
 	}
 }
 
@@ -697,22 +670,17 @@ func TestRequestHeaderWhenGzipIsEnabled(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	urls := []string{"http://" + ts.Listener.Addr().String()}
-
-	e := &Elasticsearch{
-		URLs:           urls,
-		IndexName:      "{{host}}-%Y.%m.%d",
-		Timeout:        config.Duration(time.Second * 5),
-		EnableGzip:     true,
-		ManageTemplate: false,
-		Log:            testutil.Logger{},
+	// Setup plugin
+	plugin := &Elasticsearch{
+		URLs:       []string{"http://" + ts.Listener.Addr().String()},
+		IndexName:  "{{host}}-%Y.%m.%d",
+		Timeout:    config.Duration(time.Second * 5),
+		EnableGzip: true,
+		Log:        testutil.Logger{},
 	}
+	require.NoError(t, plugin.Connect())
 
-	err := e.Connect()
-	require.NoError(t, err)
-
-	err = e.Write(testutil.MockMetrics())
-	require.NoError(t, err)
+	require.NoError(t, plugin.Write(testutil.MockMetrics()))
 }
 
 func TestRequestHeaderWhenGzipIsDisabled(t *testing.T) {
@@ -739,22 +707,17 @@ func TestRequestHeaderWhenGzipIsDisabled(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	urls := []string{"http://" + ts.Listener.Addr().String()}
-
-	e := &Elasticsearch{
-		URLs:           urls,
-		IndexName:      "{{host}}-%Y.%m.%d",
-		Timeout:        config.Duration(time.Second * 5),
-		EnableGzip:     false,
-		ManageTemplate: false,
-		Log:            testutil.Logger{},
+	// Setup plugin
+	plugin := &Elasticsearch{
+		URLs:       []string{"http://" + ts.Listener.Addr().String()},
+		IndexName:  "{{host}}-%Y.%m.%d",
+		Timeout:    config.Duration(time.Second * 5),
+		EnableGzip: false,
+		Log:        testutil.Logger{},
 	}
+	require.NoError(t, plugin.Connect())
 
-	err := e.Connect()
-	require.NoError(t, err)
-
-	err = e.Write(testutil.MockMetrics())
-	require.NoError(t, err)
+	require.NoError(t, plugin.Write(testutil.MockMetrics()))
 }
 
 func TestAuthorizationHeaderWhenBearerTokenIsPresent(t *testing.T) {
@@ -781,86 +744,39 @@ func TestAuthorizationHeaderWhenBearerTokenIsPresent(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	urls := []string{"http://" + ts.Listener.Addr().String()}
-
-	e := &Elasticsearch{
-		URLs:            urls,
+	// Setup plugin
+	plugin := &Elasticsearch{
+		URLs:            []string{"http://" + ts.Listener.Addr().String()},
 		IndexName:       "{{host}}-%Y.%m.%d",
 		Timeout:         config.Duration(time.Second * 5),
-		EnableGzip:      false,
-		ManageTemplate:  false,
 		Log:             testutil.Logger{},
 		AuthBearerToken: config.NewSecret([]byte("0123456789abcdef")),
 	}
+	require.NoError(t, plugin.Connect())
 
-	err := e.Connect()
-	require.NoError(t, err)
-
-	err = e.Write(testutil.MockMetrics())
-	require.NoError(t, err)
+	require.NoError(t, plugin.Write(testutil.MockMetrics()))
 }
 
-func TestStandardIndexSettings(t *testing.T) {
-	e := &Elasticsearch{
-		TemplateName: "test",
-		IndexName:    "telegraf-%Y.%m.%d",
-		Log:          testutil.Logger{},
-	}
-	buf, err := e.createNewTemplate("test")
-	require.NoError(t, err)
-	var jsonData esTemplate
-	err = json.Unmarshal(buf.Bytes(), &jsonData)
-	require.NoError(t, err)
-	index := jsonData.Settings.Index
-	require.Equal(t, "10s", index["refresh_interval"])
-	require.InDelta(t, float64(5000), index["mapping.total_fields.limit"], testutil.DefaultDelta)
-	require.Equal(t, "0-1", index["auto_expand_replicas"])
-	require.Equal(t, "best_compression", index["codec"])
-}
-
-func TestDifferentIndexSettings(t *testing.T) {
-	e := &Elasticsearch{
-		TemplateName: "test",
-		IndexName:    "telegraf-%Y.%m.%d",
-		IndexTemplate: map[string]any{
-			"refresh_interval":           "20s",
-			"mapping.total_fields.limit": 1000,
-			"codec":                      "best_compression",
-		},
-		Log: testutil.Logger{},
-	}
-	buf, err := e.createNewTemplate("test")
-	require.NoError(t, err)
-	var jsonData esTemplate
-	err = json.Unmarshal(buf.Bytes(), &jsonData)
-	require.NoError(t, err)
-	index := jsonData.Settings.Index
-	require.Equal(t, "20s", index["refresh_interval"])
-	require.InDelta(t, float64(1000), index["mapping.total_fields.limit"], testutil.DefaultDelta)
-	require.Equal(t, "best_compression", index["codec"])
-}
-
-func TestProcessHeaders(t *testing.T) {
+func TestCustomHeaders(t *testing.T) {
 	tests := []struct {
-		name           string
-		headers        map[string]any
-		expectedResult map[string][]string
-		description    string
+		name     string
+		headers  map[string]any
+		expected map[string][]string
 	}{
 		{
-			name:           "nil and empty headers",
-			headers:        nil,
-			expectedResult: map[string][]string{},
-			description:    "Nil headers should return empty http.Header",
+			// If headers are not set http.Header should be empty
+			name:     "no headers",
+			expected: map[string][]string{},
 		},
 		{
-			name:           "empty headers map",
-			headers:        map[string]any{},
-			expectedResult: map[string][]string{},
-			description:    "Empty headers map should return empty http.Header",
+			// Empty headers map should return empty http.Header
+			name:     "empty headers map",
+			headers:  map[string]any{},
+			expected: map[string][]string{},
 		},
 		{
-			name: "single strings - basic and with commas (deprecated behavior)",
+			// Single string values are split on commas (deprecated behavior with warnings)
+			name: "strings with commas (deprecated)",
 			headers: map[string]any{
 				"Content-Type":        "application/json",
 				"Authorization":       "Bearer token123",
@@ -872,7 +788,7 @@ func TestProcessHeaders(t *testing.T) {
 				"X-Unicode":           "测试值",
 				"X-JSON-Like":         `{"key": "value", "array": [1,2,3]}`,
 			},
-			expectedResult: map[string][]string{
+			expected: map[string][]string{
 				"Content-Type":        {"application/json"},
 				"Authorization":       {"Bearer token123"},
 				"Vl-Stream-Fields":    {"tag.Source", "tag.Channel", "tag.EventID"}, // Split on commas
@@ -883,10 +799,11 @@ func TestProcessHeaders(t *testing.T) {
 				"X-Unicode":           {"测试值"},
 				"X-Json-Like":         {`{"key": "value"`, `"array": [1`, `2`, `3]}`}, // Split on commas
 			},
-			description: "Single string values are split on commas (deprecated behavior with warnings)",
 		},
 		{
-			name: "string arrays - basic and with whitespace",
+			// Interface arrays should create multiple header values with whitespace trimmed, empty arrays ignored
+			// X-Empty-Array is not included - empty arrays don't create headers
+			name: "arrays with whitespace",
 			headers: map[string]any{
 				"Accept":        []any{"application/json", "application/xml", "text/plain"},
 				"Cache-Control": []any{"no-cache", "must-revalidate"},
@@ -894,30 +811,29 @@ func TestProcessHeaders(t *testing.T) {
 				"X-With-Spaces": []any{" application/json ", "  application/xml  ", "text/plain"},
 				"X-Empty-Array": make([]any, 0),
 			},
-			expectedResult: map[string][]string{
+			expected: map[string][]string{
 				"Accept":        {"application/json", "application/xml", "text/plain"},
 				"Cache-Control": {"no-cache", "must-revalidate"},
 				"X-Debug-Tags":  {"performance", "security", "monitoring"},
 				"X-With-Spaces": {"application/json", "application/xml", "text/plain"}, // Trimmed
-				// X-Empty-Array is not included - empty arrays don't create headers
 			},
-			description: "Interface arrays should create multiple header values with whitespace trimmed, empty arrays ignored",
 		},
 		{
+			// Interface arrays should convert strings and log errors for non-string types, empty arrays ignored
+			// X-Empty-Interface is not included - empty arrays don't create headers
 			name: "interface arrays - TOML parsing and mixed types",
 			headers: map[string]any{
 				"X-Forwarded-For":   []any{"192.168.1.1", "10.0.0.1", "172.16.0.1"},
 				"X-Mixed-Types":     []any{"string-value", 123, true, "another-string"},
 				"X-Empty-Interface": make([]any, 0),
 			},
-			expectedResult: map[string][]string{
+			expected: map[string][]string{
 				"X-Forwarded-For": {"192.168.1.1", "10.0.0.1", "172.16.0.1"},
 				"X-Mixed-Types":   {"string-value", "another-string"}, // Only strings processed
-				// X-Empty-Interface is not included - empty arrays don't create headers
 			},
-			description: "Interface arrays should convert strings and log errors for non-string types, empty arrays ignored",
 		},
 		{
+			// Invalid types should be rejected with error logging
 			name: "invalid types",
 			headers: map[string]any{
 				"X-Numeric": 123,
@@ -925,15 +841,13 @@ func TestProcessHeaders(t *testing.T) {
 				"X-Float":   45.67,
 				"X-Nil":     nil,
 			},
-			expectedResult: map[string][]string{
-				// All invalid types should be rejected and logged as errors
-			},
-			description: "Invalid types should be rejected with error logging",
+			expected: make(map[string][]string, 0),
 		},
 		{
+			// Mixed header types work correctly with comma-splitting for strings (deprecated)
+			// X-Empty-Array is not included - empty arrays don't create headers
 			name: "comprehensive mixed scenario",
 			headers: map[string]any{
-				// VictoriaLogs use case - strings with commas (deprecated behavior)
 				"VL-Stream-Fields": "tag.Source,tag.Channel,tag.EventID",
 				"VL-Time-Field":    "@timestamp",
 				"Authorization":    "Bearer token123",
@@ -943,7 +857,7 @@ func TestProcessHeaders(t *testing.T) {
 				"X-Empty-String":   "",
 				"X-Empty-Array":    make([]any, 0),
 			},
-			expectedResult: map[string][]string{
+			expected: map[string][]string{
 				"Vl-Stream-Fields": {"tag.Source", "tag.Channel", "tag.EventID"}, // Split on commas (deprecated)
 				"Vl-Time-Field":    {"@timestamp"},
 				"Authorization":    {"Bearer token123"},
@@ -951,31 +865,58 @@ func TestProcessHeaders(t *testing.T) {
 				"X-Debug-Tags":     {"performance", "security"},
 				"X-Ips":            {"1.1.1.1", "2.2.2.2"},
 				"X-Empty-String":   {""},
-				// X-Empty-Array is not included - empty arrays don't create headers
 			},
-			description: "Mixed header types work correctly with comma-splitting for strings (deprecated behavior)",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			e := &Elasticsearch{
+			// Setup plugin
+			plugin := &Elasticsearch{
 				Headers: tt.headers,
 				Log:     testutil.Logger{},
 			}
 
-			result := e.processHeaders()
-			resultMap := map[string][]string(result)
-
-			require.Equal(t, tt.expectedResult, resultMap, tt.description)
+			result := plugin.processHeaders()
+			require.EqualValues(t, tt.expected, result)
 		})
 	}
 }
 
-type esTemplate struct {
-	Settings esSettings `json:"settings"`
-}
+func TestWriteIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 
-type esSettings struct {
-	Index map[string]any `json:"index"`
+	// Setup container
+	container := &testutil.Container{
+		Image:        "elasticsearch:6.8.23",
+		ExposedPorts: []string{servicePort},
+		Env: map[string]string{
+			"discovery.type": "single-node",
+		},
+		WaitingFor: wait.ForAll(
+			wait.ForLog("] mode [basic] - valid"),
+			wait.ForListeningPort(servicePort),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+
+	// Setup plugin
+	plugin := &Elasticsearch{
+		URLs:                []string{"http://" + container.Address + ":" + container.Ports[servicePort]},
+		IndexName:           "test-%Y.%m.%d",
+		Timeout:             config.Duration(time.Second * 5),
+		EnableGzip:          true,
+		ManageTemplate:      true,
+		TemplateName:        "telegraf",
+		HealthCheckInterval: config.Duration(time.Second * 10),
+		HealthCheckTimeout:  config.Duration(time.Second * 1),
+		Log:                 testutil.Logger{},
+	}
+	require.NoError(t, plugin.Connect())
+
+	// Verify that we can successfully write data to Elasticsearch
+	require.NoError(t, plugin.Write(testutil.MockMetrics()))
 }
