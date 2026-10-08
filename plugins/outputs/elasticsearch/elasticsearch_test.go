@@ -114,7 +114,9 @@ func TestWrite(t *testing.T) {
 		floatReplace    float64
 		useOpTypeCreate bool
 		forceDocumentID bool
+		enableGzip      bool
 		expected        []string
+		expectedHeaders map[string]string
 	}{
 		{
 			name:          "float handling drop NaN",
@@ -273,6 +275,64 @@ func TestWrite(t *testing.T) {
 			},
 		},
 		{
+			name:  "gzip disabled",
+			value: 1,
+			expected: []string{
+				`
+					{
+						"index": {
+							"_index": "test-2009.11.10",
+							"_type": "metrics"
+						}
+					}
+				`,
+				`{
+					"@timestamp": "2009-11-10T23:00:00Z",
+					"measurement_name": "test1",
+						"tag": {
+							"tag1": "value1"
+						},
+						"test1": {
+							"value": 1
+						}
+					}
+				`,
+			},
+			expectedHeaders: map[string]string{
+				"Content-Encoding": "",
+			},
+		},
+		{
+			name:       "gzip enabled",
+			value:      1,
+			enableGzip: true,
+			expected: []string{
+				`
+					{
+						"index": {
+							"_index": "test-2009.11.10",
+							"_type": "metrics"
+						}
+					}
+				`,
+				`{
+					"@timestamp": "2009-11-10T23:00:00Z",
+					"measurement_name": "test1",
+						"tag": {
+							"tag1": "value1"
+						},
+						"test1": {
+							"value": 1
+						}
+					}
+				`,
+			},
+			expectedHeaders: map[string]string{
+				"Content-Encoding": "gzip",
+				"Accept-Encoding":  "gzip",
+			},
+		},
+		{
 			name:            "use_optype_create",
 			value:           1,
 			useOpTypeCreate: true,
@@ -329,6 +389,7 @@ func TestWrite(t *testing.T) {
 				FloatReplacement: tt.floatReplace,
 				UseOpTypeCreate:  tt.useOpTypeCreate,
 				ForceDocumentID:  tt.forceDocumentID,
+				EnableGzip:       tt.enableGzip,
 				Timeout:          config.Duration(time.Second * 5),
 				Log:              testutil.Logger{},
 			}
@@ -346,6 +407,13 @@ func TestWrite(t *testing.T) {
 			require.Len(t, lines, len(expected))
 			for i, actual := range lines {
 				require.JSONEqf(t, expected[i], actual, "mismatch in line %d", i)
+			}
+
+			// Check the request headers
+			for i, hdr := range server.headers() {
+				for k, v := range tt.expectedHeaders {
+					require.Equalf(t, v, hdr.Get(k), "mismatch in header %q of request %d", k, i)
+				}
 			}
 		})
 	}
@@ -788,86 +856,6 @@ func TestIndexSettings(t *testing.T) {
 	}
 }
 
-func TestRequestHeaderWhenGzipIsEnabled(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case "/_bulk":
-			if contentHeader := r.Header.Get("Content-Encoding"); contentHeader != "gzip" {
-				w.WriteHeader(http.StatusInternalServerError)
-				t.Errorf("Not equal, expected: %q, actual: %q", "gzip", contentHeader)
-				return
-			}
-			if acceptHeader := r.Header.Get("Accept-Encoding"); acceptHeader != "gzip" {
-				w.WriteHeader(http.StatusInternalServerError)
-				t.Errorf("Not equal, expected: %q, actual: %q", "gzip", acceptHeader)
-				return
-			}
-
-			if _, err := w.Write([]byte("{}")); err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				t.Error(err)
-			}
-			return
-		default:
-			if _, err := w.Write([]byte(`{"version": {"number": "7.8"}}`)); err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				t.Error(err)
-			}
-			return
-		}
-	}))
-	defer ts.Close()
-
-	// Setup plugin
-	plugin := &Elasticsearch{
-		URLs:       []string{"http://" + ts.Listener.Addr().String()},
-		IndexName:  "{{host}}-%Y.%m.%d",
-		Timeout:    config.Duration(time.Second * 5),
-		EnableGzip: true,
-		Log:        testutil.Logger{},
-	}
-	require.NoError(t, plugin.Connect())
-
-	require.NoError(t, plugin.Write(testutil.MockMetrics()))
-}
-
-func TestRequestHeaderWhenGzipIsDisabled(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case "/_bulk":
-			if contentHeader := r.Header.Get("Content-Encoding"); contentHeader == "gzip" {
-				w.WriteHeader(http.StatusInternalServerError)
-				t.Errorf("Not equal, expected: %q, actual: %q", "gzip", contentHeader)
-				return
-			}
-			if _, err := w.Write([]byte("{}")); err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				t.Error(err)
-			}
-			return
-		default:
-			if _, err := w.Write([]byte(`{"version": {"number": "7.8"}}`)); err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				t.Error(err)
-			}
-			return
-		}
-	}))
-	defer ts.Close()
-
-	// Setup plugin
-	plugin := &Elasticsearch{
-		URLs:       []string{"http://" + ts.Listener.Addr().String()},
-		IndexName:  "{{host}}-%Y.%m.%d",
-		Timeout:    config.Duration(time.Second * 5),
-		EnableGzip: false,
-		Log:        testutil.Logger{},
-	}
-	require.NoError(t, plugin.Connect())
-
-	require.NoError(t, plugin.Write(testutil.MockMetrics()))
-}
-
 func TestAuthorizationHeaderWhenBearerTokenIsPresent(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
@@ -1072,50 +1060,53 @@ func TestWriteIntegration(t *testing.T) {
 type mockServer struct {
 	server *httptest.Server
 	msgs   []string
+	hdrs   []http.Header
 	sync.Mutex
 }
 
 func startMockServer(t *testing.T) *mockServer {
 	s := &mockServer{
 		msgs: make([]string, 0),
+		hdrs: make([]http.Header, 0),
 	}
 
 	s.server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/_bulk" {
-			if _, err := w.Write([]byte(`{"version": {"number": "6.8.23"}}`)); err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				t.Error(err)
+		switch r.URL.Path {
+		case "/_bulk":
+			// The request body is compressed if the plugin is configured to use
+			// gzip, so we need to decompress it before recording the message
+			reader := r.Body
+			if r.Header.Get("Content-Encoding") == "gzip" {
+				gzipReader, err := gzip.NewReader(r.Body)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
+				defer gzipReader.Close()
+				reader = gzipReader
 			}
-			return
-		}
 
-		// The request body is compressed if the plugin is configured to use
-		// gzip, so we need to decompress it before recording the message
-		reader := r.Body
-		if r.Header.Get("Content-Encoding") == "gzip" {
-			gzipReader, err := gzip.NewReader(r.Body)
+			body, err := io.ReadAll(reader)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				t.Error(err)
 				return
 			}
-			defer gzipReader.Close()
-			reader = gzipReader
-		}
+			s.Lock()
+			s.msgs = append(s.msgs, string(body))
+			s.hdrs = append(s.hdrs, r.Header.Clone())
+			s.Unlock()
 
-		body, err := io.ReadAll(reader)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			t.Error(err)
-			return
-		}
-		s.Lock()
-		s.msgs = append(s.msgs, string(body))
-		s.Unlock()
-
-		if _, err := w.Write([]byte("{}")); err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			t.Error(err)
+			if _, err := w.Write([]byte("{}")); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+			}
+		default:
+			if _, err := w.Write([]byte(`{"version": {"number": "6.8.23"}}`)); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Error(err)
+			}
 		}
 	}))
 
@@ -1134,4 +1125,10 @@ func (s *mockServer) messages() []string {
 	s.Lock()
 	defer s.Unlock()
 	return slices.Clone(s.msgs)
+}
+
+func (s *mockServer) headers() []http.Header {
+	s.Lock()
+	defer s.Unlock()
+	return slices.Clone(s.hdrs)
 }
