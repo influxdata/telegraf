@@ -107,6 +107,29 @@ func TestConnectFail(t *testing.T) {
 }
 
 func TestWrite(t *testing.T) {
+	// Bulk request expected for a metric with a single integer value of one
+	msgBulk := []string{
+		`
+			{
+				"index": {
+					"_index": "test-2009.11.10",
+					"_type": "metrics"
+				}
+			}
+		`,
+		`{
+			"@timestamp": "2009-11-10T23:00:00Z",
+			"measurement_name": "test1",
+			"tag": {
+				"tag1": "value1"
+			},
+			"test1": {
+				"value": 1
+			}
+		}
+		`,
+	}
+
 	tests := []struct {
 		name            string
 		value           any
@@ -116,8 +139,9 @@ func TestWrite(t *testing.T) {
 		forceDocumentID bool
 		enableGzip      bool
 		authBearerToken string
+		headers         map[string]any
 		expected        []string
-		expectedHeaders map[string]string
+		expectedHeaders map[string][]string
 	}{
 		{
 			name:          "float handling drop NaN",
@@ -276,90 +300,132 @@ func TestWrite(t *testing.T) {
 			},
 		},
 		{
-			name:  "gzip disabled",
-			value: 1,
-			expected: []string{
-				`
-					{
-						"index": {
-							"_index": "test-2009.11.10",
-							"_type": "metrics"
-						}
-					}
-				`,
-				`{
-					"@timestamp": "2009-11-10T23:00:00Z",
-					"measurement_name": "test1",
-						"tag": {
-							"tag1": "value1"
-						},
-						"test1": {
-							"value": 1
-						}
-					}
-				`,
-			},
-			expectedHeaders: map[string]string{
-				"Content-Encoding": "",
+			name:     "gzip disabled",
+			value:    1,
+			expected: msgBulk,
+			expectedHeaders: map[string][]string{
+				"Content-Encoding": nil,
 			},
 		},
 		{
 			name:       "gzip enabled",
 			value:      1,
 			enableGzip: true,
-			expected: []string{
-				`
-					{
-						"index": {
-							"_index": "test-2009.11.10",
-							"_type": "metrics"
-						}
-					}
-				`,
-				`{
-					"@timestamp": "2009-11-10T23:00:00Z",
-					"measurement_name": "test1",
-						"tag": {
-							"tag1": "value1"
-						},
-						"test1": {
-							"value": 1
-						}
-					}
-				`,
-			},
-			expectedHeaders: map[string]string{
-				"Content-Encoding": "gzip",
-				"Accept-Encoding":  "gzip",
+			expected:   msgBulk,
+			expectedHeaders: map[string][]string{
+				"Content-Encoding": {"gzip"},
+				"Accept-Encoding":  {"gzip"},
 			},
 		},
 		{
 			name:            "auth bearer token",
 			value:           1,
 			authBearerToken: "0123456789abcdef",
-			expected: []string{
-				`
-					{
-						"index": {
-							"_index": "test-2009.11.10",
-							"_type": "metrics"
-						}
-					}
-				`,
-				`{
-					"@timestamp": "2009-11-10T23:00:00Z",
-					"measurement_name": "test1",
-						"tag": {
-							"tag1": "value1"
-						},
-						"test1": {
-							"value": 1
-						}
-					}
-				`,
+			expected:        msgBulk,
+			expectedHeaders: map[string][]string{
+				"Authorization": {"Bearer 0123456789abcdef"},
 			},
-			expectedHeaders: map[string]string{
-				"Authorization": "Bearer 0123456789abcdef",
+		},
+		{
+			// An empty header map must not add any header
+			name:     "empty headers map",
+			value:    1,
+			headers:  map[string]any{},
+			expected: msgBulk,
+		},
+		{
+			// Invalid types are rejected with error logging
+			name:  "invalid header types",
+			value: 1,
+			headers: map[string]any{
+				"X-Numeric": 123,
+				"X-Boolean": true,
+				"X-Float":   45.67,
+				"X-Nil":     nil,
+			},
+			expected: msgBulk,
+			expectedHeaders: map[string][]string{
+				"X-Numeric": nil,
+				"X-Boolean": nil,
+				"X-Float":   nil,
+				"X-Nil":     nil,
+			},
+		},
+		{
+			// Single string values are split on commas (deprecated behavior)
+			name:  "header strings with commas (deprecated)",
+			value: 1,
+			headers: map[string]any{
+				"Authorization":       "Bearer token123",
+				"VL-Stream-Fields":    "tag.Source,tag.Channel,tag.EventID",
+				"VL-Msg-Field":        "win_eventlog.Message",
+				"CSV-Data":            "col1,col2,col3,col4",
+				"Content-Disposition": `attachment; filename="file,with,commas.csv"`,
+				"X-Special-Chars":     "value with spaces, commas, and \"quotes\"",
+				"X-Unicode":           "测试值",
+				"X-JSON-Like":         `{"key": "value", "array": [1,2,3]}`,
+				"X-Empty-String":      "",
+			},
+			expected: msgBulk,
+			expectedHeaders: map[string][]string{
+				"Authorization":       {"Bearer token123"},
+				"VL-Stream-Fields":    {"tag.Source", "tag.Channel", "tag.EventID"},
+				"VL-Msg-Field":        {"win_eventlog.Message"},
+				"CSV-Data":            {"col1", "col2", "col3", "col4"},
+				"Content-Disposition": {`attachment; filename="file`, `with`, `commas.csv"`},
+				"X-Special-Chars":     {"value with spaces", "commas", `and "quotes"`},
+				"X-Unicode":           {"测试值"},
+				"X-JSON-Like":         {`{"key": "value"`, `"array": [1`, `2`, `3]}`},
+				"X-Empty-String":      {""},
+			},
+		},
+		{
+			// Arrays create multiple header values with whitespace trimmed,
+			// empty arrays are ignored
+			name:  "header arrays with whitespace",
+			value: 1,
+			headers: map[string]any{
+				"Cache-Control": []any{"no-cache", "must-revalidate"},
+				"X-Debug-Tags":  []any{"performance", "security", "monitoring"},
+				"X-With-Spaces": []any{" application/json ", "  application/xml  ", "text/plain"},
+				"X-Empty-Array": make([]any, 0),
+			},
+			expected: msgBulk,
+			expectedHeaders: map[string][]string{
+				"Cache-Control": {"no-cache", "must-revalidate"},
+				"X-Debug-Tags":  {"performance", "security", "monitoring"},
+				"X-With-Spaces": {"application/json", "application/xml", "text/plain"},
+				"X-Empty-Array": nil,
+			},
+		},
+		{
+			// Arrays convert strings and log errors for non-string types
+			name:  "header arrays with mixed types",
+			value: 1,
+			headers: map[string]any{
+				"X-Forwarded-For":   []any{"192.168.1.1", "10.0.0.1", "172.16.0.1"},
+				"X-Mixed-Types":     []any{"string-value", 123, true, "another-string"},
+				"X-Empty-Interface": make([]any, 0),
+			},
+			expected: msgBulk,
+			expectedHeaders: map[string][]string{
+				"X-Forwarded-For":   {"192.168.1.1", "10.0.0.1", "172.16.0.1"},
+				"X-Mixed-Types":     {"string-value", "another-string"},
+				"X-Empty-Interface": nil,
+			},
+		},
+		{
+			// Headers set by the client itself are appended to, not replaced
+			name:  "headers used by the client",
+			value: 1,
+			headers: map[string]any{
+				"Content-Type": "application/json",
+				"Accept":       []any{"application/json", "text/plain"},
+			},
+			expected: msgBulk,
+			expectedHeaders: map[string][]string{
+				"Content-Type": {"application/x-ndjson", "application/json"},
+				"Accept":       {"application/json", "application/json", "text/plain"},
 			},
 		},
 		{
@@ -415,6 +481,7 @@ func TestWrite(t *testing.T) {
 			plugin := &Elasticsearch{
 				URLs:             []string{"http://" + server.addr()},
 				IndexName:        "test-%Y.%m.%d",
+				Headers:          tt.headers,
 				FloatHandling:    tt.floatHandling,
 				FloatReplacement: tt.floatReplace,
 				UseOpTypeCreate:  tt.useOpTypeCreate,
@@ -445,7 +512,7 @@ func TestWrite(t *testing.T) {
 			// Check the request headers
 			for i, hdr := range server.headers() {
 				for k, v := range tt.expectedHeaders {
-					require.Equalf(t, v, hdr.Get(k), "mismatch in header %q of request %d", k, i)
+					require.Equalf(t, v, hdr.Values(k), "mismatch in header %q of request %d", k, i)
 				}
 			}
 		})
@@ -885,132 +952,6 @@ func TestIndexSettings(t *testing.T) {
 			buf, err := plugin.createNewTemplate("test")
 			require.NoError(t, err)
 			require.JSONEq(t, tt.expected, buf.String())
-		})
-	}
-}
-
-func TestCustomHeaders(t *testing.T) {
-	tests := []struct {
-		name     string
-		headers  map[string]any
-		expected map[string][]string
-	}{
-		{
-			// If headers are not set http.Header should be empty
-			name:     "no headers",
-			expected: make(map[string][]string),
-		},
-		{
-			// Empty headers map should return empty http.Header
-			name:     "empty headers map",
-			headers:  map[string]any{},
-			expected: make(map[string][]string),
-		},
-		{
-			// Invalid types should be rejected with error logging
-			name: "invalid types",
-			headers: map[string]any{
-				"X-Numeric": 123,
-				"X-Boolean": true,
-				"X-Float":   45.67,
-				"X-Nil":     nil,
-			},
-			expected: make(map[string][]string),
-		},
-		{
-			// Single string values are split on commas (deprecated behavior with warnings)
-			name: "strings with commas (deprecated)",
-			headers: map[string]any{
-				"Content-Type":        "application/json",
-				"Authorization":       "Bearer token123",
-				"VL-Stream-Fields":    "tag.Source,tag.Channel,tag.EventID",
-				"VL-Msg-Field":        "win_eventlog.Message",
-				"CSV-Data":            "col1,col2,col3,col4",
-				"Content-Disposition": `attachment; filename="file,with,commas.csv"`,
-				"X-Special-Chars":     "value with spaces, commas, and \"quotes\"",
-				"X-Unicode":           "测试值",
-				"X-JSON-Like":         `{"key": "value", "array": [1,2,3]}`,
-			},
-			expected: map[string][]string{
-				"Content-Type":        {"application/json"},
-				"Authorization":       {"Bearer token123"},
-				"Vl-Stream-Fields":    {"tag.Source", "tag.Channel", "tag.EventID"}, // Split on commas
-				"Vl-Msg-Field":        {"win_eventlog.Message"},
-				"Csv-Data":            {"col1", "col2", "col3", "col4"},                      // Split on commas
-				"Content-Disposition": {`attachment; filename="file`, `with`, `commas.csv"`}, // Split on commas
-				"X-Special-Chars":     {"value with spaces", "commas", `and "quotes"`},       // Split on commas
-				"X-Unicode":           {"测试值"},
-				"X-Json-Like":         {`{"key": "value"`, `"array": [1`, `2`, `3]}`}, // Split on commas
-			},
-		},
-		{
-			// Interface arrays should create multiple header values with whitespace trimmed, empty arrays ignored
-			// X-Empty-Array is not included - empty arrays don't create headers
-			name: "arrays with whitespace",
-			headers: map[string]any{
-				"Accept":        []any{"application/json", "application/xml", "text/plain"},
-				"Cache-Control": []any{"no-cache", "must-revalidate"},
-				"X-Debug-Tags":  []any{"performance", "security", "monitoring"},
-				"X-With-Spaces": []any{" application/json ", "  application/xml  ", "text/plain"},
-				"X-Empty-Array": make([]any, 0),
-			},
-			expected: map[string][]string{
-				"Accept":        {"application/json", "application/xml", "text/plain"},
-				"Cache-Control": {"no-cache", "must-revalidate"},
-				"X-Debug-Tags":  {"performance", "security", "monitoring"},
-				"X-With-Spaces": {"application/json", "application/xml", "text/plain"}, // Trimmed
-			},
-		},
-		{
-			// Interface arrays should convert strings and log errors for non-string types, empty arrays ignored
-			// X-Empty-Interface is not included - empty arrays don't create headers
-			name: "interface arrays - TOML parsing and mixed types",
-			headers: map[string]any{
-				"X-Forwarded-For":   []any{"192.168.1.1", "10.0.0.1", "172.16.0.1"},
-				"X-Mixed-Types":     []any{"string-value", 123, true, "another-string"},
-				"X-Empty-Interface": make([]any, 0),
-			},
-			expected: map[string][]string{
-				"X-Forwarded-For": {"192.168.1.1", "10.0.0.1", "172.16.0.1"},
-				"X-Mixed-Types":   {"string-value", "another-string"}, // Only strings processed
-			},
-		},
-		{
-			// Mixed header types work correctly with comma-splitting for strings (deprecated)
-			// X-Empty-Array is not included - empty arrays don't create headers
-			name: "comprehensive mixed scenario",
-			headers: map[string]any{
-				"VL-Stream-Fields": "tag.Source,tag.Channel,tag.EventID",
-				"VL-Time-Field":    "@timestamp",
-				"Authorization":    "Bearer token123",
-				"Accept":           []any{"application/json", "text/plain"},
-				"X-Debug-Tags":     []any{"performance", "security"},
-				"X-IPs":            []any{"1.1.1.1", "2.2.2.2"},
-				"X-Empty-String":   "",
-				"X-Empty-Array":    make([]any, 0),
-			},
-			expected: map[string][]string{
-				"Vl-Stream-Fields": {"tag.Source", "tag.Channel", "tag.EventID"}, // Split on commas (deprecated)
-				"Vl-Time-Field":    {"@timestamp"},
-				"Authorization":    {"Bearer token123"},
-				"Accept":           {"application/json", "text/plain"},
-				"X-Debug-Tags":     {"performance", "security"},
-				"X-Ips":            {"1.1.1.1", "2.2.2.2"},
-				"X-Empty-String":   {""},
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Setup plugin
-			plugin := &Elasticsearch{
-				Headers: tt.headers,
-				Log:     testutil.Logger{},
-			}
-
-			result := plugin.processHeaders()
-			require.EqualValues(t, tt.expected, result)
 		})
 	}
 }
