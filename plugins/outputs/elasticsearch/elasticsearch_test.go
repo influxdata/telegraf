@@ -307,7 +307,7 @@ func TestGetTagKeys(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			indexName, tagKeys := GetTagKeys(tt.indexName)
 			require.Equal(t, tt.expectedIndexName, indexName)
-			require.ElementsMatch(t, tt.expectedTagKeys, tagKeys)
+			require.Equal(t, tt.expectedTagKeys, tagKeys)
 		})
 	}
 }
@@ -367,7 +367,7 @@ func TestGetIndexName(t *testing.T) {
 			tagKeys:   []string{"tag1", "tag2"},
 		},
 		{
-			name:      "threee tags",
+			name:      "three tags",
 			indexName: "indexname-%s-%s-%s-%y-%m",
 			expected:  "indexname-value1-value2-none-14-12",
 			tagKeys:   []string{"tag1", "tag2", "tag3"},
@@ -766,13 +766,24 @@ func TestCustomHeaders(t *testing.T) {
 		{
 			// If headers are not set http.Header should be empty
 			name:     "no headers",
-			expected: map[string][]string{},
+			expected: make(map[string][]string),
 		},
 		{
 			// Empty headers map should return empty http.Header
 			name:     "empty headers map",
 			headers:  map[string]any{},
-			expected: map[string][]string{},
+			expected: make(map[string][]string),
+		},
+		{
+			// Invalid types should be rejected with error logging
+			name: "invalid types",
+			headers: map[string]any{
+				"X-Numeric": 123,
+				"X-Boolean": true,
+				"X-Float":   45.67,
+				"X-Nil":     nil,
+			},
+			expected: make(map[string][]string),
 		},
 		{
 			// Single string values are split on commas (deprecated behavior with warnings)
@@ -831,17 +842,6 @@ func TestCustomHeaders(t *testing.T) {
 				"X-Forwarded-For": {"192.168.1.1", "10.0.0.1", "172.16.0.1"},
 				"X-Mixed-Types":   {"string-value", "another-string"}, // Only strings processed
 			},
-		},
-		{
-			// Invalid types should be rejected with error logging
-			name: "invalid types",
-			headers: map[string]any{
-				"X-Numeric": 123,
-				"X-Boolean": true,
-				"X-Float":   45.67,
-				"X-Nil":     nil,
-			},
-			expected: make(map[string][]string, 0),
 		},
 		{
 			// Mixed header types work correctly with comma-splitting for strings (deprecated)
