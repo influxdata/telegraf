@@ -28,6 +28,12 @@
   previously collapsed onto one series and now split per GPU, so queries and
   dashboards grouping these metrics should account for the new tag. The extra
   cardinality is bounded by the number of GPUs.
+- PR [#19558](https://github.com/influxdata/telegraf/pull/19558) changes the
+  filenames written by `outputs.parquet` from
+  `<measurement>-<YYYY-MM-DD>-<unix-seconds>.parquet` to
+  `<measurement>-<YYYYMMDDhhmmss>-<uuid>.parquet` and never reuses a file.
+  This fixes an edge case where dataloss could occur when auto rotating
+  parquet files and multiple writers using the same directory.
 
 ## v1.40.2 [2026-10-12]
 
@@ -158,16 +164,6 @@
 - [#19706](https://github.com/influxdata/telegraf/pull/19706) `deps` Bump the aws-sdk-go-v2 group with 11 updates
 - [#19633](https://github.com/influxdata/telegraf/pull/19633) `deps` Bump the aws-sdk-go-v2 group with 11 updates
 - [#19745](https://github.com/influxdata/telegraf/pull/19745) `deps` Downgrade google.golang.org/grpc from 1.85.0-dev to 1.84.0
-## unreleased
-
-### Important Changes
-
-- PR [#19558](https://github.com/influxdata/telegraf/pull/19558) changes the
-  filenames written by `outputs.parquet` from
-  `<measurement>-<YYYY-MM-DD>-<unix-seconds>.parquet` to
-  `<measurement>-<YYYYMMDDhhmmss>-<uuid>.parquet` and never reuses a file.
-  This fixes an edge case where dataloss could occur when auto rotating
-  parquet files and enables multiple writers to the same parquet schema.
 
 ## v1.40.0 [2026-09-07]
 
