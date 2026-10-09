@@ -132,6 +132,11 @@ func TestWriteWithDefaults(t *testing.T) {
 			t.Errorf("Not equal, expected: %q, actual: %q", defaultHost, obj.Resources[0].Name)
 			return
 		}
+		if _, ok := obj.Resources[0].Properties["Alias"]; ok {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Unexpected host property %q", "Alias")
+			return
+		}
 		if obj.Resources[0].Services[0].Status != transit.MonitorStatus("SERVICE_OK") {
 			w.WriteHeader(http.StatusInternalServerError)
 			t.Errorf("Not equal, expected: %q, actual: %q", transit.MonitorStatus("SERVICE_OK"), obj.Resources[0].Services[0].Status)
@@ -279,7 +284,8 @@ func TestWriteWithTags(t *testing.T) {
 	floatMetric.AddTag("status", "SERVICE_PENDING")
 	floatMetric.AddTag("group-tag", "Group01")
 	floatMetric.AddTag("resource-tag", "Host01")
-	floatMetric.AddTag("service", "Service01")
+	floatMetric.AddTag("alias-tag", "Host01 Alias")
+	floatMetric.AddTag("service-tag", "Service01")
 	floatMetric.AddTag("facility", "FACILITY")
 	floatMetric.AddTag("severity", "SEVERITY")
 
@@ -315,6 +321,18 @@ func TestWriteWithTags(t *testing.T) {
 			w.WriteHeader(http.StatusInternalServerError)
 			t.Errorf("Not equal, expected: %q, actual: %q", "Host01", obj.Resources[0].Name)
 			return
+		}
+		if alias, ok := obj.Resources[0].Properties["Alias"]; !ok || *alias.StringValue != "Host01 Alias" {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Not equal, expected: %q, actual: %v", "Host01 Alias", obj.Resources[0].Properties["Alias"])
+			return
+		}
+		for _, tag := range []string{"alias-tag", "service-tag"} {
+			if _, ok := obj.Resources[0].Services[0].Properties[tag]; ok {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Errorf("Unexpected service property %q", tag)
+				return
+			}
 		}
 		if obj.Resources[0].Services[0].Name != "Service01" {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -385,6 +403,8 @@ func TestWriteWithTags(t *testing.T) {
 		DefaultAppType: defaultAppType,
 		GroupTag:       "group-tag",
 		ResourceTag:    "resource-tag",
+		AliasTag:       "alias-tag",
+		ServiceTag:     "service-tag",
 		client: clients.GWClient{
 			AppName: "telegraf",
 			AppType: defaultAppType,
