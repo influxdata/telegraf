@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/gwos/tcg/sdk/clients"
+	"github.com/gwos/tcg/sdk/mapping"
 	"github.com/gwos/tcg/sdk/transit"
 	"github.com/stretchr/testify/require"
 
@@ -132,6 +133,11 @@ func TestWriteWithDefaults(t *testing.T) {
 			t.Errorf("Not equal, expected: %q, actual: %q", defaultHost, obj.Resources[0].Name)
 			return
 		}
+		if _, ok := obj.Resources[0].Properties["Alias"]; ok {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Unexpected host property %q", "Alias")
+			return
+		}
 		if obj.Resources[0].Services[0].Status != transit.MonitorStatus("SERVICE_OK") {
 			w.WriteHeader(http.StatusInternalServerError)
 			t.Errorf("Not equal, expected: %q, actual: %q", transit.MonitorStatus("SERVICE_OK"), obj.Resources[0].Services[0].Status)
@@ -169,7 +175,7 @@ func TestWriteWithDefaults(t *testing.T) {
 		client: clients.GWClient{
 			AppName: "telegraf",
 			AppType: customAppType,
-			GWConnection: &clients.GWConnection{
+			GWConnection: clients.GWConnection{
 				HostName: server.URL,
 			},
 		},
@@ -254,7 +260,7 @@ func TestWriteWithFields(t *testing.T) {
 		client: clients.GWClient{
 			AppName: "telegraf",
 			AppType: defaultAppType,
-			GWConnection: &clients.GWConnection{
+			GWConnection: clients.GWConnection{
 				HostName: server.URL,
 			},
 		},
@@ -279,7 +285,8 @@ func TestWriteWithTags(t *testing.T) {
 	floatMetric.AddTag("status", "SERVICE_PENDING")
 	floatMetric.AddTag("group-tag", "Group01")
 	floatMetric.AddTag("resource-tag", "Host01")
-	floatMetric.AddTag("service", "Service01")
+	floatMetric.AddTag("alias-tag", "Host01 Alias")
+	floatMetric.AddTag("service-tag", "Service01")
 	floatMetric.AddTag("facility", "FACILITY")
 	floatMetric.AddTag("severity", "SEVERITY")
 
@@ -315,6 +322,18 @@ func TestWriteWithTags(t *testing.T) {
 			w.WriteHeader(http.StatusInternalServerError)
 			t.Errorf("Not equal, expected: %q, actual: %q", "Host01", obj.Resources[0].Name)
 			return
+		}
+		if alias, ok := obj.Resources[0].Properties["Alias"]; !ok || *alias.StringValue != "Host01 Alias" {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Errorf("Not equal, expected: %q, actual: %v", "Host01 Alias", obj.Resources[0].Properties["Alias"])
+			return
+		}
+		for _, tag := range []string{"alias-tag", "service-tag"} {
+			if _, ok := obj.Resources[0].Services[0].Properties[tag]; ok {
+				w.WriteHeader(http.StatusInternalServerError)
+				t.Errorf("Unexpected service property %q", tag)
+				return
+			}
 		}
 		if obj.Resources[0].Services[0].Name != "Service01" {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -385,10 +404,12 @@ func TestWriteWithTags(t *testing.T) {
 		DefaultAppType: defaultAppType,
 		GroupTag:       "group-tag",
 		ResourceTag:    "resource-tag",
+		AliasTag:       "alias-tag",
+		ServiceTag:     "service-tag",
 		client: clients.GWClient{
 			AppName: "telegraf",
 			AppType: defaultAppType,
-			GWConnection: &clients.GWConnection{
+			GWConnection: clients.GWConnection{
 				HostName: server.URL,
 			},
 		},
@@ -398,4 +419,184 @@ func TestWriteWithTags(t *testing.T) {
 	require.NoError(t, err)
 
 	server.Close()
+}
+
+func TestWriteWithMappings(t *testing.T) {
+	floatMetric := testutil.TestMetric(1.0, "FloatMetric")
+	floatMetric.AddTag("host", "host01.example.com")
+	floatMetric.AddTag("cluster", "prod")
+	floatMetric.AddTag("namespace", "web")
+	floatMetric.AddTag("check", "http")
+	floatMetric.AddTag("state", "warning")
+	floatMetric.AddTag("status", "SERVICE_PENDING")
+	floatMetric.AddTag("message", "Test Tag")
+
+	server, requests := newCaptureServer(t)
+
+	i := Groundwork{
+		Log:            testutil.Logger{},
+		Server:         server.URL,
+		AgentID:        defaultTestAgentID,
+		DefaultHost:    defaultHost,
+		DefaultAppType: defaultAppType,
+		GroupTag:       "group",
+		ResourceTag:    "host",
+		MapHostGroup:   mapping.Mappings{*mapping.NewMapping("cluster,namespace", "^(.+),(.+)$", "$1-$2")},
+		MapHostAlias:   mapping.Mappings{*mapping.NewMapping("host", "^(.+)$", "alias-$1")},
+		MapHostName: mapping.Mappings{
+			*mapping.NewMapping("missing", "(.*)", "$1"),
+			*mapping.NewMapping("host", "^([^.]+)", "$1"),
+		},
+		MapService: mapping.Mappings{*mapping.NewMapping("check", "(.*)", "svc-$1")},
+		MapStatus:  mapping.Mappings{*mapping.NewMapping("state", "^warning$", "SERVICE_WARNING")},
+		MapMessage: mapping.Mappings{*mapping.NewMapping("", "", "Mapped Message")},
+		client: clients.GWClient{
+			AppName: "telegraf",
+			AppType: defaultAppType,
+			GWConnection: clients.GWConnection{
+				HostName: server.URL,
+			},
+		},
+	}
+
+	require.NoError(t, i.Write([]telegraf.Metric{floatMetric}))
+
+	require.Len(t, *requests, 1)
+	received := (*requests)[0]
+	require.Len(t, received.Resources, 1)
+	res := received.Resources[0]
+	require.Equal(t, "host01", res.Name)
+	require.Contains(t, res.Properties, "Alias")
+	require.Equal(t, "alias-host01.example.com", *res.Properties["Alias"].StringValue)
+	require.Len(t, res.Services, 1)
+	require.Equal(t, "svc-http", res.Services[0].Name)
+	require.Equal(t, "host01", res.Services[0].Owner)
+	require.Equal(t, transit.ServiceWarning, res.Services[0].Status)
+	require.Equal(t, "Mapped Message", res.Services[0].LastPluginOutput)
+	require.Len(t, received.Groups, 1)
+	require.Equal(t, "prod-web", received.Groups[0].GroupName)
+	require.Equal(t, "host01", received.Groups[0].Resources[0].Name)
+}
+
+func TestWriteMappingRules(t *testing.T) {
+	newMetric := func(name, host string, tags map[string]string, message string) telegraf.Metric {
+		m := testutil.TestMetric(1.0, name)
+		m.AddTag("host", host)
+		m.AddTag("check", name)
+		for k, v := range tags {
+			m.AddTag(k, v)
+		}
+		if message != "" {
+			m.AddField("message", message)
+		}
+		return m
+	}
+	// Mapped from the string field "message".
+	matched := newMetric("matched", "host01.example.com", nil, "disk full")
+	// The "message" tag takes precedence over the field.
+	tagFirst := newMetric("tagFirst", "host01.example.com", map[string]string{"message": "intrusion"}, "disk full")
+	// Optional mappings that do not apply keep their tag-based defaults.
+	fallback := newMetric("fallback", "host02.example.com",
+		map[string]string{"group": "Group02", "host_alias": "Alias02", "state": "bogus"}, "all good")
+	// Dropped: hostname or service mapping does not match, or map_ignore matches.
+	badHost := newMetric("badHost", "-bad-", nil, "")
+	noService := newMetric("noService", "host01.example.com", nil, "")
+	noService.RemoveTag("check")
+	ignored := newMetric("ignored", "host01.example.com", nil, "DB client connected")
+
+	server, requests := newCaptureServer(t)
+
+	i := Groundwork{
+		Log:                 testutil.Logger{},
+		Server:              server.URL,
+		AgentID:             defaultTestAgentID,
+		DefaultHost:         defaultHost,
+		DefaultAppType:      defaultAppType,
+		DefaultServiceState: string(transit.ServiceOk),
+		GroupTag:            "group",
+		ResourceTag:         "host",
+		AliasTag:            "host_alias",
+		MapIgnore:           mapping.Mappings{*mapping.NewMapping("message", "client connected", "ignore")},
+		MapHostName:         mapping.Mappings{*mapping.NewMapping("host", `^(\w+)\.`, "$1")},
+		MapService:          mapping.Mappings{*mapping.NewMapping("check", "(.+)", "svc-$1")},
+		MapHostGroup:        mapping.Mappings{*mapping.NewMapping("cluster", "(.+)", "$1")},
+		MapHostAlias:        mapping.Mappings{*mapping.NewMapping("alias_src", "(.+)", "$1")},
+		MapStatus: mapping.Mappings{
+			*mapping.NewMapping("state", "(.*)", "$1"),
+			*mapping.NewMapping("message", "intrusion", string(transit.ServiceUnscheduledCritical)),
+			*mapping.NewMapping("message", "disk full", string(transit.ServiceWarning)),
+		},
+		MapMessage: mapping.Mappings{*mapping.NewMapping("summary", "(.+)", "$1")},
+		client: clients.GWClient{
+			AppName: "telegraf",
+			AppType: defaultAppType,
+			GWConnection: clients.GWConnection{
+				HostName: server.URL,
+			},
+		},
+	}
+
+	require.NoError(t, i.Write([]telegraf.Metric{matched, tagFirst, fallback, badHost, noService, ignored}))
+	require.Len(t, *requests, 1)
+	received := (*requests)[0]
+
+	services := make(map[string]transit.MonitoredService)
+	hosts := make(map[string]transit.MonitoredResource)
+	for _, res := range received.Resources {
+		hosts[res.Name] = res
+		for _, svc := range res.Services {
+			services[svc.Name] = svc
+		}
+	}
+	require.Len(t, services, 3)
+	require.Equal(t, transit.ServiceWarning, services["svc-matched"].Status)
+	require.Equal(t, "disk full", services["svc-matched"].LastPluginOutput)
+	require.Equal(t, transit.ServiceUnscheduledCritical, services["svc-tagFirst"].Status)
+	require.Equal(t, "host01", services["svc-tagFirst"].Owner)
+
+	require.Equal(t, transit.ServiceOk, services["svc-fallback"].Status)
+	require.Equal(t, "all good", services["svc-fallback"].LastPluginOutput)
+	require.Equal(t, "host02", services["svc-fallback"].Owner)
+	require.Equal(t, "Alias02", *hosts["host02"].Properties["Alias"].StringValue)
+	require.Len(t, received.Groups, 1)
+	require.Equal(t, "Group02", received.Groups[0].GroupName)
+
+	// A batch where every metric is dropped must not be sent at all.
+	require.NoError(t, i.Write([]telegraf.Metric{badHost, noService, ignored}))
+	require.Len(t, *requests, 1)
+}
+
+func TestInitMappingCompileError(t *testing.T) {
+	i := Groundwork{
+		Log:                 testutil.Logger{},
+		Server:              "http://localhost",
+		AgentID:             defaultTestAgentID,
+		Username:            config.NewSecret([]byte(`tu ser`)),
+		Password:            config.NewSecret([]byte(`pu ser`)),
+		DefaultAppType:      defaultAppType,
+		DefaultHost:         defaultHost,
+		DefaultServiceState: string(transit.ServiceOk),
+		ResourceTag:         "host",
+		MapService:          mapping.Mappings{{Tag: "service", Matcher: "(", Template: "$1"}},
+	}
+	require.ErrorContains(t, i.Init(), "map_service")
+}
+
+// newCaptureServer starts a fake GroundWork server that records every request it decodes.
+func newCaptureServer(t *testing.T) (*httptest.Server, *[]transit.ResourcesWithServicesRequest) {
+	var requests []transit.ResourcesWithServicesRequest
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var obj transit.ResourcesWithServicesRequest
+		if err := json.NewDecoder(r.Body).Decode(&obj); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			t.Error(err)
+			return
+		}
+		requests = append(requests, obj)
+		if _, err := fmt.Fprintln(w, "OK"); err != nil {
+			t.Error(err)
+		}
+	}))
+	t.Cleanup(server.Close)
+	return server, &requests
 }
