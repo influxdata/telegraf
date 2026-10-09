@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net"
 	"os/exec"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -16,6 +17,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/common/sudo"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -159,7 +161,11 @@ func unboundRunner(unbound Unbound) (*bytes.Buffer, error) {
 
 	if unbound.UseSudo {
 		cmdArgs = append([]string{unbound.Binary}, cmdArgs...)
-		cmd = exec.Command("sudo", cmdArgs...)
+		// OpenBSD doas rules run unbound-control as _unbound. doas targets root unless -u is set.
+		if runtime.GOOS == "openbsd" {
+			cmdArgs = append([]string{"-u", "_unbound"}, cmdArgs...)
+		}
+		cmd = exec.Command(sudo.Binary(), cmdArgs...)
 	}
 
 	var out bytes.Buffer

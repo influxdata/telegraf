@@ -14,6 +14,10 @@
   `inputs.nftables` invokes `nft`. When using `use_sudo`, update your
   sudoers configuration as described in the plugin's README.
 
+### Features
+
+- `inputs` Use doas instead of sudo on OpenBSD when `use_sudo` is enabled
+
 ## v1.40.1 [2026-09-21]
 
 ### Bugfixes
