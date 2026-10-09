@@ -14,8 +14,10 @@ fi
 os="$1"
 arch="$2"
 
-# List all Go files (including tests) of all packages built for the architecture
+# List all Go files (including tests) of all packages built for the architecture.
+# The "$d" below is a Go template variable, not a shell one.
 files() {
+    # shellcheck disable=SC2016
     GOOS="${os}" GOARCH="$1" go list -e -f '{{$d:=.Dir}}{{range .GoFiles}}{{$d}}/{{.}}{{"\n"}}{{end}}{{range .TestGoFiles}}{{$d}}/{{.}}{{"\n"}}{{end}}{{range .XTestGoFiles}}{{$d}}/{{.}}{{"\n"}}{{end}}' ./... | sort
 }
 
