@@ -10,6 +10,9 @@
   instead of the local one. A configuration naming a CID that does not belong
   to the machine Telegraf runs on now fails on startup, so please check your
   `vsock` addresses.
+- PR [#19503](https://github.com/influxdata/telegraf/pull/19503) changes how
+  `inputs.nftables` invokes `nft`. When using `use_sudo`, update your
+  sudoers configuration as described in the plugin's README.
 
 ## v1.40.1 [2026-09-21]
 
