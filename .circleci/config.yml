@@ -159,17 +159,17 @@ jobs:
           no_output_timeout: 30m
       - run:
           name: "golangci-lint/Windows arm64"
-          # Files with an architecture suffix (e.g. pdh_arm64.go) are not part of the amd64 run above,
-          # so lint the packages containing them for that architecture
+          # Lint only the packages with files that build for this architecture but not for amd64,
+          # everything else is covered by the amd64 run above
           command: |
-            pkgs=$(git ls-files '*_arm64.go' | xargs -n1 dirname | sort -u | sed 's|^|./|')
+            pkgs=$(./scripts/arch-only-packages.sh windows arm64)
             [ -n "$pkgs" ] || exit 0
             GOGC=80 GOMEMLIMIT=6144MiB GOOS=windows GOARCH=arm64 $GOPATH/bin/golangci-lint run --verbose --timeout=30m --concurrency 4 $pkgs
           no_output_timeout: 30m
       - run:
           name: "golangci-lint/Windows 386"
           command: |
-            pkgs=$(git ls-files '*_386.go' | xargs -n1 dirname | sort -u | sed 's|^|./|')
+            pkgs=$(./scripts/arch-only-packages.sh windows 386)
             [ -n "$pkgs" ] || exit 0
             GOGC=80 GOMEMLIMIT=6144MiB GOOS=windows GOARCH=386 $GOPATH/bin/golangci-lint run --verbose --timeout=30m --concurrency 4 $pkgs
           no_output_timeout: 30m
