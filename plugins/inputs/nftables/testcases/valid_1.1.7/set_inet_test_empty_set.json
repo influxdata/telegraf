@@ -1,0 +1,24 @@
+{
+  "nftables": [
+    {
+      "metainfo": {
+        "version": "1.1.7",
+        "release_name": "Commodore Bullmoose #8",
+        "json_schema_version": 1
+      }
+    },
+    {
+      "set": {
+        "family": "inet",
+        "name": "empty_set",
+        "table": "test",
+        "type": "ipv4_addr",
+        "handle": 7,
+        "comment": "comment",
+        "size": 65536,
+        "flags": ["timeout"],
+        "timeout": 300
+      }
+    }
+  ]
+}

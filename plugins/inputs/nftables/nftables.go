@@ -29,7 +29,8 @@ type Nftables struct {
 	Include []string        `toml:"include"`
 	Log     telegraf.Logger `toml:"-"`
 
-	args []string
+	args  []string
+	terse bool
 }
 
 func (*Nftables) SampleConfig() string {
@@ -76,13 +77,13 @@ func (n *Nftables) Start(telegraf.Accumulator) error {
 	// Use --terse to avoid dumping the elements of sets, unless sets are
 	// monitored and the nft version does not support counting elements.
 	if !slices.Contains(n.Include, "sets") {
-		n.args = append(n.args, "--terse")
+		n.terse = true
 	} else {
 		version, err := n.version()
 		if err != nil {
 			n.Log.Warnf("Failed to determine nft --version, will not use --terse: %v", err)
 		} else if version.GreaterThanEqual(semver.New(1, 1, 7, "", "")) {
-			n.args = append(n.args, "--terse")
+			n.terse = true
 		}
 	}
 	return nil
@@ -118,7 +119,11 @@ func (n *Nftables) Gather(acc telegraf.Accumulator) error {
 
 func (n *Nftables) gatherTable(acc telegraf.Accumulator, name string) error {
 	// Run the nft command
-	args := append(n.args, "--json", "list", "table", name)
+	args := n.args
+	if n.terse {
+		args = append(args, "--terse")
+	}
+	args = append(args, "--json", "list", "table", name)
 	c := exec.Command(n.Binary, args...)
 	out, err := c.Output()
 	if err != nil {
@@ -176,8 +181,20 @@ func (n *Nftables) gatherTable(acc telegraf.Accumulator, name string) error {
 			}
 		case "sets":
 			for _, set := range nftable.Sets {
+				// With --terse nft only reports the element count for sets
+				// declared with a size and only if the kernel provides it,
+				// so a missing count does not mean the set is empty. List
+				// the set itself to count its elements in this case.
+				count := set.count()
+				if n.terse && set.Count == nil {
+					c, err := n.countSetElements(set)
+					if err != nil {
+						return err
+					}
+					count = c
+				}
 				fields := map[string]any{
-					"count": set.count(),
+					"count": count,
 				}
 				tags := map[string]string{
 					"table": set.Table,
@@ -188,6 +205,28 @@ func (n *Nftables) gatherTable(acc telegraf.Accumulator, name string) error {
 		}
 	}
 	return nil
+}
+
+func (n *Nftables) countSetElements(set *namedSet) (int64, error) {
+	// List the set without --terse to get its elements
+	args := append(n.args, "--json", "list", "set", set.Family, set.Table, set.Name)
+	out, err := exec.Command(n.Binary, args...).Output()
+	if err != nil {
+		if oserr, ok := errors.AsType[*exec.ExitError](err); ok {
+			buf, _, _ := bytes.Cut(oserr.Stderr, []byte("\n"))
+			return 0, fmt.Errorf("error listing set %q: %w (%s)", set.Name, err, bytes.TrimSpace(buf))
+		}
+		return 0, fmt.Errorf("error listing set %q: %w", set.Name, err)
+	}
+
+	var nftable table
+	if err := json.Unmarshal(out, &nftable); err != nil {
+		return 0, fmt.Errorf("parsing output for set %q failed: %w", set.Name, err)
+	}
+	if len(nftable.Sets) != 1 {
+		return 0, fmt.Errorf("expected one set in output for %q but got %d", set.Name, len(nftable.Sets))
+	}
+	return nftable.Sets[0].count(), nil
 }
 
 func init() {

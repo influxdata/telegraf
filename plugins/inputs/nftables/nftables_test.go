@@ -138,30 +138,39 @@ func TestMain(m *testing.M) {
 	}
 
 	args := flag.Args()
-	if nargs := len(args); nargs != 3 {
-		fmt.Fprintf(os.Stderr, "invalid number of arguments, expected 3 got %d\n", nargs)
-		os.Exit(1)
-	}
-	if args[0] != "list" {
-		fmt.Fprintf(os.Stderr, "expected \"list\" command got %q\n", args[0])
-		os.Exit(1)
-	}
-	if args[1] != "table" {
-		fmt.Fprintf(os.Stderr, "expected \"list\" command got %q\n", args[0])
+	if len(args) == 0 || args[0] != "list" {
+		fmt.Fprintf(os.Stderr, "expected \"list\" command got %q\n", args)
 		os.Exit(1)
 	}
 
-	suffix := ".json"
-	if terse {
-		suffix = ".terse.json"
+	// Tables are served from "table_<name>.json" or "table_<name>.terse.json"
+	// depending on the --terse flag, sets from "set_<family>_<table>_<name>.json"
+	var filename string
+	switch {
+	case len(args) == 3 && args[1] == "table":
+		suffix := ".json"
+		if terse {
+			suffix = ".terse.json"
+		}
+		filename = filepath.Join(testcase, "table_"+args[2]+suffix)
+	case len(args) == 5 && args[1] == "set":
+		if terse {
+			fmt.Fprintln(os.Stderr, "expected set listing without --terse")
+			os.Exit(1)
+		}
+		filename = filepath.Join(testcase, "set_"+args[2]+"_"+args[3]+"_"+args[4]+".json")
+	default:
+		fmt.Fprintf(os.Stderr, "unexpected arguments %q\n", args)
+		os.Exit(1)
 	}
-	filename := filepath.Join(testcase, "table_"+args[2]+suffix)
+
 	buf, err := os.ReadFile(filename)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
+			cmd := strings.Join(args, " ")
 			fmt.Fprintln(os.Stderr, "Error: No such file or directory")
-			fmt.Fprintln(os.Stderr, "list table", args[1])
-			fmt.Fprintln(os.Stderr, "          ", strings.Repeat("^", len(args[1])))
+			fmt.Fprintln(os.Stderr, cmd)
+			fmt.Fprintln(os.Stderr, strings.Repeat("^", len(cmd)))
 		} else {
 			fmt.Fprintf(os.Stderr, "reading file %q failed: %v", filename, err)
 		}

@@ -161,7 +161,6 @@
         "table": "test",
         "type": "ipv4_addr",
         "handle": 18,
-        "count": 2,
         "flags": ["interval"]
       }
     },
