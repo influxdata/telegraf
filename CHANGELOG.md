@@ -10,6 +10,10 @@
   instead of the local one. A configuration naming a CID that does not belong
   to the machine Telegraf runs on now fails on startup, so please check your
   `vsock` addresses.
+- PR [#19854](https://github.com/influxdata/telegraf/pull/19854) makes the same
+  change for `outputs.prometheus_client`, which has its own listener. An
+  address without a CID (`vsock://:9273`), the documented form, keeps binding
+  the local context ID and is unaffected.
 
 ## v1.40.1 [2026-09-21]
 
