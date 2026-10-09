@@ -59,3 +59,18 @@ func TestGather(t *testing.T) {
 
 	acc.AssertContainsTaggedFields(t, "puppetagent", fields, tags)
 }
+
+func TestGatherAdditionalResources(t *testing.T) {
+	var acc testutil.Accumulator
+
+	pa := PuppetAgent{
+		Location:            "last_run_summary.yaml",
+		AdditionalResources: []string{"yumrepo", "does_not_exist"},
+	}
+	require.NoError(t, pa.Gather(&acc))
+
+	metric, ok := acc.Get("puppetagent")
+	require.True(t, ok)
+	require.InDelta(t, 0.006989, metric.Fields["time_yumrepo"], 0.0000001)
+	require.NotContains(t, metric.Fields, "time_does_not_exist")
+}

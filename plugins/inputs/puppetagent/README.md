@@ -26,6 +26,9 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Use the following path for puppet version 7+ ($publicdir/last_run_summary.yaml)
   ##   location = "/opt/puppetlabs/puppet/public/last_run_summary.yaml"
   location = "/var/lib/puppet/state/last_run_summary.yaml"
+
+  ## Additional resource timings from last_run_summary.yaml's time section.
+  # additional_resources = ["registry_value", "audit_policy"]
 ```
 
 If you use a distro packaged puppet the `$publicdir` might be different from above.
