@@ -34,11 +34,11 @@ func newMetric(_ *starlark.Thread, _ *starlark.Builtin, args starlark.Tuple, kwa
 	return &Metric{metric: m}, nil
 }
 
-func toString(value starlark.Value, errorMsg string) (string, error) {
-	if value, ok := value.(starlark.String); ok {
-		return string(value), nil
+func toString(value starlark.Value) string {
+	if v, ok := value.(starlark.String); ok {
+		return v.GoString()
 	}
-	return "", fmt.Errorf(errorMsg, value)
+	return value.String()
 }
 
 func items(value starlark.Value, errorMsg string) ([]starlark.Tuple, error) {

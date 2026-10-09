@@ -147,6 +147,60 @@ If you would like to see support for something else here, please open an issue.
 [math_lib]: https://pkg.go.dev/go.starlark.net/lib/math
 [time_lib]: https://pkg.go.dev/go.starlark.net/lib/time
 
+### State persistence
+
+You can access a global `state` dictionary which can be persisted when enabling
+state-persistence in the agent section.
+
+>[!IMPORTANT]
+> Do NOT declare a global `state` variable in your script as this will override
+> the already declared one and the state is NOT persisted!
+
+The types of all keys and values, as well as the insert order of dictionaries,
+are preserved. However, storing and restoring the `state` has the following
+limitations:
+
+#### Only values of supported types can be persisted
+
+The `state` may contain `None`, `bool`, `int`, `float`, `string`, `bytes`,
+`time` and `duration` values as well as `list`, `tuple`, `set` and `dict`
+containers and metrics. Values of other types, for example functions or the
+`fields` and `tags` views of a metric, cannot be serialized. Store those as
+dictionary via `dict(metric.fields)` or `dict(metric.tags)` instead.
+
+A single value of an unsupported type prevents the **whole** `state` from
+being persisted, i.e. the complete state is lost on restart.
+**Please only store values of supported types in `state`!**
+
+#### Values can only be nested to a limited depth
+
+Containers in the `state` can be nested at most 64 levels deep. Deeper nested
+values, as well as self-referencing containers like a list containing itself,
+cannot be persisted and will prevent the whole `state` from being stored.
+**Please keep the nesting of containers in `state` shallow!**
+
+#### Shared values are no longer shared after restoring
+
+Values referenced more than once, for example a list stored under two
+different keys, are serialized once per reference. After restoring, each
+reference holds a separate copy, so modifying one of them does no longer
+modify the other. Additionally, the size of the serialized state grows with
+the number of references and can grow excessively for deeply nested values
+sharing their elements.
+**Please do not rely on shared references in `state`!**
+
+#### Metric tracking information is dropped
+
+For tracking metrics the tracking information is removed in the serialized state
+because we cannot persist the tracking state.
+**Please handle tracking metrics with care especially in `state`!**
+
+#### Time values might lose their time-zone name
+
+The time-zone offset of a `time` value is preserved but the name of the
+time-zone, e.g. `CEST`, might be lost when restoring the value.
+**Please use UTC timestamps in `state` if possible!**
+
 ### Common Questions
 
 **What's the performance cost to using Starlark?**
