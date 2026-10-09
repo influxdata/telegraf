@@ -13,6 +13,12 @@
 - PR [#19503](https://github.com/influxdata/telegraf/pull/19503) changes how
   `inputs.nftables` invokes `nft`. When using `use_sudo`, update your
   sudoers configuration as described in the plugin's README.
+- PR [#19558](https://github.com/influxdata/telegraf/pull/19558) changes the
+  filenames written by `outputs.parquet` from
+  `<measurement>-<YYYY-MM-DD>-<unix-seconds>.parquet` to
+  `<measurement>-<YYYYMMDDhhmmss>-<uuid>.parquet` and never reuses a file.
+  This fixes an edge case where dataloss could occur when auto rotating
+  parquet files and multiple writers using the same directory.
 
 ## v1.40.1 [2026-09-21]
 

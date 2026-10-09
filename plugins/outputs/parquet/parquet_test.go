@@ -664,3 +664,26 @@ func TestDeletedFileReappearsOnlyOnRotation(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, files, 1, "the rotation opens a new file")
 }
+
+func TestMultipleWritersToSameDirectory(t *testing.T) {
+	testDir := t.TempDir()
+	metrics := []telegraf.Metric{
+		metric.New("test", map[string]string{}, map[string]any{"value": 1.0}, time.Now()),
+	}
+
+	for range 3 {
+		plugin := &Parquet{
+			Directory:          testDir,
+			TimestampFieldName: defaultTimestampFieldName,
+			Log:                testutil.Logger{},
+		}
+		require.NoError(t, plugin.Init())
+		require.NoError(t, plugin.Connect())
+		require.NoError(t, plugin.Write(metrics))
+		require.NoError(t, plugin.Close())
+	}
+
+	files, err := filepath.Glob(filepath.Join(testDir, "*.parquet"))
+	require.NoError(t, err)
+	require.Len(t, files, 3)
+}
