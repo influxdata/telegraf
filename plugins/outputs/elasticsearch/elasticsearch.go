@@ -52,92 +52,13 @@ type Elasticsearch struct {
 	UsePipeline         string          `toml:"use_pipeline"`
 	Headers             map[string]any  `toml:"headers"`
 	Log                 telegraf.Logger `toml:"-"`
-	majorReleaseNumber  int
-	pipelineName        string
-	pipelineTagKeys     []string
-	tagKeys             []string
 	tls.ClientConfig
 
-	Client *elastic.Client
-}
-
-const telegrafTemplate = `
-{
-	{{ if (lt .Version 6) }}
-	"template": "{{.TemplatePattern}}",
-	{{ else }}
-	"index_patterns" : [ "{{.TemplatePattern}}" ],
-	{{ end }}
-	"settings": {
-		"index": {{.IndexTemplate}}
-	},
-	"mappings" : {
-		{{ if (lt .Version 7) }}
-		"metrics" : {
-			{{ if (lt .Version 6) }}
-			"_all": { "enabled": false },
-			{{ end }}
-		{{ end }}
-		"properties" : {
-			"@timestamp" : { "type" : "date" },
-			"measurement_name" : { "type" : "keyword" }
-		},
-		"dynamic_templates": [
-			{
-				"tags": {
-					"match_mapping_type": "string",
-					"path_match": "tag.*",
-					"mapping": {
-						"ignore_above": 512,
-						"type": "keyword"
-					}
-				}
-			},
-			{
-				"metrics_long": {
-					"match_mapping_type": "long",
-					"mapping": {
-						"type": "float",
-						"index": false
-					}
-				}
-			},
-			{
-				"metrics_double": {
-					"match_mapping_type": "double",
-					"mapping": {
-						"type": "float",
-						"index": false
-					}
-				}
-			},
-			{
-				"text_fields": {
-					"match": "*",
-					"mapping": {
-						"norms": false
-					}
-				}
-			}
-		]
-		{{ if (lt .Version 7) }}
-		}
-		{{ end }}
-	}
-}`
-
-const defaultTemplateIndexSettings = `
-{
-	"refresh_interval": "10s",
-	"mapping.total_fields.limit": 5000,
-	"auto_expand_replicas": "0-1",
-	"codec": "best_compression"
-}`
-
-type templatePart struct {
-	TemplatePattern string
-	Version         int
-	IndexTemplate   string
+	Client             *elastic.Client
+	majorReleaseNumber int
+	pipelineName       string
+	pipelineTagKeys    []string
+	tagKeys            []string
 }
 
 func (*Elasticsearch) SampleConfig() string {
@@ -246,52 +167,9 @@ func (a *Elasticsearch) Connect() error {
 	return nil
 }
 
-func (a *Elasticsearch) processHeaders() http.Header {
-	headers := http.Header{}
-
-	if len(a.Headers) == 0 {
-		return headers
-	}
-
-	for key, value := range a.Headers {
-		switch v := value.(type) {
-		case string:
-			// Single string value - split on comma for backward compatibility
-			config.PrintOptionValueDeprecationNotice("outputs.elasticsearch", "headers."+key, v, telegraf.DeprecationInfo{
-				Since:     "1.32.0",
-				RemovalIn: "1.45.0",
-				Notice:    "Use array syntax instead: [\"value1\", \"value2\"]",
-			})
-			for headerValue := range strings.SplitSeq(v, ",") {
-				headers.Add(key, strings.TrimSpace(headerValue))
-			}
-		case []any:
-			// TOML might parse arrays as []any
-			for _, headerValue := range v {
-				if strVal, ok := headerValue.(string); ok {
-					headers.Add(key, strings.TrimSpace(strVal))
-				} else {
-					a.Log.Errorf("Header %q contains non-string value in array: %v (type: %T)", key, headerValue, headerValue)
-				}
-			}
-		default:
-			a.Log.Errorf("Header %q has invalid type %T, expected string or []string", key, value)
-		}
-	}
-
-	return headers
-}
-
-// GetPointID generates a unique ID for a Metric Point
-func GetPointID(m telegraf.Metric) string {
-	var buffer bytes.Buffer
-	// Timestamp(ns),measurement name and Series Hash for compute the final SHA256 based hash ID
-
-	buffer.WriteString(strconv.FormatInt(m.Time().Local().UnixNano(), 10))
-	buffer.WriteString(m.Name())
-	buffer.WriteString(strconv.FormatUint(m.HashID(), 10))
-
-	return fmt.Sprintf("%x", sha256.Sum256(buffer.Bytes()))
+func (a *Elasticsearch) Close() error {
+	a.Client = nil
+	return nil
 }
 
 func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
@@ -385,6 +263,42 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
+func (a *Elasticsearch) processHeaders() http.Header {
+	headers := http.Header{}
+
+	if len(a.Headers) == 0 {
+		return headers
+	}
+
+	for key, value := range a.Headers {
+		switch v := value.(type) {
+		case string:
+			// Single string value - split on comma for backward compatibility
+			config.PrintOptionValueDeprecationNotice("outputs.elasticsearch", "headers."+key, v, telegraf.DeprecationInfo{
+				Since:     "1.32.0",
+				RemovalIn: "1.45.0",
+				Notice:    "Use array syntax instead: [\"value1\", \"value2\"]",
+			})
+			for headerValue := range strings.SplitSeq(v, ",") {
+				headers.Add(key, strings.TrimSpace(headerValue))
+			}
+		case []any:
+			// TOML might parse arrays as []any
+			for _, headerValue := range v {
+				if strVal, ok := headerValue.(string); ok {
+					headers.Add(key, strings.TrimSpace(strVal))
+				} else {
+					a.Log.Errorf("Header %q contains non-string value in array: %v (type: %T)", key, headerValue, headerValue)
+				}
+			}
+		default:
+			a.Log.Errorf("Header %q has invalid type %T, expected string or []string", key, value)
+		}
+	}
+
+	return headers
+}
+
 func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
 	if a.TemplateName == "" {
 		return errors.New("elasticsearch template_name configuration not defined")
@@ -455,32 +369,6 @@ func (a *Elasticsearch) createNewTemplate(templatePattern string) (*bytes.Buffer
 	return &tmpl, nil
 }
 
-func GetTagKeys(indexName string) (string, []string) {
-	tagKeys := make([]string, 0)
-	startTag := strings.Index(indexName, "{{")
-
-	for startTag >= 0 {
-		endTag := strings.Index(indexName, "}}")
-
-		if endTag < 0 {
-			startTag = -1
-		} else {
-			tagName := indexName[startTag+2 : endTag]
-
-			var tagReplacer = strings.NewReplacer(
-				"{{"+tagName+"}}", "%s",
-			)
-
-			indexName = tagReplacer.Replace(indexName)
-			tagKeys = append(tagKeys, strings.TrimSpace(tagName))
-
-			startTag = strings.Index(indexName, "{{")
-		}
-	}
-
-	return indexName, tagKeys
-}
-
 func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time, tagKeys []string, metricTags map[string]string) string {
 	if strings.Contains(indexName, "%") {
 		var dateReplacer = strings.NewReplacer(
@@ -526,16 +414,6 @@ func (a *Elasticsearch) getPipelineName(pipelineInput string, tagKeys []string, 
 	return fmt.Sprintf(pipelineInput, tagValues...)
 }
 
-func getISOWeek(eventTime time.Time) string {
-	_, week := eventTime.ISOWeek()
-	return strconv.Itoa(week)
-}
-
-func (a *Elasticsearch) Close() error {
-	a.Client = nil
-	return nil
-}
-
 func (a *Elasticsearch) getAuthOptions() ([]elastic.ClientOptionFunc, error) {
 	var fns []elastic.ClientOptionFunc
 
@@ -564,6 +442,49 @@ func (a *Elasticsearch) getAuthOptions() ([]elastic.ClientOptionFunc, error) {
 		token.Destroy()
 	}
 	return fns, nil
+}
+
+// GetPointID generates a unique ID for a Metric Point
+func GetPointID(m telegraf.Metric) string {
+	var buffer bytes.Buffer
+	// Timestamp(ns),measurement name and Series Hash for compute the final SHA256 based hash ID
+
+	buffer.WriteString(strconv.FormatInt(m.Time().Local().UnixNano(), 10))
+	buffer.WriteString(m.Name())
+	buffer.WriteString(strconv.FormatUint(m.HashID(), 10))
+
+	return fmt.Sprintf("%x", sha256.Sum256(buffer.Bytes()))
+}
+
+func GetTagKeys(indexName string) (string, []string) {
+	tagKeys := make([]string, 0)
+	startTag := strings.Index(indexName, "{{")
+
+	for startTag >= 0 {
+		endTag := strings.Index(indexName, "}}")
+
+		if endTag < 0 {
+			startTag = -1
+		} else {
+			tagName := indexName[startTag+2 : endTag]
+
+			var tagReplacer = strings.NewReplacer(
+				"{{"+tagName+"}}", "%s",
+			)
+
+			indexName = tagReplacer.Replace(indexName)
+			tagKeys = append(tagKeys, strings.TrimSpace(tagName))
+
+			startTag = strings.Index(indexName, "{{")
+		}
+	}
+
+	return indexName, tagKeys
+}
+
+func getISOWeek(eventTime time.Time) string {
+	_, week := eventTime.ISOWeek()
+	return strconv.Itoa(week)
 }
 
 func init() {
