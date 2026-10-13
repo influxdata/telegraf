@@ -54,7 +54,7 @@ type Elasticsearch struct {
 	Log                 telegraf.Logger `toml:"-"`
 	tls.ClientConfig
 
-	Client             *elastic.Client
+	client             *elastic.Client
 	majorReleaseNumber int
 	pipelineName       string
 	pipelineTagKeys    []string
@@ -151,7 +151,7 @@ func (a *Elasticsearch) Connect() error {
 
 	a.Log.Infof("Elasticsearch version: %q", esVersion)
 
-	a.Client = client
+	a.client = client
 	a.majorReleaseNumber = majorReleaseNumber
 
 	if a.ManageTemplate {
@@ -161,14 +161,14 @@ func (a *Elasticsearch) Connect() error {
 		}
 	}
 
-	a.IndexName, a.tagKeys = GetTagKeys(a.IndexName)
-	a.pipelineName, a.pipelineTagKeys = GetTagKeys(a.UsePipeline)
+	a.IndexName, a.tagKeys = getTagKeys(a.IndexName)
+	a.pipelineName, a.pipelineTagKeys = getTagKeys(a.UsePipeline)
 
 	return nil
 }
 
 func (a *Elasticsearch) Close() error {
-	a.Client = nil
+	a.client = nil
 	return nil
 }
 
@@ -177,14 +177,14 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
-	bulkRequest := a.Client.Bulk()
+	bulkRequest := a.client.Bulk()
 
 	for _, metric := range metrics {
 		var name = metric.Name()
 
 		// index name has to be re-evaluated each time for telegraf
 		// to send the metric to the correct time-based index
-		indexName := a.GetIndexName(a.IndexName, metric.Time(), a.tagKeys, metric.Tags())
+		indexName := a.getIndexName(a.IndexName, metric.Time(), a.tagKeys, metric.Tags())
 
 		// Handle NaN and inf field-values
 		fields := make(map[string]any)
@@ -219,7 +219,7 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 		}
 
 		if a.ForceDocumentID {
-			id := GetPointID(metric)
+			id := getPointID(metric)
 			br.Id(id)
 		}
 
@@ -304,7 +304,7 @@ func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
 		return errors.New("elasticsearch template_name configuration not defined")
 	}
 
-	templateExists, errExists := a.Client.IndexTemplateExists(a.TemplateName).Do(ctx)
+	templateExists, errExists := a.client.IndexTemplateExists(a.TemplateName).Do(ctx)
 
 	if errExists != nil {
 		return fmt.Errorf("elasticsearch template check failed, template name: %s, error: %w", a.TemplateName, errExists)
@@ -330,7 +330,7 @@ func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
 			return err
 		}
 
-		_, errCreateTemplate := a.Client.IndexPutTemplate(a.TemplateName).BodyString(data.String()).Do(ctx)
+		_, errCreateTemplate := a.client.IndexPutTemplate(a.TemplateName).BodyString(data.String()).Do(ctx)
 		if errCreateTemplate != nil {
 			return fmt.Errorf("elasticsearch failed to create index template %s: %w", a.TemplateName, errCreateTemplate)
 		}
@@ -369,7 +369,7 @@ func (a *Elasticsearch) createNewTemplate(templatePattern string) (*bytes.Buffer
 	return &tmpl, nil
 }
 
-func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time, tagKeys []string, metricTags map[string]string) string {
+func (a *Elasticsearch) getIndexName(indexName string, eventTime time.Time, tagKeys []string, metricTags map[string]string) string {
 	if strings.Contains(indexName, "%") {
 		var dateReplacer = strings.NewReplacer(
 			"%Y", eventTime.UTC().Format("2006"),
@@ -444,8 +444,7 @@ func (a *Elasticsearch) getAuthOptions() ([]elastic.ClientOptionFunc, error) {
 	return fns, nil
 }
 
-// GetPointID generates a unique ID for a Metric Point
-func GetPointID(m telegraf.Metric) string {
+func getPointID(m telegraf.Metric) string {
 	var buffer bytes.Buffer
 	// Timestamp(ns),measurement name and Series Hash for compute the final SHA256 based hash ID
 
@@ -456,7 +455,7 @@ func GetPointID(m telegraf.Metric) string {
 	return fmt.Sprintf("%x", sha256.Sum256(buffer.Bytes()))
 }
 
-func GetTagKeys(indexName string) (string, []string) {
+func getTagKeys(indexName string) (string, []string) {
 	tagKeys := make([]string, 0)
 	startTag := strings.Index(indexName, "{{")
 
