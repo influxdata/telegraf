@@ -58,6 +58,7 @@ func TestConnect(t *testing.T) {
 			}
 
 			require.NoError(t, plugin.Connect())
+			defer plugin.Close()
 		})
 	}
 }
@@ -494,6 +495,7 @@ func TestWrite(t *testing.T) {
 				plugin.AuthBearerToken = config.NewSecret([]byte(tt.authBearerToken))
 			}
 			require.NoError(t, plugin.Connect())
+			defer plugin.Close()
 
 			require.NoError(t, plugin.Write([]telegraf.Metric{m}))
 
@@ -559,6 +561,7 @@ func TestWriteFail(t *testing.T) {
 				Log:       testutil.Logger{},
 			}
 			require.NoError(t, plugin.Connect())
+			defer plugin.Close()
 
 			require.ErrorContains(t, plugin.Write([]telegraf.Metric{m}), tt.expected)
 		})
@@ -989,6 +992,7 @@ func TestWriteIntegration(t *testing.T) {
 		Log:                 testutil.Logger{},
 	}
 	require.NoError(t, plugin.Connect())
+	defer plugin.Close()
 
 	// Verify that we can successfully write data to Elasticsearch
 	require.NoError(t, plugin.Write(testutil.MockMetrics()))
