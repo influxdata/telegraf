@@ -87,24 +87,6 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 			case telegraf.Histogram:
 				switch {
 				case strings.HasSuffix(field.Key, "_bucket"):
-					// if bucket only, init sum, count, inf
-					metrickeysum, promtssum := getPromTS(metricName+"_sum", labels, float64(0), metric.Time())
-					if _, ok = entries[metrickeysum]; !ok {
-						entries[metrickeysum] = promtssum
-					}
-					metrickeycount, promtscount := getPromTS(metricName+"_count", labels, float64(0), metric.Time())
-					if _, ok = entries[metrickeycount]; !ok {
-						entries[metrickeycount] = promtscount
-					}
-					extraLabel := prompb.Label{
-						Name:  "le",
-						Value: "+Inf",
-					}
-					metrickeyinf, promtsinf := getPromTS(metricName+"_bucket", labels, float64(0), metric.Time(), extraLabel)
-					if _, ok = entries[metrickeyinf]; !ok {
-						entries[metrickeyinf] = promtsinf
-					}
-
 					le, ok := metric.GetTag("le")
 					if !ok {
 						traceAndKeepErr("failed to parse %q: can't find `le` label", metricName)
@@ -121,7 +103,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 						continue
 					}
 
-					extraLabel = prompb.Label{
+					extraLabel := prompb.Label{
 						Name:  "le",
 						Value: fmt.Sprint(bound),
 					}
