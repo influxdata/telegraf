@@ -468,7 +468,7 @@ func TestWrite(t *testing.T) {
 			if tt.forceDocumentID {
 				for i, l := range expected {
 					if strings.Contains(l, `"_id": "%s"`) {
-						expected[i] = fmt.Sprintf(l, GetPointID(m))
+						expected[i] = fmt.Sprintf(l, getPointID(m))
 					}
 				}
 			}
@@ -621,7 +621,7 @@ func TestGetTagKeys(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			indexName, tagKeys := GetTagKeys(tt.indexName)
+			indexName, tagKeys := getTagKeys(tt.indexName)
 			require.Equal(t, tt.expectedIndexName, indexName)
 			require.Equal(t, tt.expectedTagKeys, tagKeys)
 		})
@@ -700,7 +700,7 @@ func TestGetIndexName(t *testing.T) {
 				Log:             testutil.Logger{},
 			}
 
-			indexName := plugin.GetIndexName(tt.indexName, eventTime, tt.tagKeys, tags)
+			indexName := plugin.getIndexName(tt.indexName, eventTime, tt.tagKeys, tags)
 			require.Equal(t, tt.expected, indexName)
 		})
 	}
@@ -772,7 +772,7 @@ func TestGetPipelineName(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			pn, ptags := GetTagKeys(tt.pipeline)
+			pn, ptags := getTagKeys(tt.pipeline)
 
 			// Setup plugin
 			plugin := &Elasticsearch{
