@@ -115,7 +115,6 @@ package sqltemplate
 import (
 	"bytes"
 	"encoding/base32"
-	"errors"
 	"fmt"
 	"hash/fnv"
 	"strings"
@@ -391,9 +390,6 @@ func (t *Template) UnmarshalText(text []byte) error {
 }
 
 func (t *Template) Render(table *Table, newColumns []utils.Column, metricTable, tagTable *Table) ([]byte, error) {
-	if table == nil {
-		return nil, errors.New("cannot render SQL for a nil table")
-	}
 	tcs := NewColumns(newColumns).Sorted()
 	data := map[string]any{
 		"table":       table,
