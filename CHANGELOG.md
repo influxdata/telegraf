@@ -83,6 +83,10 @@
 - [#19756](https://github.com/influxdata/telegraf/pull/19756) `deps` Bump the aws-sdk-go-v2 group across 1 directory with 7 updates
 - [#19824](https://github.com/influxdata/telegraf/pull/19824) `deps` Bump the aws-sdk-go-v2 group with 3 updates
 
+### Features
+
+- `inputs` Use doas instead of sudo on OpenBSD when `use_sudo` is enabled
+
 ## v1.40.1 [2026-09-21]
 
 ### Bugfixes

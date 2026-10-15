@@ -28,7 +28,8 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 # A plugin to collect stats from Varnish HTTP Cache
 # This plugin ONLY supports non-Windows
 [[inputs.varnish]]
-  ## If running as a restricted user you can prepend sudo for additional access:
+  ## If running as a restricted user you can prepend sudo for additional access.
+  ## On OpenBSD, doas is used instead of sudo.
   #use_sudo = false
 
   ## The default location of the varnishstat binary can be overridden with:
