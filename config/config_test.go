@@ -170,6 +170,28 @@ func TestConfig_InputCollectionJitterExplicitZeroIsSet(t *testing.T) {
 	require.False(t, c.Inputs[1].Config.CollectionJitterSet)
 }
 
+func TestConfig_InputTimeSource(t *testing.T) {
+	c := config.NewConfig()
+	cfg := []byte(`
+[[inputs.memcached]]
+  servers = ["localhost"]
+  time_source = "collection_start"
+
+[[inputs.memcached]]
+  servers = ["127.0.0.1"]
+  time_source = "collection_end"
+
+[[inputs.memcached]]
+  servers = ["127.0.0.2"]
+`)
+	require.NoError(t, c.LoadConfigData(cfg, config.EmptySourcePath))
+	require.Len(t, c.Inputs, 3)
+
+	require.Equal(t, "collection_start", c.Inputs[0].Config.TimeSource)
+	require.Equal(t, "collection_end", c.Inputs[1].Config.TimeSource)
+	require.Empty(t, c.Inputs[2].Config.TimeSource)
+}
+
 func TestConfig_LoadSingleInput_WithSeparators(t *testing.T) {
 	c := config.NewConfig()
 	confFile := filepath.Join("testdata", "single_plugin_with_separators.toml")
