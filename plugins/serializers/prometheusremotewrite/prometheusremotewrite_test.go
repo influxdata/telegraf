@@ -179,9 +179,6 @@ http_request_duration_seconds_bucket{le="+Inf"} 144320
 				telegraf.Histogram,
 			),
 			expected: []byte(`
-http_request_duration_seconds_count 0
-http_request_duration_seconds_sum 0
-http_request_duration_seconds_bucket{le="+Inf"} 0
 http_request_duration_seconds_bucket{le="0.5"} 129389
 `),
 		},
@@ -970,6 +967,100 @@ func TestRemoteWriteAccumulateSamples(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, tt.expected, actual)
 		})
+	}
+}
+
+func TestRemoteWriteHistogramSplitAcrossBatches(t *testing.T) {
+	// A scrape can be cut into several batches by the agent, so the
+	// buckets of a histogram may arrive in a different batch than its
+	// count and sum. The serializer must only write the values it
+	// received and not fill in the rest of the histogram.
+	batches := [][]telegraf.Metric{
+		{
+			metric.New(
+				"prometheus",
+				map[string]string{"handler": "x"},
+				map[string]any{
+					"http_request_duration_seconds_count": 6.0,
+					"http_request_duration_seconds_sum":   0.114,
+				},
+				time.Unix(1, 0),
+				telegraf.Histogram,
+			),
+			metric.New(
+				"prometheus",
+				map[string]string{"handler": "x", "le": "0.1"},
+				map[string]any{"http_request_duration_seconds_bucket": 6.0},
+				time.Unix(1, 0),
+				telegraf.Histogram,
+			),
+		},
+		{
+			metric.New(
+				"prometheus",
+				map[string]string{"handler": "x", "le": "+Inf"},
+				map[string]any{"http_request_duration_seconds_bucket": 6.0},
+				time.Unix(1, 0),
+				telegraf.Histogram,
+			),
+		},
+	}
+	expected := [][]prompb.TimeSeries{
+		{
+			{
+				Labels: []prompb.Label{
+					{Name: "__name__", Value: "http_request_duration_seconds_count"},
+					{Name: "handler", Value: "x"},
+				},
+				Samples: []prompb.Sample{{Value: 6, Timestamp: 1000}},
+			},
+			{
+				Labels: []prompb.Label{
+					{Name: "__name__", Value: "http_request_duration_seconds_sum"},
+					{Name: "handler", Value: "x"},
+				},
+				Samples: []prompb.Sample{{Value: 0.114, Timestamp: 1000}},
+			},
+			{
+				Labels: []prompb.Label{
+					{Name: "__name__", Value: "http_request_duration_seconds_bucket"},
+					{Name: "handler", Value: "x"},
+					{Name: "le", Value: "+Inf"},
+				},
+				Samples: []prompb.Sample{{Value: 6, Timestamp: 1000}},
+			},
+			{
+				Labels: []prompb.Label{
+					{Name: "__name__", Value: "http_request_duration_seconds_bucket"},
+					{Name: "handler", Value: "x"},
+					{Name: "le", Value: "0.1"},
+				},
+				Samples: []prompb.Sample{{Value: 6, Timestamp: 1000}},
+			},
+		},
+		{
+			{
+				Labels: []prompb.Label{
+					{Name: "__name__", Value: "http_request_duration_seconds_bucket"},
+					{Name: "handler", Value: "x"},
+					{Name: "le", Value: "+Inf"},
+				},
+				Samples: []prompb.Sample{{Value: 6, Timestamp: 1000}},
+			},
+		},
+	}
+
+	s := &Serializer{
+		Log:         &testutil.CaptureLogger{},
+		SortMetrics: true,
+	}
+	for i, batch := range batches {
+		data, err := s.SerializeBatch(batch)
+		require.NoError(t, err)
+
+		actual, err := prompbToTimeseries(data)
+		require.NoError(t, err)
+		require.Equal(t, expected[i], actual)
 	}
 }
 
