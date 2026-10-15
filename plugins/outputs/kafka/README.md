@@ -145,6 +145,13 @@ to use them.
   # net_write_timeout = "30s"
   # producer_timeout = "10s"
 
+  ## Maximum time for delivering a batch
+  ## On timeout the producer is replaced and the batch is sent again, possibly
+  ## duplicating messages. Should exceed the maximum delivery duration of
+  ## (max_retry + 1) * (net_write_timeout + net_read_timeout).
+  ## Set to "0s" to disable.
+  # delivery_timeout = "5m"
+
   ## Producer timestamp
   ## This option sets the timestamp of the kafka producer message, choose from:
   ##   * metric: Uses the metric's timestamp
@@ -294,5 +301,17 @@ Lowering them makes an unresponsive broker surface as a write error sooner
 instead of stalling the flush. Note that they bound the individual operations
 and not the whole write: with `max_retry` greater than `0` a single flush may
 retry, and so take longer than any one of these timeouts.
+
+The `delivery_timeout` option bounds the whole delivery of a batch, including
+waiting for a result lost with a broker connection, which none of the above
+timeouts cover. On timeout the producer is replaced and the batch is sent
+again, so messages that reached Kafka are duplicated, also with
+`idempotent_writes` enabled.
+
+The default of 5 minutes exceeds the maximum delivery duration with the default
+retries and timeouts, and a warning is logged if the option is set below it.
+The connections of an abandoned producer are closed immediately. A delivery
+whose result was lost never returns and keeps its batch in memory until
+Telegraf is restarted.
 
 [sarama]: https://github.com/IBM/sarama

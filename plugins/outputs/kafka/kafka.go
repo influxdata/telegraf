@@ -6,8 +6,10 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"io"
 	"slices"
 	"strings"
+	"sync/atomic"
 	"text/template"
 	"time"
 
@@ -28,6 +30,9 @@ var sampleConfig string
 
 var zeroTime = time.Unix(0, 0)
 
+// Sarama's Close blocks while a delivery is stuck
+const defaultCloseTimeout = 5 * time.Second
+
 type Kafka struct {
 	Brokers           []string          `toml:"brokers"`
 	Topic             string            `toml:"topic"`
@@ -39,14 +44,18 @@ type Kafka struct {
 	ProducerTimestamp string            `toml:"producer_timestamp"`
 	MetricNameHeader  string            `toml:"metric_name_header" deprecated:"1.39.0;1.45.0;please use 'headers' instead"`
 	Headers           map[string]string `toml:"headers"`
+	DeliveryTimeout   config.Duration   `toml:"delivery_timeout"`
 	Log               telegraf.Logger   `toml:"-"`
 	common_proxy.Socks5ProxyConfig
 	kafka.WriteConfig
 
 	saramaConfig *sarama.Config
-	producerFunc func(addrs []string, config *sarama.Config) (sarama.SyncProducer, error)
+	producerFunc func(addrs []string, config *sarama.Config) (sarama.SyncProducer, io.Closer, error)
 	producer     sarama.SyncProducer
+	client       io.Closer
 	headerTmpl   map[string]*template.Template
+	closeTimeout time.Duration
+	abandoned    atomic.Int32
 
 	serializer telegraf.Serializer
 }
@@ -101,6 +110,18 @@ func (k *Kafka) Init() error {
 	}
 	k.saramaConfig = cfg
 
+	if k.DeliveryTimeout < 0 {
+		return errors.New("delivery_timeout must not be negative")
+	}
+	if k.DeliveryTimeout > 0 {
+		// Maximum duration of a delivery using all retries
+		attempts := time.Duration(cfg.Producer.Retry.Max + 1)
+		longest := attempts*(cfg.Net.WriteTimeout+cfg.Net.ReadTimeout) + (attempts-1)*cfg.Producer.Retry.Backoff
+		if timeout := time.Duration(k.DeliveryTimeout); timeout < longest {
+			k.Log.Warnf("delivery_timeout %s is below the maximum delivery duration of %s", timeout, longest)
+		}
+	}
+
 	switch k.ProducerTimestamp {
 	case "":
 		k.ProducerTimestamp = "metric"
@@ -123,11 +144,9 @@ func (k *Kafka) Init() error {
 }
 
 func (k *Kafka) Connect() error {
-	producer, err := k.producerFunc(k.Brokers, k.saramaConfig)
-	if err != nil {
+	if err := k.createProducer(); err != nil {
 		return &internal.StartupError{Err: err, Retry: true}
 	}
-	k.producer = producer
 	return nil
 }
 
@@ -135,10 +154,40 @@ func (k *Kafka) Close() error {
 	if k.producer == nil {
 		return nil
 	}
-	return k.producer.Close()
+	producer, client := k.producer, k.client
+	k.producer, k.client = nil, nil
+	return errors.Join(k.closeProducer(producer), closeClient(client))
+}
+
+func (k *Kafka) closeProducer(producer sarama.SyncProducer) error {
+	timeout := k.closeTimeout
+	if timeout <= 0 {
+		timeout = defaultCloseTimeout
+	}
+
+	done := make(chan error, 1)
+	go func() {
+		done <- producer.Close()
+	}()
+
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+	select {
+	case err := <-done:
+		return err
+	case <-timer.C:
+		return fmt.Errorf("closing producer timed out after %s", timeout)
+	}
 }
 
 func (k *Kafka) Write(metrics []telegraf.Metric) error {
+	// Recreate the producer if a previous write abandoned it
+	if k.producer == nil {
+		if err := k.createProducer(); err != nil {
+			return fmt.Errorf("creating producer failed: %w", err)
+		}
+	}
+
 	msgs := make([]*sarama.ProducerMessage, 0, len(metrics))
 	for _, metric := range metrics {
 		metric, topic := k.getTopicName(metric)
@@ -186,7 +235,7 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 		msgs = append(msgs, m)
 	}
 
-	if err := k.producer.SendMessages(msgs); err != nil {
+	if err := k.send(msgs); err != nil {
 		// We could have many errors, return only the first encountered.
 		var errs sarama.ProducerErrors
 		if errors.As(err, &errs) && len(errs) > 0 {
@@ -209,6 +258,90 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 	}
 
 	return nil
+}
+
+func (k *Kafka) createProducer() error {
+	producer, client, err := k.producerFunc(k.Brokers, k.saramaConfig)
+	if err != nil {
+		return err
+	}
+	k.producer = producer
+	k.client = client
+	return nil
+}
+
+// send abandons the producer if the delivery exceeds the timeout, as
+// SendMessages cannot be cancelled and never returns if a result is lost.
+func (k *Kafka) send(msgs []*sarama.ProducerMessage) error {
+	if k.DeliveryTimeout <= 0 {
+		return k.producer.SendMessages(msgs)
+	}
+
+	producer, client := k.producer, k.client
+	done := make(chan error, 1)
+	go func() {
+		done <- producer.SendMessages(msgs)
+	}()
+
+	timer := time.NewTimer(time.Duration(k.DeliveryTimeout))
+	defer timer.Stop()
+	select {
+	case err := <-done:
+		return err
+	case <-timer.C:
+	}
+
+	// Use a result received concurrently with the timeout
+	select {
+	case err := <-done:
+		return err
+	default:
+	}
+
+	k.producer, k.client = nil, nil
+	pending := k.abandoned.Add(1)
+	k.Log.Warnf("Abandoning producer, %d abandoned deliveries pending", pending)
+	go k.disposeAbandoned(producer, client, done)
+
+	return fmt.Errorf("delivery timed out after %s", time.Duration(k.DeliveryTimeout))
+}
+
+// disposeAbandoned closes the client right away to release its connections
+// and the producer after its delivery returned. Closing the producer earlier
+// can panic in sarama if SendMessages is still queueing messages. A delivery
+// with a lost result never returns and keeps its messages until shutdown.
+func (k *Kafka) disposeAbandoned(producer sarama.SyncProducer, client io.Closer, done <-chan error) {
+	defer k.abandoned.Add(-1)
+
+	if err := closeClient(client); err != nil {
+		k.Log.Errorf("Closing client of abandoned producer failed: %v", err)
+	}
+	if err := <-done; err == nil {
+		k.Log.Warn("Abandoned delivery succeeded, the resent batch will be duplicated")
+	}
+	if err := k.closeProducer(producer); err != nil {
+		k.Log.Errorf("Closing abandoned producer failed: %v", err)
+	}
+}
+
+func newProducer(addrs []string, cfg *sarama.Config) (sarama.SyncProducer, io.Closer, error) {
+	client, err := sarama.NewClient(addrs, cfg)
+	if err != nil {
+		return nil, nil, err
+	}
+	producer, err := sarama.NewSyncProducerFromClient(client)
+	if err != nil {
+		return nil, nil, errors.Join(err, client.Close())
+	}
+	return producer, client, nil
+}
+
+// closeClient closes a producer's client, as the producer leaves it open
+func closeClient(client io.Closer) error {
+	if client == nil {
+		return nil
+	}
+	return client.Close()
 }
 
 func (k *Kafka) getTopicName(metric telegraf.Metric) (telegraf.Metric, string) {
@@ -274,7 +407,8 @@ func init() {
 			NetReadTimeout:  config.Duration(30 * time.Second),
 			NetWriteTimeout: config.Duration(30 * time.Second),
 			ProducerTimeout: config.Duration(10 * time.Second),
-			producerFunc:    sarama.NewSyncProducer,
+			DeliveryTimeout: config.Duration(5 * time.Minute),
+			producerFunc:    newProducer,
 		}
 	})
 }
