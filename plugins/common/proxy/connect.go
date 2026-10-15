@@ -3,6 +3,7 @@ package proxy
 import (
 	"bufio"
 	"context"
+	"encoding/base64"
 	"fmt"
 	"net"
 	"net/http"
@@ -57,7 +58,13 @@ func (c *httpConnectProxy) DialContext(ctx context.Context, network, addr string
 	}
 	req.Close = false
 	if password, hasAuth := c.url.User.Password(); hasAuth {
-		req.SetBasicAuth(c.url.User.Username(), password)
+		// Proxy credentials belong in Proxy-Authorization, not Authorization: the
+		// latter authenticates against the origin resource, and a proxy following
+		// RFC 9110 section 11.7.2 ignores it and answers 407. SetBasicAuth sets
+		// Authorization, so the value is built here instead -- the same way
+		// net/http's own transport authenticates a CONNECT proxy.
+		credentials := c.url.User.Username() + ":" + password
+		req.Header.Set("Proxy-Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(credentials)))
 	}
 
 	err = req.Write(proxyConn)
