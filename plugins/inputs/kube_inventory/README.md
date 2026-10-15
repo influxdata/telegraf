@@ -256,6 +256,7 @@ tls_key = "/run/telegraf-kubernetes-key"
     - phase_type (int, [see below](#pvc-phase_type))
 
 - kubernetes_pod_container
+  - Includes native sidecar containers (init containers with `restartPolicy: Always`).
   - tags:
     - container_name
     - namespace
