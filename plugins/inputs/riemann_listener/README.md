@@ -54,6 +54,9 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   #  tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
   ## Maximum socket buffer size (in bytes when no unit specified).
   #  read_buffer_size = "64KiB"
+  ## Maximum size of a single message. Messages announcing a larger size
+  ## are rejected and the connection is closed.
+  #  max_message_size = "4MiB"
   ## Period between keep alive probes.
   ## 0 disables keep alive probes.
   ## Defaults to the OS configuration.
