@@ -36,6 +36,7 @@ type Syslog struct {
 	SyslogStandard   string                     `toml:"syslog_standard"`
 	Trailer          nontransparent.TrailerType `toml:"trailer"`
 	BestEffort       bool                       `toml:"best_effort"`
+	EmbeddedNewlines bool                       `toml:"embedded_newlines"`
 	Separator        string                     `toml:"sdparam_separator"`
 	MaxMessageLength config.Size                `toml:"max_message_length"`
 	Log              telegraf.Logger            `toml:"-"`
@@ -233,7 +234,11 @@ func (s *Syslog) createDatagramDataHandler(acc telegraf.Accumulator) socket.Call
 	var parser syslog.Machine
 	switch s.SyslogStandard {
 	case "RFC3164":
-		parser = rfc3164.NewParser(rfc3164.WithYear(rfc3164.CurrentYear{}))
+		options := []syslog.MachineOption{rfc3164.WithYear(rfc3164.CurrentYear{})}
+		if s.EmbeddedNewlines {
+			options = append(options, rfc3164.WithEmbeddedNewlines())
+		}
+		parser = rfc3164.NewParser(options...)
 	case "RFC5424":
 		parser = rfc5424.NewParser()
 	}
