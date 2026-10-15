@@ -96,6 +96,13 @@ to use them.
   #   gauge = []
 ```
 
+With a `vsock` address the listener binds the context ID given in the
+address, so it has to be a CID of the machine Telegraf runs on. Any other
+CID, for example the host CID on a guest, is rejected on startup. An address
+without a CID, as in `vsock://:9273`, binds the local context ID. Use that
+machine's CID in the client address to reach the listener from another
+context.
+
 ## Metrics
 
 Prometheus metrics are produced in the same manner as the [prometheus
