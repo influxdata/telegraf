@@ -82,6 +82,17 @@ type job struct {
 	query   *query
 }
 
+// collection holds what all databases of one Gather have in common. It is
+// read by the goroutines processing the databases and never modified after
+// it is built.
+type collection struct {
+	queries   []*query
+	timestamp time.Time
+	// concurrency is the number of queries executing at the same time in a
+	// single database
+	concurrency int
+}
+
 func (*Postgresql) SampleConfig() string {
 	return sampleConfig
 }
@@ -255,6 +266,12 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	// up to max_connections_per_database of its queries at the same time. The
 	// semaphore is acquired before spawning the goroutine to avoid a large
 	// number of waiting goroutines when there are many databases.
+	coll := &collection{
+		queries:     queries,
+		timestamp:   timestamp,
+		concurrency: p.MaxConnectionsPerDatabase,
+	}
+
 	var wg sync.WaitGroup
 	semaphore := make(chan struct{}, p.MaxParallelDatabases)
 	for _, datname := range datnames {
@@ -264,7 +281,7 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 			defer wg.Done()
 			defer func() { <-semaphore }()
 
-			if err := p.gatherInDatabase(ctx, acc, datname, queries, timestamp, p.MaxConnectionsPerDatabase); err != nil {
+			if err := p.gatherInDatabase(ctx, acc, datname, coll); err != nil {
 				acc.AddError(fmt.Errorf("database %q: %w", datname, err))
 			}
 		}(datname)
@@ -274,18 +291,10 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-// gatherInDatabase runs the queries in the given database with up to
-// concurrency queries executing at the same time. The connection database
-// uses the existing pool, any other database gets a pool of its own which
-// is closed when done.
-func (p *Postgresql) gatherInDatabase(
-	ctx context.Context,
-	acc telegraf.Accumulator,
-	datname string,
-	queries []*query,
-	timestamp time.Time,
-	concurrency int,
-) error {
+// gatherInDatabase runs the queries in the given database. The connection
+// database uses the existing pool, any other database gets a pool of its own
+// which is closed when done.
+func (p *Postgresql) gatherInDatabase(ctx context.Context, acc telegraf.Accumulator, datname string, coll *collection) error {
 	service := p.service
 	if datname != p.service.ConnectionDatabase {
 		var err error
@@ -297,11 +306,11 @@ func (p *Postgresql) gatherInDatabase(
 			return err
 		}
 		defer service.Stop()
-		service.DB.SetMaxOpenConns(concurrency)
-		service.DB.SetMaxIdleConns(concurrency)
+		service.DB.SetMaxOpenConns(coll.concurrency)
+		service.DB.SetMaxIdleConns(coll.concurrency)
 	}
 
-	p.gatherDatabase(ctx, acc, service, datname, queries, timestamp, concurrency)
+	p.gatherDatabase(ctx, acc, service, datname, coll)
 	return nil
 }
 
@@ -312,27 +321,19 @@ func (p *Postgresql) closeIdleConnections() {
 	p.service.DB.SetMaxIdleConns(max(p.MaxIdle, p.MaxConnectionsPerDatabase))
 }
 
-// gatherDatabase runs the queries in one database with the given number of
-// queries executing concurrently
-func (p *Postgresql) gatherDatabase(
-	ctx context.Context,
-	acc telegraf.Accumulator,
-	service *postgresql.Service,
-	datname string,
-	queries []*query,
-	timestamp time.Time,
-	concurrency int,
-) {
+// gatherDatabase runs the queries in one database with coll.concurrency
+// queries executing at the same time
+func (p *Postgresql) gatherDatabase(ctx context.Context, acc telegraf.Accumulator, service *postgresql.Service, datname string, coll *collection) {
 	var wg sync.WaitGroup
-	semaphore := make(chan struct{}, concurrency)
-	for _, q := range queries {
+	semaphore := make(chan struct{}, coll.concurrency)
+	for _, q := range coll.queries {
 		semaphore <- struct{}{}
 		wg.Add(1)
 		go func(j job) {
 			defer wg.Done()
 			defer func() { <-semaphore }()
 
-			if err := p.gatherMetricsFromQuery(ctx, acc, service, j, timestamp); err != nil {
+			if err := p.gatherMetricsFromQuery(ctx, acc, service, j, coll.timestamp); err != nil {
 				acc.AddError(fmt.Errorf("database %q: %w", j.datname, err))
 			}
 		}(job{datname: datname, query: q})

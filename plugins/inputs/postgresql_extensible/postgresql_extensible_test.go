@@ -52,8 +52,8 @@ func TestInitDefaults(t *testing.T) {
 	require.True(t, q.numericFloat)
 }
 
-// TestRegisteredDefaults pins the defaults existing configurations rely on:
-// no timeout, no caching, numeric columns as strings and the connection kept
+// TestRegisteredDefaults pins the defaults of a registered plugin: no
+// timeout, no caching, numeric columns as strings and the connection kept
 // between collections.
 func TestRegisteredDefaults(t *testing.T) {
 	creator, found := inputs.Inputs["postgresql_extensible"]
@@ -858,7 +858,7 @@ func TestRoleFilterIntegration(t *testing.T) {
 }
 
 // TestColumnTypesIntegration checks the mapping of the column types to the
-// field types, which must not change for existing configurations
+// field types
 func TestColumnTypesIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")

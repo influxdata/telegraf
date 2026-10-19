@@ -339,10 +339,9 @@ CREATE OR REPLACE VIEW public.sessions AS
 ## Databases
 
 Without `datname_include` and `datname_exclude` all queries are run in the
-database given in the `address` (or the driver default), which is the
-behavior of previous versions of this plugin. If any of the filters is set,
-the list of databases is read from `pg_database` and the queries are run in
-every database matching the filters. Template databases and databases not
+database given in the `address` (or the driver default). If any of the
+filters is set, the list of databases is read from `pg_database` and the
+queries are run in every database matching the filters. Template databases and databases not
 accepting connections are never included.
 
 Every filter entry is a regular expression matching the complete database
@@ -377,8 +376,7 @@ zero reads them on every collection.
 
 The plugin-level `timeout` limits a complete collection cycle. Each query
 is run with its own `timeout` if set, or the remaining time of the cycle
-otherwise. The default of zero means no limit, as in previous versions of
-this plugin.
+otherwise. The default of zero means no limit.
 
 Concurrency has two independent knobs. `max_parallel_databases` sets how
 many databases are processed at the same time, `max_connections_per_database`
@@ -393,8 +391,8 @@ the two:
 | 5 | 1 | 5 |
 | 5 | 2 | 10 |
 
-Both default to one, which is the behavior of previous versions of this
-plugin: one connection running the queries one after another.
+Both default to one: a single connection running the queries one after
+another.
 
 `keep_idle_connections` only covers the pool for the database given in the
 `address`. The connection to any other database is always closed as soon as
