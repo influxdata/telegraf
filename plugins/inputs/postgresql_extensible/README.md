@@ -83,11 +83,14 @@ to use them.
   ## Zero reads them on every collection.
   # metadata_refresh_interval = "0s"
 
-  ## Maximum number of connections used concurrently. With a single database
-  ## to query this many queries run concurrently in it. With several
-  ## databases this many databases are processed concurrently, running the
-  ## queries of each database sequentially on one connection.
-  # max_connections = 1
+  ## Number of databases processed at the same time. Only relevant when the
+  ## datname filters below select more than one database.
+  # max_parallel_databases = 1
+
+  ## Number of queries run at the same time within one database. Every query
+  ## occupies one connection, so the maximum number of connections this
+  ## plugin opens is max_parallel_databases * max_connections_per_database.
+  # max_connections_per_database = 1
 
   ## Keep the idle connections of the pool for the database given in the
   ## address open between collections. If unset, they are closed after a
@@ -377,14 +380,21 @@ is run with its own `timeout` if set, or the remaining time of the cycle
 otherwise. The default of zero means no limit, as in previous versions of
 this plugin.
 
-With a single database to query, either the connection database or the only
-one matching the filters, the queries run with up to `max_connections`
-queries executing concurrently, each on its own connection.
+Concurrency has two independent knobs. `max_parallel_databases` sets how
+many databases are processed at the same time, `max_connections_per_database`
+how many queries run at the same time within one of them. Every query
+occupies one connection, so the plugin never opens more than the product of
+the two:
 
-With several databases matching the filters up to `max_connections`
-databases are processed concurrently. The queries of a database run
-sequentially on a single connection, so the number of connections per
-collection equals the number of databases.
+| `max_parallel_databases` | `max_connections_per_database` | connections |
+|---|---|---|
+| 1 | 1 | 1 |
+| 1 | 5 | 5 |
+| 5 | 1 | 5 |
+| 5 | 2 | 10 |
+
+Both default to one, which is the behavior of previous versions of this
+plugin: one connection running the queries one after another.
 
 `keep_idle_connections` only covers the pool for the database given in the
 `address`. The connection to any other database is always closed as soon as

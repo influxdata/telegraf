@@ -29,19 +29,20 @@ var sampleConfig string
 var ignoredColumns = map[string]bool{"stats_reset": true}
 
 type Postgresql struct {
-	Databases               []string        `deprecated:"1.22.4;use the sqlquery option to specify database to use"`
-	Query                   []query         `toml:"query"`
-	PreparedStatements      bool            `toml:"prepared_statements"`
-	Timeout                 config.Duration `toml:"timeout"`
-	Role                    string          `toml:"role"`
-	DatnameInclude          []string        `toml:"datname_include"`
-	DatnameExclude          []string        `toml:"datname_exclude"`
-	MetadataRefreshInterval config.Duration `toml:"metadata_refresh_interval"`
-	MaxConnections          int             `toml:"max_connections"`
-	KeepIdleConnections     bool            `toml:"keep_idle_connections"`
-	StringColumnsAsTags     bool            `toml:"string_columns_as_tags"`
-	NumericAsFloat          bool            `toml:"numeric_as_float"`
-	Log                     telegraf.Logger `toml:"-"`
+	Databases                 []string        `deprecated:"1.22.4;use the sqlquery option to specify database to use"`
+	Queries                   []query         `toml:"query"`
+	PreparedStatements        bool            `toml:"prepared_statements"`
+	Timeout                   config.Duration `toml:"timeout"`
+	Role                      string          `toml:"role"`
+	DatnameInclude            []string        `toml:"datname_include"`
+	DatnameExclude            []string        `toml:"datname_exclude"`
+	MetadataRefreshInterval   config.Duration `toml:"metadata_refresh_interval"`
+	MaxConnectionsPerDatabase int             `toml:"max_connections_per_database"`
+	MaxParallelDatabases      int             `toml:"max_parallel_databases"`
+	KeepIdleConnections       bool            `toml:"keep_idle_connections"`
+	StringColumnsAsTags       bool            `toml:"string_columns_as_tags"`
+	NumericAsFloat            bool            `toml:"numeric_as_float"`
+	Log                       telegraf.Logger `toml:"-"`
 	postgresql.Config
 
 	service *postgresql.Service
@@ -86,8 +87,11 @@ func (*Postgresql) SampleConfig() string {
 }
 
 func (p *Postgresql) Init() error {
-	if p.MaxConnections <= 0 {
-		p.MaxConnections = 1
+	if p.MaxConnectionsPerDatabase <= 0 {
+		p.MaxConnectionsPerDatabase = 1
+	}
+	if p.MaxParallelDatabases <= 0 {
+		p.MaxParallelDatabases = 1
 	}
 	if err := validateRole(p.Role); err != nil {
 		return err
@@ -113,7 +117,7 @@ func (p *Postgresql) Init() error {
 	}
 
 	// Set defaults for the queries
-	for i, q := range p.Query {
+	for i, q := range p.Queries {
 		if q.Sqlquery == "" {
 			query, err := os.ReadFile(q.Script)
 			if err != nil {
@@ -159,7 +163,7 @@ func (p *Postgresql) Init() error {
 				q.additionalTags[tag] = true
 			}
 		}
-		p.Query[i] = q
+		p.Queries[i] = q
 	}
 	p.Config.SimpleProtocol = !p.PreparedStatements
 
@@ -178,18 +182,17 @@ func (p *Postgresql) Start(_ telegraf.Accumulator) error {
 		return err
 	}
 
-	// Make sure the pool of the connection database allows the configured
-	// number of concurrent queries and reuses them within a collection. This
-	// overrides the undocumented max_open and max_idle options of the shared
-	// PostgreSQL configuration, max_connections is the documented way to size
-	// the pool of this plugin.
-	if p.MaxConnections > p.MaxOpen {
-		p.Log.Debugf("Raising max_open from %d to max_connections %d", p.MaxOpen, p.MaxConnections)
-		p.service.DB.SetMaxOpenConns(p.MaxConnections)
+	// The pool of the connection database serves a single database, so size it
+	// by the per-database limit. This overrides the undocumented max_open and
+	// max_idle options, max_connections_per_database is the documented way to
+	// size the pools of this plugin.
+	if p.MaxConnectionsPerDatabase > p.MaxOpen {
+		p.Log.Debugf("Raising max_open from %d to max_connections_per_database %d", p.MaxOpen, p.MaxConnectionsPerDatabase)
+		p.service.DB.SetMaxOpenConns(p.MaxConnectionsPerDatabase)
 	}
-	if p.MaxConnections > p.MaxIdle {
-		p.Log.Debugf("Raising max_idle from %d to max_connections %d", p.MaxIdle, p.MaxConnections)
-		p.service.DB.SetMaxIdleConns(p.MaxConnections)
+	if p.MaxConnectionsPerDatabase > p.MaxIdle {
+		p.Log.Debugf("Raising max_idle from %d to max_connections_per_database %d", p.MaxIdle, p.MaxConnectionsPerDatabase)
+		p.service.DB.SetMaxIdleConns(p.MaxConnectionsPerDatabase)
 	}
 
 	return nil
@@ -213,9 +216,9 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	}
 
 	// Select the queries to run for this server version and role
-	queries := make([]*query, 0, len(p.Query))
-	for i := range p.Query {
-		q := &p.Query[i]
+	queries := make([]*query, 0, len(p.Queries))
+	for i := range p.Queries {
+		q := &p.Queries[i]
 		if !matchesVersion(q, p.dbVersion) {
 			continue
 		}
@@ -248,21 +251,12 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 		return nil
 	}
 
-	// A single database gets all connections: run the queries concurrently
-	if len(datnames) == 1 {
-		if err := p.gatherInDatabase(ctx, acc, datnames[0], queries, timestamp, p.MaxConnections); err != nil {
-			acc.AddError(fmt.Errorf("database %q: %w", datnames[0], err))
-		}
-		return nil
-	}
-
-	// Process up to max_connections databases concurrently, running the
-	// queries of each database sequentially on a single connection which is
-	// closed when done. The semaphore is acquired before spawning the
-	// goroutine to avoid a large number of waiting goroutines when there are
-	// many databases.
+	// Process up to max_parallel_databases databases concurrently, each running
+	// up to max_connections_per_database of its queries at the same time. The
+	// semaphore is acquired before spawning the goroutine to avoid a large
+	// number of waiting goroutines when there are many databases.
 	var wg sync.WaitGroup
-	semaphore := make(chan struct{}, p.MaxConnections)
+	semaphore := make(chan struct{}, p.MaxParallelDatabases)
 	for _, datname := range datnames {
 		semaphore <- struct{}{}
 		wg.Add(1)
@@ -270,7 +264,7 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 			defer wg.Done()
 			defer func() { <-semaphore }()
 
-			if err := p.gatherInDatabase(ctx, acc, datname, queries, timestamp, 1); err != nil {
+			if err := p.gatherInDatabase(ctx, acc, datname, queries, timestamp, p.MaxConnectionsPerDatabase); err != nil {
 				acc.AddError(fmt.Errorf("database %q: %w", datname, err))
 			}
 		}(datname)
@@ -315,7 +309,7 @@ func (p *Postgresql) gatherInDatabase(
 // database by temporarily dropping the idle limit of the pool
 func (p *Postgresql) closeIdleConnections() {
 	p.service.DB.SetMaxIdleConns(0)
-	p.service.DB.SetMaxIdleConns(max(p.MaxIdle, p.MaxConnections))
+	p.service.DB.SetMaxIdleConns(max(p.MaxIdle, p.MaxConnectionsPerDatabase))
 }
 
 // gatherDatabase runs the queries in one database with the given number of
