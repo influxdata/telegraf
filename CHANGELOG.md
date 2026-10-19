@@ -17,6 +17,12 @@
 - PR [#19503](https://github.com/influxdata/telegraf/pull/19503) changes how
   `inputs.nftables` invokes `nft`. When using `use_sudo`, update your
   sudoers configuration as described in the plugin's README.
+- PR [#19918](https://github.com/influxdata/telegraf/pull/19918) makes
+  `inputs.riemann_listener` reject a message whose announced size exceeds
+  `max_message_size` (new option, default `4MiB`) and close the connection.
+  If your clients legitimately send larger messages, raise
+  `max_message_size` accordingly.
+
 ## v1.40.2 [2026-10-12]
 
 ### Bugfixes
