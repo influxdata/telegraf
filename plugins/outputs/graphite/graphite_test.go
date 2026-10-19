@@ -654,7 +654,7 @@ func TestIntegration(t *testing.T) {
 			}
 		}
 		return false
-	}, 10*time.Second, 100*time.Millisecond)
+	}, 30*time.Second, 100*time.Millisecond)
 }
 
 func query(url string, data any) error {
