@@ -2,7 +2,6 @@ package docker_log
 
 import (
 	"fmt"
-	"maps"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -213,9 +212,7 @@ func TestStatePersistence(t *testing.T) {
 		Timeout:  config.Duration(time.Second * 5),
 	}
 	require.NoError(t, plugin.Init())
-	plugin.lastRecordMtx.Lock()
-	state := maps.Clone(plugin.lastRecord)
-	plugin.lastRecordMtx.Unlock()
+	state := plugin.GetState().(map[string]time.Time)
 	require.Empty(t, state)
 
 	// Write a first log message
@@ -237,10 +234,7 @@ func TestStatePersistence(t *testing.T) {
 	// Gracefully stop the plugin and make sure the state was updated
 	plugin.Stop()
 
-	plugin.lastRecordMtx.Lock()
-	state = maps.Clone(plugin.lastRecord)
-	plugin.lastRecordMtx.Unlock()
-
+	state = plugin.GetState().(map[string]time.Time)
 	require.Contains(t, state, id)
 	require.Equal(t, ts.UTC(), state[id])
 }
@@ -270,9 +264,7 @@ func TestStatePersistenceMux(t *testing.T) {
 		Timeout:  config.Duration(time.Second * 5),
 	}
 	require.NoError(t, plugin.Init())
-	plugin.lastRecordMtx.Lock()
-	state := maps.Clone(plugin.lastRecord)
-	plugin.lastRecordMtx.Unlock()
+	state := plugin.GetState().(map[string]time.Time)
 	require.Empty(t, state)
 
 	// Write a first log message
@@ -297,10 +289,7 @@ func TestStatePersistenceMux(t *testing.T) {
 	// Gracefully stop the plugin and make sure the state was updated
 	plugin.Stop()
 
-	plugin.lastRecordMtx.Lock()
-	state = maps.Clone(plugin.lastRecord)
-	plugin.lastRecordMtx.Unlock()
-
+	state = plugin.GetState().(map[string]time.Time)
 	require.Contains(t, state, id)
 	require.Equal(t, ts.UTC(), state[id])
 }
