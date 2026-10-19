@@ -479,7 +479,7 @@ func (a *Agent) testRunInputs(
 
 	nul := make(chan telegraf.Metric)
 	go func() {
-		//nolint:revive // empty block needed here
+		// empty block needed here
 		for range nul {
 		}
 	}()
