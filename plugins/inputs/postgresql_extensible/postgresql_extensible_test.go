@@ -666,6 +666,8 @@ func TestMultipleDatabasesIntegration(t *testing.T) {
 	}
 }
 
+// TestKeepConnectionsIntegration counts the sessions still open after a
+// collection, which is what keep_idle_connections decides
 func TestKeepConnectionsIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -673,20 +675,22 @@ func TestKeepConnectionsIntegration(t *testing.T) {
 
 	server := startServer(t, "app_1", "app_2")
 	defer server.stop()
-	server.address += " application_name=postgresql_multi_test"
+
+	const appName = "pgext_keep_connections"
 
 	// Observe the server from an independent connection, as the sessions of
-	// the plugin can only be counted once its collection is done
-	observer, err := sql.Open("pgx", server.address)
+	// the plugin can only be counted once its collection is done. The
+	// observer carries an application_name of its own, so it never counts
+	// itself.
+	observer, err := sql.Open("pgx", server.dsn("postgres", "keep_observer"))
 	require.NoError(t, err)
 	defer observer.Close()
 	observer.SetMaxOpenConns(1)
 
 	sessions := func() int {
 		var count int
-		query := `SELECT count(*) FROM pg_stat_activity ` +
-			`WHERE application_name = 'postgresql_multi_test' AND pid <> pg_backend_pid()`
-		require.NoError(t, observer.QueryRow(query).Scan(&count))
+		query := `SELECT count(*) FROM pg_stat_activity WHERE application_name = $1`
+		require.NoError(t, observer.QueryRow(query, appName).Scan(&count))
 		return count
 	}
 
@@ -706,7 +710,7 @@ func TestKeepConnectionsIntegration(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &Postgresql{
 				Log:                       testutil.Logger{},
-				Config:                    postgresql.Config{Address: config.NewSecret([]byte(server.address)), MaxIdle: 1, MaxOpen: 1},
+				Config:                    postgresql.Config{Address: config.NewSecret([]byte(server.dsn("postgres", appName))), MaxIdle: 1, MaxOpen: 1},
 				NumericAsFloat:            true,
 				MaxConnectionsPerDatabase: 3,
 				KeepIdleConnections:       tt.keep,
