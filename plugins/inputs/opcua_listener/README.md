@@ -493,11 +493,11 @@ This example group configuration has three groups with two nodes each:
     namespace = "3"
     identifier_type = "i"
     default_tags = { group1_tag = "val1" }
-    [[inputs.opcua.group.nodes]]
+    [[inputs.opcua_listener.group.nodes]]
       name = "name"
       identifier = "1001"
       default_tags = { node1_tag = "val2" }
-    [[inputs.opcua.group.nodes]]
+    [[inputs.opcua_listener.group.nodes]]
       name = "name"
       identifier = "1002"
       default_tags = {node1_tag = "val3"}
@@ -508,11 +508,11 @@ This example group configuration has three groups with two nodes each:
     namespace = "3"
     identifier_type = "i"
     default_tags = { group2_tag = "val3" }
-    [[inputs.opcua.group.nodes]]
+    [[inputs.opcua_listener.group.nodes]]
       name = "saw"
       identifier = "1003"
       default_tags = { node2_tag = "val4" }
-    [[inputs.opcua.group.nodes]]
+    [[inputs.opcua_listener.group.nodes]]
       name = "sin"
       identifier = "1004"
 
