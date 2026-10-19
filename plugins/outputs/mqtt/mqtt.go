@@ -304,10 +304,29 @@ func (m *MQTT) collectHomieV4(metrics []telegraf.Metric) []message {
 	return collection
 }
 
+// templateMetric unwraps a potentially tracking-wrapped metric to the plain
+// metric that satisfies telegraf.TemplateMetric, so the topic and Homie
+// templates can call .Tag, .Field and friends. Tracking inputs (e.g.
+// inputs.tail) wrap metrics in a type that only exposes the telegraf.Metric
+// interface, which does not carry the template methods.
+func templateMetric(metric telegraf.Metric) (telegraf.TemplateMetric, error) {
+	if wm, ok := metric.(telegraf.UnwrappableMetric); ok {
+		metric = wm.Unwrap()
+	}
+	tm, ok := metric.(telegraf.TemplateMetric)
+	if !ok {
+		return nil, fmt.Errorf("metric of type %T is not a template metric", metric)
+	}
+	return tm, nil
+}
+
 func (m *MQTT) generateTopic(metric telegraf.Metric) (string, error) {
-	var b strings.Builder
-	err := m.template.Execute(&b, metric)
+	tm, err := templateMetric(metric)
 	if err != nil {
+		return "", err
+	}
+	var b strings.Builder
+	if err := m.template.Execute(&b, tm); err != nil {
 		return "", err
 	}
 	var ts []string

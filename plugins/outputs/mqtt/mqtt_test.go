@@ -914,3 +914,33 @@ func TestGenerateTopicName(t *testing.T) {
 		})
 	}
 }
+
+func TestGenerateTopicNameTrackingMetric(t *testing.T) {
+	s := &serializers_influx.Serializer{}
+	require.NoError(t, s.Init())
+
+	m := &MQTT{
+		Servers:    []string{"tcp://localhost:1883"},
+		KeepAlive:  30,
+		Timeout:    config.Duration(5 * time.Second),
+		Topic:      `telegraf/{{ .Tag "host" }}/{{ .Name }}`,
+		serializer: s,
+		Log:        testutil.Logger{},
+	}
+	require.NoError(t, m.Init())
+
+	met := metric.New(
+		"metric-name",
+		map[string]string{"host": "hostname"},
+		map[string]any{"value": 123},
+		time.Date(2022, time.November, 10, 23, 0, 0, 0, time.UTC),
+	)
+	// Metrics coming from tracking inputs (e.g. inputs.tail) are wrapped so
+	// that only the telegraf.Metric interface is exposed; the topic template
+	// must still resolve the template methods on the underlying metric.
+	tracked, _ := metric.WithTracking(met, func(telegraf.DeliveryInfo) {})
+
+	actual, err := m.generateTopic(tracked)
+	require.NoError(t, err)
+	require.Equal(t, "telegraf/hostname/metric-name", actual)
+}

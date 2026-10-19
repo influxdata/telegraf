@@ -96,8 +96,12 @@ func convertType(value any) (val, dtype string, err error) {
 }
 
 func homieGenerate(t *template.Template, m telegraf.Metric) (string, error) {
+	tm, err := templateMetric(m)
+	if err != nil {
+		return "", err
+	}
 	var b strings.Builder
-	if err := t.Execute(&b, m.(telegraf.TemplateMetric)); err != nil {
+	if err := t.Execute(&b, tm); err != nil {
 		return "", err
 	}
 
