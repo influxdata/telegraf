@@ -139,7 +139,7 @@ string values:
 
 ```toml
 [[processors.enum]]
-  namepass = "mysql"
+  namepass = ["mysql"]
   [[processors.enum.mapping]]
     field = "slave_slave_io_running"
     dest = "slave_slave_io_running_int"
