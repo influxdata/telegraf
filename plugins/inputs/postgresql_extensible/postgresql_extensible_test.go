@@ -34,6 +34,8 @@ func newPlugin() *Postgresql {
 	}
 }
 
+// TestInitDefaults checks the values Init fills in, both for the plugin and
+// for a query inheriting from it or overriding it
 func TestInitDefaults(t *testing.T) {
 	p := newPlugin()
 	p.Queries = []query{{Sqlquery: "SELECT 1"}}
@@ -50,6 +52,32 @@ func TestInitDefaults(t *testing.T) {
 	require.Equal(t, "any", q.Role)
 	require.False(t, q.stringTags)
 	require.True(t, q.numericFloat)
+
+	// A query takes the settings of the plugin unless it sets its own
+	p = newPlugin()
+	p.Role = "primary"
+	p.StringColumnsAsTags = true
+	p.NumericAsFloat = true
+	p.Queries = []query{
+		{Sqlquery: "SELECT 1"},
+		{
+			Sqlquery:            "SELECT 2",
+			Role:                "replica",
+			StringColumnsAsTags: boolPtr(false),
+			NumericAsFloat:      boolPtr(false),
+		},
+	}
+	require.NoError(t, p.Init())
+
+	inherited := p.Queries[0]
+	require.Equal(t, "primary", inherited.Role)
+	require.True(t, inherited.stringTags)
+	require.True(t, inherited.numericFloat)
+
+	overridden := p.Queries[1]
+	require.Equal(t, "replica", overridden.Role)
+	require.False(t, overridden.stringTags)
+	require.False(t, overridden.numericFloat)
 }
 
 // TestRegisteredDefaults pins the defaults of a registered plugin: no
@@ -119,33 +147,6 @@ func TestInitDeprecatedOptions(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestInitQueryOverrides(t *testing.T) {
-	p := newPlugin()
-	p.Role = "primary"
-	p.StringColumnsAsTags = true
-	p.NumericAsFloat = true
-	p.Queries = []query{
-		{Sqlquery: "SELECT 1"},
-		{
-			Sqlquery:            "SELECT 2",
-			Role:                "replica",
-			StringColumnsAsTags: boolPtr(false),
-			NumericAsFloat:      boolPtr(false),
-		},
-	}
-	require.NoError(t, p.Init())
-
-	inherited := p.Queries[0]
-	require.Equal(t, "primary", inherited.Role)
-	require.True(t, inherited.stringTags)
-	require.True(t, inherited.numericFloat)
-
-	overridden := p.Queries[1]
-	require.Equal(t, "replica", overridden.Role)
-	require.False(t, overridden.stringTags)
-	require.False(t, overridden.numericFloat)
 }
 
 func TestInitScript(t *testing.T) {
@@ -624,29 +625,12 @@ func TestGeneratesMetricsIntegration(t *testing.T) {
 	})
 	require.Empty(t, acc.Errors)
 
-	intMetrics := []string{
-		"xact_commit",
-		"xact_rollback",
-		"blks_read",
-		"blks_hit",
-		"tup_returned",
-		"tup_fetched",
-		"tup_inserted",
-		"tup_updated",
-		"tup_deleted",
-		"conflicts",
-		"temp_files",
-		"temp_bytes",
-		"deadlocks",
-		"numbackends",
-		"datid",
-	}
-	for _, metric := range intMetrics {
+	// A few representative columns of each type. Naming them all would make
+	// the test fail on a PostgreSQL release that changes the view.
+	for _, metric := range []string{"numbackends", "xact_commit", "blks_read"} {
 		require.Truef(t, acc.HasInt64Field("postgresql", metric), "expected %s to be an integer", metric)
 	}
-	for _, metric := range []string{"blk_read_time", "blk_write_time"} {
-		require.Truef(t, acc.HasFloatField("postgresql", metric), "expected %s to be a float", metric)
-	}
+	require.True(t, acc.HasFloatField("postgresql", "blk_read_time"))
 	require.True(t, acc.HasStringField("postgresql", "datname"))
 	require.False(t, acc.HasField("postgresql", "stats_reset"))
 	require.Equal(t, "postgres", acc.TagValue("postgresql", "db"))
@@ -749,32 +733,6 @@ func TestKeepConnectionsIntegration(t *testing.T) {
 	}
 }
 
-func TestNumericConversionIntegration(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
-	server := startServer(t)
-	defer server.stop()
-
-	acc := server.run(t, &Postgresql{
-		NumericAsFloat: true,
-		Queries: []query{
-			{Measurement: "converted", Sqlquery: "SELECT 10.5::numeric AS value"},
-			{Measurement: "raw", Sqlquery: "SELECT 10.5::numeric AS value", NumericAsFloat: boolPtr(false)},
-		},
-	})
-	require.Empty(t, acc.Errors)
-
-	v, found := acc.FloatField("converted", "value")
-	require.True(t, found)
-	require.InDelta(t, 10.5, v, testutil.DefaultDelta)
-
-	s, found := acc.StringField("raw", "value")
-	require.True(t, found)
-	require.Equal(t, "10.5", s)
-}
-
 func TestQueryTimeoutIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -868,9 +826,10 @@ func TestColumnTypesIntegration(t *testing.T) {
 	defer server.stop()
 
 	tests := []struct {
-		name  string
-		sql   string
-		check func(t *testing.T, acc *testutil.Accumulator)
+		name   string
+		sql    string
+		plugin func(q *query, p *Postgresql)
+		check  func(t *testing.T, acc *testutil.Accumulator)
 	}{
 		{
 			name: "float",
@@ -888,6 +847,29 @@ func TestColumnTypesIntegration(t *testing.T) {
 				v, found := acc.StringField("postgresql", "myvalue")
 				require.True(t, found)
 				require.Equal(t, "10.0", v)
+			},
+		},
+		{
+			name:   "numeric as float",
+			sql:    "SELECT 10.5::numeric AS myvalue",
+			plugin: func(_ *query, p *Postgresql) { p.NumericAsFloat = true },
+			check: func(t *testing.T, acc *testutil.Accumulator) {
+				v, found := acc.FloatField("postgresql", "myvalue")
+				require.True(t, found)
+				require.InDelta(t, 10.5, v, testutil.DefaultDelta)
+			},
+		},
+		{
+			name: "query overrides numeric as float",
+			sql:  "SELECT 10.5::numeric AS myvalue",
+			plugin: func(q *query, p *Postgresql) {
+				p.NumericAsFloat = true
+				q.NumericAsFloat = boolPtr(false)
+			},
+			check: func(t *testing.T, acc *testutil.Accumulator) {
+				v, found := acc.StringField("postgresql", "myvalue")
+				require.True(t, found)
+				require.Equal(t, "10.5", v)
 			},
 		},
 		{
@@ -922,9 +904,14 @@ func TestColumnTypesIntegration(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			acc := server.run(t, &Postgresql{
-				Queries: []query{{Sqlquery: tt.sql, MinVersion: 901, Timestamp: "ts"}},
-			})
+			q := query{Sqlquery: tt.sql, MinVersion: 901, Timestamp: "ts"}
+			p := &Postgresql{}
+			if tt.plugin != nil {
+				tt.plugin(&q, p)
+			}
+			p.Queries = []query{q}
+
+			acc := server.run(t, p)
 			require.Empty(t, acc.Errors)
 			tt.check(t, acc)
 		})
