@@ -46,12 +46,15 @@ func (q *InstantQuery) init(c *client, log telegraf.Logger, options ...apiv1.Opt
 }
 
 func (q *InstantQuery) execute(ctx context.Context, acc telegraf.Accumulator, t time.Time) error {
-	results, warnings, err := q.client.Query(ctx, q.Query, t, q.options...)
+	results, warnings, infos, err := q.client.Query(ctx, q.Query, t, q.options...)
 	if err != nil {
 		return fmt.Errorf("querying %q failed: %w", q.client.url, err)
 	}
 	for _, w := range warnings {
 		q.log.Warnf("query %q produced warning: %s", q.Query, w)
+	}
+	for _, i := range infos {
+		q.log.Debugf("query %q produced info: %s", q.Query, i)
 	}
 
 	return q.convertModelValue(acc, results)
@@ -88,12 +91,15 @@ func (q *RangeQuery) execute(ctx context.Context, acc telegraf.Accumulator, t ti
 		End:   t.Add(-time.Duration(q.End)),
 		Step:  time.Duration(q.Step),
 	}
-	results, warnings, err := q.client.QueryRange(ctx, q.Query, r, q.options...)
+	results, warnings, infos, err := q.client.QueryRange(ctx, q.Query, r, q.options...)
 	if err != nil {
 		return fmt.Errorf("querying %q failed: %w", q.client.url, err)
 	}
 	for _, w := range warnings {
 		q.log.Warnf("query %q produced warning: %s", q.Query, w)
+	}
+	for _, i := range infos {
+		q.log.Debugf("query %q produced info: %s", q.Query, i)
 	}
 	return q.convertModelValue(acc, results)
 }
