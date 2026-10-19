@@ -3,18 +3,22 @@ package proxy
 import (
 	"bufio"
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net"
 	"net/http"
 	"net/url"
 
 	"golang.org/x/net/proxy"
+
+	common_tls "github.com/influxdata/telegraf/plugins/common/tls"
 )
 
 // httpConnectProxy proxies (only?) TCP over a HTTP tunnel using the CONNECT method
 type httpConnectProxy struct {
-	forward proxy.Dialer
-	url     *url.URL
+	forward   proxy.Dialer
+	url       *url.URL
+	tlsConfig *tls.Config
 }
 
 func (c *httpConnectProxy) DialContext(ctx context.Context, network, addr string) (net.Conn, error) {
@@ -33,6 +37,19 @@ func (c *httpConnectProxy) DialContext(ctx context.Context, network, addr string
 	}
 	if err != nil {
 		return nil, err
+	}
+
+	// Secure the connection to an https proxy before the CONNECT request
+	// and the credentials it may carry are sent.
+	if c.tlsConfig != nil {
+		tlsConn := tls.Client(proxyConn, c.tlsConfig)
+		if err := tlsConn.HandshakeContext(ctx); err != nil {
+			if err := proxyConn.Close(); err != nil {
+				return nil, err
+			}
+			return nil, fmt.Errorf("tls handshake with proxy failed: %w", err)
+		}
+		proxyConn = tlsConn
 	}
 
 	// Add and strip http:// to extract authority portion of the URL
@@ -94,7 +111,14 @@ func (c *httpConnectProxy) Dial(network, addr string) (net.Conn, error) {
 }
 
 func newHTTPConnectProxy(proxyURL *url.URL, forward proxy.Dialer) (proxy.Dialer, error) {
-	return &httpConnectProxy{forward, proxyURL}, nil
+	c := &httpConnectProxy{forward: forward, url: proxyURL}
+	if proxyURL.Scheme == "https" {
+		c.tlsConfig = &tls.Config{
+			ServerName: proxyURL.Hostname(),
+			MinVersion: common_tls.TLSMinVersionDefault,
+		}
+	}
+	return c, nil
 }
 
 func init() {
