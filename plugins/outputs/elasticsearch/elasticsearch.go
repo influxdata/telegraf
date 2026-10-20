@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -19,6 +20,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
@@ -42,6 +44,7 @@ type Elasticsearch struct {
 	HealthCheckTimeout  config.Duration `toml:"health_check_timeout"`
 	IndexName           string          `toml:"index_name"`
 	IndexTemplate       map[string]any  `toml:"template_index_settings"`
+	LocalAddress        string          `toml:"local_address"`
 	ManageTemplate      bool            `toml:"manage_template"`
 	OverwriteTemplate   bool            `toml:"overwrite_template"`
 	UseOpTypeCreate     bool            `toml:"use_optype_create"`
@@ -54,6 +57,7 @@ type Elasticsearch struct {
 
 	client             *elastic.Client
 	httpHeaders        http.Header
+	localAddr          *net.TCPAddr
 	majorReleaseNumber int
 	pipelineName       string
 	pipelineTagKeys    []string
@@ -91,6 +95,15 @@ func (a *Elasticsearch) Init() error {
 		if strings.HasPrefix(a.IndexName, "%") || strings.HasPrefix(a.IndexName, "{{") {
 			return errors.New("dynamic 'index_name' must have a static prefix")
 		}
+	}
+
+	// Resolve the local address to bind to
+	if a.LocalAddress != "" {
+		localAddr, err := internal.ResolveLocalTCPAddress(a.LocalAddress)
+		if err != nil {
+			return err
+		}
+		a.localAddr = localAddr
 	}
 
 	// Setup index, tags and pipelines
@@ -136,6 +149,10 @@ func (a *Elasticsearch) Connect() error {
 	}
 	transport := &http.Transport{
 		TLSClientConfig: tlsCfg,
+	}
+	if a.localAddr != nil {
+		dialer := &net.Dialer{LocalAddr: a.localAddr}
+		transport.DialContext = dialer.DialContext
 	}
 
 	httpclient := &http.Client{
