@@ -90,12 +90,12 @@ func (f *Fail2ban) Gather(acc telegraf.Accumulator) error {
 	const targetString = "Jail list:"
 	var jails []string
 	for _, line := range lines {
-		idx := strings.LastIndex(line, targetString)
-		if idx < 0 {
+		_, end, found := strings.CutLast(line, targetString)
+		if !found {
 			// not target line, skip.
 			continue
 		}
-		jails = strings.Split(strings.TrimSpace(line[idx+len(targetString):]), ", ")
+		jails = strings.Split(strings.TrimSpace(end), ", ")
 		break
 	}
 
