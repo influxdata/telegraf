@@ -30,6 +30,7 @@ var zeroTime = time.Unix(0, 0)
 
 type Kafka struct {
 	Brokers           []string          `toml:"brokers"`
+	LocalAddress      string            `toml:"local_address"`
 	Topic             string            `toml:"topic"`
 	TopicTag          string            `toml:"topic_tag"`
 	ExcludeTopicTag   bool              `toml:"exclude_topic_tag"`
@@ -88,6 +89,17 @@ func (k *Kafka) Init() error {
 	cfg := sarama.NewConfig()
 	if err := k.SetConfig(cfg, k.Log); err != nil {
 		return err
+	}
+
+	if k.LocalAddress != "" {
+		if k.Socks5ProxyEnabled {
+			return errors.New("local_address cannot be used with socks5_enabled")
+		}
+		localAddr, err := internal.ResolveLocalTCPAddress(k.LocalAddress)
+		if err != nil {
+			return err
+		}
+		cfg.Net.LocalAddr = localAddr
 	}
 
 	if k.Socks5ProxyEnabled {
