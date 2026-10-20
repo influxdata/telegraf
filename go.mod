@@ -184,7 +184,7 @@ require (
 	github.com/prometheus-community/pro-bing v0.9.1
 	github.com/prometheus/client_golang v1.25.0
 	github.com/prometheus/client_model v0.6.3
-	github.com/prometheus/common v0.72.0
+	github.com/prometheus/common v0.72.1
 	github.com/prometheus/procfs v0.22.0
 	github.com/prometheus/prometheus v0.315.0
 	github.com/rabbitmq/amqp091-go v1.15.0
