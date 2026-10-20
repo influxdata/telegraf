@@ -158,17 +158,27 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
+	// Unwrap tracking metrics as the topic and Homie templates require
+	// access to the underlying metric
+	unwrapped := make([]telegraf.Metric, 0, len(metrics))
+	for _, metric := range metrics {
+		if wm, ok := metric.(telegraf.UnwrappableMetric); ok {
+			metric = wm.Unwrap()
+		}
+		unwrapped = append(unwrapped, metric)
+	}
+
 	// Group the metrics to topics and serialize them
 	var topicMessages []message
 	switch m.Layout {
 	case "batch":
-		topicMessages = m.collectBatch(metrics)
+		topicMessages = m.collectBatch(unwrapped)
 	case "non-batch":
-		topicMessages = m.collectNonBatch(metrics)
+		topicMessages = m.collectNonBatch(unwrapped)
 	case "field":
-		topicMessages = m.collectField(metrics)
+		topicMessages = m.collectField(unwrapped)
 	case "homie-v4":
-		topicMessages = m.collectHomieV4(metrics)
+		topicMessages = m.collectHomieV4(unwrapped)
 	default:
 		return fmt.Errorf("unknown layout %q", m.Layout)
 	}
