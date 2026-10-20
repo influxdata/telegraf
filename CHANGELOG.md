@@ -63,6 +63,12 @@
   If you set `default_service_state`, it now also applies to metrics with
   numeric fields but without thresholds, which used to get `SERVICE_OK`.
   Please check alerts relying on these states.
+- PR [#19853](https://github.com/influxdata/telegraf/pull/19853) makes
+  `use_sudo` invoke doas(1) instead of sudo on OpenBSD. A configuration
+  that relies on sudoers will fail until a doas.conf(5) rule permits the
+  same command. `inputs.nsd` and `inputs.unbound` run as `_nsd` and
+  `_unbound`.
+
 ## v1.40.3 [2026-11-02]
 
 ### Bugfixes
@@ -143,11 +149,6 @@
 - [#19889](https://github.com/influxdata/telegraf/pull/19889) `deps` Bump srebhan/label-milestone-action from 1.2.0 to 1.2.1
 - [#19982](https://github.com/influxdata/telegraf/pull/19982) `deps` Bump the aws-sdk-go-v2 group with 11 updates
 - [#19890](https://github.com/influxdata/telegraf/pull/19890) `deps` Bump the aws-sdk-go-v2 group with 11 updates
-- PR [#19853](https://github.com/influxdata/telegraf/pull/19853) makes
-  `use_sudo` invoke doas(1) instead of sudo on OpenBSD. A configuration
-  that relies on sudoers will fail until a doas.conf(5) rule permits the
-  same command. `inputs.nsd` and `inputs.unbound` run as `_nsd` and
-  `_unbound`.
 
 ## v1.40.2 [2026-10-12]
 
