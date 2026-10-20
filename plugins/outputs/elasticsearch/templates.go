@@ -1,5 +1,13 @@
 package elasticsearch
 
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"strings"
+	"text/template"
+)
+
 const telegrafTemplate = `
 {
 	{{ if (lt .Version 6) }}
@@ -73,8 +81,44 @@ const defaultTemplateIndexSettings = `
 	"codec": "best_compression"
 }`
 
-type templatePart struct {
+type templateData struct {
 	TemplatePattern string
 	Version         int
 	IndexTemplate   string
+}
+
+func createNewTemplate(name string, pattern map[string]any, major int) (string, error) {
+	// Create the template-pattern value by extracting the static prefix of the
+	// template name
+	if strings.Contains(name, "%") {
+		name = name[0:strings.Index(name, "%")]
+	}
+	if strings.Contains(name, "{{") {
+		name = name[0:strings.Index(name, "{{")]
+	}
+
+	// Allow overriding the index settings by user configuration settings
+	indexTemplate := defaultTemplateIndexSettings
+	if pattern != nil {
+		p, err := json.Marshal(pattern)
+		if err != nil {
+			return "", fmt.Errorf("creating index settings for template failed: %w", err)
+		}
+		indexTemplate = string(p)
+	}
+
+	// Create the index settings from the `telegrafTemplate` and the extracted
+	// variables
+	data := templateData{
+		TemplatePattern: name + "*",
+		Version:         major,
+		IndexTemplate:   indexTemplate,
+	}
+
+	var buf bytes.Buffer
+	tmpl := template.Must(template.New("template").Parse(telegrafTemplate))
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return "", fmt.Errorf("executing template failed: %w", err)
+	}
+	return buf.String(), nil
 }
