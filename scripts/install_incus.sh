@@ -14,7 +14,10 @@ Signed-By: /etc/apt/keyrings/zabbly.asc
 
 EOF'
 
-sudo apt-get update && sudo apt-get install --yes incus
+# The install pulls in library updates, and on the CircleCI image needrestart
+# then asks which services to restart. Restart them automatically instead of
+# waiting on a prompt nobody can answer.
+sudo apt-get update && sudo NEEDRESTART_MODE=a apt-get install --yes incus
 
 # On CircleCI instances do not have IPv6 enabled, force IPv4 usage only.
 cat <<EOF | sudo incus admin init --preseed
