@@ -818,11 +818,13 @@ func TestGetPipelineName(t *testing.T) {
 func TestIndexSettings(t *testing.T) {
 	tests := []struct {
 		name     string
+		version  int
 		template map[string]any
 		expected string
 	}{
 		{
-			name: "standard",
+			name:    "standard",
+			version: 5,
 			expected: `
 				{
 					"template": "test*",
@@ -891,7 +893,8 @@ func TestIndexSettings(t *testing.T) {
 			`,
 		},
 		{
-			name: "custom index",
+			name:    "custom index",
+			version: 5,
 			template: map[string]any{
 				"refresh_interval":           "20s",
 				"mapping.total_fields.limit": 1000,
@@ -969,15 +972,20 @@ func TestIndexSettings(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup plugin
 			plugin := &Elasticsearch{
-				URLs:           []string{"http://example.com"},
-				ManageTemplate: true,
-				TemplateName:   "test",
-				IndexName:      "test%Y.%m.%d",
-				IndexTemplate:  tt.template,
-				Log:            testutil.Logger{},
+				URLs:               []string{"http://example.com"},
+				ManageTemplate:     true,
+				TemplateName:       "test",
+				IndexName:          "test%Y.%m.%d",
+				IndexTemplate:      tt.template,
+				Log:                testutil.Logger{},
+				majorReleaseNumber: tt.version,
 			}
 			require.NoError(t, plugin.Init())
-			require.JSONEq(t, tt.expected, plugin.indexTmpl)
+
+			actual, err := createNewTemplate(plugin.IndexName, plugin.IndexTemplate, plugin.majorReleaseNumber)
+			require.NoError(t, err)
+
+			require.JSONEq(t, tt.expected, actual)
 		})
 	}
 }

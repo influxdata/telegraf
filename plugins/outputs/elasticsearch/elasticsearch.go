@@ -54,7 +54,6 @@ type Elasticsearch struct {
 
 	client             *elastic.Client
 	httpHeaders        http.Header
-	indexTmpl          string
 	majorReleaseNumber int
 	pipelineName       string
 	pipelineTagKeys    []string
@@ -92,13 +91,6 @@ func (a *Elasticsearch) Init() error {
 		if strings.HasPrefix(a.IndexName, "%") || strings.HasPrefix(a.IndexName, "{{") {
 			return errors.New("dynamic 'index_name' must have a static prefix")
 		}
-
-		// Create an index template
-		tmpl, err := createNewTemplate(a.IndexName, a.IndexTemplate, a.majorReleaseNumber)
-		if err != nil {
-			return fmt.Errorf("creating index template %q failed: %w", a.TemplateName, err)
-		}
-		a.indexTmpl = tmpl
 	}
 
 	// Setup index, tags and pipelines
@@ -310,11 +302,28 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
 	templateExists, err := a.client.IndexTemplateExists(a.TemplateName).Do(ctx)
 	if err != nil {
-		return fmt.Errorf("checking existance of template %q failed: %w", a.TemplateName, err)
+		return fmt.Errorf("checking existence of template %q failed: %w", a.TemplateName, err)
 	}
 
-	if a.OverwriteTemplate || !templateExists {
-		if _, err := a.client.IndexPutTemplate(a.TemplateName).BodyString(a.indexTmpl).Do(ctx); err != nil {
+	templatePattern := a.IndexName
+	if strings.Contains(templatePattern, "%") {
+		templatePattern = templatePattern[0:strings.Index(templatePattern, "%")]
+	}
+	if strings.Contains(templatePattern, "{{") {
+		templatePattern = templatePattern[0:strings.Index(templatePattern, "{{")]
+	}
+	if templatePattern == "" {
+		return errors.New("template cannot be created for dynamic index names without an index prefix")
+	}
+
+	if a.OverwriteTemplate || !templateExists || templatePattern != "" {
+		// Create an index template
+		tmpl, err := createNewTemplate(a.IndexName, a.IndexTemplate, a.majorReleaseNumber)
+		if err != nil {
+			return fmt.Errorf("creating index template %q failed: %w", a.TemplateName, err)
+		}
+
+		if _, err := a.client.IndexPutTemplate(a.TemplateName).BodyString(tmpl).Do(ctx); err != nil {
 			return fmt.Errorf("sending index template %q failed: %w", a.TemplateName, err)
 		}
 		a.Log.Debugf("Template %s created or updated", a.TemplateName)
