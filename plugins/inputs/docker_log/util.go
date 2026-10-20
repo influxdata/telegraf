@@ -146,7 +146,7 @@ func tailMultiplexed(acc telegraf.Accumulator, tags map[string]string, container
 		// Cancelling the context closes the underlying connection, so the
 		// in-flight read surfaces the raw socket error instead of the
 		// context error
-		if errors.Is(err, io.EOF) || errors.Is(err, context.Canceled) || !errors.Is(err, net.ErrClosed) {
+		if errors.Is(err, io.EOF) || errors.Is(err, context.Canceled) || errors.Is(err, net.ErrClosed) {
 			return lastTS, nil
 		}
 		// Keep the progress made so far to be able to resume the stream
