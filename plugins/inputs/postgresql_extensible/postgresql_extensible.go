@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	// Required for SQL framework driver
@@ -47,6 +48,12 @@ type Postgresql struct {
 
 	service *postgresql.Service
 
+	// Pools of the databases other than the one of the address, kept between
+	// collections while keep_idle_connections is set. They are created and
+	// read by the goroutines processing the databases, hence the lock.
+	pools   map[string]*postgresql.Service
+	poolsMu sync.Mutex
+
 	includeRegex []*regexp.Regexp
 	excludeRegex []*regexp.Regexp
 
@@ -82,15 +89,15 @@ type job struct {
 	query   *query
 }
 
-// collection holds what all databases of one Gather have in common. It is
-// read by the goroutines processing the databases and never modified after
-// it is built.
+// collection is what the databases of one Gather have in common.
 type collection struct {
-	queries   []*query
-	timestamp time.Time
-	// concurrency is the number of queries executing at the same time in a
-	// single database
-	concurrency int
+	queries                []*query
+	timestamp              time.Time
+	connectionsPerDatabase int
+	// closed sums the connections of the pools closed while the collection
+	// runs. A pool records its own count just before it goes away, so the
+	// debug line at the end can still include it.
+	closed atomic.Int64
 }
 
 func (*Postgresql) SampleConfig() string {
@@ -178,7 +185,6 @@ func (p *Postgresql) Init() error {
 	}
 	p.Config.SimpleProtocol = !p.PreparedStatements
 
-	// Create a service to access the PostgreSQL server
 	service, err := p.Config.CreateService()
 	if err != nil {
 		return err
@@ -217,16 +223,13 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	}
 	defer cancel()
 
-	// Refresh the cached server version, role and database list if due
 	if err := p.refreshMetadata(ctx); err != nil {
 		acc.AddError(err)
 	}
 	if p.dbVersion == 0 {
-		// The server information was never read successfully
 		return nil
 	}
 
-	// Select the queries to run for this server version and role
 	queries := make([]*query, 0, len(p.Queries))
 	for i := range p.Queries {
 		q := &p.Queries[i]
@@ -243,12 +246,8 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 		return nil
 	}
 
-	// set default timestamp to Now and use for all generated metrics during
-	// the same Gather call
 	timestamp := time.Now()
 
-	// Unless the connections should be kept, close the idle connections of
-	// the connection database after the collection
 	if !p.KeepIdleConnections {
 		defer p.closeIdleConnections()
 	}
@@ -262,55 +261,147 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 		return nil
 	}
 
-	// Process up to max_parallel_databases databases concurrently, each running
-	// up to max_connections_per_database of its queries at the same time. The
-	// semaphore is acquired before spawning the goroutine to avoid a large
-	// number of waiting goroutines when there are many databases.
+	p.releasePools(datnames)
+
 	coll := &collection{
-		queries:     queries,
-		timestamp:   timestamp,
-		concurrency: p.MaxConnectionsPerDatabase,
+		queries:                queries,
+		timestamp:              timestamp,
+		connectionsPerDatabase: p.MaxConnectionsPerDatabase,
 	}
 
+	// The semaphore is acquired before spawning the goroutine, so that a
+	// long database list does not pile up goroutines waiting for their turn
 	var wg sync.WaitGroup
 	semaphore := make(chan struct{}, p.MaxParallelDatabases)
 	for _, datname := range datnames {
 		semaphore <- struct{}{}
 		wg.Add(1)
-		go func(datname string) {
+		go func() {
 			defer wg.Done()
 			defer func() { <-semaphore }()
 
 			if err := p.gatherInDatabase(ctx, acc, datname, coll); err != nil {
 				acc.AddError(fmt.Errorf("database %q: %w", datname, err))
 			}
-		}(datname)
+		}()
 	}
 	wg.Wait()
+
+	// Report the connections of this collection before the deferred close of
+	// the idle ones runs
+	if p.Log.Level() >= telegraf.Debug {
+		used := coll.closed.Load() + p.openConnections()
+		var kept int64
+		if p.KeepIdleConnections {
+			kept = used
+		}
+		p.Log.Debugf("Collection used %d connections, %d kept open", used, kept)
+	}
 
 	return nil
 }
 
+// openConnections counts the connections currently open in the pool of the
+// connection database and in the pools kept for the other databases
+func (p *Postgresql) openConnections() int64 {
+	count := int64(p.service.DB.Stats().OpenConnections)
+
+	p.poolsMu.Lock()
+	defer p.poolsMu.Unlock()
+	for _, service := range p.pools {
+		count += int64(service.DB.Stats().OpenConnections)
+	}
+
+	return count
+}
+
+// releasePools closes the pools of the databases missing from datnames
+// between collections
+func (p *Postgresql) releasePools(datnames []string) {
+	p.poolsMu.Lock()
+	defer p.poolsMu.Unlock()
+
+	queried := make(map[string]bool, len(datnames))
+	for _, datname := range datnames {
+		queried[datname] = true
+	}
+
+	for datname, service := range p.pools {
+		if queried[datname] {
+			continue
+		}
+		service.Stop()
+		delete(p.pools, datname)
+	}
+}
+
+// newPool creates a pool for the given database, holding as many
+// connections as the database may use at a time
+func (p *Postgresql) newPool(datname string, connections int) (*postgresql.Service, error) {
+	service, err := p.Config.CreateServiceForDatabase(datname)
+	if err != nil {
+		return nil, err
+	}
+	if err := service.Start(); err != nil {
+		return nil, err
+	}
+	service.DB.SetMaxOpenConns(connections)
+	service.DB.SetMaxIdleConns(connections)
+
+	return service, nil
+}
+
+// poolFor returns the pool of the given database, creating it if this is the
+// first collection querying that database
+func (p *Postgresql) poolFor(datname string, connections int) (*postgresql.Service, error) {
+	p.poolsMu.Lock()
+	defer p.poolsMu.Unlock()
+
+	if service, found := p.pools[datname]; found {
+		return service, nil
+	}
+
+	service, err := p.newPool(datname, connections)
+	if err != nil {
+		return nil, err
+	}
+
+	if p.pools == nil {
+		p.pools = make(map[string]*postgresql.Service)
+	}
+	p.pools[datname] = service
+
+	return service, nil
+}
+
 // gatherInDatabase runs the queries in the given database. The connection
-// database uses the existing pool, any other database gets a pool of its own
-// which is closed when done.
+// database uses the pool created at startup, any other database gets one of
+// its own, kept between collections while keep_idle_connections is set.
 func (p *Postgresql) gatherInDatabase(ctx context.Context, acc telegraf.Accumulator, datname string, coll *collection) error {
-	service := p.service
-	if datname != p.service.ConnectionDatabase {
-		var err error
-		service, err = p.Config.CreateServiceForDatabase(datname)
+	if datname == p.service.ConnectionDatabase {
+		p.gatherDatabase(ctx, acc, p.service, datname, coll)
+		return nil
+	}
+
+	if p.KeepIdleConnections {
+		service, err := p.poolFor(datname, coll.connectionsPerDatabase)
 		if err != nil {
 			return err
 		}
-		if err := service.Start(); err != nil {
-			return err
-		}
-		defer service.Stop()
-		service.DB.SetMaxOpenConns(coll.concurrency)
-		service.DB.SetMaxIdleConns(coll.concurrency)
+		p.gatherDatabase(ctx, acc, service, datname, coll)
+		return nil
+	}
+
+	service, err := p.newPool(datname, coll.connectionsPerDatabase)
+	if err != nil {
+		return err
 	}
 
 	p.gatherDatabase(ctx, acc, service, datname, coll)
+
+	coll.closed.Add(int64(service.DB.Stats().OpenConnections))
+	service.Stop()
+
 	return nil
 }
 
@@ -321,33 +412,35 @@ func (p *Postgresql) closeIdleConnections() {
 	p.service.DB.SetMaxIdleConns(max(p.MaxIdle, p.MaxConnectionsPerDatabase))
 }
 
-// gatherDatabase runs the queries in one database with coll.concurrency
-// queries executing at the same time
+// gatherDatabase runs the queries in one database, as many at a time as
+// that database may use connections
 func (p *Postgresql) gatherDatabase(ctx context.Context, acc telegraf.Accumulator, service *postgresql.Service, datname string, coll *collection) {
 	var wg sync.WaitGroup
-	semaphore := make(chan struct{}, coll.concurrency)
+	semaphore := make(chan struct{}, coll.connectionsPerDatabase)
 	for _, q := range coll.queries {
 		semaphore <- struct{}{}
 		wg.Add(1)
-		go func(j job) {
+		j := job{datname: datname, query: q}
+		go func() {
 			defer wg.Done()
 			defer func() { <-semaphore }()
 
 			if err := p.gatherMetricsFromQuery(ctx, acc, service, j, coll.timestamp); err != nil {
 				acc.AddError(fmt.Errorf("database %q: %w", j.datname, err))
 			}
-		}(job{datname: datname, query: q})
+		}()
 	}
 	wg.Wait()
 }
 
 func (p *Postgresql) Stop() {
+	p.releasePools(nil)
 	p.service.Stop()
 }
 
 // refreshMetadata updates the cached server version, role and list of
-// databases if a refresh is due. Caching them keeps the collections between
-// two refreshes from connecting to the connection database at all.
+// databases if a refresh is due. A collection between two refreshes does
+// not read the server information again.
 func (p *Postgresql) refreshMetadata(ctx context.Context) error {
 	if !refreshDue(p.metadataUpdated, time.Now(), time.Duration(p.MetadataRefreshInterval)) {
 		return nil
@@ -440,7 +533,6 @@ func (p *Postgresql) gatherMetricsFromQuery(
 	}
 	defer rows.Close()
 
-	// grab the column information from the result
 	columns, err := rows.Columns()
 	if err != nil {
 		return err

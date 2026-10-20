@@ -698,12 +698,16 @@ func TestKeepConnectionsIntegration(t *testing.T) {
 		name     string
 		keep     bool
 		include  []string
+		perDB    int
 		expected int
 	}{
-		{name: "single database closed", keep: false, expected: 0},
-		{name: "single database kept", keep: true, expected: 3},
-		{name: "multiple databases closed", keep: false, include: []string{"app_.*"}, expected: 0},
-		{name: "multiple databases kept", keep: true, include: []string{"app_.*"}, expected: 1},
+		{name: "single database closed", keep: false, perDB: 3, expected: 0},
+		// The three queries run at the same time on the pool of the address
+		{name: "single database kept", keep: true, perDB: 3, expected: 3},
+		{name: "multiple databases closed", keep: false, include: []string{"app_.*"}, perDB: 3, expected: 0},
+		// Two databases holding two connections each, plus the one reading
+		// the server version, the role and the database list
+		{name: "multiple databases kept", keep: true, include: []string{"app_.*"}, perDB: 2, expected: 5},
 	}
 
 	for _, tt := range tests {
@@ -712,7 +716,8 @@ func TestKeepConnectionsIntegration(t *testing.T) {
 				Log:                       testutil.Logger{},
 				Config:                    postgresql.Config{Address: config.NewSecret([]byte(server.dsn("postgres", appName))), MaxIdle: 1, MaxOpen: 1},
 				NumericAsFloat:            true,
-				MaxConnectionsPerDatabase: 3,
+				MaxConnectionsPerDatabase: tt.perDB,
+				MaxParallelDatabases:      2,
 				KeepIdleConnections:       tt.keep,
 				DatnameInclude:            tt.include,
 				Queries: []query{

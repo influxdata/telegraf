@@ -65,8 +65,8 @@ to use them.
   # timeout = "0s"
 
   ## Server role required to run the queries. Queries may override this.
-  ## Valid values are "any", "primary" and "replica". The role is determined
-  ## on every collection using pg_is_in_recovery().
+  ## Valid values are "any", "primary" and "replica". The role is read with
+  ## pg_is_in_recovery() and cached for metadata_refresh_interval.
   # role = "any"
 
   ## Run the queries in all databases matching the filters instead of the
@@ -79,23 +79,26 @@ to use them.
   ## Interval for refreshing the server version, the server role and the
   ## list of databases. They are cached and refreshed on the first collection
   ## after each interval boundary on the wall clock, so a collection between
-  ## two refreshes does not query the connection database at all.
+  ## two refreshes does not read the server information again.
   ## Zero reads them on every collection.
   # metadata_refresh_interval = "0s"
 
   ## Number of databases processed at the same time. Only relevant when the
-  ## datname filters below select more than one database.
+  ## datname filters above select more than one database.
   # max_parallel_databases = 1
 
   ## Number of queries run at the same time within one database. Every query
-  ## occupies one connection, so the maximum number of connections this
-  ## plugin opens is max_parallel_databases * max_connections_per_database.
+  ## occupies one connection, so a collection opens at most
+  ## max_parallel_databases * max_connections_per_database connections, plus
+  ## one while it refreshes the cached server information if the database of
+  ## the address is not among the ones queried.
   # max_connections_per_database = 1
 
-  ## Keep the idle connections of the pool for the database given in the
-  ## address open between collections. If unset, they are closed after a
-  ## collection. The connection to any other database is always closed as
-  ## soon as its queries are done, whatever this is set to.
+  ## Keep the connections open between collections instead of closing them
+  ## once a collection is done. This covers every database queried, so a
+  ## filter matching many databases holds up to the number of databases
+  ## times max_connections_per_database connections, which may exceed the
+  ## max_connections setting of the server.
   # keep_idle_connections = true
 
   ## Use all string columns as tags instead of fields. Queries may override this.
@@ -357,17 +360,17 @@ interval.
 
 ## Server role
 
-The server role is determined using `pg_is_in_recovery()`. Queries with
-`role = "primary"` are only run if the server is not in recovery, queries
-with `role = "replica"` only if it is. The plugin-level `role` option sets
-the default for all queries.
+The server role is read with `pg_is_in_recovery()` and cached for
+`metadata_refresh_interval`. Queries with `role = "primary"` are only run
+if the server is not in recovery, queries with `role = "replica"` only if
+it is. The plugin-level `role` option sets the default for all queries.
 
 ## Cached server information
 
 The server version, the server role and the list of databases are read
 together and cached for `metadata_refresh_interval`. A collection between
-two refreshes uses the cached values and does not query the connection
-database at all. After a role change the plugin therefore keeps using the
+two refreshes uses the cached values and does not read the server
+information again. After a role change the plugin therefore keeps using the
 previous role for up to one refresh interval, so choose the interval short
 enough for how fast a promoted server should be picked up. The default of
 zero reads them on every collection.
@@ -381,8 +384,8 @@ otherwise. The default of zero means no limit.
 Concurrency has two independent knobs. `max_parallel_databases` sets how
 many databases are processed at the same time, `max_connections_per_database`
 how many queries run at the same time within one of them. Every query
-occupies one connection, so the plugin never opens more than the product of
-the two:
+occupies one connection, so a collection opens at most the product of the
+two:
 
 | `max_parallel_databases` | `max_connections_per_database` | connections |
 |---|---|---|
@@ -394,10 +397,19 @@ the two:
 Both default to one: a single connection running the queries one after
 another.
 
-`keep_idle_connections` only covers the pool for the database given in the
-`address`. The connection to any other database is always closed as soon as
-its queries are done, to not hold one connection per database on a server
-that may have hundreds of them.
+One connection comes on top of that product while a collection refreshes
+the server version, the role and the database list, and only when the
+database of the `address` is not among the ones queried. Otherwise that
+connection is taken from the pool the queries use anyway.
+
+`keep_idle_connections` keeps the connections of every queried database
+open until the next collection. A collection querying many databases then
+holds up to the number of databases times `max_connections_per_database`
+connections, which may exceed the `max_connections` setting of the server.
+Unset it to close the connections as soon as a collection is done.
+
+The pool of a database that drops out of the filtered list is closed on the
+next collection.
 
 ## Compatibility
 
