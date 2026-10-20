@@ -158,17 +158,27 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
+	// Unwrap tracking metrics as the topic and Homie templates require
+	// access to the underlying metric
+	unwrapped := make([]telegraf.Metric, 0, len(metrics))
+	for _, metric := range metrics {
+		if wm, ok := metric.(telegraf.UnwrappableMetric); ok {
+			metric = wm.Unwrap()
+		}
+		unwrapped = append(unwrapped, metric)
+	}
+
 	// Group the metrics to topics and serialize them
 	var topicMessages []message
 	switch m.Layout {
 	case "batch":
-		topicMessages = m.collectBatch(metrics)
+		topicMessages = m.collectBatch(unwrapped)
 	case "non-batch":
-		topicMessages = m.collectNonBatch(metrics)
+		topicMessages = m.collectNonBatch(unwrapped)
 	case "field":
-		topicMessages = m.collectField(metrics)
+		topicMessages = m.collectField(unwrapped)
 	case "homie-v4":
-		topicMessages = m.collectHomieV4(metrics)
+		topicMessages = m.collectHomieV4(unwrapped)
 	default:
 		return fmt.Errorf("unknown layout %q", m.Layout)
 	}
@@ -304,29 +314,10 @@ func (m *MQTT) collectHomieV4(metrics []telegraf.Metric) []message {
 	return collection
 }
 
-// templateMetric unwraps a potentially tracking-wrapped metric to the plain
-// metric that satisfies telegraf.TemplateMetric, so the topic and Homie
-// templates can call .Tag, .Field and friends. Tracking inputs (e.g.
-// inputs.tail) wrap metrics in a type that only exposes the telegraf.Metric
-// interface, which does not carry the template methods.
-func templateMetric(metric telegraf.Metric) (telegraf.TemplateMetric, error) {
-	if wm, ok := metric.(telegraf.UnwrappableMetric); ok {
-		metric = wm.Unwrap()
-	}
-	tm, ok := metric.(telegraf.TemplateMetric)
-	if !ok {
-		return nil, fmt.Errorf("metric of type %T is not a template metric", metric)
-	}
-	return tm, nil
-}
-
 func (m *MQTT) generateTopic(metric telegraf.Metric) (string, error) {
-	tm, err := templateMetric(metric)
-	if err != nil {
-		return "", err
-	}
 	var b strings.Builder
-	if err := m.template.Execute(&b, tm); err != nil {
+	err := m.template.Execute(&b, metric)
+	if err != nil {
 		return "", err
 	}
 	var ts []string

@@ -915,32 +915,58 @@ func TestGenerateTopicName(t *testing.T) {
 	}
 }
 
-func TestGenerateTopicNameTrackingMetric(t *testing.T) {
+func TestWriteTrackingMetric(t *testing.T) {
 	s := &serializers_influx.Serializer{}
 	require.NoError(t, s.Init())
 
+	client := &testClient{}
 	m := &MQTT{
 		Servers:    []string{"tcp://localhost:1883"},
 		KeepAlive:  30,
 		Timeout:    config.Duration(5 * time.Second),
 		Topic:      `telegraf/{{ .Tag "host" }}/{{ .Name }}`,
 		serializer: s,
+		client:     client,
 		Log:        testutil.Logger{},
 	}
 	require.NoError(t, m.Init())
 
-	met := metric.New(
-		"metric-name",
-		map[string]string{"host": "hostname"},
-		map[string]any{"value": 123},
-		time.Date(2022, time.November, 10, 23, 0, 0, 0, time.UTC),
-	)
 	// Metrics coming from tracking inputs (e.g. inputs.tail) are wrapped so
 	// that only the telegraf.Metric interface is exposed; the topic template
 	// must still resolve the template methods on the underlying metric.
-	tracked, _ := metric.WithTracking(met, func(telegraf.DeliveryInfo) {})
+	met, _ := metric.WithTracking(
+		metric.New(
+			"metric-name",
+			map[string]string{"host": "hostname"},
+			map[string]any{"value": 123},
+			time.Date(2022, time.November, 10, 23, 0, 0, 0, time.UTC),
+		),
+		func(telegraf.DeliveryInfo) {},
+	)
 
-	actual, err := m.generateTopic(tracked)
-	require.NoError(t, err)
-	require.Equal(t, "telegraf/hostname/metric-name", actual)
+	require.NoError(t, m.Write([]telegraf.Metric{met}))
+	require.Equal(t, []string{"telegraf/hostname/metric-name"}, client.topics)
+}
+
+type testClient struct {
+	topics []string
+}
+
+func (*testClient) Connect() (bool, error) {
+	return true, nil
+}
+
+func (c *testClient) Publish(topic string, _ []byte) error {
+	c.topics = append(c.topics, topic)
+	return nil
+}
+
+func (*testClient) SubscribeMultiple(map[string]byte, paho.MessageHandler) error {
+	return nil
+}
+
+func (*testClient) AddRoute(string, paho.MessageHandler) {}
+
+func (*testClient) Close() error {
+	return nil
 }
