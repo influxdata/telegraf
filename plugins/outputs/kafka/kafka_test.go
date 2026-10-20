@@ -1,6 +1,8 @@
 package kafka
 
 import (
+	"net"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -140,6 +142,64 @@ func TestInvalidTopicSuffixMethod(t *testing.T) {
 		Log: testutil.Logger{},
 	}
 	require.ErrorContains(t, plugin.Init(), "unknown topic suffix method provided")
+}
+
+func TestLocalAddress(t *testing.T) {
+	plugin := &Kafka{
+		LocalAddress: "127.0.0.2",
+		Log:          testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+	require.Equal(t, "127.0.0.2:0", plugin.saramaConfig.Net.LocalAddr.String())
+}
+
+func TestLocalAddressWithSocks5(t *testing.T) {
+	plugin := &Kafka{
+		LocalAddress: "127.0.0.2",
+		Log:          testutil.Logger{},
+	}
+	plugin.Socks5ProxyEnabled = true
+	plugin.Socks5ProxyAddress = "127.0.0.1:1080"
+	require.ErrorContains(t, plugin.Init(), "local_address cannot be used with socks5_enabled")
+}
+
+func TestLocalAddressConnect(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Binding to 127.0.0.2 requires a loopback alias outside of Linux")
+	}
+
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer listener.Close()
+
+	remote := make(chan string, 1)
+	go func() {
+		conn, err := listener.Accept()
+		if err != nil {
+			return
+		}
+		remote <- conn.RemoteAddr().String()
+		conn.Close()
+	}()
+
+	plugin := &Kafka{
+		Brokers:      []string{listener.Addr().String()},
+		LocalAddress: "127.0.0.2",
+		Log:          testutil.Logger{},
+		producerFunc: sarama.NewSyncProducer,
+	}
+	require.NoError(t, plugin.Init())
+	plugin.saramaConfig.Metadata.Retry.Max = 0
+	require.Error(t, plugin.Connect())
+
+	select {
+	case addr := <-remote:
+		host, _, err := net.SplitHostPort(addr)
+		require.NoError(t, err)
+		require.Equal(t, "127.0.0.2", host)
+	case <-time.After(5 * time.Second):
+		require.Fail(t, "no connection received")
+	}
 }
 
 func TestRoutingKeyStatic(t *testing.T) {
