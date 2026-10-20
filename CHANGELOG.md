@@ -28,6 +28,11 @@
   previously collapsed onto one series and now split per GPU, so queries and
   dashboards grouping these metrics should account for the new tag. The extra
   cardinality is bounded by the number of GPUs.
+- PR [#19853](https://github.com/influxdata/telegraf/pull/19853) makes
+  `use_sudo` invoke doas(1) instead of sudo on OpenBSD. A configuration
+  that relies on sudoers will fail until a doas.conf(5) rule permits the
+  same command. `inputs.nsd` and `inputs.unbound` run as `_nsd` and
+  `_unbound`.
 
 ## v1.40.2 [2026-10-12]
 
@@ -98,10 +103,6 @@
 - [#19792](https://github.com/influxdata/telegraf/pull/19792) `deps` Bump the aws-sdk-go-v2 group across 1 directory with 11 updates
 - [#19756](https://github.com/influxdata/telegraf/pull/19756) `deps` Bump the aws-sdk-go-v2 group across 1 directory with 7 updates
 - [#19824](https://github.com/influxdata/telegraf/pull/19824) `deps` Bump the aws-sdk-go-v2 group with 3 updates
-
-### Features
-
-- `inputs` Use doas instead of sudo on OpenBSD when `use_sudo` is enabled
 
 ## v1.40.1 [2026-09-21]
 
