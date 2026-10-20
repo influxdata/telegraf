@@ -117,11 +117,11 @@ func (a *Elasticsearch) Init() error {
 				if strVal, ok := headerValue.(string); ok {
 					a.httpHeaders.Add(key, strings.TrimSpace(strVal))
 				} else {
-					a.Log.Errorf("header %q contains non-string value in array: %v with type %T", key, headerValue, headerValue)
+					return fmt.Errorf("header %q contains non-string value in array: %v with type %T", key, headerValue, headerValue)
 				}
 			}
 		default:
-			a.Log.Errorf("header %q has invalid type %T, expected string or []string", key, value)
+			return fmt.Errorf("header %q has invalid type %T, expected string or []string", key, value)
 		}
 	}
 
