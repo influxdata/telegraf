@@ -324,17 +324,15 @@ func (d *DockerLogs) tailContainerLogs(
 	} else {
 		last, err = tailMultiplexed(acc, tags, cntnr.ID, logReader)
 	}
-	if err != nil {
-		return err
-	}
-
+	// Record the progress made even if the stream ended with an error to be
+	// able to resume where we left off instead of re-reading the log
 	d.lastRecordMtx.Lock()
 	if ts, ok := d.lastRecord[cntnr.ID]; !ok || ts.Before(last) {
 		d.lastRecord[cntnr.ID] = last
 	}
 	d.lastRecordMtx.Unlock()
 
-	return nil
+	return err
 }
 
 func init() {

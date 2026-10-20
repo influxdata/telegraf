@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"maps"
+	"net"
 	"strings"
 	"sync"
 	"time"
@@ -86,19 +87,23 @@ func tailStream(
 					"container_id": containerID,
 					"message":      message,
 				}, tags, ts)
-			}
 
-			// Store the last processed timestamp
-			if ts.After(lastTS) {
-				lastTS = ts
+				// Store the last processed timestamp
+				if ts.After(lastTS) {
+					lastTS = ts
+				}
 			}
 		}
 
 		if err != nil {
-			if errors.Is(err, io.EOF) || errors.Is(err, context.Canceled) {
+			// Cancelling the context closes the underlying connection, so the
+			// in-flight read surfaces the raw socket error instead of the
+			// context error
+			if errors.Is(err, io.EOF) || errors.Is(err, context.Canceled) || errors.Is(err, net.ErrClosed) {
 				return lastTS, nil
 			}
-			return time.Time{}, err
+			// Keep the progress made so far to be able to resume the stream
+			return lastTS, err
 		}
 	}
 }
@@ -133,11 +138,19 @@ func tailMultiplexed(acc telegraf.Accumulator, tags map[string]string, container
 	_ = src.Close()
 	wg.Wait()
 
-	if err != nil && !errors.Is(err, context.Canceled) {
-		return time.Time{}, err
+	lastTS := tsStdout
+	if tsStderr.After(lastTS) {
+		lastTS = tsStderr
 	}
-	if tsStdout.After(tsStderr) {
-		return tsStdout, nil
+	if err != nil {
+		// Cancelling the context closes the underlying connection, so the
+		// in-flight read surfaces the raw socket error instead of the
+		// context error
+		if errors.Is(err, io.EOF) || errors.Is(err, context.Canceled) || errors.Is(err, net.ErrClosed) {
+			return lastTS, nil
+		}
+		// Keep the progress made so far to be able to resume the stream
+		return lastTS, err
 	}
-	return tsStderr, nil
+	return lastTS, nil
 }
