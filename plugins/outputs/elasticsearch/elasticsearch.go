@@ -114,11 +114,11 @@ func (a *Elasticsearch) Init() error {
 		case []any:
 			// TOML might parse arrays as []any
 			for _, headerValue := range v {
-				if strVal, ok := headerValue.(string); ok {
-					a.httpHeaders.Add(key, strings.TrimSpace(strVal))
-				} else {
+				strVal, ok := headerValue.(string)
+				if !ok {
 					return fmt.Errorf("header %q contains non-string value in array: %v with type %T", key, headerValue, headerValue)
 				}
+				a.httpHeaders.Add(key, strings.TrimSpace(strVal))
 			}
 		default:
 			return fmt.Errorf("header %q has invalid type %T, expected string or []string", key, value)
