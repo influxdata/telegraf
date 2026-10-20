@@ -57,52 +57,73 @@ func TestConnect(t *testing.T) {
 				Log:               testutil.Logger{},
 			}
 
+			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Connect())
 			defer plugin.Close()
 		})
 	}
 }
 
-func TestConnectFail(t *testing.T) {
+func TestInitFail(t *testing.T) {
 	tests := []struct {
-		name           string
-		index          string
-		manageTemplate bool
-		template       string
-		expected       string
+		name     string
+		plugin   *Elasticsearch
+		expected string
 	}{
 		{
-			name:           "empty template",
-			index:          "test-%Y.%m.%d",
-			manageTemplate: true,
-			expected:       "elasticsearch template_name configuration not defined",
+			name:     "no URLs",
+			plugin:   &Elasticsearch{IndexName: "test-%Y.%m.%d"},
+			expected: "no 'urls' defined",
 		},
 		{
-			name:           "invalid index pattern",
-			index:          "{{host}}-%Y.%m.%d",
-			manageTemplate: true,
-			template:       "telegraf",
-			expected:       "template cannot be created for dynamic index names without an index prefix",
+			name:     "no index name",
+			plugin:   &Elasticsearch{URLs: []string{"http://localhost:9200"}},
+			expected: "no 'index_name' defined",
+		},
+		{
+			name: "invalid float handling",
+			plugin: &Elasticsearch{
+				URLs:          []string{"http://localhost:9200"},
+				IndexName:     "test-%Y.%m.%d",
+				FloatHandling: "invalid",
+			},
+			expected: `invalid 'float_handling' type "invalid"`,
+		},
+		{
+			name: "empty template name",
+			plugin: &Elasticsearch{
+				URLs:           []string{"http://localhost:9200"},
+				IndexName:      "test-%Y.%m.%d",
+				ManageTemplate: true,
+			},
+			expected: "no 'template_name' defined",
+		},
+		{
+			name: "index name with leading date",
+			plugin: &Elasticsearch{
+				URLs:           []string{"http://localhost:9200"},
+				IndexName:      "%Y.%m.%d",
+				TemplateName:   "telegraf",
+				ManageTemplate: true,
+			},
+			expected: "dynamic 'index_name' must have a static prefix",
+		},
+		{
+			name: "index name with leading tag",
+			plugin: &Elasticsearch{
+				URLs:           []string{"http://localhost:9200"},
+				IndexName:      "{{host}}-%Y.%m.%d",
+				TemplateName:   "telegraf",
+				ManageTemplate: true,
+			},
+			expected: "dynamic 'index_name' must have a static prefix",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Setup a mock Elasticsearch endpoint
-			server := startMockServer(t)
-			defer server.close()
-
-			// Setup plugin
-			plugin := &Elasticsearch{
-				URLs:           []string{"http://" + server.addr()},
-				IndexName:      tt.index,
-				ManageTemplate: tt.manageTemplate,
-				TemplateName:   tt.template,
-				Timeout:        config.Duration(time.Second * 5),
-				Log:            testutil.Logger{},
-			}
-
-			require.ErrorContains(t, plugin.Connect(), tt.expected)
+			tt.plugin.Log = testutil.Logger{}
+			require.ErrorContains(t, tt.plugin.Init(), tt.expected)
 		})
 	}
 }
@@ -494,6 +515,7 @@ func TestWrite(t *testing.T) {
 			if tt.authBearerToken != "" {
 				plugin.AuthBearerToken = config.NewSecret([]byte(tt.authBearerToken))
 			}
+			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Connect())
 			defer plugin.Close()
 
@@ -560,6 +582,7 @@ func TestWriteFail(t *testing.T) {
 				Timeout:   config.Duration(time.Second * 5),
 				Log:       testutil.Logger{},
 			}
+			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Connect())
 			defer plugin.Close()
 
@@ -795,11 +818,13 @@ func TestGetPipelineName(t *testing.T) {
 func TestIndexSettings(t *testing.T) {
 	tests := []struct {
 		name     string
+		version  int
 		template map[string]any
 		expected string
 	}{
 		{
-			name: "standard",
+			name:    "standard",
+			version: 5,
 			expected: `
 				{
 					"template": "test*",
@@ -868,7 +893,8 @@ func TestIndexSettings(t *testing.T) {
 			`,
 		},
 		{
-			name: "custom index",
+			name:    "custom index",
+			version: 5,
 			template: map[string]any{
 				"refresh_interval":           "20s",
 				"mapping.total_fields.limit": 1000,
@@ -946,15 +972,20 @@ func TestIndexSettings(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup plugin
 			plugin := &Elasticsearch{
-				TemplateName:  "test",
-				IndexName:     "telegraf-%Y.%m.%d",
-				IndexTemplate: tt.template,
-				Log:           testutil.Logger{},
+				URLs:               []string{"http://example.com"},
+				ManageTemplate:     true,
+				TemplateName:       "test",
+				IndexName:          "test%Y.%m.%d",
+				IndexTemplate:      tt.template,
+				Log:                testutil.Logger{},
+				majorReleaseNumber: tt.version,
 			}
+			require.NoError(t, plugin.Init())
 
-			buf, err := plugin.createNewTemplate("test")
+			actual, err := createNewTemplate(plugin.IndexName, plugin.IndexTemplate, plugin.majorReleaseNumber)
 			require.NoError(t, err)
-			require.JSONEq(t, tt.expected, buf.String())
+
+			require.JSONEq(t, tt.expected, actual)
 		})
 	}
 }
@@ -991,6 +1022,7 @@ func TestWriteIntegration(t *testing.T) {
 		HealthCheckTimeout:  config.Duration(time.Second * 1),
 		Log:                 testutil.Logger{},
 	}
+	require.NoError(t, plugin.Init())
 	require.NoError(t, plugin.Connect())
 	defer plugin.Close()
 
