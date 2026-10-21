@@ -28,6 +28,11 @@
   previously collapsed onto one series and now split per GPU, so queries and
   dashboards grouping these metrics should account for the new tag. The extra
   cardinality is bounded by the number of GPUs.
+- PR [#PRNUMBER](https://github.com/influxdata/telegraf/pull/PRNUMBER) fixes
+  an issue in `inputs.cisco_telemetry_mdt` where only the first event of an
+  NX-OS `EVENT-LIST` message was emitted. Event metrics now carry a
+  `row_number` tag. Please check your metrics and queries for the mentioned
+  data.
 
 ## v1.40.2 [2026-10-12]
 
