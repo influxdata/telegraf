@@ -118,6 +118,51 @@ func TestInitFail(t *testing.T) {
 			},
 			expected: "dynamic 'index_name' must have a static prefix",
 		},
+		{
+			name: "header with integer value",
+			plugin: &Elasticsearch{
+				URLs:      []string{"http://localhost:9200"},
+				IndexName: "test-%Y.%m.%d",
+				Headers:   map[string]any{"X-Invalid": 123},
+			},
+			expected: `header "X-Invalid" has invalid type int, expected string or []string`,
+		},
+		{
+			name: "header with boolean value",
+			plugin: &Elasticsearch{
+				URLs:      []string{"http://localhost:9200"},
+				IndexName: "test-%Y.%m.%d",
+				Headers:   map[string]any{"X-Invalid": true},
+			},
+			expected: `header "X-Invalid" has invalid type bool, expected string or []string`,
+		},
+		{
+			name: "header with float value",
+			plugin: &Elasticsearch{
+				URLs:      []string{"http://localhost:9200"},
+				IndexName: "test-%Y.%m.%d",
+				Headers:   map[string]any{"X-Invalid": 45.67},
+			},
+			expected: `header "X-Invalid" has invalid type float64, expected string or []string`,
+		},
+		{
+			name: "header with nil value",
+			plugin: &Elasticsearch{
+				URLs:      []string{"http://localhost:9200"},
+				IndexName: "test-%Y.%m.%d",
+				Headers:   map[string]any{"X-Invalid": nil},
+			},
+			expected: `header "X-Invalid" has invalid type <nil>, expected string or []string`,
+		},
+		{
+			name: "header with array with non-string value",
+			plugin: &Elasticsearch{
+				URLs:      []string{"http://localhost:9200"},
+				IndexName: "test-%Y.%m.%d",
+				Headers:   map[string]any{"X-Invalid": []any{"string-value", 123, "another-string"}},
+			},
+			expected: `header "X-Invalid" contains non-string value in array: 123 with type int`,
+		},
 	}
 
 	for _, tt := range tests {
@@ -356,24 +401,6 @@ func TestWrite(t *testing.T) {
 			expected: msgBulk,
 		},
 		{
-			// Invalid types are rejected with error logging
-			name:  "invalid header types",
-			value: 1,
-			headers: map[string]any{
-				"X-Numeric": 123,
-				"X-Boolean": true,
-				"X-Float":   45.67,
-				"X-Nil":     nil,
-			},
-			expected: msgBulk,
-			expectedHeaders: map[string][]string{
-				"X-Numeric": nil,
-				"X-Boolean": nil,
-				"X-Float":   nil,
-				"X-Nil":     nil,
-			},
-		},
-		{
 			// Single string values are split on commas (deprecated behavior)
 			name:  "header strings with commas (deprecated)",
 			value: 1,
@@ -418,22 +445,6 @@ func TestWrite(t *testing.T) {
 				"X-Debug-Tags":  {"performance", "security", "monitoring"},
 				"X-With-Spaces": {"application/json", "application/xml", "text/plain"},
 				"X-Empty-Array": nil,
-			},
-		},
-		{
-			// Arrays convert strings and log errors for non-string types
-			name:  "header arrays with mixed types",
-			value: 1,
-			headers: map[string]any{
-				"X-Forwarded-For":   []any{"192.168.1.1", "10.0.0.1", "172.16.0.1"},
-				"X-Mixed-Types":     []any{"string-value", 123, true, "another-string"},
-				"X-Empty-Interface": make([]any, 0),
-			},
-			expected: msgBulk,
-			expectedHeaders: map[string][]string{
-				"X-Forwarded-For":   {"192.168.1.1", "10.0.0.1", "172.16.0.1"},
-				"X-Mixed-Types":     {"string-value", "another-string"},
-				"X-Empty-Interface": nil,
 			},
 		},
 		{
