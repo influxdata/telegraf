@@ -398,29 +398,25 @@ func TestWriteMetricsExpiry(t *testing.T) {
 		expiry    time.Duration
 		sendErr   error
 		expectErr bool
-		accept    []int
 		reject    []int
+		sent      int
 	}{
 		{
-			name:      "old only",
-			metrics:   []telegraf.Metric{old},
-			expiry:    time.Hour,
-			expectErr: true,
-			reject:    []int{0},
+			name:    "old only",
+			metrics: []telegraf.Metric{old},
+			expiry:  time.Hour,
 		},
 		{
-			name:      "fresh only",
-			metrics:   []telegraf.Metric{fresh},
-			expiry:    time.Hour,
-			expectErr: false,
+			name:    "fresh only",
+			metrics: []telegraf.Metric{fresh},
+			expiry:  time.Hour,
+			sent:    1,
 		},
 		{
-			name:      "old, fresh, old",
-			metrics:   []telegraf.Metric{old, fresh, old},
-			expiry:    time.Hour,
-			expectErr: true,
-			accept:    []int{1},
-			reject:    []int{0, 2},
+			name:    "old, fresh, old",
+			metrics: []telegraf.Metric{old, fresh, old},
+			expiry:  time.Hour,
+			sent:    1,
 		},
 		{
 			name:      "old, fresh + sendError",
@@ -431,9 +427,9 @@ func TestWriteMetricsExpiry(t *testing.T) {
 			reject:    []int{0},
 		},
 		{
-			name:      "old, fresh + unset expiry",
-			metrics:   []telegraf.Metric{old, fresh},
-			expectErr: false,
+			name:    "old, fresh + unset expiry",
+			metrics: []telegraf.Metric{old, fresh},
+			sent:    2,
 		},
 	}
 
@@ -442,38 +438,44 @@ func TestWriteMetricsExpiry(t *testing.T) {
 			converter, err := influx2otel.NewLineProtocolToOtelMetrics(common.NoopLogger{})
 			require.NoError(t, err)
 
+			client := &fakeClient{err: tt.sendErr}
 			plugin := &OpenTelemetry{
 				MetricsExpiry:    config.Duration(tt.expiry),
 				metricsConverter: converter,
-				otlpMetricClient: &fakeClient{err: tt.sendErr},
+				otlpMetricClient: client,
 				Log:              testutil.Logger{},
 				timeFunc:         func() time.Time { return now },
 			}
 
 			err = plugin.Write(tt.metrics)
+			require.Equal(t, tt.sent, client.sent)
 			if !tt.expectErr {
 				require.NoError(t, err)
 				return
 			}
 
+			// Fresh metrics are in neither list so they are retried
 			var writeErr *internal.PartialWriteError
 			require.ErrorAs(t, err, &writeErr)
-			// ElementsMatch treats an empty slice and nil as equal
-			require.ElementsMatch(t, tt.accept, writeErr.MetricsAccept)
+			require.Empty(t, writeErr.MetricsAccept)
 			require.ElementsMatch(t, tt.reject, writeErr.MetricsReject)
 		})
 	}
 }
 
 type fakeClient struct {
-	err error
+	err  error
+	sent int
 }
 
 func (*fakeClient) Connect(*clientConfig) error {
 	return nil
 }
 
-func (f *fakeClient) Export(context.Context, pmetricotlp.ExportRequest) (pmetricotlp.ExportResponse, error) {
+func (f *fakeClient) Export(_ context.Context, request pmetricotlp.ExportRequest) (pmetricotlp.ExportResponse, error) {
+	if f.err == nil {
+		f.sent += request.Metrics().DataPointCount()
+	}
 	return pmetricotlp.NewExportResponse(), f.err
 }
 

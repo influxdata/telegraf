@@ -152,11 +152,7 @@ func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
 	now := o.timeFunc()
 	expiry := now.Add(-time.Duration(o.MetricsExpiry))
 
-	writeErr := &internal.PartialWriteError{
-		MetricsAccept: make([]int, 0, len(metrics)),
-	}
-
-	var freshMetrics []int
+	writeErr := &internal.PartialWriteError{}
 
 	for i, m := range metrics {
 		// Skip metrics that are past the expiry
@@ -165,7 +161,6 @@ func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
 			o.Log.Tracef("Metric outside acceptable time window: %v", m)
 			writeErr.MetricsReject = append(writeErr.MetricsReject, i)
 		} else {
-			freshMetrics = append(freshMetrics, i)
 			if existingSlice, ok := metricBatch[timestamp]; ok {
 				metricBatch[timestamp] = append(existingSlice, m)
 			} else {
@@ -187,9 +182,7 @@ func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
 	}
 
 	if len(writeErr.MetricsReject) > 0 {
-		writeErr.MetricsAccept = freshMetrics
-		writeErr.Err = fmt.Errorf("rejected %d metrics due to them reaching the expiry threshold value", len(writeErr.MetricsReject))
-		return writeErr
+		o.Log.Warnf("Dropped %d metrics older than %s", len(writeErr.MetricsReject), time.Duration(o.MetricsExpiry))
 	}
 
 	return nil
