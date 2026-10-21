@@ -781,7 +781,6 @@ func TestInvalidUsernameorPassword(t *testing.T) {
 	require.NoError(t, err)
 	err = r.Gather(&acc)
 
-	// EG: failed to retrieve some items: [{\"link\":\"/redfish/v1/Systems/\",\"error\":\"401: Unauthorized.\\n\"}]
 	require.ErrorContains(t, err, "401: Unauthorized")
 	require.ErrorContains(t, err, "/redfish/v1/Systems/")
 }
@@ -897,8 +896,6 @@ func TestInvalidDellJSON(t *testing.T) {
 			err := plugin.Gather(&acc)
 			require.Error(t, err)
 
-			//nolint:lll // Keep entire error message on one line
-			// Example: failed to retrieve some items: [{\"link\":\"/redfish/v1/Systems/1\",\"error\":\"invalid character '{' looking for beginning of object key string\"}]
 			require.ErrorContains(t, err, "invalid character")
 		})
 	}

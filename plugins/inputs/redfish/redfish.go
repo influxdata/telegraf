@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"slices"
 	"time"
 
 	"github.com/stmcginnis/gofish"
@@ -42,9 +43,8 @@ type Redfish struct {
 	tagSet map[string]bool
 	client http.Client
 	tls.ClientConfig
-	gf          *gofish.Service
-	host        string
-	chassisTags map[string]string
+	gf   *gofish.Service
+	host string
 }
 
 type datacenterTag struct {
@@ -60,8 +60,6 @@ func (*Redfish) SampleConfig() string {
 }
 
 func (r *Redfish) Init() error {
-	// Check all config values
-
 	if r.Address == "" {
 		return errors.New("did not provide IP")
 	}
@@ -93,7 +91,7 @@ func (r *Redfish) Init() error {
 		}
 	}
 
-	if len(r.IncludeTagSets) > 0 {
+	if slices.Contains(r.IncludeTagSets, tagSetChassisLocation) {
 		r.Log.Warn("The tag Datacenter (Chassis.Location.PostalAddress.DataCenter) is not part of DMTF's standard an will be removed in a future version")
 	}
 
@@ -102,27 +100,26 @@ func (r *Redfish) Init() error {
 		r.tagSet[setLabel] = true
 	}
 
-	// Remove all the fluff form the endpoint address to just have the hostname or IP
-	redfishURL, err := url.Parse(r.Address)
+	u, err := url.Parse(r.Address)
 	if err != nil {
-		r.host = redfishURL.Host
+		r.host = u.Host
 	} else {
-		r.host, _, err = net.SplitHostPort(redfishURL.Host)
+		r.host, _, err = net.SplitHostPort(u.Host)
 	}
 
 	if err != nil {
-		r.host = redfishURL.Host
+		r.host = u.Host
 	}
 
 	return nil
 }
 
 func (r *Redfish) Start(_ telegraf.Accumulator) error {
-	var err error
 	tlsCfg, err := r.ClientConfig.TLSConfig()
 	if err != nil {
 		return err
 	}
+
 	r.client = http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: tlsCfg,
@@ -164,15 +161,12 @@ func (r *Redfish) Start(_ telegraf.Accumulator) error {
 	return err
 }
 
-//nolint:revive // Part of the ServiceInput interface, but not required here
-func (r *Redfish) Stop() {
-
-}
+func (*Redfish) Stop() {}
 
 func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 	systems, err := r.gf.Systems()
 	if err != nil {
-		return err
+		return fmt.Errorf("getting systems failed: %w", err)
 	}
 
 	// Process only the system defined via ComputerSystemID in the config
@@ -188,20 +182,20 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 		}
 
 		if len(chassisList) == 0 {
-			r.Log.Warn("No chassis found, no metric can be produced")
+			r.Log.Warn("No chassis found on configured system ID, no metric can be produced")
 			return nil
 		}
 
 		for _, chassis := range chassisList {
 			for _, metric := range r.IncludeMetrics {
-				r.chassisTags = setChassisTags(chassis)
+				chassisTags := setChassisTags(chassis)
 
 				var err error
 				switch metric {
 				case "thermal":
-					err = r.gatherThermal(acc, r.host, system, chassis)
+					err = r.gatherThermal(acc, system, chassis, chassisTags)
 				case "power":
-					err = r.gatherPower(acc, r.host, system, chassis)
+					err = r.gatherPower(acc, system, chassis, chassisTags)
 				default:
 					return fmt.Errorf("unknown metric requested: %s", metric)
 				}

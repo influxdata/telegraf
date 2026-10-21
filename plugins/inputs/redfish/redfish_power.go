@@ -10,14 +10,10 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
-func (r *Redfish) gatherPower(acc telegraf.Accumulator, address string, system *schemas.ComputerSystem, chassis *schemas.Chassis) error {
-	return r.gatherPowerMetrics(acc, address, system, chassis)
-}
-
-func (r *Redfish) gatherPowerMetrics(acc telegraf.Accumulator, address string, system *schemas.ComputerSystem, chassis *schemas.Chassis) error {
+func (r *Redfish) gatherPower(acc telegraf.Accumulator, system *schemas.ComputerSystem, chassis *schemas.Chassis, chassisTags map[string]string) error {
 	power, err := chassis.Power()
 	if err != nil {
-		return fmt.Errorf("parsing power data from %q failed: %w", address, err)
+		return fmt.Errorf("parsing power data from %q failed: %w", r.host, err)
 	}
 
 	// power is nil when the legacy power endpoints are not available
@@ -30,7 +26,7 @@ func (r *Redfish) gatherPowerMetrics(acc telegraf.Accumulator, address string, s
 	for _, j := range power.PowerControl {
 		tags := map[string]string{
 			"member_id": j.MemberID,
-			"address":   address,
+			"address":   r.host,
 			"name":      j.Name,
 			"source":    system.HostName,
 		}
@@ -47,7 +43,7 @@ func (r *Redfish) gatherPowerMetrics(acc telegraf.Accumulator, address string, s
 			tags["row"] = chassis.Location.Placement.Row
 		}
 		if _, ok := r.tagSet[tagSetChassis]; ok {
-			maps.Copy(tags, r.chassisTags)
+			maps.Copy(tags, chassisTags)
 		}
 
 		fields := map[string]any{
@@ -65,10 +61,11 @@ func (r *Redfish) gatherPowerMetrics(acc telegraf.Accumulator, address string, s
 		acc.AddFields("redfish_power_powercontrol", fields, tags)
 	}
 
+	// each iteration would copy a large ammount of data, therefore we use indexing
 	for i := range len(power.PowerSupplies) {
 		tags := make(map[string]string, 19)
 		tags["member_id"] = power.PowerSupplies[i].MemberID
-		tags["address"] = address
+		tags["address"] = r.host
 		tags["name"] = power.PowerSupplies[i].Name
 		tags["source"] = system.HostName
 		tags["state"] = string(power.PowerSupplies[i].Status.State)
@@ -79,7 +76,6 @@ func (r *Redfish) gatherPowerMetrics(acc telegraf.Accumulator, address string, s
 			var datacenter datacenterTag
 			//nolint:errcheck // Ignore if the marshalling fails as this datapoint should not exist
 			json.Unmarshal(chassis.RawData, &datacenter)
-			r.Log.Warnf("The datacenter tag will be removed in a future version as it does not conform to DTMF's standard.")
 
 			tags["datacenter"] = datacenter.Location.PostalAddress.DataCenter
 			tags["room"] = chassis.Location.PostalAddress.Room
@@ -87,7 +83,7 @@ func (r *Redfish) gatherPowerMetrics(acc telegraf.Accumulator, address string, s
 			tags["row"] = chassis.Location.Placement.Row
 		}
 		if _, ok := r.tagSet[tagSetChassis]; ok {
-			maps.Copy(tags, r.chassisTags)
+			maps.Copy(tags, chassisTags)
 		}
 
 		fields := make(map[string]any)
@@ -102,7 +98,7 @@ func (r *Redfish) gatherPowerMetrics(acc telegraf.Accumulator, address string, s
 	for _, j := range power.Voltages {
 		tags := make(map[string]string, 19)
 		tags["member_id"] = j.MemberID
-		tags["address"] = address
+		tags["address"] = r.host
 		tags["name"] = j.Name
 		tags["source"] = system.HostName
 		tags["state"] = string(j.Status.State)
@@ -120,7 +116,7 @@ func (r *Redfish) gatherPowerMetrics(acc telegraf.Accumulator, address string, s
 			tags["row"] = chassis.Location.Placement.Row
 		}
 		if _, ok := r.tagSet[tagSetChassis]; ok {
-			maps.Copy(tags, r.chassisTags)
+			maps.Copy(tags, chassisTags)
 		}
 
 		fields := make(map[string]any)
