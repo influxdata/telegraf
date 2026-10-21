@@ -28,6 +28,10 @@
   previously collapsed onto one series and now split per GPU, so queries and
   dashboards grouping these metrics should account for the new tag. The extra
   cardinality is bounded by the number of GPUs.
+- PR [#19949](https://github.com/influxdata/telegraf/pull/19949) enables
+  `batch_transactions` by default in `outputs.sql`, so metrics with the same
+  columns and table are written in one transaction using prepared statements.
+  If your database does not support this, set `batch_transactions = false`.
 
 ## v1.40.2 [2026-10-12]
 

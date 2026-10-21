@@ -484,7 +484,6 @@ func (p *SQL) Write(metrics []telegraf.Metric) error {
 				}
 			}
 		}
-		// Using BatchTx is opt-in
 		if p.BatchTx {
 			batchedQueries[sql] = append(batchedQueries[sql], values)
 		} else {
@@ -576,6 +575,8 @@ func init() {
 			// except max idle connections which is 2. See
 			// https://pkg.go.dev/database/sql#DB.SetMaxIdleConns
 			ConnectionMaxIdle: 2,
+
+			BatchTx: true,
 		}
 	})
 }
