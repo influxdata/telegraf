@@ -31,7 +31,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## remote_control, printer, scanner, camera, wearable, toy, bluetooth_generic
   # device_types = []
 
-  ## Timeout for collecting the device information
+  ## Timeout for collecting the device information, zero disables the timeout
   # timeout = "5s"
 ```
 
