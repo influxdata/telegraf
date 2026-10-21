@@ -31,8 +31,9 @@
 - PR [#PRNUMBER](https://github.com/influxdata/telegraf/pull/PRNUMBER) fixes
   an issue in `inputs.cisco_telemetry_mdt` where only the first event of an
   NX-OS `EVENT-LIST` message was emitted. Event metrics now carry a
-  `row_number` tag. Please check your metrics and queries for the mentioned
-  data.
+  `row_number` tag and, with `include_delete_field` enabled, the `delete`
+  field is emitted as a separate metric like for NX-API table rows. Please
+  check your metrics and queries for the mentioned data.
 
 ## v1.40.2 [2026-10-12]
 
