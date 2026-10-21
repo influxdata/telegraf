@@ -51,6 +51,10 @@
   `aggregators.starlark`. While states from previous Telegraf versions can still
   be read, the new state format cannot be used with older Telegraf versions,
   i.e. you cannot downgrade Telegraf in case you persist starlark states.
+- PR [#19949](https://github.com/influxdata/telegraf/pull/19949) enables
+  `batch_transactions` by default in `outputs.sql`, so metrics with the same
+  columns and table are written in one transaction using prepared statements.
+  If your database does not support this, set `batch_transactions = false`.
 
 ## v1.40.2 [2026-10-12]
 
