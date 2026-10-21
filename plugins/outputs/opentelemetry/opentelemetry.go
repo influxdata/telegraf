@@ -162,7 +162,7 @@ func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
 		// Skip metrics that are past the expiry
 		timestamp := m.Time().UnixNano()
 		if o.MetricsExpiry > 0 && m.Time().Before(expiry) {
-			o.Log.Debugf("Metric outside acceptable time window: %v", m)
+			o.Log.Tracef("Metric outside acceptable time window: %v", m)
 			writeErr.MetricsReject = append(writeErr.MetricsReject, i)
 		} else {
 			freshMetrics = append(freshMetrics, i)

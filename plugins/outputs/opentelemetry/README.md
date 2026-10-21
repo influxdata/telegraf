@@ -35,7 +35,8 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Drop metrics older than this age instead of sending them; they are
   ## counted as rejected. Useful for backends that refuse old samples.
-  ## Disabled by default (0).
+  ## Set it larger than the agent's flush_interval, or healthy metrics may be
+  ## dropped. Disabled by default (0).
   # metrics_expiry = "60m"
 
   ## Optional TLS Config.
