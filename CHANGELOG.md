@@ -22,6 +22,12 @@
   `max_message_size` (new option, default `4MiB`) and close the connection.
   If your clients legitimately send larger messages, raise
   `max_message_size` accordingly.
+- PR [#19923](https://github.com/influxdata/telegraf/pull/19923) adds a `uuid`
+  tag to `inputs.nvidia_smi` `nvidia_smi_process` metrics identifying the GPU
+  the process runs on. Processes with the same name and type on different GPUs
+  previously collapsed onto one series and now split per GPU, so queries and
+  dashboards grouping these metrics should account for the new tag. The extra
+  cardinality is bounded by the number of GPUs.
 
 ## v1.40.2 [2026-10-12]
 
