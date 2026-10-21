@@ -4,7 +4,12 @@ package upower
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
@@ -14,12 +19,138 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
+func TestInitInvalidDeviceType(t *testing.T) {
+	plugin := &UPower{DeviceTypes: []string{"battery", "toaster"}}
+	require.ErrorContains(t, plugin.Init(), `invalid device type "toaster"`)
+}
+
+func TestInitInvalidTimeout(t *testing.T) {
+	plugin := &UPower{Timeout: config.Duration(-1 * time.Second)}
+	require.ErrorContains(t, plugin.Init(), "timeout must not be negative")
+}
+
+func TestCases(t *testing.T) {
+	// Get all testcase directories
+	folders, err := os.ReadDir("testcases")
+	require.NoError(t, err)
+
+	for _, f := range folders {
+		// Only handle folders
+		if !f.IsDir() {
+			continue
+		}
+
+		t.Run(f.Name(), func(t *testing.T) {
+			testcasePath := filepath.Join("testcases", f.Name())
+			configFilename := filepath.Join(testcasePath, "telegraf.conf")
+			inputFilename := filepath.Join(testcasePath, "devices.json")
+			expectedFilename := filepath.Join(testcasePath, "expected.out")
+
+			// Load the input data
+			devices, err := readDevices(inputFilename)
+			require.NoError(t, err)
+
+			// Read the expected output if any
+			parser := &influx.Parser{}
+			require.NoError(t, parser.Init())
+
+			var expected []telegraf.Metric
+			if _, err := os.Stat(expectedFilename); err == nil {
+				var err error
+				expected, err = testutil.ParseMetricsFromFile(expectedFilename, parser)
+				require.NoError(t, err)
+			}
+
+			// Configure and setup the plugin
+			cfg := config.NewConfig()
+			require.NoError(t, cfg.LoadConfig(configFilename))
+			require.Len(t, cfg.Inputs, 1)
+
+			plugin := cfg.Inputs[0].Input.(*UPower)
+			plugin.Log = testutil.Logger{}
+			require.NoError(t, plugin.Init())
+			plugin.client = &fakeClient{devices: devices}
+			defer plugin.Stop()
+
+			// Gather and check the metrics
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Gather(&acc))
+			require.Empty(t, acc.Errors)
+
+			actual := acc.GetTelegrafMetrics()
+			testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.IgnoreType(), testutil.SortMetrics())
+		})
+	}
+}
+
+func TestGatherErrors(t *testing.T) {
+	linePower := fakeDevice{
+		path: "/org/freedesktop/UPower/devices/line_power_AC",
+		props: map[string]dbus.Variant{
+			"NativePath": dbus.MakeVariant("AC"),
+			"Type":       dbus.MakeVariant(uint32(1)),
+			"Online":     dbus.MakeVariant(false),
+		},
+	}
+	linePowerMetric := metric.New(
+		"upower",
+		map[string]string{
+			"native_path": "AC",
+			"type":        "line_power",
+		},
+		map[string]any{
+			"online": false,
+		},
+		time.Unix(0, 0),
+		telegraf.Gauge,
+	)
+
+	tests := []struct {
+		name        string
+		client      *fakeClient
+		expected    []telegraf.Metric
+		expectedErr string
+	}{
+		{
+			name: "device error does not stop collection",
+			client: &fakeClient{devices: []fakeDevice{
+				{path: "/org/freedesktop/UPower/devices/broken", err: errors.New("boom")},
+				linePower,
+			}},
+			expected:    []telegraf.Metric{linePowerMetric},
+			expectedErr: `getting properties of device "/org/freedesktop/UPower/devices/broken" failed: boom`,
+		},
+		{
+			name:        "enumeration error",
+			client:      &fakeClient{enumerateErr: errors.New("boom")},
+			expectedErr: "enumerating devices failed: boom",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := &UPower{Log: testutil.Logger{}}
+			require.NoError(t, plugin.Init())
+			plugin.client = tt.client
+			defer plugin.Stop()
+
+			var acc testutil.Accumulator
+			require.ErrorContains(t, acc.GatherError(plugin.Gather), tt.expectedErr)
+
+			actual := acc.GetTelegrafMetrics()
+			testutil.RequireMetricsEqual(t, tt.expected, actual, testutil.IgnoreTime())
+		})
+	}
+}
+
+// Fake implementation of the D-Bus client
 type fakeDevice struct {
 	path  dbus.ObjectPath
-	props map[string]any
+	props map[string]dbus.Variant
 	err   error
 }
 
@@ -44,259 +175,62 @@ func (c *fakeClient) enumerateDevices(context.Context) ([]dbus.ObjectPath, error
 
 func (c *fakeClient) deviceProperties(_ context.Context, path dbus.ObjectPath) (map[string]dbus.Variant, error) {
 	for _, d := range c.devices {
-		if d.path != path {
-			continue
+		if d.path == path {
+			return d.props, d.err
 		}
-		if d.err != nil {
-			return nil, d.err
-		}
-		props := make(map[string]dbus.Variant, len(d.props))
-		for k, v := range d.props {
-			props[k] = dbus.MakeVariant(v)
-		}
-		return props, nil
 	}
 	return nil, errors.New("no such device")
 }
 
-var (
-	battery = fakeDevice{
-		path: "/org/freedesktop/UPower/devices/battery_BAT0",
-		props: map[string]any{
-			"NativePath":       "BAT0",
-			"Vendor":           "LGC",
-			"Model":            "5B10W13973",
-			"Serial":           "1234",
-			"Type":             uint32(2),
-			"State":            uint32(2),
-			"Technology":       uint32(2),
-			"WarningLevel":     uint32(1),
-			"Percentage":       float64(83.0),
-			"Energy":           float64(41.57),
-			"EnergyEmpty":      float64(0.0),
-			"EnergyFull":       float64(50.08),
-			"EnergyFullDesign": float64(57.0),
-			"EnergyRate":       float64(7.891),
-			"Voltage":          float64(11.98),
-			"Temperature":      float64(0.0),
-			"Capacity":         float64(87.86),
-			"ChargeCycles":     int32(213),
-			"TimeToEmpty":      int64(18966),
-			"TimeToFull":       int64(0),
-			"IsPresent":        true,
-			"IsRechargeable":   true,
-			"PowerSupply":      true,
-		},
-	}
-	linePower = fakeDevice{
-		path: "/org/freedesktop/UPower/devices/line_power_AC",
-		props: map[string]any{
-			"NativePath": "AC",
-			"Type":       uint32(1),
-			"Online":     false,
-		},
-	}
-	mouse = fakeDevice{
-		path: "/org/freedesktop/UPower/devices/mouse_hidpp_battery_0",
-		props: map[string]any{
-			"NativePath":     "hidpp_battery_0",
-			"Vendor":         "Logitech",
-			"Model":          "MX Master 3",
-			"Type":           uint32(5),
-			"State":          uint32(2),
-			"WarningLevel":   uint32(1),
-			"Percentage":     float64(55.0),
-			"IsPresent":      true,
-			"IsRechargeable": true,
-		},
+func readDevices(filename string) ([]fakeDevice, error) {
+	buf, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, err
 	}
 
-	batteryMetric = metric.New(
-		"upower",
-		map[string]string{
-			"native_path":   "BAT0",
-			"type":          "battery",
-			"vendor":        "LGC",
-			"model":         "5B10W13973",
-			"serial":        "1234",
-			"state":         "discharging",
-			"technology":    "lithium_polymer",
-			"warning_level": "none",
-		},
-		map[string]any{
-			"percentage":            83.0,
-			"energy_wh":             41.57,
-			"energy_empty_wh":       0.0,
-			"energy_full_wh":        50.08,
-			"energy_full_design_wh": 57.0,
-			"energy_rate_w":         7.891,
-			"voltage_v":             11.98,
-			"temperature_c":         0.0,
-			"capacity_percent":      87.86,
-			"charge_cycles":         int32(213),
-			"time_to_empty_sec":     int64(18966),
-			"time_to_full_sec":      int64(0),
-			"is_present":            true,
-			"is_rechargeable":       true,
-			"power_supply":          true,
-		},
-		time.Unix(0, 0),
-		telegraf.Gauge,
-	)
-	linePowerMetric = metric.New(
-		"upower",
-		map[string]string{
-			"native_path": "AC",
-			"type":        "line_power",
-		},
-		map[string]any{
-			"online": false,
-		},
-		time.Unix(0, 0),
-		telegraf.Gauge,
-	)
-	mouseMetric = metric.New(
-		"upower",
-		map[string]string{
-			"native_path":   "hidpp_battery_0",
-			"type":          "mouse",
-			"vendor":        "Logitech",
-			"model":         "MX Master 3",
-			"state":         "discharging",
-			"technology":    "unknown",
-			"warning_level": "none",
-		},
-		map[string]any{
-			"percentage":            55.0,
-			"energy_wh":             0.0,
-			"energy_empty_wh":       0.0,
-			"energy_full_wh":        0.0,
-			"energy_full_design_wh": 0.0,
-			"energy_rate_w":         0.0,
-			"voltage_v":             0.0,
-			"temperature_c":         0.0,
-			"capacity_percent":      0.0,
-			"charge_cycles":         int32(0),
-			"time_to_empty_sec":     int64(0),
-			"time_to_full_sec":      int64(0),
-			"is_present":            true,
-			"is_rechargeable":       true,
-			"power_supply":          false,
-		},
-		time.Unix(0, 0),
-		telegraf.Gauge,
-	)
-)
+	var entries []struct {
+		Path  string `json:"path"`
+		Props []struct {
+			Name  string `json:"name"`
+			Type  string `json:"type"`
+			Value string `json:"value"`
+		} `json:"props"`
+	}
+	if err := json.Unmarshal(buf, &entries); err != nil {
+		return nil, err
+	}
 
-func TestInitInvalidDeviceType(t *testing.T) {
-	plugin := &UPower{DeviceTypes: []string{"battery", "toaster"}}
-	require.ErrorContains(t, plugin.Init(), `invalid device type "toaster"`)
+	devices := make([]fakeDevice, 0, len(entries))
+	for _, e := range entries {
+		props := make(map[string]dbus.Variant, len(e.Props))
+		for _, p := range e.Props {
+			v, err := parseValue(p.Type, p.Value)
+			if err != nil {
+				return nil, fmt.Errorf("parsing property %q of %q failed: %w", p.Name, e.Path, err)
+			}
+			props[p.Name] = dbus.MakeVariant(v)
+		}
+		devices = append(devices, fakeDevice{path: dbus.ObjectPath(e.Path), props: props})
+	}
+	return devices, nil
 }
 
-func TestInitDefaults(t *testing.T) {
-	plugin := &UPower{}
-	require.NoError(t, plugin.Init())
-	require.Equal(t, config.Duration(5*time.Second), plugin.Timeout)
-}
-
-func TestGather(t *testing.T) {
-	tests := []struct {
-		name        string
-		deviceTypes []string
-		client      *fakeClient
-		expected    []telegraf.Metric
-		expectedErr string
-	}{
-		{
-			name:     "all devices",
-			client:   &fakeClient{devices: []fakeDevice{battery, linePower, mouse}},
-			expected: []telegraf.Metric{batteryMetric, linePowerMetric, mouseMetric},
-		},
-		{
-			name:        "filtered by type",
-			deviceTypes: []string{"battery", "ups"},
-			client:      &fakeClient{devices: []fakeDevice{battery, linePower, mouse}},
-			expected:    []telegraf.Metric{batteryMetric},
-		},
-		{
-			name:     "no devices",
-			client:   &fakeClient{},
-			expected: make([]telegraf.Metric, 0),
-		},
-		{
-			name: "unknown enumeration values",
-			client: &fakeClient{devices: []fakeDevice{{
-				path:  "/org/freedesktop/UPower/devices/battery_X",
-				props: map[string]any{"NativePath": "X", "Type": uint32(99), "State": uint32(42)},
-			}}},
-			expected: []telegraf.Metric{
-				metric.New(
-					"upower",
-					map[string]string{
-						"native_path":   "X",
-						"type":          "unknown-99",
-						"state":         "unknown-42",
-						"technology":    "unknown",
-						"warning_level": "unknown",
-					},
-					map[string]any{
-						"percentage":            0.0,
-						"energy_wh":             0.0,
-						"energy_empty_wh":       0.0,
-						"energy_full_wh":        0.0,
-						"energy_full_design_wh": 0.0,
-						"energy_rate_w":         0.0,
-						"voltage_v":             0.0,
-						"temperature_c":         0.0,
-						"capacity_percent":      0.0,
-						"charge_cycles":         int32(0),
-						"time_to_empty_sec":     int64(0),
-						"time_to_full_sec":      int64(0),
-						"is_present":            false,
-						"is_rechargeable":       false,
-						"power_supply":          false,
-					},
-					time.Unix(0, 0),
-					telegraf.Gauge,
-				),
-			},
-		},
-		{
-			name: "device error does not stop collection",
-			client: &fakeClient{devices: []fakeDevice{
-				{path: "/org/freedesktop/UPower/devices/broken", err: errors.New("boom")},
-				linePower,
-			}},
-			expected:    []telegraf.Metric{linePowerMetric},
-			expectedErr: `getting properties of device "/org/freedesktop/UPower/devices/broken" failed: boom`,
-		},
-		{
-			name:        "enumeration error",
-			client:      &fakeClient{enumerateErr: errors.New("boom")},
-			expectedErr: "enumerating devices failed: boom",
-		},
+func parseValue(typ, value string) (any, error) {
+	switch typ {
+	case "string":
+		return value, nil
+	case "boolean":
+		return strconv.ParseBool(value)
+	case "double":
+		return strconv.ParseFloat(value, 64)
+	case "int32":
+		v, err := strconv.ParseInt(value, 10, 32)
+		return int32(v), err
+	case "int64":
+		return strconv.ParseInt(value, 10, 64)
+	case "uint32":
+		v, err := strconv.ParseUint(value, 10, 32)
+		return uint32(v), err
 	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			plugin := &UPower{
-				DeviceTypes: tt.deviceTypes,
-				Log:         testutil.Logger{},
-			}
-			require.NoError(t, plugin.Init())
-			plugin.client = tt.client
-			defer plugin.Stop()
-
-			var acc testutil.Accumulator
-			err := acc.GatherError(plugin.Gather)
-			if tt.expectedErr != "" {
-				require.ErrorContains(t, err, tt.expectedErr)
-			} else {
-				require.NoError(t, err)
-			}
-
-			actual := acc.GetTelegrafMetrics()
-			testutil.RequireMetricsEqual(t, tt.expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
-		})
-	}
+	return nil, fmt.Errorf("unknown type %q", typ)
 }

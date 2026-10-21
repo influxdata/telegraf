@@ -31,14 +31,15 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## remote_control, printer, scanner, camera, wearable, toy, bluetooth_generic
   # device_types = []
 
-  ## Timeout for collecting the device information
+  ## Timeout for collecting the device information, zero disables the timeout
   # timeout = "5s"
 ```
 
 ## Metrics
 
 Line-power devices (e.g. AC adapters) only report the `online` field, all
-other device types report the battery related fields.
+other device types report the battery related fields. Fields marked as
+optional are omitted if UPower reports them as unknown.
 
 - upower
   - tags:
@@ -58,17 +59,18 @@ other device types report the battery related fields.
     - percentage (float) - Charge level in percent
     - energy_wh (float) - Current energy in watt-hours
     - energy_empty_wh (float) - Energy considered empty in watt-hours
-    - energy_full_wh (float) - Energy when fully charged in watt-hours
-    - energy_full_design_wh (float) - Design energy when fully charged
-      in watt-hours
+    - energy_full_wh (float), optional - Energy when fully charged in
+      watt-hours
+    - energy_full_design_wh (float), optional - Design energy when fully
+      charged in watt-hours
     - energy_rate_w (float) - Charge or discharge rate in watts
-    - voltage_v (float) - Voltage in volts
-    - temperature_c (float) - Temperature in degrees Celsius
-    - capacity_percent (float) - Battery health as percentage of the design
-      capacity
+    - voltage_v (float), optional - Voltage in volts
+    - temperature_c (float), optional - Temperature in degrees Celsius
+    - capacity_percent (float), optional - Battery health as percentage of the
+      design capacity
     - charge_cycles (int) - Number of charge cycles, `-1` if unknown
-    - time_to_empty_sec (int) - Estimated seconds until empty, `0` if unknown
-    - time_to_full_sec (int) - Estimated seconds until full, `0` if unknown
+    - time_to_empty_sec (int), optional - Estimated seconds until empty
+    - time_to_full_sec (int), optional - Estimated seconds until full
     - is_present (boolean) - Whether the battery is present
     - is_rechargeable (boolean) - Whether the battery is rechargeable
     - power_supply (boolean) - Whether the device powers the system
@@ -76,7 +78,7 @@ other device types report the battery related fields.
 ## Example Output
 
 ```text
-upower,host=laptop,model=5B10W13973,native_path=BAT0,serial=1234,state=discharging,technology=lithium_polymer,type=battery,vendor=LGC,warning_level=none capacity_percent=87.86,charge_cycles=213i,energy_empty_wh=0,energy_full_design_wh=57,energy_full_wh=50.08,energy_rate_w=7.891,energy_wh=41.57,is_present=true,is_rechargeable=true,percentage=83,power_supply=true,temperature_c=0,time_to_empty_sec=18966i,time_to_full_sec=0i,voltage_v=11.98 1758542400000000000
+upower,host=laptop,model=5B10W13973,native_path=BAT0,serial=1234,state=discharging,technology=lithium_polymer,type=battery,vendor=LGC,warning_level=none capacity_percent=87.86,charge_cycles=213i,energy_empty_wh=0,energy_full_design_wh=57,energy_full_wh=50.08,energy_rate_w=7.891,energy_wh=41.57,is_present=true,is_rechargeable=true,percentage=83,power_supply=true,time_to_empty_sec=18966i,voltage_v=11.98 1758542400000000000
 upower,host=laptop,native_path=AC,type=line_power online=false 1758542400000000000
-upower,host=laptop,model=MX\ Master\ 3,native_path=hidpp_battery_0,state=discharging,technology=unknown,type=mouse,vendor=Logitech,warning_level=none capacity_percent=0,charge_cycles=0i,energy_empty_wh=0,energy_full_design_wh=0,energy_full_wh=0,energy_rate_w=0,energy_wh=0,is_present=true,is_rechargeable=true,percentage=55,power_supply=false,temperature_c=0,time_to_empty_sec=0i,time_to_full_sec=0i,voltage_v=0 1758542400000000000
+upower,host=laptop,model=MX\ Master\ 3,native_path=hidpp_battery_0,state=discharging,technology=unknown,type=mouse,vendor=Logitech,warning_level=none charge_cycles=0i,energy_empty_wh=0,energy_rate_w=0,energy_wh=0,is_present=true,is_rechargeable=true,percentage=55,power_supply=false 1758542400000000000
 ```
