@@ -33,6 +33,11 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Override the default (5s) request timeout
   # timeout = "5s"
 
+  ## Drop metrics older than this age instead of sending them; they are
+  ## counted as rejected. Useful for backends that refuse old samples.
+  ## Disabled by default (0).
+  # metrics_expiry = "60m"
+
   ## Optional TLS Config.
   ##
   ## Root certificates for verifying server certificates encoded in PEM format.

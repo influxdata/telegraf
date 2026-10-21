@@ -2,6 +2,7 @@ package opentelemetry
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net"
 	"net/http"
@@ -22,6 +23,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -53,6 +55,7 @@ func TestOpenTelemetry(t *testing.T) {
 		Headers:          map[string]string{"test": "header1"},
 		Attributes:       map[string]string{"attr-key": "attr-val"},
 		metricsConverter: metricsConverter,
+		timeFunc:         time.Now,
 		otlpMetricClient: &gRPCClient{
 			grpcClientConn:       m.GrpcClient(),
 			metricsServiceClient: pmetricotlp.NewGRPCClient(m.GrpcClient()),
@@ -155,6 +158,7 @@ func TestOpenTelemetryHTTPProtobuf(t *testing.T) {
 		Attributes:       map[string]string{"attr-key": "attr-val"},
 		Compression:      "none",
 		metricsConverter: metricsConverter,
+		timeFunc:         time.Now,
 		Log:              testutil.Logger{},
 	}
 	require.NoError(t, plugin.Connect())
@@ -253,6 +257,7 @@ func TestOpenTelemetryHTTPJSON(t *testing.T) {
 		Attributes:       map[string]string{"attr-key": "attr-val"},
 		Compression:      "none",
 		metricsConverter: metricsConverter,
+		timeFunc:         time.Now,
 		Log:              testutil.Logger{},
 	}
 	require.NoError(t, plugin.Connect())
@@ -294,7 +299,8 @@ func TestConnectInvalidProxy(t *testing.T) {
 			plugin: &OpenTelemetry{
 				ServiceAddress: "localhost:4317",
 				UseProxy:       true, ProxyURL: "://invalid",
-				Log: testutil.Logger{},
+				timeFunc: time.Now,
+				Log:      testutil.Logger{},
 			},
 		},
 		{
@@ -302,6 +308,7 @@ func TestConnectInvalidProxy(t *testing.T) {
 			plugin: &OpenTelemetry{
 				ServiceAddress: "http://localhost:4318",
 				HTTPProxyURL:   "://invalid",
+				timeFunc:       time.Now,
 				Log:            testutil.Logger{},
 			},
 		},
@@ -375,4 +382,101 @@ func (m *mockOtelService) Export(ctx context.Context, request pmetricotlp.Export
 	require.Equal(m.t, []string{"header1"}, ctxMetadata.Get("test"))
 	require.True(m.t, ok)
 	return pmetricotlp.NewExportResponse(), nil
+}
+
+func TestWriteMetricsExpiry(t *testing.T) {
+	now := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+	newMetric := func(ts time.Time) telegraf.Metric {
+		return metric.New("cpu", map[string]string{}, map[string]any{"value": 42.0}, ts)
+	}
+	old := newMetric(now.Add(-2 * time.Hour))
+	fresh := newMetric(now.Add(-time.Minute))
+
+	tests := []struct {
+		name      string
+		metrics   []telegraf.Metric
+		expiry    time.Duration
+		sendErr   error
+		expectErr bool
+		accept    []int
+		reject    []int
+	}{
+		{
+			name:      "old only",
+			metrics:   []telegraf.Metric{old},
+			expiry:    time.Hour,
+			expectErr: true,
+			reject:    []int{0},
+		},
+		{
+			name:      "fresh only",
+			metrics:   []telegraf.Metric{fresh},
+			expiry:    time.Hour,
+			expectErr: false,
+		},
+		{
+			name:      "old, fresh, old",
+			metrics:   []telegraf.Metric{old, fresh, old},
+			expiry:    time.Hour,
+			expectErr: true,
+			accept:    []int{1},
+			reject:    []int{0, 2},
+		},
+		{
+			name:      "old, fresh + sendError",
+			metrics:   []telegraf.Metric{old, fresh},
+			expiry:    time.Hour,
+			sendErr:   errors.New("send failed"),
+			expectErr: true,
+			reject:    []int{0},
+		},
+		{
+			name:      "old, fresh + unset expiry",
+			metrics:   []telegraf.Metric{old, fresh},
+			expectErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			converter, err := influx2otel.NewLineProtocolToOtelMetrics(common.NoopLogger{})
+			require.NoError(t, err)
+
+			plugin := &OpenTelemetry{
+				MetricsExpiry:    config.Duration(tt.expiry),
+				metricsConverter: converter,
+				otlpMetricClient: &fakeClient{err: tt.sendErr},
+				Log:              testutil.Logger{},
+				timeFunc:         func() time.Time { return now },
+			}
+
+			err = plugin.Write(tt.metrics)
+			if !tt.expectErr {
+				require.NoError(t, err)
+				return
+			}
+
+			var writeErr *internal.PartialWriteError
+			require.ErrorAs(t, err, &writeErr)
+			// ElementsMatch treats an empty slice and nil as equal
+			require.ElementsMatch(t, tt.accept, writeErr.MetricsAccept)
+			require.ElementsMatch(t, tt.reject, writeErr.MetricsReject)
+		})
+	}
+}
+
+type fakeClient struct {
+	err error
+}
+
+func (*fakeClient) Connect(*clientConfig) error {
+	return nil
+}
+
+func (f *fakeClient) Export(context.Context, pmetricotlp.ExportRequest) (pmetricotlp.ExportResponse, error) {
+	return pmetricotlp.NewExportResponse(), f.err
+}
+
+func (*fakeClient) Close() error {
+	return nil
 }

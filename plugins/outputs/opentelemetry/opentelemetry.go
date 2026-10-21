@@ -34,16 +34,18 @@ type OpenTelemetry struct {
 	EncodingType   string `toml:"encoding_type"`
 
 	tls.ClientConfig
-	Timeout     config.Duration   `toml:"timeout"`
-	Compression string            `toml:"compression"`
-	Token       config.Secret     `toml:"token"`
-	Headers     map[string]string `toml:"headers"`
-	Attributes  map[string]string `toml:"attributes"`
-	Coralogix   *CoralogixConfig  `toml:"coralogix"`
+	Timeout       config.Duration   `toml:"timeout"`
+	Compression   string            `toml:"compression"`
+	Token         config.Secret     `toml:"token"`
+	Headers       map[string]string `toml:"headers"`
+	Attributes    map[string]string `toml:"attributes"`
+	Coralogix     *CoralogixConfig  `toml:"coralogix"`
+	MetricsExpiry config.Duration   `toml:"metrics_expiry"`
 	proxy.HTTPProxy
 	proxy.TCPProxy
-
 	Log telegraf.Logger `toml:"-"`
+
+	timeFunc func() time.Time
 
 	metricsConverter *influx2otel.LineProtocolToOtelMetrics
 	otlpMetricClient otlpMetricClient
@@ -147,13 +149,29 @@ func (o *OpenTelemetry) Close() error {
 func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
 	metricBatch := make(map[int64][]telegraf.Metric)
 	timestamps := make([]int64, 0, len(metrics))
-	for _, metric := range metrics {
-		timestamp := metric.Time().UnixNano()
-		if existingSlice, ok := metricBatch[timestamp]; ok {
-			metricBatch[timestamp] = append(existingSlice, metric)
+	now := o.timeFunc()
+	expiry := now.Add(-time.Duration(o.MetricsExpiry))
+
+	writeErr := &internal.PartialWriteError{
+		MetricsAccept: make([]int, 0, len(metrics)),
+	}
+
+	var freshMetrics []int
+
+	for i, m := range metrics {
+		// Skip metrics that are past the expiry
+		timestamp := m.Time().UnixNano()
+		if o.MetricsExpiry > 0 && m.Time().Before(expiry) {
+			o.Log.Debugf("Metric outside acceptable time window: %v", m)
+			writeErr.MetricsReject = append(writeErr.MetricsReject, i)
 		} else {
-			metricBatch[timestamp] = []telegraf.Metric{metric}
-			timestamps = append(timestamps, timestamp)
+			freshMetrics = append(freshMetrics, i)
+			if existingSlice, ok := metricBatch[timestamp]; ok {
+				metricBatch[timestamp] = append(existingSlice, m)
+			} else {
+				metricBatch[timestamp] = []telegraf.Metric{m}
+				timestamps = append(timestamps, timestamp)
+			}
 		}
 	}
 
@@ -163,8 +181,15 @@ func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
 	o.Log.Debugf("Received %d metrics and split into %d groups by timestamp", len(metrics), len(metricBatch))
 	for _, timestamp := range timestamps {
 		if err := o.sendBatch(metricBatch[timestamp]); err != nil {
-			return err
+			writeErr.Err = err
+			return writeErr
 		}
+	}
+
+	if len(writeErr.MetricsReject) > 0 {
+		writeErr.MetricsAccept = freshMetrics
+		writeErr.Err = fmt.Errorf("rejected %d metrics due to them reaching the expiry threshold value", len(writeErr.MetricsReject))
+		return writeErr
 	}
 
 	return nil
@@ -243,6 +268,7 @@ func init() {
 			ServiceAddress: defaultServiceAddress,
 			Timeout:        defaultTimeout,
 			Compression:    defaultCompression,
+			timeFunc:       time.Now,
 		}
 	})
 }
