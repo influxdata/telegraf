@@ -98,12 +98,6 @@ func getConfigCommands(configHandlingFlags []cli.Flag, outputBuffer io.Writer) [
 						}
 
 						ag := agent.NewAgent(c)
-
-						// Skip the second processor run by default unless the first one is skipped
-						if c.Agent.SkipProcessorsAfterAggregators == nil {
-							c.Agent.SkipProcessorsAfterAggregators = new(!c.Agent.SkipProcessorsBeforeAggregators)
-						}
-
 						return ag.InitPlugins()
 					},
 				},
