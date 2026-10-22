@@ -40,7 +40,7 @@
   second time on metrics emitted by aggregators unless
   `skip_processors_before_aggregators` is set. If you rely on the second run,
   set `skip_processors_after_aggregators = false` explicitly.
-- PR [#PRNUMBER](https://github.com/influxdata/telegraf/pull/PRNUMBER) fixes
+- PR [#19952](https://github.com/influxdata/telegraf/pull/19952) fixes
   an issue in `inputs.cisco_telemetry_mdt` where only the first event of an
   NX-OS `EVENT-LIST` message was emitted. Event metrics now carry a
   `row_number` tag and, with `include_delete_field` enabled, the `delete`
