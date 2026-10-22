@@ -436,7 +436,7 @@ func TestPod(t *testing.T) {
 		{
 			name: "init container resources",
 			handler: &mockHandler{
-				responseMap: map[string]interface{}{
+				responseMap: map[string]any{
 					"/pods/": &corev1.PodList{
 						Items: []corev1.Pod{
 							{
@@ -492,7 +492,7 @@ func TestPod(t *testing.T) {
 						"state":          "terminated",
 						"version":        "latest",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"restarts_total":               int32(0),
 						"state_code":                   1,
 						"state_reason":                 "Completed",
