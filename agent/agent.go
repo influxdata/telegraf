@@ -28,6 +28,11 @@ type Agent struct {
 
 // NewAgent returns an Agent for the given Config.
 func NewAgent(cfg *config.Config) *Agent {
+	// Skip the second processor run by default unless the first one is skipped
+	if cfg.Agent.SkipProcessorsAfterAggregators == nil {
+		cfg.Agent.SkipProcessorsAfterAggregators = new(!cfg.Agent.SkipProcessorsBeforeAggregators)
+	}
+
 	a := &Agent{
 		Config: cfg,
 	}
@@ -107,11 +112,6 @@ func (a *Agent) Run(ctx context.Context) error {
 		"Flush Interval:%s",
 		time.Duration(a.Config.Agent.Interval), a.Config.Agent.Quiet,
 		a.Config.Agent.Hostname, time.Duration(a.Config.Agent.FlushInterval))
-
-	// Skip the second processor run by default unless the first one is skipped
-	if a.Config.Agent.SkipProcessorsAfterAggregators == nil {
-		a.Config.Agent.SkipProcessorsAfterAggregators = new(!a.Config.Agent.SkipProcessorsBeforeAggregators)
-	}
 
 	log.Printf("D! [agent] Initializing plugins")
 	if err := a.InitPlugins(); err != nil {
@@ -965,11 +965,6 @@ func (a *Agent) Test(ctx context.Context, wait time.Duration) error {
 // outputC. After gathering pauses for the wait duration to allow service
 // inputs to run.
 func (a *Agent) runTest(ctx context.Context, wait time.Duration, outputC chan<- telegraf.Metric) error {
-	// Skip the second processor run by default unless the first one is skipped
-	if a.Config.Agent.SkipProcessorsAfterAggregators == nil {
-		a.Config.Agent.SkipProcessorsAfterAggregators = new(!a.Config.Agent.SkipProcessorsBeforeAggregators)
-	}
-
 	log.Printf("D! [agent] Initializing plugins")
 	if err := a.InitPlugins(); err != nil {
 		return err
@@ -1058,11 +1053,6 @@ func (a *Agent) Once(ctx context.Context, wait time.Duration) error {
 // outputC. After gathering pauses for the wait duration to allow service
 // inputs to run.
 func (a *Agent) runOnce(ctx context.Context, wait time.Duration) error {
-	// Skip the second processor run by default unless the first one is skipped
-	if a.Config.Agent.SkipProcessorsAfterAggregators == nil {
-		a.Config.Agent.SkipProcessorsAfterAggregators = new(!a.Config.Agent.SkipProcessorsBeforeAggregators)
-	}
-
 	log.Printf("D! [agent] Initializing plugins")
 	if err := a.InitPlugins(); err != nil {
 		return err
