@@ -36,7 +36,7 @@
   parquet files and multiple writers using the same directory.
 - PR [#19959](https://github.com/influxdata/telegraf/pull/19959) changes the
   default of the `skip_processors_after_aggregators` agent setting to `true`,
-  as announced by the startup warning since v1.34. Processors no longer run a
+  as announced by the startup warning since v1.33.1. Processors no longer run a
   second time on metrics emitted by aggregators unless
   `skip_processors_before_aggregators` is set. If you rely on the second run,
   set `skip_processors_after_aggregators = false` explicitly.
