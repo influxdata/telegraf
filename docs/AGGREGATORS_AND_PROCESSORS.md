@@ -42,13 +42,14 @@ Processors are run first, then aggregators.
 
 To run processors a second time on the metrics emitted by aggregators set the
 `skip_processors_after_aggregators` agent configuration setting to false. Be
-aware that aggregated metrics are then built from already processed data, so a
-processor scaling data will scale it twice! Use metric filtering as described
-below to limit which metrics a processor sees.
+aware that aggregated metrics are built from already processed data, so the
+second run of a processor scaling data will scale it twice! Use metric
+filtering as described below to limit which metrics a processor sees.
 
 To run processors only after aggregators set the
-`skip_processors_before_aggregators` agent configuration setting to true.
-Another option is to use metric filtering as described below.
+`skip_processors_before_aggregators` agent configuration setting to true. In
+this case metrics not emitted by aggregators are not processed at all. Another
+option is to use metric filtering as described below.
 
 ## Metric Filtering
 
