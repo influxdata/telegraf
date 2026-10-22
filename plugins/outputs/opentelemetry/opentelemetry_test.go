@@ -391,16 +391,18 @@ func TestWriteMetricsExpiry(t *testing.T) {
 	}
 	old := newMetric(now.Add(-2 * time.Hour))
 	fresh := newMetric(now.Add(-time.Minute))
+	fresher := newMetric(now.Add(-30 * time.Second))
 
 	tests := []struct {
-		name      string
-		metrics   []telegraf.Metric
-		expiry    time.Duration
-		sendErr   error
-		expectErr bool
-		accept    []int
-		reject    []int
-		sent      int
+		name       string
+		metrics    []telegraf.Metric
+		expiry     time.Duration
+		sendErr    error
+		failOnCall int
+		expectErr  bool
+		accept     []int
+		reject     []int
+		sent       int
 	}{
 		{
 			name:      "old only",
@@ -433,6 +435,16 @@ func TestWriteMetricsExpiry(t *testing.T) {
 			reject:    []int{0},
 		},
 		{
+			name:       "fresh, fresher + second send fails",
+			metrics:    []telegraf.Metric{fresh, fresher},
+			expiry:     time.Hour,
+			sendErr:    errors.New("send failed"),
+			failOnCall: 2,
+			expectErr:  true,
+			accept:     []int{0},
+			sent:       1,
+		},
+		{
 			name:    "old, fresh + unset expiry",
 			metrics: []telegraf.Metric{old, fresh},
 			sent:    2,
@@ -444,7 +456,7 @@ func TestWriteMetricsExpiry(t *testing.T) {
 			converter, err := influx2otel.NewLineProtocolToOtelMetrics(common.NoopLogger{})
 			require.NoError(t, err)
 
-			client := &fakeClient{err: tt.sendErr}
+			client := &fakeClient{err: tt.sendErr, failOnCall: tt.failOnCall}
 			plugin := &OpenTelemetry{
 				MetricsExpiry:    config.Duration(tt.expiry),
 				metricsConverter: converter,
@@ -470,8 +482,10 @@ func TestWriteMetricsExpiry(t *testing.T) {
 }
 
 type fakeClient struct {
-	err  error
-	sent int
+	err        error
+	failOnCall int
+	calls      int
+	sent       int
 }
 
 func (*fakeClient) Connect(*clientConfig) error {
@@ -479,10 +493,12 @@ func (*fakeClient) Connect(*clientConfig) error {
 }
 
 func (f *fakeClient) Export(_ context.Context, request pmetricotlp.ExportRequest) (pmetricotlp.ExportResponse, error) {
-	if f.err == nil {
-		f.sent += request.Metrics().DataPointCount()
+	f.calls++
+	if f.err != nil && (f.failOnCall == 0 || f.calls == f.failOnCall) {
+		return pmetricotlp.NewExportResponse(), f.err
 	}
-	return pmetricotlp.NewExportResponse(), f.err
+	f.sent += request.Metrics().DataPointCount()
+	return pmetricotlp.NewExportResponse(), nil
 }
 
 func (*fakeClient) Close() error {
