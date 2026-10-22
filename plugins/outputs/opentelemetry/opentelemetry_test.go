@@ -398,13 +398,16 @@ func TestWriteMetricsExpiry(t *testing.T) {
 		expiry    time.Duration
 		sendErr   error
 		expectErr bool
+		accept    []int
 		reject    []int
 		sent      int
 	}{
 		{
-			name:    "old only",
-			metrics: []telegraf.Metric{old},
-			expiry:  time.Hour,
+			name:      "old only",
+			metrics:   []telegraf.Metric{old},
+			expiry:    time.Hour,
+			expectErr: true,
+			reject:    []int{0},
 		},
 		{
 			name:    "fresh only",
@@ -413,10 +416,13 @@ func TestWriteMetricsExpiry(t *testing.T) {
 			sent:    1,
 		},
 		{
-			name:    "old, fresh, old",
-			metrics: []telegraf.Metric{old, fresh, old},
-			expiry:  time.Hour,
-			sent:    1,
+			name:      "old, fresh, old",
+			metrics:   []telegraf.Metric{old, fresh, old},
+			expiry:    time.Hour,
+			expectErr: true,
+			accept:    []int{1},
+			reject:    []int{0, 2},
+			sent:      1,
 		},
 		{
 			name:      "old, fresh + sendError",
@@ -454,10 +460,10 @@ func TestWriteMetricsExpiry(t *testing.T) {
 				return
 			}
 
-			// Fresh metrics are in neither list so they are retried
 			var writeErr *internal.PartialWriteError
 			require.ErrorAs(t, err, &writeErr)
-			require.Empty(t, writeErr.MetricsAccept)
+			// ElementsMatch treats an empty slice and nil as equal
+			require.ElementsMatch(t, tt.accept, writeErr.MetricsAccept)
 			require.ElementsMatch(t, tt.reject, writeErr.MetricsReject)
 		})
 	}
