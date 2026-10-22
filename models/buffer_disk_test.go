@@ -226,9 +226,6 @@ func TestDiskBufferTrackingDroppedFromOldWal(t *testing.T) {
 		),
 	}
 
-	// call manually so that we can properly use metric.ToBytes() without having initialized a buffer
-	registerGob()
-
 	// Prefill the WAL file
 	path := t.TempDir()
 	walfile, err := wal.Open(filepath.Join(path, "123"), &wal.Options{
@@ -265,10 +262,6 @@ func TestDiskBufferTrackingDroppedFromOldWal(t *testing.T) {
 // special test we use tracking metrics as e.g. used for Kafka or MQTT.
 // Related to https://github.com/influxdata/telegraf/issues/16981
 func TestDiskBufferTrackingOnOutputOutage(t *testing.T) {
-	// Make sure we can serialize the metrics by manually registering the binary
-	// serializer. In real-world this is done during setting up Telegraf.
-	registerGob()
-
 	// Create some tracking metrics with a callback that records the accepted
 	// metrics (or at least the tracking ID).
 	const count = 10

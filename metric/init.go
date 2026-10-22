@@ -2,6 +2,6 @@ package metric
 
 import "encoding/gob"
 
-func Init() {
+func init() {
 	gob.RegisterName("metric.metric", &metric{})
 }
