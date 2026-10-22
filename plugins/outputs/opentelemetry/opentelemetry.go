@@ -180,8 +180,11 @@ func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
 	o.Log.Debugf("Received %d metrics and split into %d groups by timestamp", len(metrics), len(metricBatch))
 	for _, timestamp := range timestamps {
 		if err := o.sendBatch(metricBatch[timestamp]); err != nil {
-			writeErr.Err = err
-			return writeErr
+			if len(writeErr.MetricsReject) > 0 || len(writeErr.MetricsAccept) > 0 {
+				writeErr.Err = err
+				return writeErr
+			}
+			return err
 		}
 		writeErr.MetricsAccept = append(writeErr.MetricsAccept, indexBatch[timestamp]...)
 	}
