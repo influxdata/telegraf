@@ -112,7 +112,7 @@ func (a *Agent) Run(ctx context.Context) error {
 
 	// Set the default for processor skipping
 	if a.Config.Agent.SkipProcessorsAfterAggregators == nil {
-		msg := `The default value of 'skip_processors_after_aggregators' will change to 'true' with Telegraf v1.40.0! `
+		msg := `The default value of 'skip_processors_after_aggregators' will change to 'true' with Telegraf v1.41.0! `
 		msg += `If you need the current default behavior, please explicitly set the option to 'false'!`
 		log.Print("W! [agent] ", color.YellowString(msg))
 		skipProcessorsAfterAggregators := false
@@ -973,7 +973,7 @@ func (a *Agent) Test(ctx context.Context, wait time.Duration) error {
 func (a *Agent) runTest(ctx context.Context, wait time.Duration, outputC chan<- telegraf.Metric) error {
 	// Set the default for processor skipping
 	if a.Config.Agent.SkipProcessorsAfterAggregators == nil {
-		msg := `The default value of 'skip_processors_after_aggregators' will change to 'true' with Telegraf v1.40.0! `
+		msg := `The default value of 'skip_processors_after_aggregators' will change to 'true' with Telegraf v1.41.0! `
 		msg += `If you need the current default behavior, please explicitly set the option to 'false'!`
 		log.Print("W! [agent] ", color.YellowString(msg))
 		skipProcessorsAfterAggregators := false
@@ -1070,7 +1070,7 @@ func (a *Agent) Once(ctx context.Context, wait time.Duration) error {
 func (a *Agent) runOnce(ctx context.Context, wait time.Duration) error {
 	// Set the default for processor skipping
 	if a.Config.Agent.SkipProcessorsAfterAggregators == nil {
-		msg := `The default value of 'skip_processors_after_aggregators' will change to 'true' with Telegraf v1.40.0! `
+		msg := `The default value of 'skip_processors_after_aggregators' will change to 'true' with Telegraf v1.41.0! `
 		msg += `If you need the current default behavior, please explicitly set the option to 'false'!`
 		log.Print("W! [agent] ", color.YellowString(msg))
 		skipProcessorsAfterAggregators := false
