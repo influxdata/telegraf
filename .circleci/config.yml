@@ -4,13 +4,16 @@ orbs:
   aws-cli: circleci/aws-cli@3.1.1
 
 executors:
-  telegraf-ci:
+  telegraf-ci: &telegraf-ci # YAML anchor lets telegraf-ci-gen2 reuse definition
     working_directory: '/go/src/github.com/influxdata/telegraf'
-    resource_class: large
     docker:
       - image: 'quay.io/influxdb/telegraf-ci:1.27.2'
     environment:
       GOFLAGS: -p=4
+    resource_class: large
+  telegraf-ci-gen2: # identical to telegraf-ci except the resource_class
+    <<: *telegraf-ci # YAML merge key copies everything from telegraf-ci
+    resource_class: large.gen2
   mac:
     working_directory: '~/go/src/github.com/influxdata/telegraf'
     resource_class: m4pro.medium
@@ -111,7 +114,7 @@ commands:
             - 'dist'
 jobs:
   lint-linux:
-    executor: telegraf-ci
+    executor: telegraf-ci-gen2
     steps:
       - checkout
       - run: ./scripts/make_docs.sh
@@ -130,7 +133,7 @@ jobs:
           command: GOGC=80 GOMEMLIMIT=6144MiB $GOPATH/bin/golangci-lint run --verbose --timeout=30m --concurrency 4
           no_output_timeout: 30m
   lint-macos:
-    executor: telegraf-ci
+    executor: telegraf-ci-gen2
     steps:
       - checkout
       - check-changed-files-or-halt
@@ -144,7 +147,7 @@ jobs:
           command: GOGC=80 GOMEMLIMIT=6144MiB GOOS=darwin $GOPATH/bin/golangci-lint run --verbose --timeout=30m --concurrency 4
           no_output_timeout: 30m
   lint-windows:
-    executor: telegraf-ci
+    executor: telegraf-ci-gen2
     steps:
       - checkout
       - check-changed-files-or-halt
@@ -174,13 +177,13 @@ jobs:
             GOGC=80 GOMEMLIMIT=6144MiB GOOS=windows GOARCH=386 $GOPATH/bin/golangci-lint run --verbose --timeout=30m --concurrency 4 $pkgs
           no_output_timeout: 30m
   test-go-linux:
-    executor: telegraf-ci
+    executor: telegraf-ci-gen2
     steps:
       - checkout
       - check-changed-files-or-halt
       - test-go
   test-go-linux-386:
-    executor: telegraf-ci
+    executor: telegraf-ci-gen2
     steps:
       - checkout
       - check-changed-files-or-halt
@@ -192,7 +195,7 @@ jobs:
   test-integration:
     machine:
       image: ubuntu-2204:current
-    resource_class: large.gen2
+    resource_class: large
     steps:
       - checkout
       - check-changed-files-or-halt
@@ -253,7 +256,7 @@ jobs:
       nightly:
         type: boolean
         default: false
-    executor: telegraf-ci
+    executor: telegraf-ci-gen2
     steps:
       - package-build:
           type: windows
@@ -263,7 +266,7 @@ jobs:
       nightly:
         type: boolean
         default: false
-    executor: telegraf-ci
+    executor: telegraf-ci-gen2
     steps:
       - package-build:
           type: darwin-amd64
@@ -273,7 +276,7 @@ jobs:
       nightly:
         type: boolean
         default: false
-    executor: telegraf-ci
+    executor: telegraf-ci-gen2
     steps:
       - package-build:
           type: darwin-arm64
@@ -283,7 +286,7 @@ jobs:
       nightly:
         type: boolean
         default: false
-    executor: telegraf-ci
+    executor: telegraf-ci-gen2
     steps:
       - package-build:
           type: i386
@@ -293,7 +296,7 @@ jobs:
       nightly:
         type: boolean
         default: false
-    executor: telegraf-ci
+    executor: telegraf-ci-gen2
     steps:
       - package-build:
           type: ppc64le
@@ -303,7 +306,7 @@ jobs:
       nightly:
         type: boolean
         default: false
-    executor: telegraf-ci
+    executor: telegraf-ci-gen2
     steps:
       - package-build:
           type: riscv64
@@ -323,7 +326,7 @@ jobs:
       nightly:
         type: boolean
         default: false
-    executor: telegraf-ci
+    executor: telegraf-ci-gen2
     steps:
       - package-build:
           type: s390x
@@ -333,7 +336,7 @@ jobs:
       nightly:
         type: boolean
         default: false
-    executor: telegraf-ci
+    executor: telegraf-ci-gen2
     steps:
       - package-build:
           type: armel
@@ -343,7 +346,7 @@ jobs:
       nightly:
         type: boolean
         default: false
-    executor: telegraf-ci
+    executor: telegraf-ci-gen2
     steps:
       - package-build:
           type: amd64
@@ -353,7 +356,7 @@ jobs:
       nightly:
         type: boolean
         default: false
-    executor: telegraf-ci
+    executor: telegraf-ci-gen2
     steps:
       - package-build:
           type: arm64
@@ -363,7 +366,7 @@ jobs:
       nightly:
         type: boolean
         default: false
-    executor: telegraf-ci
+    executor: telegraf-ci-gen2
     steps:
       - package-build:
           type: mipsel
@@ -373,7 +376,7 @@ jobs:
       nightly:
         type: boolean
         default: false
-    executor: telegraf-ci
+    executor: telegraf-ci-gen2
     steps:
       - package-build:
           type: mips
@@ -383,7 +386,7 @@ jobs:
       nightly:
         type: boolean
         default: false
-    executor: telegraf-ci
+    executor: telegraf-ci-gen2
     steps:
       - package-build:
           type: armhf
@@ -462,7 +465,7 @@ jobs:
   amd64-package-test-nightly:
     machine:
       image: ubuntu-2204:current
-    resource_class: medium.gen2
+    resource_class: medium
     steps:
       - checkout
       - attach_workspace:
@@ -475,7 +478,7 @@ jobs:
   package-sign-windows:
     machine:
       image: ubuntu-2204:current
-    resource_class: medium.gen2
+    resource_class: medium
     steps:
       - checkout
       - check-changed-files-or-halt
