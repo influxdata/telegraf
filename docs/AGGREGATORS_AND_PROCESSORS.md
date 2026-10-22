@@ -38,21 +38,17 @@ aggregation to collected metrics.
 
 ## Ordering
 
-Processors are run first, then aggregators, then processors a second time.
+Processors are run first, then aggregators.
 
-Allowing processors to run again after aggregators gives users the opportunity
-to run a processor on any aggregated metrics. This behavior can be a bit
-surprising to new users and may cause weird behavior in metrics. For example,
-if the user scales data, it could get scaled twice!
+To run processors a second time on the metrics emitted by aggregators set the
+`skip_processors_after_aggregators` agent configuration setting to false. Be
+aware that aggregated metrics are then built from already processed data, so a
+processor scaling data will scale it twice! Use metric filtering as described
+below to limit which metrics a processor sees.
 
-To disable the processors running first set the
+To run processors only after aggregators set the
 `skip_processors_before_aggregators` agent configuration setting to true.
-Another option is to use metric filtering as
-described below.
-
-To disable this behavior set the `skip_processors_after_aggregators` agent
-configuration setting to true. Another option is to use metric filtering as
-described below.
+Another option is to use metric filtering as described below.
 
 ## Metric Filtering
 

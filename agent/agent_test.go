@@ -228,17 +228,38 @@ func TestCases(t *testing.T) {
 	}
 }
 
-func TestAgent_SkipProcessorsAfterAggregatorsDefaultsFalse(t *testing.T) {
-	c := config.NewConfig()
-	c.Agent.OmitHostname = true
+func TestSkipProcessorsAfterAggregatorsDefault(t *testing.T) {
+	tests := []struct {
+		name       string
+		skipBefore bool
+		expected   bool
+	}{
+		{
+			name:     "default",
+			expected: true,
+		},
+		{
+			name:       "skip before aggregators",
+			skipBefore: true,
+			expected:   false,
+		},
+	}
 
-	a := NewAgent(c)
-	ctx, cancel := context.WithTimeout(t.Context(), 1*time.Second)
-	defer cancel()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := config.NewConfig()
+			c.Agent.OmitHostname = true
+			c.Agent.SkipProcessorsBeforeAggregators = tt.skipBefore
 
-	require.NoError(t, a.Run(ctx))
-	require.NotNil(t, c.Agent.SkipProcessorsAfterAggregators)
-	require.False(t, *c.Agent.SkipProcessorsAfterAggregators)
+			a := NewAgent(c)
+			ctx, cancel := context.WithTimeout(t.Context(), 1*time.Second)
+			defer cancel()
+
+			require.NoError(t, a.Run(ctx))
+			require.NotNil(t, c.Agent.SkipProcessorsAfterAggregators)
+			require.Equal(t, tt.expected, *c.Agent.SkipProcessorsAfterAggregators)
+		})
+	}
 }
 
 // Implement a "test-mode" like call but collect the metrics

@@ -11,8 +11,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/fatih/color"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
@@ -110,13 +108,9 @@ func (a *Agent) Run(ctx context.Context) error {
 		time.Duration(a.Config.Agent.Interval), a.Config.Agent.Quiet,
 		a.Config.Agent.Hostname, time.Duration(a.Config.Agent.FlushInterval))
 
-	// Set the default for processor skipping
+	// Skip the second processor run by default unless the first one is skipped
 	if a.Config.Agent.SkipProcessorsAfterAggregators == nil {
-		msg := `The default value of 'skip_processors_after_aggregators' will change to 'true' with Telegraf v1.41.0! `
-		msg += `If you need the current default behavior, please explicitly set the option to 'false'!`
-		log.Print("W! [agent] ", color.YellowString(msg))
-		skipProcessorsAfterAggregators := false
-		a.Config.Agent.SkipProcessorsAfterAggregators = &skipProcessorsAfterAggregators
+		a.Config.Agent.SkipProcessorsAfterAggregators = new(!a.Config.Agent.SkipProcessorsBeforeAggregators)
 	}
 
 	log.Printf("D! [agent] Initializing plugins")
@@ -971,13 +965,9 @@ func (a *Agent) Test(ctx context.Context, wait time.Duration) error {
 // outputC. After gathering pauses for the wait duration to allow service
 // inputs to run.
 func (a *Agent) runTest(ctx context.Context, wait time.Duration, outputC chan<- telegraf.Metric) error {
-	// Set the default for processor skipping
+	// Skip the second processor run by default unless the first one is skipped
 	if a.Config.Agent.SkipProcessorsAfterAggregators == nil {
-		msg := `The default value of 'skip_processors_after_aggregators' will change to 'true' with Telegraf v1.41.0! `
-		msg += `If you need the current default behavior, please explicitly set the option to 'false'!`
-		log.Print("W! [agent] ", color.YellowString(msg))
-		skipProcessorsAfterAggregators := false
-		a.Config.Agent.SkipProcessorsAfterAggregators = &skipProcessorsAfterAggregators
+		a.Config.Agent.SkipProcessorsAfterAggregators = new(!a.Config.Agent.SkipProcessorsBeforeAggregators)
 	}
 
 	log.Printf("D! [agent] Initializing plugins")
@@ -1068,13 +1058,9 @@ func (a *Agent) Once(ctx context.Context, wait time.Duration) error {
 // outputC. After gathering pauses for the wait duration to allow service
 // inputs to run.
 func (a *Agent) runOnce(ctx context.Context, wait time.Duration) error {
-	// Set the default for processor skipping
+	// Skip the second processor run by default unless the first one is skipped
 	if a.Config.Agent.SkipProcessorsAfterAggregators == nil {
-		msg := `The default value of 'skip_processors_after_aggregators' will change to 'true' with Telegraf v1.41.0! `
-		msg += `If you need the current default behavior, please explicitly set the option to 'false'!`
-		log.Print("W! [agent] ", color.YellowString(msg))
-		skipProcessorsAfterAggregators := false
-		a.Config.Agent.SkipProcessorsAfterAggregators = &skipProcessorsAfterAggregators
+		a.Config.Agent.SkipProcessorsAfterAggregators = new(!a.Config.Agent.SkipProcessorsBeforeAggregators)
 	}
 
 	log.Printf("D! [agent] Initializing plugins")

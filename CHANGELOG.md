@@ -28,6 +28,12 @@
   previously collapsed onto one series and now split per GPU, so queries and
   dashboards grouping these metrics should account for the new tag. The extra
   cardinality is bounded by the number of GPUs.
+- PR [#19959](https://github.com/influxdata/telegraf/pull/19959) changes the
+  default of the `skip_processors_after_aggregators` agent setting to `true`,
+  as announced by the startup warning since v1.34. Processors no longer run a
+  second time on metrics emitted by aggregators unless
+  `skip_processors_before_aggregators` is set. If you rely on the second run,
+  set `skip_processors_after_aggregators = false` explicitly.
 
 ## v1.40.2 [2026-10-12]
 
