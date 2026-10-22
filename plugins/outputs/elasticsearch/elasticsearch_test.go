@@ -2,6 +2,7 @@ package elasticsearch
 
 import (
 	"compress/gzip"
+	"context"
 	"fmt"
 	"io"
 	"math"
@@ -1089,6 +1090,33 @@ func TestWriteIntegration(t *testing.T) {
 
 	// Verify that we can successfully write data to Elasticsearch
 	require.NoError(t, plugin.Write(testutil.MockMetrics()))
+
+	// Refresh the index so the written documents are visible to searches.
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(plugin.Timeout))
+	defer cancel()
+	_, err := plugin.client.Refresh("test-*").Do(ctx)
+	require.NoError(t, err)
+
+	// Verify the stored document independently of the bulk request.
+	result, err := plugin.client.Search("test-*").Do(ctx)
+	require.NoError(t, err)
+	require.NotNil(t, result.Hits)
+	require.Len(t, result.Hits.Hits, 1)
+
+	hit := result.Hits.Hits[0]
+	require.Equal(t, "test-2009.11.10", hit.Index)
+	require.Equal(t, "metrics", hit.Type)
+	require.NotNil(t, hit.Source)
+	require.JSONEq(t, `{
+		"@timestamp": "2009-11-10T23:00:00Z",
+		"measurement_name": "test1",
+		"tag": {
+			"tag1": "value1"
+		},
+		"test1": {
+			"value": 1
+		}
+	}`, string(*hit.Source))
 }
 
 type mockServer struct {
