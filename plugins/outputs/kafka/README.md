@@ -63,6 +63,11 @@ to use them.
   ## If true, the 'topic_tag' will be removed from to the metric.
   # exclude_topic_tag = false
 
+  ## Behavior when Kafka reports an unknown topic or partition: "retry" or "drop".
+  ## By default only failed metrics are retried; successful ones leave the buffer.
+  ## Dropping can lose data during temporary topic or partition unavailability.
+  # topic_error_behavior = "retry"
+
   ## Optional Client id
   # client_id = "Telegraf"
 
@@ -281,6 +286,29 @@ increase during downtime.
 The option is similar to the
 [retries](https://kafka.apache.org/documentation/#producerconfigs) Producer
 option in the Java Kafka Producer.
+
+### Partial writes and `topic_error_behavior`
+
+When Kafka reports failures for individual messages, successfully delivered
+metrics are removed from the buffer and only failed metrics are retried.
+Messages rejected for their size or timestamp, and metrics that cannot be
+serialized, are discarded individually. Other metrics in the batch are not
+discarded with them. If the producer cannot report individual results, all
+submitted metrics remain buffered; retrying them may produce duplicates.
+
+The default `topic_error_behavior = "retry"` also retains messages that fail
+with an unknown-topic-or-partition error. This error can be temporary, so it
+does not necessarily mean the topic was never created. Repeated failures can
+still fill a batch and eventually the buffer, preventing newer metrics from
+being sent. Correct the topic configuration or restore the missing topic or
+partition to let these metrics drain.
+
+Set `topic_error_behavior = "drop"` to discard messages with this specific
+error instead. This allows later metrics to drain even if the unknown-topic
+messages would otherwise fill a batch. **This can lose data during temporary
+topic or partition unavailability.** All other transient errors are still
+retried. The setting applies after the Kafka client's own retry attempts and
+does not eliminate the time those retries take.
 
 ### Timeouts
 
