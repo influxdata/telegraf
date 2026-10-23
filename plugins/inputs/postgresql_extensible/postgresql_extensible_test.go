@@ -202,7 +202,9 @@ func TestInitErrors(t *testing.T) {
 				p.Queries = []query{{Script: "testdata/does_not_exist.sql"}}
 				return p
 			}(),
-			expected: "no such file",
+			// The wording of the error differs between operating systems,
+			// the path is the part all of them share
+			expected: "does_not_exist.sql",
 		},
 	}
 
