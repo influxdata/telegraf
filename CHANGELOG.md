@@ -28,6 +28,12 @@
   previously collapsed onto one series and now split per GPU, so queries and
   dashboards grouping these metrics should account for the new tag. The extra
   cardinality is bounded by the number of GPUs.
+- PR [#19558](https://github.com/influxdata/telegraf/pull/19558) changes the
+  filenames written by `outputs.parquet` from
+  `<measurement>-<YYYY-MM-DD>-<unix-seconds>.parquet` to
+  `<measurement>-<YYYYMMDDhhmmss>-<uuid>.parquet` and never reuses a file.
+  This fixes an edge case where dataloss could occur when auto rotating
+  parquet files and multiple writers using the same directory.
 
 ## v1.40.2 [2026-10-12]
 
