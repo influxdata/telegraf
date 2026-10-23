@@ -296,11 +296,15 @@ func (h *HTTPListenerV2) serveWrite(res http.ResponseWriter, req *http.Request) 
 }
 
 func (h *HTTPListenerV2) collectBody(res http.ResponseWriter, req *http.Request) ([]byte, bool) {
-	encoding := req.Header.Get("Content-Encoding")
+	defer req.Body.Close()
 
-	switch encoding {
-	case "gzip":
-		r, err := gzip.NewReader(req.Body)
+	// Limit the body independent of the content-length header as a client
+	// may omit it or send the body chunked.
+	var body io.Reader = http.MaxBytesReader(res, req.Body, int64(h.MaxBodySize))
+
+	encoding := req.Header.Get("Content-Encoding")
+	if encoding == "gzip" {
+		r, err := gzip.NewReader(body)
 		if err != nil {
 			h.Log.Debug(err.Error())
 			if err := badRequest(res); err != nil {
@@ -309,18 +313,28 @@ func (h *HTTPListenerV2) collectBody(res http.ResponseWriter, req *http.Request)
 			return nil, false
 		}
 		defer r.Close()
-		maxReader := http.MaxBytesReader(res, r, int64(h.MaxBodySize))
-		bytes, err := io.ReadAll(maxReader)
-		if err != nil {
+		// Limit the decompressed size as well
+		body = http.MaxBytesReader(res, r, int64(h.MaxBodySize))
+	}
+
+	bytes, err := io.ReadAll(body)
+	if err != nil {
+		h.Log.Debug(err.Error())
+		if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
 			if err := tooLarge(res); err != nil {
 				h.Log.Debugf("error in too-large: %v", err)
 			}
-			return nil, false
+		} else if err := badRequest(res); err != nil {
+			h.Log.Debugf("error in bad-request: %v", err)
 		}
-		return bytes, true
-	case "snappy":
-		defer req.Body.Close()
-		bytes, err := io.ReadAll(req.Body)
+		return nil, false
+	}
+
+	if encoding == "snappy" {
+		// snappy block format is only supported by decode/encode not snappy reader/writer
+		// Decoding allocates the length announced in the header up front, so
+		// check it against the limit before decoding.
+		n, err := snappy.DecodedLen(bytes)
 		if err != nil {
 			h.Log.Debug(err.Error())
 			if err := badRequest(res); err != nil {
@@ -328,7 +342,12 @@ func (h *HTTPListenerV2) collectBody(res http.ResponseWriter, req *http.Request)
 			}
 			return nil, false
 		}
-		// snappy block format is only supported by decode/encode not snappy reader/writer
+		if int64(n) > int64(h.MaxBodySize) {
+			if err := tooLarge(res); err != nil {
+				h.Log.Debugf("error in too-large: %v", err)
+			}
+			return nil, false
+		}
 		bytes, err = snappy.Decode(nil, bytes)
 		if err != nil {
 			h.Log.Debug(err.Error())
@@ -337,19 +356,9 @@ func (h *HTTPListenerV2) collectBody(res http.ResponseWriter, req *http.Request)
 			}
 			return nil, false
 		}
-		return bytes, true
-	default:
-		defer req.Body.Close()
-		bytes, err := io.ReadAll(req.Body)
-		if err != nil {
-			h.Log.Debug(err.Error())
-			if err := badRequest(res); err != nil {
-				h.Log.Debugf("error in bad-request: %v", err)
-			}
-			return nil, false
-		}
-		return bytes, true
 	}
+
+	return bytes, true
 }
 
 func (h *HTTPListenerV2) collectQuery(res http.ResponseWriter, req *http.Request) ([]byte, bool) {
