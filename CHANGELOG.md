@@ -28,6 +28,11 @@
   previously collapsed onto one series and now split per GPU, so queries and
   dashboards grouping these metrics should account for the new tag. The extra
   cardinality is bounded by the number of GPUs.
+- PR [#19853](https://github.com/influxdata/telegraf/pull/19853) makes
+  `use_sudo` invoke doas(1) instead of sudo on OpenBSD. A configuration
+  that relies on sudoers will fail until a doas.conf(5) rule permits the
+  same command. `inputs.nsd` and `inputs.unbound` run as `_nsd` and
+  `_unbound`.
 
 ## v1.40.2 [2026-10-12]
 
