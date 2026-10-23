@@ -2,7 +2,9 @@
 
 This plugin queries a [PostgreSQL][postgres] server and provides metrics for
 the returned result. This is useful when using PostgreSQL extensions to collect
-additional metrics.
+additional metrics. The queries can be run in many databases of the server,
+restricted to the primary or replica role, limited in runtime and executed
+concurrently.
 
 > [!TIP]
 > Please also check the more generic [sql input plugin][inputs_sql].
@@ -33,72 +35,115 @@ to use them.
 ## Configuration
 
 ```toml @sample.conf
-# Read metrics from one or many postgresql servers
+# Read metrics from one or many postgresql servers and databases
 [[inputs.postgresql_extensible]]
-  # specify address via a url matching:
-  # postgres://[pqgotest[:password]]@host:port[/dbname]?sslmode=...&statement_timeout=...
-  # or a simple string:
-  #   host=localhost port=5432 user=pqgotest password=... sslmode=... dbname=app_production
-  #
-  # All connection parameters are optional.
-  # Without the dbname parameter, the driver will default to a database
-  # with the same name as the user. This dbname is just for instantiating a
-  # connection with the server and doesn't restrict the databases we are trying
-  # to grab metrics for.
-  #
+  ## Specify address via a url matching:
+  ##   postgres://[pqgotest[:password]]@host:port[/dbname]?sslmode=...
+  ## or a simple string:
+  ##   host=localhost port=5432 user=pqgotest password=... sslmode=... dbname=app_production
+  ##
+  ## All connection parameters are optional. Without the dbname parameter,
+  ## the driver will default to a database with the same name as the user.
+  ## This database is used to determine the server version and role, the list
+  ## of databases and to run the queries when no database filter is set.
   address = "host=localhost user=postgres sslmode=disable"
 
   ## Whether to use prepared statements when connecting to the database.
   ## This should be set to false when connecting through a PgBouncer instance
   ## with pool_mode set to transaction.
-  prepared_statements = true
+  # prepared_statements = true
 
-  # Define the toml config where the sql queries are stored
-  # The script option can be used to specify the .sql file path.
-  # If script and sqlquery options specified at same time, sqlquery will be used
-  #
-  # the measurement field defines measurement name for metrics produced
-  # by the query. Default is "postgresql".
-  #
-  # the tagvalue field is used to define custom tags (separated by comas).
-  # the query is expected to return columns which match the names of the
-  # defined tags. The values in these columns must be of a string-type,
-  # a number-type or a blob-type.
-  #
-  # The timestamp field is used to override the data points timestamp value. By
-  # default, all rows inserted with current time. By setting a timestamp column,
-  # the row will be inserted with that column's value.
-  #
-  # The min_version field specifies minimal database version this query
-  # will run on.
-  #
-  # The max_version field when set specifies maximal database version
-  # this query will NOT run on.
-  #
-  # Database version in `minversion` and `maxversion` is represented as
-  # a single integer without last component, for example:
-  # 9.6.2 -> 906
-  # 15.2 -> 1500
-  #
-  # Structure :
-  # [[inputs.postgresql_extensible.query]]
-  #   measurement string
-  #   sqlquery string
-  #   min_version int
-  #   max_version int
-  #   withdbname boolean
-  #   tagvalue string (coma separated)
-  #   timestamp string
+  ## Maximum lifetime of a connection. A connection older than this is closed
+  ## when it is returned to the pool instead of being reused. Zero keeps the
+  ## connections forever. Note that this does not interrupt queries, the
+  ## lifetime is not enforced while a query is running.
+  # max_lifetime = "0s"
+
+  ## Timeout for a complete collection cycle, i.e. all queries in all
+  ## databases. Individual queries may specify a shorter timeout.
+  ## Zero means no limit on the duration of a collection.
+  # timeout = "0s"
+
+  ## Server role required to run the queries. Queries may override this.
+  ## Valid values are "any", "primary" and "replica". The role is read with
+  ## pg_is_in_recovery() and cached for metadata_refresh_interval.
+  # role = "any"
+
+  ## Run the queries in all databases matching the filters instead of the
+  ## database of the connection only. Each entry is a regular expression
+  ## matching the complete database name. Template databases and databases
+  ## not allowing connections are never included.
+  # datname_include = []
+  # datname_exclude = []
+
+  ## Interval for refreshing the server version, the server role and the
+  ## list of databases. They are cached and refreshed on the first collection
+  ## after each interval boundary on the wall clock, so a collection between
+  ## two refreshes does not read the server information again.
+  ## Zero reads them on every collection.
+  # metadata_refresh_interval = "0s"
+
+  ## Number of databases processed at the same time. Only relevant when the
+  ## datname filters above select more than one database.
+  # max_parallel_databases = 1
+
+  ## Number of queries run at the same time within one database. Every query
+  ## occupies one connection, so a collection opens at most
+  ## max_parallel_databases * max_connections_per_database connections, plus
+  ## one while it refreshes the cached server information if the database of
+  ## the address is not among the ones queried.
+  # max_connections_per_database = 1
+
+  ## Keep the connections open between collections instead of closing them
+  ## once a collection is done. This covers every database queried, so a
+  ## filter matching many databases holds up to the number of databases
+  ## times max_connections_per_database connections, which may exceed the
+  ## max_connections setting of the server.
+  # keep_idle_connections = true
+
+  ## Use all string columns as tags instead of fields. Queries may override this.
+  # string_columns_as_tags = false
+
+  ## Convert numeric columns to floating point fields instead of string
+  ## fields. Queries may override this.
+  # numeric_as_float = false
+
+  ## Queries to run
+  ##
+  ## The sqlquery option contains the SQL text to run, the script option a
+  ## path to a file containing it. If both are given, sqlquery is used.
+  ##
+  ## The measurement option defines the measurement name for the metrics
+  ## produced by the query. Default is "postgresql".
+  ##
+  ## The tagvalue option is a comma separated list of columns to use as tags.
+  ##
+  ## The timestamp option names a column whose value is used as the metric
+  ## timestamp instead of the collection time.
+  ##
+  ## The min_version and max_version options restrict the query to the given
+  ## server versions. The version is the server_version_num divided by 100,
+  ## e.g. 9.6.2 -> 906 and 15.2 -> 1500. The query is not run on max_version.
+  ##
+  ## The timeout option limits the runtime of the query and defaults to the
+  ## remaining time of the collection cycle.
+  ##
+  ## The role, string_columns_as_tags and numeric_as_float options override
+  ## the plugin-level settings for this query.
   [[inputs.postgresql_extensible.query]]
-    measurement="pg_stat_database"
-    sqlquery="SELECT * FROM pg_stat_database WHERE datname"
-    min_version=901
-    tagvalue=""
+    measurement = "pg_stat_database"
+    sqlquery = "SELECT * FROM pg_stat_database"
+    min_version = 901
+    tagvalue = ""
+    # timeout = "10s"
+    # role = "any"
+    # string_columns_as_tags = false
+    # numeric_as_float = false
   [[inputs.postgresql_extensible.query]]
-    script="your_sql-filepath.sql"
-    min_version=901
-    max_version=1300
-    tagvalue=""
+    script = "your_sql-filepath.sql"
+    min_version = 901
+    max_version = 1300
+    role = "primary"
 ```
 
 The system can be easily extended using homemade metrics collection tools or
@@ -294,6 +339,87 @@ CREATE OR REPLACE VIEW public.sessions AS
   WHERE proc.pid = stat.pid;
 ```
 
+## Databases
+
+Without `datname_include` and `datname_exclude` all queries are run in the
+database given in the `address` (or the driver default). If any of the
+filters is set, the list of databases is read from `pg_database` and the
+queries are run in every database matching the filters. Template databases
+and databases not accepting connections are never included.
+
+Every filter entry is a regular expression matching the complete database
+name, so `app` only matches the database `app` while `app_.*` matches
+`app_prod` and `app_test`. A database is used if it matches any of the
+`datname_include` entries (or the list is empty) and none of the
+`datname_exclude` entries.
+
+The database list is refreshed on the first collection after each
+`metadata_refresh_interval` boundary on the wall clock, so a new database
+shows up after at most `metadata_refresh_interval` plus one collection
+interval.
+
+## Server role
+
+The server role is read with `pg_is_in_recovery()` and cached for
+`metadata_refresh_interval`. Queries with `role = "primary"` are only run
+if the server is not in recovery, queries with `role = "replica"` only if
+it is. The plugin-level `role` option sets the default for all queries.
+
+## Cached server information
+
+The server version, the server role and the list of databases are read
+together and cached for `metadata_refresh_interval`. A collection between
+two refreshes uses the cached values and does not read the server
+information again. After a role change the plugin therefore keeps using the
+previous role for up to one refresh interval, so choose the interval short
+enough for how fast a promoted server should be picked up. The default of
+zero reads them on every collection.
+
+## Timeouts and concurrency
+
+The plugin-level `timeout` limits a complete collection cycle. Each query
+is run with its own `timeout` if set, or the remaining time of the cycle
+otherwise. The default of zero means no limit.
+
+Concurrency has two independent knobs. `max_parallel_databases` sets how
+many databases are processed at the same time, `max_connections_per_database`
+how many queries run at the same time within one of them. Every query
+occupies one connection, so a collection opens at most the product of the
+two:
+
+| `max_parallel_databases` | `max_connections_per_database` | connections |
+|---|---|---|
+| 1 | 1 | 1 |
+| 1 | 5 | 5 |
+| 5 | 1 | 5 |
+| 5 | 2 | 10 |
+
+Both default to one: a single connection running the queries one after
+another.
+
+One connection comes on top of that product while a collection refreshes
+the server version, the role and the database list, and only when the
+database of the `address` is not among the ones queried. Otherwise that
+connection is taken from the pool the queries use anyway.
+
+`keep_idle_connections` keeps the connections of every queried database
+open until the next collection. A collection querying many databases then
+holds up to the number of databases times `max_connections_per_database`
+connections, which may exceed the `max_connections` setting of the server.
+Unset it to close the connections as soon as a collection is done.
+
+The pool of a database that drops out of the filtered list is closed on the
+next collection.
+
+## Compatibility
+
+The defaults keep the behavior of previous versions of this plugin: no
+timeout, no caching of the server information, a single connection running
+the queries sequentially in the database of the `address`, `numeric` columns
+as string fields and the connection kept open between collections. The
+deprecated `databases`, `withdbname` and `version` options keep working as
+before.
+
 ## Example Output
 
 The example out below was taken by running the query
@@ -316,5 +442,14 @@ By default, the following format will be used
 
 * postgresql
   * tags:
-    * db
-    * server
+    * db - the database the query was run in, or the value of the `datname`
+      column if present
+    * server - the sanitized connection address
+    * all columns listed in `tagvalue`
+    * all string columns if `string_columns_as_tags` is set
+  * fields:
+    * all remaining columns; `numeric` columns are converted to floats if
+      `numeric_as_float` is set
+
+The `stats_reset` column is never reported. To drop further columns use the
+`fieldexclude` and `tagexclude` options every input plugin supports.
