@@ -232,10 +232,12 @@ func TestSkipProcessorsAfterAggregatorsDefault(t *testing.T) {
 	tests := []struct {
 		name              string
 		skipBefore        bool
+		skipAfter         *bool
 		expectedSkipAfter bool
 	}{
 		{
 			name:              "skip after aggregators by default",
+			skipBefore:        false,
 			expectedSkipAfter: true,
 		},
 		{
@@ -243,12 +245,19 @@ func TestSkipProcessorsAfterAggregatorsDefault(t *testing.T) {
 			skipBefore:        true,
 			expectedSkipAfter: false,
 		},
+		{
+			name:              "explicit setting is kept",
+			skipBefore:        true,
+			skipAfter:         new(true),
+			expectedSkipAfter: true,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := config.NewConfig()
 			c.Agent.SkipProcessorsBeforeAggregators = tt.skipBefore
+			c.Agent.SkipProcessorsAfterAggregators = tt.skipAfter
 
 			NewAgent(c)
 			require.NotNil(t, c.Agent.SkipProcessorsAfterAggregators)
