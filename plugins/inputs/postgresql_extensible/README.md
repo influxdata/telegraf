@@ -344,8 +344,8 @@ CREATE OR REPLACE VIEW public.sessions AS
 Without `datname_include` and `datname_exclude` all queries are run in the
 database given in the `address` (or the driver default). If any of the
 filters is set, the list of databases is read from `pg_database` and the
-queries are run in every database matching the filters. Template databases and databases not
-accepting connections are never included.
+queries are run in every database matching the filters. Template databases
+and databases not accepting connections are never included.
 
 Every filter entry is a regular expression matching the complete database
 name, so `app` only matches the database `app` while `app_.*` matches
