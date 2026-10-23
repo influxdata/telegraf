@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	elasticsearch6 "github.com/elastic/go-elasticsearch/v6"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
@@ -1041,32 +1042,55 @@ func TestWriteIntegration(t *testing.T) {
 	// Verify that we can successfully write data to Elasticsearch
 	require.NoError(t, plugin.Write(testutil.MockMetrics()))
 
+	// Create a separate client for document verification.
+	client, err := elasticsearch6.NewClient(elasticsearch6.Config{
+		Addresses: plugin.URLs,
+	})
+	require.NoError(t, err)
+
 	// Refresh the index so the written documents are visible to searches.
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(plugin.Timeout))
 	defer cancel()
-	_, err := plugin.client.Refresh("test-*").Do(ctx)
+	refresh, err := client.Indices.Refresh(
+		client.Indices.Refresh.WithContext(ctx),
+		client.Indices.Refresh.WithIndex("test-*"),
+	)
 	require.NoError(t, err)
+	defer refresh.Body.Close()
+	require.Equal(t, http.StatusOK, refresh.StatusCode)
 
 	// Verify the stored document independently of the bulk request.
-	result, err := plugin.client.Search("test-*").Do(ctx)
+	result, err := client.Search(
+		client.Search.WithContext(ctx),
+		client.Search.WithIndex("test-*"),
+		client.Search.WithFilterPath("hits.hits._index", "hits.hits._type", "hits.hits._source"),
+	)
 	require.NoError(t, err)
-	require.NotNil(t, result.Hits)
-	require.Len(t, result.Hits.Hits, 1)
+	defer result.Body.Close()
+	require.Equal(t, http.StatusOK, result.StatusCode)
 
-	hit := result.Hits.Hits[0]
-	require.Equal(t, "test-2009.11.10", hit.Index)
-	require.Equal(t, "metrics", hit.Type)
-	require.NotNil(t, hit.Source)
+	actual, err := io.ReadAll(result.Body)
+	require.NoError(t, err)
 	require.JSONEq(t, `{
-		"@timestamp": "2009-11-10T23:00:00Z",
-		"measurement_name": "test1",
-		"tag": {
-			"tag1": "value1"
-		},
-		"test1": {
-			"value": 1
+		"hits": {
+			"hits": [
+				{
+					"_index": "test-2009.11.10",
+					"_type": "metrics",
+					"_source": {
+						"@timestamp": "2009-11-10T23:00:00Z",
+						"measurement_name": "test1",
+						"tag": {
+							"tag1": "value1"
+						},
+						"test1": {
+							"value": 1
+						}
+					}
+				}
+			]
 		}
-	}`, string(*hit.Source))
+	}`, string(actual))
 }
 
 type mockServer struct {
