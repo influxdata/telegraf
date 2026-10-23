@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gopcua/opcua"
+	"github.com/gopcua/opcua/id"
 	"github.com/gopcua/opcua/ua"
 
 	"github.com/influxdata/telegraf"
@@ -33,8 +34,10 @@ type subscribeClient struct {
 	dataNotifications  chan *opcua.PublishNotificationData
 	metrics            chan telegraf.Metric
 
-	ctx    context.Context
-	cancel context.CancelFunc
+	// Internal flags
+	maxMonitoredItemsPerCall int
+	ctx                      context.Context
+	cancel                   context.CancelFunc
 }
 
 func checkDataChangeFilterParameters(params *input.DataChangeFilter) error {
@@ -137,6 +140,26 @@ func (o *subscribeClient) connect() error {
 		// Continue anyway - this is only needed if using namespace URIs
 	}
 
+	// Query the server-imposed limit on monitored items per create request so
+	// large item sets can be split accordingly. The property is optional and
+	// zero means "no limit"; in both cases all items are sent in a single
+	// request unless monitored_items_batch_size is set.
+	o.maxMonitoredItemsPerCall = 0
+	limits, err := o.Client.Read(o.ctx, &ua.ReadRequest{
+		NodesToRead: []*ua.ReadValueID{
+			{NodeID: ua.NewNumericNodeID(0, id.Server_ServerCapabilities_OperationLimits_MaxMonitoredItemsPerCall)},
+		},
+	})
+	switch {
+	case err != nil:
+		o.Log.Debugf("Querying the server's operation limits failed: %v", err)
+	case len(limits.Results) != 1:
+		o.Log.Debugf("Server returned %d results for 1 requested operation limit", len(limits.Results))
+	default:
+		o.maxMonitoredItemsPerCall = opcuaclient.OperationLimit(limits.Results[0])
+		o.Log.Debugf("Server limits requests to %d monitored items per call (0 = unlimited)", o.maxMonitoredItemsPerCall)
+	}
+
 	// Browse-based discovery runs on every connect so server-side schema
 	// changes (added or removed nodes, renumbered namespaces) are picked up
 	// on reconnect. DiscoverNodes replaces the previously discovered groups
@@ -216,23 +239,21 @@ func (o *subscribeClient) stop(ctx context.Context) <-chan struct{} {
 }
 
 // monitor registers the given monitored-item requests on the subscription.
-// Servers reject a CreateMonitoredItems request whose encoded size exceeds
-// their negotiated maximum message size, which surfaces as a connection drop
-// (BadTcpMessageTooLarge) for large node counts. When monitored_items_batch_size
-// is set, the requests are split into batches of that size and the per-request
-// results are concatenated in the original order so the caller's index-to-node
-// mapping stays valid.
+// Servers reject a CreateMonitoredItems request with more items than their
+// MaxMonitoredItemsPerCall limit (BadTooManyOperations) or whose encoded size
+// exceeds their negotiated maximum message size, which surfaces as a
+// connection drop (BadTcpMessageTooLarge) for large node counts. The requests
+// are split into batches of the server limit or monitored_items_batch_size,
+// whichever is smaller, and the per-request results are concatenated in the
+// original order so the caller's index-to-node mapping stays valid.
 func (o *subscribeClient) monitor(ctx context.Context, reqs []*ua.MonitoredItemCreateRequest) ([]*ua.MonitoredItemCreateResult, error) {
-	// Build the batches first: a single batch holds everything when batching is
-	// disabled, otherwise split into chunks of the configured size.
-	batchSize := o.Config.Workarounds.MonitoredItemsBatchSize
-	var batches [][]*ua.MonitoredItemCreateRequest
-	if batchSize <= 0 {
-		batches = [][]*ua.MonitoredItemCreateRequest{reqs}
-	} else {
-		for chunk := range slices.Chunk(reqs, batchSize) {
-			batches = append(batches, chunk)
-		}
+	batchSize := o.maxMonitoredItemsPerCall
+	if size := o.Config.Workarounds.MonitoredItemsBatchSize; size > 0 && (batchSize == 0 || size < batchSize) {
+		batchSize = size
+	}
+	batches := [][]*ua.MonitoredItemCreateRequest{reqs}
+	if batchSize > 0 {
+		batches = slices.Collect(slices.Chunk(reqs, batchSize))
 	}
 
 	results := make([]*ua.MonitoredItemCreateResult, 0, len(reqs))
