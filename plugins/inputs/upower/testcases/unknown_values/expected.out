@@ -1,0 +1,1 @@
+upower,native_path=X,state=unknown-42,technology=unknown,type=unknown-99,warning_level=unknown capacity_percent=0,charge_cycles=0i,energy_empty_wh=0,energy_full_design_wh=0,energy_full_wh=0,energy_rate_w=0,energy_wh=0,is_present=false,is_rechargeable=false,percentage=0,power_supply=false,temperature_c=0,time_to_empty_sec=0i,time_to_full_sec=0i,voltage_v=0
