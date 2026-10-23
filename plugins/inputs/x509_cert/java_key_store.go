@@ -34,22 +34,12 @@ func (c *X509Cert) processPKCS12(path string) ([]*x509.Certificate, error) {
 	passwordStr := password.String()
 	password.Destroy()
 
-	_, cert, caCerts, err := pkcs12.DecodeChain(data, passwordStr)
+	certs, err := pkcs12.DecodeTrustStore(data, passwordStr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode PKCS#12 keystore: %w", err)
 	}
 
-	// Ensure Root CA pool exists
-	if c.tlsCfg.RootCAs == nil {
-		c.tlsCfg.RootCAs = x509.NewCertPool()
-	}
-
-	// Add CA certificates to RootCAs
-	for _, caCert := range caCerts {
-		c.tlsCfg.RootCAs.AddCert(caCert)
-	}
-
-	return append([]*x509.Certificate{cert}, caCerts...), nil
+	return certs, nil
 }
 
 func (c *X509Cert) processJKS(path string) ([]*x509.Certificate, error) {
