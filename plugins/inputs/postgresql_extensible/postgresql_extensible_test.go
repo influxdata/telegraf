@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -60,8 +61,8 @@ func TestInitDefaults(t *testing.T) {
 		{
 			Sqlquery:            "SELECT 2",
 			Role:                "replica",
-			StringColumnsAsTags: boolPtr(false),
-			NumericAsFloat:      boolPtr(false),
+			StringColumnsAsTags: new(false),
+			NumericAsFloat:      new(false),
 		},
 	}
 	require.NoError(t, p.Init())
@@ -91,7 +92,7 @@ func TestRegisteredDefaults(t *testing.T) {
 	require.Zero(t, p.MetadataRefreshInterval)
 	require.Zero(t, p.MaxConnectionsPerDatabase)
 	require.Zero(t, p.MaxParallelDatabases)
-	require.Zero(t, p.Role)
+	require.Empty(t, p.Role)
 	require.False(t, p.NumericAsFloat)
 	require.False(t, p.StringColumnsAsTags)
 	require.True(t, p.KeepIdleConnections)
@@ -344,7 +345,7 @@ func TestAccRow(t *testing.T) {
 		},
 		{
 			name:    "string columns as tags",
-			query:   query{StringColumnsAsTags: boolPtr(true)},
+			query:   query{StringColumnsAsTags: new(true)},
 			columns: []string{"relname", "raw", "count"},
 			values:  []any{"users", []byte("bytes"), int64(3)},
 			expectedTags: map[string]string{
@@ -378,7 +379,7 @@ func TestAccRow(t *testing.T) {
 		},
 		{
 			name:    "numeric as string",
-			query:   query{NumericAsFloat: boolPtr(false)},
+			query:   query{NumericAsFloat: new(false)},
 			columns: []string{"ratio"},
 			numeric: map[string]bool{"ratio": true},
 			values:  []any{"10.5"},
@@ -412,7 +413,7 @@ func TestAccRow(t *testing.T) {
 			var acc testutil.Accumulator
 			j := job{datname: "mydb", query: &p.Queries[0]}
 			now := time.Now()
-			p.accRow(&acc, tt.columns, tt.values, tt.numeric, j, now, false)
+			p.accRow(&acc, &resultSet{columns: tt.columns, values: tt.values, numeric: tt.numeric}, j, now)
 			require.Len(t, acc.Metrics, 1)
 
 			metric := acc.Metrics[0]
@@ -491,10 +492,6 @@ func TestRefreshDue(t *testing.T) {
 	}
 }
 
-func boolPtr(v bool) *bool {
-	return &v
-}
-
 // Integration tests
 
 type testServer struct {
@@ -522,6 +519,9 @@ func (s *testServer) seedSchema(t *testing.T, datname string) {
 	require.NoError(t, err)
 	defer db.Close()
 
+	// The table names come from the hardcoded list below, so building the
+	// statements by concatenation is safe here
+	//nolint:gosec // G202: no user input reaches these statements
 	for _, table := range []string{"orders", "customers", "invoices"} {
 		_, err := db.Exec("CREATE TABLE " + table + " (id integer PRIMARY KEY, label text, amount numeric)")
 		require.NoErrorf(t, err, "creating table %q in %q failed", table, datname)
@@ -876,7 +876,7 @@ func TestColumnTypesIntegration(t *testing.T) {
 			sql:  "SELECT 10.5::numeric AS myvalue",
 			plugin: func(q *query, p *Postgresql) {
 				p.NumericAsFloat = true
-				q.NumericAsFloat = boolPtr(false)
+				q.NumericAsFloat = new(false)
 			},
 			check: func(t *testing.T, acc *testutil.Accumulator) {
 				v, found := acc.StringField("postgresql", "myvalue")
@@ -1040,7 +1040,7 @@ func TestConnectionLimitsIntegration(t *testing.T) {
 	// a CTE so it runs once per query instead of once per row.
 	const sleep = "0.4"
 	trivial := func(n int) string {
-		return "WITH s AS (SELECT pg_sleep(" + sleep + ")) SELECT " + fmt.Sprint(n) + " AS value FROM s"
+		return "WITH s AS (SELECT pg_sleep(" + sleep + ")) SELECT " + strconv.Itoa(n) + " AS value FROM s"
 	}
 	tableStats := "WITH s AS (SELECT pg_sleep(" + sleep + ")) " +
 		"SELECT relname, n_live_tup, n_dead_tup FROM pg_stat_user_tables, s"
@@ -1260,6 +1260,7 @@ func BenchmarkAccRow(b *testing.B) {
 			for i := range values {
 				pointers[i] = &values[i]
 			}
+			rs := &resultSet{columns: columns, values: values, debug: tt.debug}
 
 			b.ReportAllocs()
 			b.ResetTimer()
@@ -1268,7 +1269,7 @@ func BenchmarkAccRow(b *testing.B) {
 				for k := range row {
 					*(pointers[k].(*any)) = row[k]
 				}
-				p.accRow(&acc, columns, values, nil, j, now, tt.debug)
+				p.accRow(&acc, rs, j, now)
 				acc.ClearMetrics()
 			}
 		})

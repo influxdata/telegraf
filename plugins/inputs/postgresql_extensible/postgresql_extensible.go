@@ -89,6 +89,17 @@ type job struct {
 	query   *query
 }
 
+// resultSet is what the rows of one query result have in common. The values
+// are overwritten by every Scan, the rest is built once per result.
+type resultSet struct {
+	columns []string
+	values  []any
+	// numeric names the columns of the NUMERIC type
+	numeric map[string]bool
+	// debug tells whether every column value is logged
+	debug bool
+}
+
 // collection is what the databases of one Gather have in common.
 type collection struct {
 	queries                []*query
@@ -275,15 +286,13 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	semaphore := make(chan struct{}, p.MaxParallelDatabases)
 	for _, datname := range datnames {
 		semaphore <- struct{}{}
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			defer func() { <-semaphore }()
 
 			if err := p.gatherInDatabase(ctx, acc, datname, coll); err != nil {
 				acc.AddError(fmt.Errorf("database %q: %w", datname, err))
 			}
-		}()
+		})
 	}
 	wg.Wait()
 
@@ -419,16 +428,14 @@ func (p *Postgresql) gatherDatabase(ctx context.Context, acc telegraf.Accumulato
 	semaphore := make(chan struct{}, coll.connectionsPerDatabase)
 	for _, q := range coll.queries {
 		semaphore <- struct{}{}
-		wg.Add(1)
 		j := job{datname: datname, query: q}
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			defer func() { <-semaphore }()
 
 			if err := p.gatherMetricsFromQuery(ctx, acc, service, j, coll.timestamp); err != nil {
 				acc.AddError(fmt.Errorf("database %q: %w", j.datname, err))
 			}
-		}()
+		})
 	}
 	wg.Wait()
 }
@@ -555,38 +562,35 @@ func (p *Postgresql) gatherMetricsFromQuery(
 		pointers[i] = &values[i]
 	}
 
-	// Logging every value is only done on demand: the arguments of a
-	// disabled Debugf call are still boxed and allocated for every column
-	// of every row
-	debug := p.Log.Level() >= telegraf.Debug
+	rs := &resultSet{
+		columns: columns,
+		values:  values,
+		numeric: numeric,
+		// Logging every value is only done on demand: the arguments of a
+		// disabled Debugf call are still boxed and allocated for every
+		// column of every row
+		debug: p.Log.Level() >= telegraf.Debug,
+	}
 
 	for rows.Next() {
 		if err := rows.Scan(pointers...); err != nil {
 			return err
 		}
-		p.accRow(acc, columns, values, numeric, j, timestamp, debug)
+		p.accRow(acc, rs, j, timestamp)
 	}
 	return rows.Err()
 }
 
-func (p *Postgresql) accRow(
-	acc telegraf.Accumulator,
-	columns []string,
-	values []any,
-	numeric map[string]bool,
-	j job,
-	timestamp time.Time,
-	debug bool,
-) {
+func (p *Postgresql) accRow(acc telegraf.Accumulator, rs *resultSet, j job, timestamp time.Time) {
 	q := j.query
 
 	// extract the database name from the row if available
 	dbname := j.datname
-	for i, col := range columns {
+	for i, col := range rs.columns {
 		if col != "datname" {
 			continue
 		}
-		if datname, ok := values[i].(string); ok {
+		if datname, ok := rs.values[i].(string); ok {
 			dbname = datname
 		}
 		break
@@ -596,10 +600,10 @@ func (p *Postgresql) accRow(
 	tags["server"] = p.service.SanitizedAddress
 	tags["db"] = dbname
 
-	fields := make(map[string]any, len(columns))
-	for i, col := range columns {
-		value := values[i]
-		if debug {
+	fields := make(map[string]any, len(rs.columns))
+	for i, col := range rs.columns {
+		value := rs.values[i]
+		if rs.debug {
 			p.Log.Debugf("Column: %s = %T: %v\n", col, value, value)
 		}
 		if ignoredColumns[col] || value == nil {
@@ -623,7 +627,7 @@ func (p *Postgresql) accRow(
 			continue
 		}
 
-		if q.numericFloat && numeric[col] {
+		if q.numericFloat && rs.numeric[col] {
 			v, err := internal.ToFloat64(value)
 			if err != nil {
 				p.Log.Debugf("Failed to convert numeric column %q: %v", col, err)

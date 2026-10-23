@@ -40,7 +40,7 @@ type Config struct {
 // CreateService creates a service connecting to the database given in the
 // address (or the driver default if none is specified).
 func (c *Config) CreateService() (*Service, error) {
-	return c.createService("")
+	return c.newService("")
 }
 
 // CreateServiceForDatabase creates a service connecting to the given database
@@ -50,10 +50,10 @@ func (c *Config) CreateServiceForDatabase(dbname string) (*Service, error) {
 	if dbname == "" {
 		return nil, errors.New("database name must not be empty")
 	}
-	return c.createService(dbname)
+	return c.newService(dbname)
 }
 
-func (c *Config) createService(dbOverride string) (*Service, error) {
+func (c *Config) newService(dbOverride string) (*Service, error) {
 	addrSecret, err := c.Address.Get()
 	if err != nil {
 		return nil, fmt.Errorf("getting address failed: %w", err)
