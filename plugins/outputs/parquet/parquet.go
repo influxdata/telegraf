@@ -453,7 +453,7 @@ func (p *Parquet) createWriter(name string, schema *arrow.Schema, now time.Time)
 	}
 	filename := fmt.Sprintf("%s-%s-%s.parquet", name, now.Format("20060102150405"), id)
 
-	f, err := p.root.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0640)
+	f, err := p.root.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0666)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to create file %q: %w", filename, err)
 	}
