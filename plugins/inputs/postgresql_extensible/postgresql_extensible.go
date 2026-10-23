@@ -105,6 +105,9 @@ type collection struct {
 	queries                []*query
 	timestamp              time.Time
 	connectionsPerDatabase int
+	// debug tells whether the connections of this collection are counted
+	// for the debug line at its end
+	debug bool
 	// closed sums the connections of the pools closed while the collection
 	// runs. A pool records its own count just before it goes away, so the
 	// debug line at the end can still include it.
@@ -278,6 +281,7 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 		queries:                queries,
 		timestamp:              timestamp,
 		connectionsPerDatabase: p.MaxConnectionsPerDatabase,
+		debug:                  p.Log.Level() >= telegraf.Debug,
 	}
 
 	// The semaphore is acquired before spawning the goroutine, so that a
@@ -298,7 +302,7 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 
 	// Report the connections of this collection before the deferred close of
 	// the idle ones runs
-	if p.Log.Level() >= telegraf.Debug {
+	if coll.debug {
 		used := coll.closed.Load() + p.openConnections()
 		var kept int64
 		if p.KeepIdleConnections {
@@ -408,7 +412,9 @@ func (p *Postgresql) gatherInDatabase(ctx context.Context, acc telegraf.Accumula
 
 	p.gatherDatabase(ctx, acc, service, datname, coll)
 
-	coll.closed.Add(int64(service.DB.Stats().OpenConnections))
+	if coll.debug {
+		coll.closed.Add(int64(service.DB.Stats().OpenConnections))
+	}
 	service.Stop()
 
 	return nil
