@@ -14,7 +14,7 @@ import (
 
 var m1 = metric.New("m1",
 	map[string]string{"foo": "bar"},
-	map[string]interface{}{
+	map[string]any{
 		"a": int64(1),
 		"b": int64(1),
 		"c": int64(1),
@@ -30,7 +30,7 @@ var m1 = metric.New("m1",
 )
 var m2 = metric.New("m1",
 	map[string]string{"foo": "bar"},
-	map[string]interface{}{
+	map[string]any{
 		"a":        int64(1),
 		"b":        int64(3),
 		"c":        int64(3),
@@ -69,7 +69,7 @@ func TestMinMaxWithPeriod(t *testing.T) {
 	minmax.Add(m2)
 	minmax.Push(&acc)
 
-	expectedFields := map[string]interface{}{
+	expectedFields := map[string]any{
 		"a_max": int64(1),
 		"a_min": int64(1),
 		"b_max": int64(3),
@@ -109,7 +109,7 @@ func TestMinMaxDifferentPeriods(t *testing.T) {
 	require.NoError(t, err)
 	minmax.Add(m1)
 	minmax.Push(&acc)
-	expectedFields := map[string]interface{}{
+	expectedFields := map[string]any{
 		"a_max": int64(1),
 		"a_min": int64(1),
 		"b_max": int64(1),
@@ -140,7 +140,7 @@ func TestMinMaxDifferentPeriods(t *testing.T) {
 	minmax.Reset()
 	minmax.Add(m2)
 	minmax.Push(&acc)
-	expectedFields = map[string]interface{}{
+	expectedFields = map[string]any{
 		"a_max": int64(1),
 		"a_min": int64(1),
 		"b_max": int64(3),
@@ -186,7 +186,7 @@ func TestSimple(t *testing.T) {
 			map[string]string{
 				"cpu": "cpu0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"time_idle": 42,
 			},
 			time.Unix(0, 0),
@@ -200,7 +200,7 @@ func TestSimple(t *testing.T) {
 			map[string]string{
 				"cpu": "cpu0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"time_guest": 42,
 			},
 			time.Unix(0, 0),
@@ -217,7 +217,7 @@ func TestSimple(t *testing.T) {
 			map[string]string{
 				"cpu": "cpu0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"time_idle":  42,
 				"time_guest": 42,
 			},
@@ -239,7 +239,7 @@ func TestNanosecondPrecision(t *testing.T) {
 			map[string]string{
 				"cpu": "cpu0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"time_idle": 42,
 			},
 			time.Unix(0, 1),
@@ -253,7 +253,7 @@ func TestNanosecondPrecision(t *testing.T) {
 			map[string]string{
 				"cpu": "cpu0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"time_guest": 42,
 			},
 			time.Unix(0, 1),
@@ -271,7 +271,7 @@ func TestNanosecondPrecision(t *testing.T) {
 			map[string]string{
 				"cpu": "cpu0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"time_idle":  42,
 				"time_guest": 42,
 			},
@@ -293,7 +293,7 @@ func TestReset(t *testing.T) {
 			map[string]string{
 				"cpu": "cpu0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"time_idle": 42,
 			},
 			time.Unix(0, 0),
@@ -312,7 +312,7 @@ func TestReset(t *testing.T) {
 			map[string]string{
 				"cpu": "cpu0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"time_guest": 42,
 			},
 			time.Unix(0, 0),
@@ -328,7 +328,7 @@ func TestReset(t *testing.T) {
 			map[string]string{
 				"cpu": "cpu0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"time_idle": 42,
 			},
 			time.Unix(0, 0),
@@ -338,7 +338,7 @@ func TestReset(t *testing.T) {
 			map[string]string{
 				"cpu": "cpu0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"time_guest": 42,
 			},
 			time.Unix(0, 0),
@@ -372,7 +372,7 @@ def reset():
 			map[string]string{
 				"cpu": "cpu0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"time_idle": 42,
 			},
 			time.Unix(0, 0),
@@ -385,7 +385,7 @@ def reset():
 			map[string]string{
 				"cpu": "cpu2",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"time_idle": 31,
 			},
 			time.Unix(0, 0),
@@ -393,7 +393,7 @@ def reset():
 	)
 	require.NoError(t, err)
 	plugin.Push(&acc)
-	expectedFields := map[string]interface{}{
+	expectedFields := map[string]any{
 		"time_idle": int64(31),
 	}
 	expectedTags := map[string]string{
@@ -405,11 +405,9 @@ def reset():
 
 func newStarlarkFromSource(source string) (*Starlark, error) {
 	plugin := &Starlark{
-		Common: common.Common{
-			StarlarkLoadFunc: common.LoadFunc,
-			Log:              testutil.Logger{},
-			Source:           source,
-		},
+		StarlarkLoadFunc: common.LoadFunc,
+		Log:              testutil.Logger{},
+		Source:           source,
 	}
 	err := plugin.Init()
 	if err != nil {
@@ -420,11 +418,9 @@ func newStarlarkFromSource(source string) (*Starlark, error) {
 
 func newStarlarkFromScript(script string) (*Starlark, error) {
 	plugin := &Starlark{
-		Common: common.Common{
-			StarlarkLoadFunc: common.LoadFunc,
-			Log:              testutil.Logger{},
-			Script:           script,
-		},
+		StarlarkLoadFunc: common.LoadFunc,
+		Log:              testutil.Logger{},
+		Script:           script,
 	}
 	err := plugin.Init()
 	if err != nil {

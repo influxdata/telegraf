@@ -27,7 +27,7 @@ func TestDaemonSet(t *testing.T) {
 		{
 			name: "no daemon set",
 			handler: &mockHandler{
-				responseMap: map[string]interface{}{
+				responseMap: map[string]any{
 					"/daemonsets/": &apps.DaemonSetList{},
 				},
 			},
@@ -36,7 +36,7 @@ func TestDaemonSet(t *testing.T) {
 		{
 			name: "collect daemonsets",
 			handler: &mockHandler{
-				responseMap: map[string]interface{}{
+				responseMap: map[string]any{
 					"/daemonsets/": &apps.DaemonSetList{
 						Items: []apps.DaemonSet{
 							{
@@ -49,16 +49,14 @@ func TestDaemonSet(t *testing.T) {
 									NumberUnavailable:      1,
 									UpdatedNumberScheduled: 2,
 								},
-								ObjectMeta: meta.ObjectMeta{
-									Generation: 11221,
-									Namespace:  "ns1",
-									Name:       "daemon1",
-									Labels: map[string]string{
-										"lab1": "v1",
-										"lab2": "v2",
-									},
-									CreationTimestamp: meta.Time{Time: now},
+								Generation: 11221,
+								Namespace:  "ns1",
+								Name:       "daemon1",
+								Labels: map[string]string{
+									"lab1": "v1",
+									"lab2": "v2",
 								},
+								CreationTimestamp: meta.Time{Time: now},
 								Spec: apps.DaemonSetSpec{
 									Selector: &meta.LabelSelector{
 										MatchLabels: map[string]string{
@@ -81,7 +79,7 @@ func TestDaemonSet(t *testing.T) {
 						"selector_select1": "s1",
 						"selector_select2": "s2",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"generation":               int64(11221),
 						"current_number_scheduled": int32(3),
 						"desired_number_scheduled": int32(5),
@@ -127,7 +125,7 @@ func TestDaemonSet(t *testing.T) {
 func TestDaemonSetSelectorFilter(t *testing.T) {
 	cli := &client{}
 
-	responseMap := map[string]interface{}{
+	responseMap := map[string]any{
 		"/daemonsets/": &apps.DaemonSetList{
 			Items: []apps.DaemonSet{
 				{
@@ -140,16 +138,14 @@ func TestDaemonSetSelectorFilter(t *testing.T) {
 						NumberUnavailable:      1,
 						UpdatedNumberScheduled: 2,
 					},
-					ObjectMeta: meta.ObjectMeta{
-						Generation: 11221,
-						Namespace:  "ns1",
-						Name:       "daemon1",
-						Labels: map[string]string{
-							"lab1": "v1",
-							"lab2": "v2",
-						},
-						CreationTimestamp: meta.Time{Time: time.Now()},
+					Generation: 11221,
+					Namespace:  "ns1",
+					Name:       "daemon1",
+					Labels: map[string]string{
+						"lab1": "v1",
+						"lab2": "v2",
 					},
+					CreationTimestamp: meta.Time{Time: time.Now()},
 					Spec: apps.DaemonSetSpec{
 						Selector: &meta.LabelSelector{
 							MatchLabels: map[string]string{

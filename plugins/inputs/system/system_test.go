@@ -107,7 +107,7 @@ func TestGather(t *testing.T) {
 				metric.New(
 					"system",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"load1":           float64(0),
 						"load5":           float64(0),
 						"load15":          float64(0),
@@ -122,14 +122,14 @@ func TestGather(t *testing.T) {
 				metric.New(
 					"system",
 					map[string]string{},
-					map[string]interface{}{"uptime": uint64(0)},
+					map[string]any{"uptime": uint64(0)},
 					time.Unix(0, 0),
 					telegraf.Counter,
 				),
 				metric.New(
 					"system",
 					map[string]string{},
-					map[string]interface{}{"uptime_format": string("")},
+					map[string]any{"uptime_format": string("")},
 					time.Unix(0, 0),
 					telegraf.Untyped,
 				),
@@ -142,7 +142,7 @@ func TestGather(t *testing.T) {
 				metric.New(
 					"system",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"n_cpus":          0,
 						"n_physical_cpus": 0,
 					},
@@ -159,7 +159,7 @@ func TestGather(t *testing.T) {
 				metric.New(
 					"system",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"load1":           float64(0),
 						"load5":           float64(0),
 						"load15":          float64(0),
@@ -182,7 +182,7 @@ func TestGather(t *testing.T) {
 				metric.New(
 					"system",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"load1":           float64(0),
 						"load5":           float64(0),
 						"load15":          float64(0),
@@ -197,14 +197,14 @@ func TestGather(t *testing.T) {
 				metric.New(
 					"system",
 					map[string]string{},
-					map[string]interface{}{"uptime": uint64(0)},
+					map[string]any{"uptime": uint64(0)},
 					time.Unix(0, 0),
 					telegraf.Counter,
 				),
 				metric.New(
 					"system",
 					map[string]string{},
-					map[string]interface{}{"uptime_format": string("")},
+					map[string]any{"uptime_format": string("")},
 					time.Unix(0, 0),
 					telegraf.Untyped,
 				),
@@ -218,7 +218,7 @@ func TestGather(t *testing.T) {
 				metric.New(
 					"system",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"n_users":        0,
 						"n_unique_users": 0,
 					},
@@ -272,7 +272,7 @@ func TestGatherOSValues(t *testing.T) {
 		metric.New(
 			"system",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"os":               "linux",
 				"platform":         "telegraftest",
 				"platform_family":  "",
@@ -315,7 +315,7 @@ func TestGatherDMIValues(t *testing.T) {
 	expected := metric.New(
 		"system",
 		nil,
-		map[string]interface{}{
+		map[string]any{
 			"bios_vendor":       "Telegraf BIOS, Inc.",
 			"bios_version":      "1.2.3",
 			"bios_date":         "01/01/2026",

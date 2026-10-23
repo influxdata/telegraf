@@ -63,7 +63,7 @@ func (p *Parser) Parse(b []byte) ([]telegraf.Metric, error) {
 			}
 			break
 		}
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		tags := make(map[string]string)
 		for decoder.ScanKeyval() {
 			if len(decoder.Value()) == 0 {

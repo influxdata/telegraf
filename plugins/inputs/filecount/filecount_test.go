@@ -162,7 +162,7 @@ func TestDirectoryWithTrailingSlash(t *testing.T) {
 			map[string]string{
 				"directory": getTestdataDir(),
 			},
-			map[string]interface{}{
+			map[string]any{
 				"count":                 9,
 				"size_bytes":            5096,
 				"newest_file_timestamp": time.Unix(1450117505, 0).UnixNano(),

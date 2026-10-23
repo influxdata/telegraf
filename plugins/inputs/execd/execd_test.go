@@ -122,6 +122,28 @@ func TestParsesLinesContainingNewline(t *testing.T) {
 	}
 }
 
+func TestParsesInfluxWithTimestampPrecision(t *testing.T) {
+	parser := models.NewRunningParser(&influx.Parser{InfluxTimestampPrecision: config.Duration(time.Second)}, &models.ParserConfig{})
+	require.NoError(t, parser.Init())
+
+	metrics := make(chan telegraf.Metric, 10)
+	defer close(metrics)
+	acc := agent.NewAccumulator(&TestMetricMaker{}, metrics)
+
+	e := &Execd{
+		RestartDelay: config.Duration(5 * time.Second),
+		Signal:       "STDIN",
+		acc:          acc,
+		Log:          testutil.Logger{},
+	}
+	e.SetParser(parser)
+
+	e.outputReader(strings.NewReader("my_series,my_tag_key=my_tag_value my_field=987i 12345"))
+
+	m := readChanWithTimeout(t, metrics, 1*time.Second)
+	require.Equal(t, time.Unix(12345, 0), m.Time())
+}
+
 func TestParsesPrometheus(t *testing.T) {
 	parser := models.NewRunningParser(&prometheus.Parser{}, &models.ParserConfig{})
 	require.NoError(t, parser.Init())
@@ -147,7 +169,7 @@ test{handler="execd",quantile="0.5"} 42.0
 		metric.New(
 			"prometheus",
 			map[string]string{"handler": "execd", "quantile": "0.5"},
-			map[string]interface{}{"test": float64(42.0)},
+			map[string]any{"test": float64(42.0)},
 			time.Unix(0, 0),
 		),
 	}
@@ -252,7 +274,7 @@ func TestLoggingNoPrefix(t *testing.T) {
 
 	// Check the metric
 	expected := []telegraf.Metric{
-		metric.New("test", map[string]string{}, map[string]interface{}{"value": int64(0)}, time.Unix(0, 0)),
+		metric.New("test", map[string]string{}, map[string]any{"value": int64(0)}, time.Unix(0, 0)),
 	}
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 
@@ -324,7 +346,7 @@ func TestLoggingWithPrefix(t *testing.T) {
 
 			// Check the metric
 			expected := []telegraf.Metric{
-				metric.New("test", map[string]string{}, map[string]interface{}{"value": int64(0)}, time.Unix(0, 0)),
+				metric.New("test", map[string]string{}, map[string]any{"value": int64(0)}, time.Unix(0, 0)),
 			}
 			testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 
@@ -423,7 +445,7 @@ func runCounterProgram() error {
 	for scanner.Scan() {
 		m := metric.New(envMetricName,
 			map[string]string{},
-			map[string]interface{}{"count": i},
+			map[string]any{"count": i},
 			time.Now(),
 		)
 		i++

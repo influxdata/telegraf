@@ -96,13 +96,13 @@ func collectTotalReadWrite(process) (r, w uint64, err error) {
 	return 0, 0, errors.ErrUnsupported
 }
 
-func statsTCP(conns []gopsnet.ConnectionStat, _ uint8) ([]map[string]interface{}, error) {
+func statsTCP(conns []gopsnet.ConnectionStat, _ uint8) ([]map[string]any, error) {
 	if len(conns) == 0 {
 		return nil, nil
 	}
 
 	// Filter the responses via the inodes belonging to the process
-	fieldslist := make([]map[string]interface{}, 0, len(conns))
+	fieldslist := make([]map[string]any, 0, len(conns))
 	for _, c := range conns {
 		var proto string
 		switch c.Family {
@@ -114,7 +114,7 @@ func statsTCP(conns []gopsnet.ConnectionStat, _ uint8) ([]map[string]interface{}
 			continue
 		}
 
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"protocol":  proto,
 			"state":     c.Status,
 			"pid":       c.Pid,
@@ -129,13 +129,13 @@ func statsTCP(conns []gopsnet.ConnectionStat, _ uint8) ([]map[string]interface{}
 	return fieldslist, nil
 }
 
-func statsUDP(conns []gopsnet.ConnectionStat, _ uint8) ([]map[string]interface{}, error) {
+func statsUDP(conns []gopsnet.ConnectionStat, _ uint8) ([]map[string]any, error) {
 	if len(conns) == 0 {
 		return nil, nil
 	}
 
 	// Filter the responses via the inodes belonging to the process
-	fieldslist := make([]map[string]interface{}, 0, len(conns))
+	fieldslist := make([]map[string]any, 0, len(conns))
 	for _, c := range conns {
 		var proto string
 		switch c.Family {
@@ -147,7 +147,7 @@ func statsUDP(conns []gopsnet.ConnectionStat, _ uint8) ([]map[string]interface{}
 			continue
 		}
 
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"protocol":  proto,
 			"state":     c.Status,
 			"pid":       c.Pid,
@@ -162,6 +162,6 @@ func statsUDP(conns []gopsnet.ConnectionStat, _ uint8) ([]map[string]interface{}
 	return fieldslist, nil
 }
 
-func statsUnix([]gopsnet.ConnectionStat) ([]map[string]interface{}, error) {
+func statsUnix([]gopsnet.ConnectionStat) ([]map[string]any, error) {
 	return nil, nil
 }

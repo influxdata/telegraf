@@ -205,7 +205,7 @@ func (c *CouchDB) fetchAndInsertData(accumulator telegraf.Accumulator, host stri
 		httpdStatusCodesStatus500 = stats.Couchdb.HttpdStatusCodes.Status500
 	}
 
-	fields := make(map[string]interface{}, 31)
+	fields := make(map[string]any, 31)
 	// CouchDB meta stats:
 	generateFields(fields, "couchdb_auth_cache_misses", stats.Couchdb.AuthCacheMisses)
 	generateFields(fields, "couchdb_database_writes", stats.Couchdb.DatabaseWrites)
@@ -252,7 +252,7 @@ func (c *CouchDB) fetchAndInsertData(accumulator telegraf.Accumulator, host stri
 	return nil
 }
 
-func generateFields(fields map[string]interface{}, prefix string, obj metaData) {
+func generateFields(fields map[string]any, prefix string, obj metaData) {
 	if obj.Value != nil {
 		fields[prefix+"_value"] = *obj.Value
 	}

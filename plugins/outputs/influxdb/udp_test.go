@@ -29,7 +29,7 @@ func getMetric() telegraf.Metric {
 	m := metric.New(
 		"cpu",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"value": 42.0,
 		},
 		time.Unix(0, 0),
@@ -210,7 +210,7 @@ func TestUDP_ErrorLogging(t *testing.T) {
 						map[string]string{
 							"host": "example.org",
 						},
-						map[string]interface{}{},
+						map[string]any{},
 						time.Unix(0, 0),
 					)
 					return m
@@ -247,9 +247,7 @@ func TestUDP_WriteWithRealConn(t *testing.T) {
 
 	buf := make([]byte, 200)
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		var total int
 		for range metrics {
 			n, _, err := conn.ReadFrom(buf[total:])
@@ -259,7 +257,7 @@ func TestUDP_WriteWithRealConn(t *testing.T) {
 			total += n
 		}
 		buf = buf[:total]
-	}()
+	})
 
 	addr := conn.LocalAddr()
 	u, err := url.Parse(fmt.Sprintf("%s://%s", addr.Network(), addr))

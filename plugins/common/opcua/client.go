@@ -7,6 +7,7 @@ import (
 	"log" //nolint:depguard // just for debug
 	"net/url"
 	"os"
+	"slices"
 	"strconv"
 	"time"
 
@@ -308,12 +309,7 @@ func (o *OpcUAClient) setupWorkarounds() error {
 }
 
 func (o *OpcUAClient) StatusCodeOK(code ua.StatusCode) bool {
-	for _, val := range o.codes {
-		if val == code {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(o.codes, code)
 }
 
 // Connect to an OPC UA device

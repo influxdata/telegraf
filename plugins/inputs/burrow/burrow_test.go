@@ -77,7 +77,7 @@ func TestBurrowTopic(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	require.NoError(t, plugin.Gather(acc))
 
-	fields := []map[string]interface{}{
+	fields := []map[string]any{
 		// topicA
 		{"offset": int64(459178195)},
 		{"offset": int64(459178022)},
@@ -92,7 +92,7 @@ func TestBurrowTopic(t *testing.T) {
 
 	require.Empty(t, acc.Errors)
 	require.True(t, acc.HasMeasurement("burrow_topic"))
-	for i := 0; i < len(fields); i++ {
+	for i := range fields {
 		acc.AssertContainsTaggedFields(t, "burrow_topic", fields[i], tags[i])
 	}
 }
@@ -108,7 +108,7 @@ func TestBurrowPartition(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	require.NoError(t, plugin.Gather(acc))
 
-	fields := []map[string]interface{}{
+	fields := []map[string]any{
 		{
 			"status":      "OK",
 			"status_code": 1,
@@ -140,7 +140,7 @@ func TestBurrowPartition(t *testing.T) {
 	require.Empty(t, acc.Errors)
 	require.True(t, acc.HasMeasurement("burrow_partition"))
 
-	for i := 0; i < len(fields); i++ {
+	for i := range fields {
 		acc.AssertContainsTaggedFields(t, "burrow_partition", fields[i], tags[i])
 	}
 }
@@ -156,7 +156,7 @@ func TestBurrowGroup(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	require.NoError(t, plugin.Gather(acc))
 
-	fields := []map[string]interface{}{
+	fields := []map[string]any{
 		{
 			"status":          "OK",
 			"status_code":     1,
@@ -175,7 +175,7 @@ func TestBurrowGroup(t *testing.T) {
 	require.Empty(t, acc.Errors)
 	require.True(t, acc.HasMeasurement("burrow_group"))
 
-	for i := 0; i < len(fields); i++ {
+	for i := range fields {
 		acc.AssertContainsTaggedFields(t, "burrow_group", fields[i], tags[i])
 	}
 }
@@ -206,7 +206,7 @@ func TestMultipleRuns(t *testing.T) {
 	plugin := &Burrow{
 		Servers: []string{s.URL},
 	}
-	for i := 0; i < 4; i++ {
+	for range 4 {
 		acc := &testutil.Accumulator{}
 		require.NoError(t, plugin.Gather(acc))
 

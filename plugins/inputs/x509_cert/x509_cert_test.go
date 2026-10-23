@@ -601,10 +601,8 @@ func TestClassification(t *testing.T) {
 	certURI := "file://" + filepath.Join(tmpDir, "cert.pem")
 	plugin := &X509Cert{
 		Sources: []string{certURI},
-		ClientConfig: common_tls.ClientConfig{
-			TLSCA: filepath.Join(tmpDir, "ca.pem"),
-		},
-		Log: testutil.Logger{},
+		TLSCA:   filepath.Join(tmpDir, "ca.pem"),
+		Log:     testutil.Logger{},
 	}
 	require.NoError(t, plugin.Init())
 
@@ -630,7 +628,7 @@ func TestClassification(t *testing.T) {
 				"type":                 "leaf",
 				"verification":         "valid",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"age":               int64(0),
 				"expiry":            int64(86399),
 				"startdate":         start.Unix(),
@@ -657,7 +655,7 @@ func TestClassification(t *testing.T) {
 				"type":                 "intermediate",
 				"verification":         "valid",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"age":               int64(0),
 				"expiry":            int64(86399),
 				"startdate":         start.Unix(),
@@ -684,7 +682,7 @@ func TestClassification(t *testing.T) {
 				"type":                 "root",
 				"verification":         "valid",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"age":               int64(0),
 				"expiry":            int64(86399),
 				"startdate":         start.Unix(),
@@ -736,7 +734,7 @@ func TestPublicKeyLength(t *testing.T) {
 						"type":                 "root",
 						"verification":         "invalid",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"age":                int64(0),
 						"expiry":             int64(86399),
 						"startdate":          start.Unix(),
@@ -770,7 +768,7 @@ func TestPublicKeyLength(t *testing.T) {
 						"type":                 "root",
 						"verification":         "invalid",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"age":                int64(0),
 						"expiry":             int64(86399),
 						"startdate":          start.Unix(),
@@ -804,7 +802,7 @@ func TestPublicKeyLength(t *testing.T) {
 						"type":                 "root",
 						"verification":         "invalid",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"age":                int64(0),
 						"expiry":             int64(86399),
 						"startdate":          start.Unix(),
@@ -838,7 +836,7 @@ func TestPublicKeyLength(t *testing.T) {
 						"type":                 "root",
 						"verification":         "invalid",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"age":                int64(0),
 						"expiry":             int64(86399),
 						"startdate":          start.Unix(),
@@ -871,7 +869,7 @@ func TestPublicKeyLength(t *testing.T) {
 						"type":                 "root",
 						"verification":         "invalid",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"age":                int64(0),
 						"expiry":             int64(86399),
 						"startdate":          start.Unix(),
@@ -895,7 +893,7 @@ func TestPublicKeyLength(t *testing.T) {
 			// Generate the (unsigned) certificate
 			root := t.TempDir()
 
-			var priv, pub interface{}
+			var priv, pub any
 			switch tt.algorithm {
 			case "rsa":
 				key, err := rsa.GenerateKey(rand.Reader, tt.length)

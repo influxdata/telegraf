@@ -66,7 +66,7 @@ func (n *Nomad) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (n *Nomad) loadJSON(url string, v interface{}) error {
+func (n *Nomad) loadJSON(url string, v any) error {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return err
@@ -100,7 +100,7 @@ func buildNomadMetrics(acc telegraf.Accumulator, summaryMetrics *metricsSummary)
 	for _, counters := range summaryMetrics.Counters {
 		tags := counters.DisplayLabels
 
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"count": counters.Count,
 			"rate":  counters.Rate,
 			"sum":   counters.Sum,
@@ -115,7 +115,7 @@ func buildNomadMetrics(acc telegraf.Accumulator, summaryMetrics *metricsSummary)
 	for _, gauges := range summaryMetrics.Gauges {
 		tags := gauges.DisplayLabels
 
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"value": gauges.Value,
 		}
 
@@ -125,7 +125,7 @@ func buildNomadMetrics(acc telegraf.Accumulator, summaryMetrics *metricsSummary)
 	for _, points := range summaryMetrics.Points {
 		tags := make(map[string]string)
 
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"value": points.Points,
 		}
 
@@ -135,7 +135,7 @@ func buildNomadMetrics(acc telegraf.Accumulator, summaryMetrics *metricsSummary)
 	for _, samples := range summaryMetrics.Samples {
 		tags := samples.DisplayLabels
 
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"count":  samples.Count,
 			"rate":   samples.Rate,
 			"sum":    samples.Sum,

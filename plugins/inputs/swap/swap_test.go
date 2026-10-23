@@ -30,7 +30,7 @@ func TestSwapStats(t *testing.T) {
 	err = (&Swap{&mps}).Gather(&acc)
 	require.NoError(t, err)
 
-	swapfields := map[string]interface{}{
+	swapfields := map[string]any{
 		"total":        uint64(8123),
 		"used":         uint64(1232),
 		"used_percent": float64(12.2),

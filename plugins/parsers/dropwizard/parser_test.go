@@ -57,7 +57,7 @@ func TestParseValidCounterJSON(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, metrics, 1)
 	require.Equal(t, "measurement", metrics[0].Name())
-	require.Equal(t, map[string]interface{}{
+	require.Equal(t, map[string]any{
 		"count": float64(1),
 	}, metrics[0].Fields())
 	require.Equal(t, map[string]string{"metric_type": "counter"}, metrics[0].Tags())
@@ -101,7 +101,7 @@ func TestParseValidEmbeddedCounterJSON(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, metrics, 1)
 	require.Equal(t, "measurement", metrics[0].Name())
-	require.Equal(t, map[string]interface{}{
+	require.Equal(t, map[string]any{
 		"count": float64(1),
 	}, metrics[0].Fields())
 	require.Equal(t, map[string]string{
@@ -153,7 +153,7 @@ func TestParseValidMeterJSON1(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, metrics, 1)
 	require.Equal(t, "measurement1", metrics[0].Name())
-	require.Equal(t, map[string]interface{}{
+	require.Equal(t, map[string]any{
 		"count":     float64(1),
 		"m15_rate":  float64(1),
 		"m1_rate":   float64(1),
@@ -194,7 +194,7 @@ func TestParseValidMeterJSON2(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, metrics, 1)
 	require.Equal(t, "measurement2", metrics[0].Name())
-	require.Equal(t, map[string]interface{}{
+	require.Equal(t, map[string]any{
 		"count":     float64(2),
 		"m15_rate":  float64(2),
 		"m1_rate":   float64(2),
@@ -229,7 +229,7 @@ func TestParseValidGaugeJSON(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, metrics, 1)
 	require.Equal(t, "measurement", metrics[0].Name())
-	require.Equal(t, map[string]interface{}{
+	require.Equal(t, map[string]any{
 		"value": true,
 	}, metrics[0].Fields())
 	require.Equal(t, map[string]string{"metric_type": "gauge"}, metrics[0].Tags())
@@ -269,7 +269,7 @@ func TestParseValidHistogramJSON(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, metrics, 1)
 	require.Equal(t, "measurement", metrics[0].Name())
-	require.Equal(t, map[string]interface{}{
+	require.Equal(t, map[string]any{
 		"count":  float64(1),
 		"max":    float64(2),
 		"mean":   float64(3),
@@ -325,7 +325,7 @@ func TestParseValidTimerJSON(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, metrics, 1)
 	require.Equal(t, "measurement", metrics[0].Name())
-	require.Equal(t, map[string]interface{}{
+	require.Equal(t, map[string]any{
 		"count":          float64(1),
 		"max":            float64(2),
 		"mean":           float64(3),
@@ -460,7 +460,7 @@ func TestParseSampleTemplateJSON(t *testing.T) {
 
 	jenkinsMetric := search(metrics, "jenkins", nil, "")
 	require.NotNil(t, jenkinsMetric, "the metrics should contain a jenkins measurement")
-	require.Equal(t, map[string]interface{}{
+	require.Equal(t, map[string]any{
 		"duration_count":  float64(1),
 		"duration_max":    float64(2),
 		"duration_mean":   float64(3),
@@ -477,14 +477,14 @@ func TestParseSampleTemplateJSON(t *testing.T) {
 
 	vmMemoryHeapCommitted := search(metrics, "vm_memory", map[string]string{"pool": "heap"}, "committed_value")
 	require.NotNil(t, vmMemoryHeapCommitted)
-	require.Equal(t, map[string]interface{}{
+	require.Equal(t, map[string]any{
 		"committed_value": float64(1),
 	}, vmMemoryHeapCommitted.Fields())
 	require.Equal(t, map[string]string{"metric_type": "gauge", "pool": "heap"}, vmMemoryHeapCommitted.Tags())
 
 	vmMemoryNonHeapCommitted := search(metrics, "vm_memory", map[string]string{"pool": "non-heap"}, "committed_value")
 	require.NotNil(t, vmMemoryNonHeapCommitted)
-	require.Equal(t, map[string]interface{}{
+	require.Equal(t, map[string]any{
 		"committed_value": float64(6),
 	}, vmMemoryNonHeapCommitted.Fields())
 	require.Equal(t, map[string]string{"metric_type": "gauge", "pool": "non-heap"}, vmMemoryNonHeapCommitted.Tags())
@@ -529,7 +529,7 @@ func TestDropWizard(t *testing.T) {
 					map[string]string{
 						"metric_type": "counter",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 42.0,
 					},
 					time.Unix(0, 0),
@@ -545,7 +545,7 @@ func TestDropWizard(t *testing.T) {
 					map[string]string{
 						"metric_type": "counter",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 42.0,
 					},
 					time.Unix(0, 0),
@@ -566,7 +566,7 @@ func TestDropWizard(t *testing.T) {
 					map[string]string{
 						"metric_type": "counter",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": 42.0,
 					},
 					time.Unix(0, 0),
@@ -616,7 +616,7 @@ func TestBenchmarkData(t *testing.T) {
 				"tags_platform": "python",
 				"tags_sdkver":   "3.11.5",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 5.0,
 			},
 			time.Unix(0, 0),
@@ -629,7 +629,7 @@ func TestBenchmarkData(t *testing.T) {
 				"tags_platform": "python",
 				"tags_sdkver":   "3.11.4",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 4.0,
 			},
 			time.Unix(0, 0),

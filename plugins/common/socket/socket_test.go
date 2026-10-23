@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mdlayher/vsock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -35,19 +36,19 @@ func TestListenData(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
-			map[string]interface{}{"v": int64(1)},
+			map[string]any{"v": int64(1)},
 			time.Unix(0, 123456789),
 		),
 		metric.New(
 			"test",
 			map[string]string{"foo": "baz"},
-			map[string]interface{}{"v": int64(2)},
+			map[string]any{"v": int64(2)},
 			time.Unix(0, 123456790),
 		),
 		metric.New(
 			"test",
 			map[string]string{"foo": "zab"},
-			map[string]interface{}{"v": int64(3)},
+			map[string]any{"v": int64(3)},
 			time.Unix(0, 123456791),
 		),
 	}
@@ -237,19 +238,19 @@ func TestListenConnection(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
-			map[string]interface{}{"v": int64(1)},
+			map[string]any{"v": int64(1)},
 			time.Unix(0, 123456789),
 		),
 		metric.New(
 			"test",
 			map[string]string{"foo": "baz"},
-			map[string]interface{}{"v": int64(2)},
+			map[string]any{"v": int64(2)},
 			time.Unix(0, 123456790),
 		),
 		metric.New(
 			"test",
 			map[string]string{"foo": "zab"},
-			map[string]interface{}{"v": int64(3)},
+			map[string]any{"v": int64(3)},
 			time.Unix(0, 123456791),
 		),
 	}
@@ -642,19 +643,19 @@ func TestNoSplitter(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
-			map[string]interface{}{"v": int64(1)},
+			map[string]any{"v": int64(1)},
 			time.Unix(0, 123456789),
 		),
 		metric.New(
 			"test",
 			map[string]string{"foo": "baz"},
-			map[string]interface{}{"v": int64(2)},
+			map[string]any{"v": int64(2)},
 			time.Unix(0, 123456790),
 		),
 		metric.New(
 			"test",
 			map[string]string{"foo": "zab"},
-			map[string]interface{}{"v": int64(3)},
+			map[string]any{"v": int64(3)},
 			time.Unix(0, 123456791),
 		),
 	}
@@ -793,15 +794,13 @@ func TestTLSMemLeak(t *testing.T) {
 		var errs []error
 		var wg sync.WaitGroup
 		for count := 1; count < connections; count++ {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				if err := write(); err != nil {
 					mu.Lock()
 					errs = append(errs, err)
 					mu.Unlock()
 				}
-			}()
+			})
 			if count%maxConcurrency == 0 {
 				wg.Wait()
 				mu.Lock()
@@ -869,9 +868,11 @@ func TestNewSocketServiceAddressParsing(t *testing.T) {
 		{name: "udp all addresses no interface name", address: "udp://:8094", url: "udp://:8094"},
 		{name: "udp4 all interfaces no interface name", address: "udp4://:8094", url: "udp4://:8094"},
 		{name: "udp6 all interfaces no interface name", address: "udp6://:8094", url: "udp6://:8094"},
-		{name: "vsock with port", address: "vsock://cid:80", url: "vsock://cid:80"},
+		{name: "vsock with port", address: "vsock://3:80", url: "vsock://3:80"},
 		{name: "unix no interface name", address: "unix:///tmp/telegraf.sock", url: "unix:///tmp/telegraf.sock"},
 		{name: "unixgram no interface name", address: "unixgram:///tmp/telegraf.sock", url: "unixgram:///tmp/telegraf.sock"},
+		{name: "unix with encoded path", address: "unix:///tmp/my%20path.sock", url: "unix:///tmp/my%20path.sock"},
+		{name: "unixgram with encoded path", address: "unixgram:///tmp/my%20path.sock", url: "unixgram:///tmp/my%20path.sock"},
 		{name: "udp6 multicast no interface name", address: "udp6://[ff02::1]:8094", url: "udp6://[ff02::1]:8094"},
 		{name: "udp6 multicast with zone id", address: "udp6://[ff02::1%eth0]:8094", interfaceName: "eth0", url: "udp6://[ff02::1]:8094"},
 		{name: "udp6 ipv4 mapped host", address: "udp6://[::ffff:239.0.0.1]:8094%eth0",
@@ -881,6 +882,10 @@ func TestNewSocketServiceAddressParsing(t *testing.T) {
 		{name: "tcp6 ipv6 with interface name", address: "tcp6://[2001:db8::1]:8094%br-interface",
 			interfaceName: "br-interface", url: "tcp6://[2001:db8::1]:8094"},
 		{name: "tcp all addresses with interface name with period", address: "tcp://:8094%dev.name", interfaceName: "dev.name", url: "tcp://:8094"},
+		{name: "udp4 multicast with interface name with brackets", address: "udp4://239.0.0.1:40000%Ethernet [2]",
+			interfaceName: "Ethernet [2]", url: "udp4://239.0.0.1:40000"},
+		{name: "udp4 multicast with interface name with spaces", address: "udp4://239.0.0.1:40000%vEthernet (Default Switch)",
+			interfaceName: "vEthernet (Default Switch)", url: "udp4://239.0.0.1:40000"},
 	}
 
 	for _, tt := range tests {
@@ -900,16 +905,80 @@ func TestInterfaceNameFromServiceAddressInvalid(t *testing.T) {
 		address string
 		err     string
 	}{
-		{name: "empty string not allowed", address: "tcp://localhost:400%", err: "is not valid"},
+		{name: "empty string not allowed", address: "tcp://localhost:400%",
+			err: `empty interface name in address "tcp://localhost:400%"`},
 		{name: "udp6 multicast with zone id and interface name", address: "udp6://[ff02::1%eth0]:8094%enp0",
-			err: "ipv6 zone id and interface name are mutually exclusive"},
+			err: `ipv6 zone id and interface name are mutually exclusive in address "udp6://[ff02::1%eth0]:8094%enp0"`},
+		{name: "udp6 multicast with empty zone id", address: "udp6://[ff02::1%]:8094",
+			err: `empty interface name in address "udp6://[ff02::1%]:8094"`},
+		{name: "udp6 multicast with empty zone id and interface name", address: "udp6://[ff02::1%]:8094%eth0",
+			err: `ipv6 zone id and interface name are mutually exclusive in address "udp6://[ff02::1%]:8094%eth0"`},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			name, err := interfaceNameFromServiceAddress(tt.address)
 			require.Empty(t, name)
-			require.ErrorContains(t, err, tt.err)
+			require.EqualError(t, err, tt.err)
+		})
+	}
+}
+
+func TestVsockAddressParsing(t *testing.T) {
+	cid, err := vsock.ContextID()
+	if err != nil {
+		t.Skipf("vsock not available on this host: %v", err)
+	}
+
+	var cfg Config
+	s, err := cfg.NewSocket(fmt.Sprintf("vsock://%d:8790", cid), nil, testutil.Logger{})
+	require.NoError(t, err)
+
+	l := newStreamListener(s.Config, nil, testutil.Logger{})
+	require.NoError(t, l.setupVsock(s.url))
+	defer l.listener.Close()
+
+	addr, ok := l.listener.Addr().(*vsock.Addr)
+	require.True(t, ok)
+	require.Equal(t, cid, addr.ContextID)
+	require.Equal(t, uint32(8790), addr.Port)
+}
+
+func TestVsockForeignContextID(t *testing.T) {
+	if _, err := vsock.ContextID(); err != nil {
+		t.Skipf("vsock not available on this host: %v", err)
+	}
+
+	// The highest context ID below the wildcard can never belong to this
+	// machine, so binding it has to fail instead of silently using our own.
+	var cfg Config
+	s, err := cfg.NewSocket("vsock://4294967294:8790", nil, testutil.Logger{})
+	require.NoError(t, err)
+
+	// The exact errno depends on the kernel, so only require that binding is
+	// refused and that the CID is named in the error.
+	l := newStreamListener(s.Config, nil, testutil.Logger{})
+	require.ErrorContains(t, l.setupVsock(s.url), "listening on CID 4294967294 failed")
+}
+
+func TestVsockAddressParsingInvalid(t *testing.T) {
+	tests := []struct {
+		name     string
+		address  string
+		expected string
+	}{
+		{name: "missing port", address: "vsock://2", expected: "port and/or CID number missing"},
+		{name: "invalid CID", address: "vsock://cid:8790", expected: "failed to parse CID cid"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var cfg Config
+			s, err := cfg.NewSocket(tt.address, nil, testutil.Logger{})
+			require.NoError(t, err)
+
+			l := newStreamListener(s.Config, nil, testutil.Logger{})
+			require.ErrorContains(t, l.setupVsock(s.url), tt.expected)
 		})
 	}
 }

@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math"
 	"net"
 	"net/url"
 	"os"
@@ -115,9 +114,7 @@ func (l *streamListener) setupUnix(u *url.URL, tlsCfg *tls.Config, socketMode st
 }
 
 func (l *streamListener) setupVsock(u *url.URL) error {
-	var err error
-
-	addrTuple := strings.SplitN(u.String(), ":", 2)
+	addrTuple := strings.SplitN(u.Host, ":", 2)
 
 	// Check address string for containing two tokens
 	if len(addrTuple) < 2 {
@@ -129,19 +126,16 @@ func (l *streamListener) setupVsock(u *url.URL) error {
 	if err != nil {
 		return fmt.Errorf("failed to parse CID %s: %w", addrTuple[0], err)
 	}
-	if (cid >= uint64(math.Pow(2, 32))-1) && (cid <= 0) {
-		return fmt.Errorf("value of CID %d is out of range", cid)
-	}
 	port, err := strconv.ParseUint(addrTuple[1], 10, 32)
 	if err != nil {
 		return fmt.Errorf("failed to parse port number %s: %w", addrTuple[1], err)
 	}
-	if (port >= uint64(math.Pow(2, 32))-1) && (port <= 0) {
-		return fmt.Errorf("port number %d is out of range", port)
-	}
 
-	l.listener, err = vsock.Listen(uint32(port), nil)
-	return err
+	l.listener, err = vsock.ListenContextID(uint32(cid), uint32(port), nil)
+	if err != nil {
+		return fmt.Errorf("listening on CID %d failed: %w", cid, err)
+	}
+	return nil
 }
 
 func (l *streamListener) setupConnection(conn net.Conn) error {
@@ -247,10 +241,7 @@ func (l *streamListener) listenData(onData CallbackData, onError CallbackError) 
 	ctx, cancel := context.WithCancel(context.Background())
 	l.cancel = cancel
 
-	l.wg.Add(1)
-	go func() {
-		defer l.wg.Done()
-
+	l.wg.Go(func() {
 		for {
 			conn, err := l.listener.Accept()
 			if err != nil {
@@ -283,7 +274,7 @@ func (l *streamListener) listenData(onData CallbackData, onError CallbackError) 
 			l.wg.Add(1)
 			go l.handleReaderConn(ctx, conn, onData, onError)
 		}
-	}()
+	})
 }
 
 func (l *streamListener) handleReaderConn(ctx context.Context, conn net.Conn, onData CallbackData, onError CallbackError) {
@@ -312,10 +303,7 @@ func (l *streamListener) listenConnection(onConnection CallbackConnection, onErr
 	ctx, cancel := context.WithCancel(context.Background())
 	l.cancel = cancel
 
-	l.wg.Add(1)
-	go func() {
-		defer l.wg.Done()
-
+	l.wg.Go(func() {
 		for {
 			conn, err := l.listener.Accept()
 			if err != nil {
@@ -357,7 +345,7 @@ func (l *streamListener) listenConnection(onConnection CallbackConnection, onErr
 				}
 			}(conn)
 		}
-	}()
+	})
 }
 
 func (l *streamListener) read(conn net.Conn, onData CallbackData) error {

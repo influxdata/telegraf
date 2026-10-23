@@ -182,7 +182,7 @@ func (px *Proxmox) gatherVMData(acc telegraf.Accumulator, rt resourceType) {
 		swapMetrics := getByteMetrics(currentVMStatus.TotalSwap, currentVMStatus.UsedSwap)
 		diskMetrics := getByteMetrics(currentVMStatus.TotalDisk, currentVMStatus.UsedDisk)
 
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"status":               currentVMStatus.Status,
 			"uptime":               jsonNumberToInt64(currentVMStatus.Uptime),
 			"cpuload":              jsonNumberToFloat64(currentVMStatus.CPULoad),

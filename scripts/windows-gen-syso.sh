@@ -17,7 +17,7 @@ if [ -n "${1+x}" ]; then
   fi
 fi
 
-goversioninfo "${FLAGS[@]}" \
+"$GOPATH/bin/goversioninfo" "${FLAGS[@]}" \
     -product-name "$NAME" \
     -product-version "$VERSION" \
     -skip-versioninfo \

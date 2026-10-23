@@ -1708,7 +1708,7 @@ func TestMachine(t *testing.T) {
 			fsm := influx.NewMachine(handler)
 			fsm.SetData(tt.input)
 
-			for i := 0; i < 20; i++ {
+			for range 20 {
 				err := fsm.Next()
 				if err != nil && errors.Is(err, influx.EOF) {
 					break
@@ -1786,7 +1786,7 @@ func TestMachinePosition(t *testing.T) {
 			fsm.SetData(tt.input)
 
 			// Parse until an error or eof
-			for i := 0; i < 20; i++ {
+			for range 20 {
 				err := fsm.Next()
 				if err != nil {
 					break
@@ -2136,7 +2136,7 @@ func TestHandlerErrorRecovery(t *testing.T) {
 			fsm := influx.NewMachine(tt.handler)
 			fsm.SetData(tt.input)
 
-			for i := 0; i < 20; i++ {
+			for range 20 {
 				err := fsm.Next()
 				if err != nil && errors.Is(err, influx.EOF) {
 					break
@@ -2175,7 +2175,7 @@ func TestStreamMachine(t *testing.T) {
 
 			// Parse only up to 20 metrics; to avoid any bugs where the parser
 			// isn't terminated.
-			for i := 0; i < 20; i++ {
+			for range 20 {
 				err := fsm.Next()
 				if err != nil && errors.Is(err, influx.EOF) {
 					break
@@ -2213,7 +2213,7 @@ func TestStreamMachinePosition(t *testing.T) {
 			fsm := influx.NewStreamMachine(tt.input, handler)
 
 			// Parse until an error or eof
-			for i := 0; i < 20; i++ {
+			for range 20 {
 				err := fsm.Next()
 				if err != nil {
 					break

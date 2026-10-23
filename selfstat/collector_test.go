@@ -47,7 +47,7 @@ func TestCollectorRegisterIncrSet(t *testing.T) {
 		metric.New(
 			"internal_test",
 			map[string]string{"global": "zoo", "test": "foo"},
-			map[string]interface{}{"field1": int64(10), "field2": int64(5)},
+			map[string]any{"field1": int64(10), "field2": int64(5)},
 			time.Unix(0, 0),
 		),
 	}
@@ -66,13 +66,13 @@ func TestCollectorRegisterIncrSet(t *testing.T) {
 		metric.New(
 			"internal_test",
 			map[string]string{"global": "zoo", "test": "foo"},
-			map[string]interface{}{"field1": int64(10), "field2": int64(5)},
+			map[string]any{"field1": int64(10), "field2": int64(5)},
 			time.Unix(0, 0),
 		),
 		metric.New(
 			"internal_test",
 			map[string]string{"global": "zoo", "test": "bar"},
-			map[string]interface{}{"field1": int64(42)},
+			map[string]any{"field1": int64(42)},
 			time.Unix(0, 0),
 		),
 	}
@@ -113,7 +113,7 @@ func TestCollectorRegisterTimingIncrSet(t *testing.T) {
 		metric.New(
 			"internal_test",
 			map[string]string{"global": "zoo", "test": "foo"},
-			map[string]interface{}{"field1_ns": int64(10), "field2_ns": int64(5)},
+			map[string]any{"field1_ns": int64(10), "field2_ns": int64(5)},
 			time.Unix(0, 0),
 		),
 	}
@@ -132,13 +132,13 @@ func TestCollectorRegisterTimingIncrSet(t *testing.T) {
 		metric.New(
 			"internal_test",
 			map[string]string{"global": "zoo", "test": "foo"},
-			map[string]interface{}{"field1_ns": int64(10), "field2_ns": int64(5)},
+			map[string]any{"field1_ns": int64(10), "field2_ns": int64(5)},
 			time.Unix(0, 0),
 		),
 		metric.New(
 			"internal_test",
 			map[string]string{"global": "zoo", "test": "bar"},
-			map[string]interface{}{"field1_ns": int64(42)},
+			map[string]any{"field1_ns": int64(42)},
 			time.Unix(0, 0),
 		),
 	}

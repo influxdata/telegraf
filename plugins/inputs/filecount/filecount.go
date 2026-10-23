@@ -196,7 +196,7 @@ func (fc *FileCount) count(ctx context.Context, acc telegraf.Accumulator, basedi
 
 	postChildrenFn := func(path string, _ *godirwalk.Dirent) error {
 		if glob.MatchString(path) {
-			gauge := map[string]interface{}{
+			gauge := map[string]any{
 				"count":      childCount[path],
 				"size_bytes": childSize[path],
 			}

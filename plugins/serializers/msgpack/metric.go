@@ -12,10 +12,10 @@ import (
 // Metric is structure to define MessagePack message format
 // will be used by msgp code generator
 type Metric struct {
-	Name   string                 `msg:"name"`
-	Time   MessagePackTime        `msg:"time,extension"`
-	Tags   map[string]string      `msg:"tags"`
-	Fields map[string]interface{} `msg:"fields"`
+	Name   string            `msg:"name"`
+	Time   MessagePackTime   `msg:"time,extension"`
+	Tags   map[string]string `msg:"tags"`
+	Fields map[string]any    `msg:"fields"`
 }
 
 // MessagePackTime implements the official timestamp extension type

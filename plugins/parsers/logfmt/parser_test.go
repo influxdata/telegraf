@@ -30,7 +30,7 @@ func TestParse(t *testing.T) {
 				metric.New(
 					"testlog",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"foo": "bar",
 					},
 					time.Unix(0, 0),
@@ -45,7 +45,7 @@ func TestParse(t *testing.T) {
 				metric.New(
 					"testlog",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"foo": "bar",
 					},
 					time.Unix(0, 0),
@@ -60,7 +60,7 @@ func TestParse(t *testing.T) {
 				metric.New(
 					"testlog",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"lvl":    "info",
 						"msg":    "http request",
 						"method": "POST",
@@ -80,7 +80,7 @@ func TestParse(t *testing.T) {
 				metric.New(
 					"testlog",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"lvl":    "info",
 						"msg":    "http request",
 						"method": "POST",
@@ -91,7 +91,7 @@ func TestParse(t *testing.T) {
 				metric.New(
 					"testlog",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"parent_id": "088876RL000",
 						"duration":  7.45,
 						"log_id":    "09R4e4Rl000",
@@ -160,7 +160,7 @@ func TestParseLine(t *testing.T) {
 			want: metric.New(
 				"testlog",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"ts":     "2018-07-24T19:43:35.207268Z",
 					"lvl":    int64(5),
 					"msg":    "Write failed",
@@ -177,7 +177,7 @@ func TestParseLine(t *testing.T) {
 			want: metric.New(
 				"testlog",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"ts":     "2018-07-24T19:43:35.207268Z",
 					"lvl":    int64(5),
 					"msg":    "Write failed",
@@ -224,7 +224,7 @@ func TestTags(t *testing.T) {
 				map[string]string{
 					"lvl": "info",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"msg":    "http request",
 					"method": "POST",
 					"ts":     "2018-07-24T19:43:40.275Z",
@@ -242,7 +242,7 @@ func TestTags(t *testing.T) {
 				map[string]string{
 					"lvl": "info",
 				},
-				map[string]interface{}{},
+				map[string]any{},
 				time.Unix(0, 0),
 			),
 		},
@@ -259,7 +259,7 @@ func TestTags(t *testing.T) {
 					"method": "POST",
 					"ts":     "2018-07-24T19:43:40.275Z",
 				},
-				map[string]interface{}{},
+				map[string]any{},
 				time.Unix(0, 0),
 			),
 		},
@@ -302,7 +302,7 @@ func TestBenchmarkData(t *testing.T) {
 				"tags_platform": "python",
 				"tags_sdkver":   "3.11.5",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 5,
 			},
 			time.Unix(0, 0),
@@ -314,7 +314,7 @@ func TestBenchmarkData(t *testing.T) {
 				"tags_platform": "python",
 				"tags_sdkver":   "3.11.4",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 4,
 			},
 			time.Unix(0, 0),

@@ -224,5 +224,5 @@ type bucketStats struct {
 		Lasttstamp   int64 `json:"lastTStamp"`
 		Interval     int   `json:"interval"`
 	} `json:"op"`
-	HotKeys []interface{} `json:"hot_keys"`
+	HotKeys []any `json:"hot_keys"`
 }

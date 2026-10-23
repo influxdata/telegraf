@@ -245,8 +245,7 @@ func (r *metricReceiver) collectMetrics(ctx context.Context, acc telegraf.Accumu
 
 		// Construct the metric fields. Iterate the timeseries in reverse order
 		// and only accept the latest valid field set
-		for i := len(timeseries) - 1; i >= 0; i-- {
-			data := timeseries[i]
+		for _, data := range slices.Backward(timeseries) {
 			if data == nil {
 				acc.AddError(fmt.Errorf("bad timeseries data for metric %q of resource target %q", *metric.ID, target.ResourceID))
 				continue
@@ -257,7 +256,7 @@ func (r *metricReceiver) collectMetrics(ctx context.Context, acc telegraf.Accumu
 				continue
 			}
 
-			fields := make(map[string]interface{}, 6)
+			fields := make(map[string]any, 6)
 			fields["timeStamp"] = data.TimeStamp.Format("2006-01-02T15:04:05Z07:00")
 			if data.Total != nil {
 				fields["total"] = *data.Total

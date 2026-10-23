@@ -168,7 +168,7 @@ func TestTableBuildWalkGosmi(t *testing.T) {
 			"ifIndex": "foo",
 			"index":   "0",
 		},
-		Fields: map[string]interface{}{
+		Fields: map[string]any{
 			"atPhysAddress": 1,
 			"atNetAddress":  "atNetAddress",
 		},
@@ -178,7 +178,7 @@ func TestTableBuildWalkGosmi(t *testing.T) {
 			"ifIndex": "bar",
 			"index":   "1",
 		},
-		Fields: map[string]interface{}{
+		Fields: map[string]any{
 			"atPhysAddress": 2,
 		},
 	}
@@ -186,7 +186,7 @@ func TestTableBuildWalkGosmi(t *testing.T) {
 		Tags: map[string]string{
 			"index": "2",
 		},
-		Fields: map[string]interface{}{
+		Fields: map[string]any{
 			"atPhysAddress": 0,
 		},
 	}
@@ -237,7 +237,7 @@ func TestTableBuildNoWalkGosmi(t *testing.T) {
 
 	rtr := RTableRow{
 		Tags:   map[string]string{"myfield1": "baz", "myfield3": "234"},
-		Fields: map[string]interface{}{"myfield2": 234, "myfield4": "atNetAddress"},
+		Fields: map[string]any{"myfield2": 234, "myfield4": "atNetAddress"},
 	}
 	require.Len(t, tb.Rows, 1)
 	require.Contains(t, tb.Rows, rtr)
@@ -245,9 +245,9 @@ func TestTableBuildNoWalkGosmi(t *testing.T) {
 
 func TestFieldConvertGosmi(t *testing.T) {
 	tests := []struct {
-		input    interface{}
+		input    any
 		conv     string
-		expected interface{}
+		expected any
 	}{
 		{"0.123", "float", float64(0.123)},
 		{[]byte("0.123"), "float", float64(0.123)},
@@ -312,7 +312,7 @@ func TestSnmpFormatDisplayHintGosmi(t *testing.T) {
 	tests := []struct {
 		name     string
 		oid      string
-		input    interface{}
+		input    any
 		expected string
 	}{
 		{
@@ -394,7 +394,7 @@ func TestTableJoinWalkGosmi(t *testing.T) {
 			"myfield4": "bar",
 			"index":    "10",
 		},
-		Fields: map[string]interface{}{
+		Fields: map[string]any{
 			"myfield2": 10,
 			"myfield3": 1,
 			"myfield5": 2,
@@ -405,7 +405,7 @@ func TestTableJoinWalkGosmi(t *testing.T) {
 			"myfield1": "instance2",
 			"index":    "11",
 		},
-		Fields: map[string]interface{}{
+		Fields: map[string]any{
 			"myfield2": 20,
 			"myfield3": 2,
 			"myfield5": 0,
@@ -416,7 +416,7 @@ func TestTableJoinWalkGosmi(t *testing.T) {
 			"myfield1": "instance3",
 			"index":    "12",
 		},
-		Fields: map[string]interface{}{
+		Fields: map[string]any{
 			"myfield2": 20,
 			"myfield3": 3,
 		},
@@ -471,7 +471,7 @@ func TestTableOuterJoinWalkGosmi(t *testing.T) {
 			"myfield4": "bar",
 			"index":    "10",
 		},
-		Fields: map[string]interface{}{
+		Fields: map[string]any{
 			"myfield2": 10,
 			"myfield3": 1,
 			"myfield5": 2,
@@ -482,7 +482,7 @@ func TestTableOuterJoinWalkGosmi(t *testing.T) {
 			"myfield1": "instance2",
 			"index":    "11",
 		},
-		Fields: map[string]interface{}{
+		Fields: map[string]any{
 			"myfield2": 20,
 			"myfield3": 2,
 			"myfield5": 0,
@@ -493,7 +493,7 @@ func TestTableOuterJoinWalkGosmi(t *testing.T) {
 			"myfield1": "instance3",
 			"index":    "12",
 		},
-		Fields: map[string]interface{}{
+		Fields: map[string]any{
 			"myfield2": 20,
 			"myfield3": 3,
 		},
@@ -503,7 +503,7 @@ func TestTableOuterJoinWalkGosmi(t *testing.T) {
 			"index":    "Secondary.0",
 			"myfield4": "foo",
 		},
-		Fields: map[string]interface{}{
+		Fields: map[string]any{
 			"myfield5": 1,
 		},
 	}
@@ -557,7 +557,7 @@ func TestTableJoinNoIndexAsTagWalkGosmi(t *testing.T) {
 			"myfield4": "bar",
 			// "index":    "10",
 		},
-		Fields: map[string]interface{}{
+		Fields: map[string]any{
 			"myfield2": 10,
 			"myfield3": 1,
 			"myfield5": 2,
@@ -568,7 +568,7 @@ func TestTableJoinNoIndexAsTagWalkGosmi(t *testing.T) {
 			"myfield1": "instance2",
 			// "index":    "11",
 		},
-		Fields: map[string]interface{}{
+		Fields: map[string]any{
 			"myfield2": 20,
 			"myfield3": 2,
 			"myfield5": 0,
@@ -579,7 +579,7 @@ func TestTableJoinNoIndexAsTagWalkGosmi(t *testing.T) {
 			"myfield1": "instance3",
 			// "index":    "12",
 		},
-		Fields: map[string]interface{}{
+		Fields: map[string]any{
 			"myfield2": 20,
 			"myfield3": 3,
 		},

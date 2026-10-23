@@ -4,7 +4,7 @@ import "strconv"
 
 type event interface {
 	tags() map[string]string
-	fields() map[string]interface{}
+	fields() map[string]any
 }
 
 type dummyEvent struct {
@@ -42,8 +42,8 @@ func (ni *newItem) tags() map[string]string {
 	}
 }
 
-func (ni *newItem) fields() map[string]interface{} {
-	return map[string]interface{}{
+func (ni *newItem) fields() map[string]any {
+	return map[string]any{
 		"id": ni.Data.Item.ID,
 	}
 }
@@ -79,8 +79,8 @@ func (o *occurrence) tags() map[string]string {
 	}
 }
 
-func (o *occurrence) fields() map[string]interface{} {
-	return map[string]interface{}{
+func (o *occurrence) fields() map[string]any {
+	return map[string]any{
 		"id": o.Data.Item.ID,
 	}
 }
@@ -108,8 +108,8 @@ func (ni *deploy) tags() map[string]string {
 	}
 }
 
-func (ni *deploy) fields() map[string]interface{} {
-	return map[string]interface{}{
+func (ni *deploy) fields() map[string]any {
+	return map[string]any{
 		"id": ni.Data.Deploy.ID,
 	}
 }

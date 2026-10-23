@@ -168,7 +168,7 @@ func (j *Jenkins) gatherNodeData(n node, acc telegraf.Accumulator) error {
 	tags["source"] = j.source
 	tags["port"] = j.port
 
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	fields["num_executors"] = n.NumExecutors
 
 	if j.NodeLabelsAsTag {
@@ -216,7 +216,7 @@ func (j *Jenkins) gatherNodesData(acc telegraf.Accumulator) {
 
 	// get total and busy executors
 	tags := map[string]string{"source": j.source, "port": j.port}
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	fields["busy_executors"] = nodeResp.BusyExecutors
 	fields["total_executors"] = nodeResp.TotalExecutors
 
@@ -443,7 +443,7 @@ func (jr jobRequest) parentsString() string {
 
 func (j *Jenkins) gatherJobBuild(jr jobRequest, b *buildResponse, acc telegraf.Accumulator) {
 	tags := map[string]string{"name": jr.name, "parents": jr.parentsString(), "result": b.Result, "source": j.source, "port": j.port}
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	fields["duration"] = b.Duration
 	fields["result_code"] = mapResultCode(b.Result)
 	fields["number"] = b.Number

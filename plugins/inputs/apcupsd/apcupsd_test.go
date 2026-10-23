@@ -127,7 +127,7 @@ func TestApcupsdGather(t *testing.T) {
 			name   string
 			err    bool
 			tags   map[string]string
-			fields map[string]interface{}
+			fields map[string]any
 			out    func() [][]byte
 		}{
 			{
@@ -139,7 +139,7 @@ func TestApcupsdGather(t *testing.T) {
 					"ups_name": "BERTHA",
 					"model":    "Model 12345",
 				},
-				fields: map[string]interface{}{
+				fields: map[string]any{
 					"status_flags":                  uint64(8),
 					"input_voltage":                 float64(0),
 					"load_percent":                  float64(13),

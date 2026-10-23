@@ -72,7 +72,7 @@ func TestPhpFpmGeneratesMetrics_From_Http(t *testing.T) {
 		"url":  url,
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"start_since":          int64(1991),
 		"accepted_conn":        int64(3),
 		"listen_queue":         int64(1),
@@ -142,7 +142,7 @@ func TestPhpFpmGeneratesMetrics_From_Fcgi(t *testing.T) {
 		"url":  r.Urls[0],
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"start_since":          int64(1991),
 		"accepted_conn":        int64(3),
 		"listen_queue":         int64(1),
@@ -251,7 +251,7 @@ func TestPhpFpmGeneratesMetrics_From_Socket(t *testing.T) {
 		"url":  r.Urls[0],
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"start_since":          int64(1991),
 		"accepted_conn":        int64(3),
 		"listen_queue":         int64(1),
@@ -309,7 +309,7 @@ func TestPhpFpmGeneratesMetrics_From_Multiple_Sockets_With_Glob(t *testing.T) {
 		"url":  socket2,
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"start_since":          int64(1991),
 		"accepted_conn":        int64(3),
 		"listen_queue":         int64(1),
@@ -354,7 +354,7 @@ func TestPhpFpmGeneratesMetrics_From_Socket_Custom_Status_Path(t *testing.T) {
 		"url":  r.Urls[0],
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"start_since":          int64(1991),
 		"accepted_conn":        int64(3),
 		"listen_queue":         int64(1),
@@ -472,7 +472,7 @@ func TestGatherDespiteUnavailable(t *testing.T) {
 				"pool": "www",
 				"url":  r.Urls[0],
 			},
-			map[string]interface{}{
+			map[string]any{
 				"start_since":          int64(1991),
 				"accepted_conn":        int64(3),
 				"listen_queue":         int64(1),

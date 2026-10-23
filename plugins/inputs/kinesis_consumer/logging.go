@@ -11,12 +11,12 @@ type telegrafLoggerWrapper struct {
 }
 
 // Log logs messages at the trace level.
-func (t *telegrafLoggerWrapper) Log(args ...interface{}) {
+func (t *telegrafLoggerWrapper) Log(args ...any) {
 	t.Trace(args...)
 }
 
 // Logf logs formatted messages with a specific classification.
-func (t *telegrafLoggerWrapper) Logf(classification logging.Classification, format string, v ...interface{}) {
+func (t *telegrafLoggerWrapper) Logf(classification logging.Classification, format string, v ...any) {
 	switch classification {
 	case logging.Debug:
 		format = "DEBUG " + format

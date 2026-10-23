@@ -59,10 +59,8 @@ func TestOptionsApply(t *testing.T) {
 				},
 				Rel: []relOpts{
 					{
-						baseOpts: baseOpts{
-							Field: "relField",
-							Tag:   "relTag",
-						},
+						Field:    "relField",
+						Tag:      "relTag",
 						BasePath: base,
 					},
 				},
@@ -83,7 +81,7 @@ func TestOptionsApply(t *testing.T) {
 						"relTag":   sample,
 						"slashTag": sample,
 					},
-					map[string]interface{}{
+					map[string]any{
 						"baseField":  sample,
 						"dirField":   sample,
 						"stemField":  sample,
@@ -104,7 +102,7 @@ func TestOptionsApply(t *testing.T) {
 						"relTag":   filepath.Join("path", "file.log"),
 						"slashTag": filepath.ToSlash(sample),
 					},
-					map[string]interface{}{
+					map[string]any{
 						"baseField":  "file.log",
 						"dirField":   filepath.Join(base, "path"),
 						"stemField":  "file",
@@ -129,14 +127,14 @@ func TestOptionsApply(t *testing.T) {
 				metric.New(
 					"testMetric",
 					map[string]string{"sourcePath": filepath.ToSlash(sample)},
-					map[string]interface{}{"sourcePath": filepath.ToSlash(sample)},
+					map[string]any{"sourcePath": filepath.ToSlash(sample)},
 					time.Now()),
 			},
 			expected: []telegraf.Metric{
 				metric.New(
 					"testMetric",
 					map[string]string{"sourcePath": filepath.ToSlash(sample), "basePath": "file.log"},
-					map[string]interface{}{"sourcePath": filepath.ToSlash(sample), "basePath": "file.log"},
+					map[string]any{"sourcePath": filepath.ToSlash(sample), "basePath": "file.log"},
 					time.Now()),
 			},
 		},
@@ -161,7 +159,7 @@ func TestTracking(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{"sourcePath": filepath.ToSlash(sample)},
-			map[string]interface{}{"sourcePath": filepath.ToSlash(sample)},
+			map[string]any{"sourcePath": filepath.ToSlash(sample)},
 			time.Unix(0, 0),
 		),
 	}
@@ -170,7 +168,7 @@ func TestTracking(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{"sourcePath": filepath.ToSlash(sample), "basePath": "file.log"},
-			map[string]interface{}{"sourcePath": filepath.ToSlash(sample), "basePath": "file.log"},
+			map[string]any{"sourcePath": filepath.ToSlash(sample), "basePath": "file.log"},
 			time.Unix(0, 0),
 		),
 	}

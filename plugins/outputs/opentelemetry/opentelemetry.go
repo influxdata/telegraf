@@ -6,7 +6,7 @@ import (
 	_ "embed"
 	"fmt"
 	"maps"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
@@ -158,7 +158,7 @@ func (o *OpenTelemetry) Write(metrics []telegraf.Metric) error {
 	}
 
 	// sort the timestamps we collected
-	sort.Slice(timestamps, func(i, j int) bool { return timestamps[i] < timestamps[j] })
+	slices.Sort(timestamps)
 
 	o.Log.Debugf("Received %d metrics and split into %d groups by timestamp", len(metrics), len(metricBatch))
 	for _, timestamp := range timestamps {

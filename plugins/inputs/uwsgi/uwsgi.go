@@ -182,7 +182,7 @@ func (u *Uwsgi) gatherServer(acc telegraf.Accumulator, address *url.URL) error {
 }
 
 func gatherStatServer(acc telegraf.Accumulator, s *statsServer) {
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"listen_queue":        s.ListenQueue,
 		"listen_queue_errors": s.ListenQueueErrors,
 		"signal_queue":        s.SignalQueue,
@@ -205,7 +205,7 @@ func gatherStatServer(acc telegraf.Accumulator, s *statsServer) {
 
 func gatherWorkers(acc telegraf.Accumulator, s *statsServer) {
 	for _, w := range s.Workers {
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"requests":       w.Requests,
 			"accepting":      w.Accepting,
 			"delta_request":  w.DeltaRequests,
@@ -235,7 +235,7 @@ func gatherWorkers(acc telegraf.Accumulator, s *statsServer) {
 func gatherApps(acc telegraf.Accumulator, s *statsServer) {
 	for _, w := range s.Workers {
 		for _, a := range w.Apps {
-			fields := map[string]interface{}{
+			fields := map[string]any{
 				"modifier1":    a.Modifier1,
 				"requests":     a.Requests,
 				"startup_time": a.StartupTime,
@@ -254,7 +254,7 @@ func gatherApps(acc telegraf.Accumulator, s *statsServer) {
 func gatherCores(acc telegraf.Accumulator, s *statsServer) {
 	for _, w := range s.Workers {
 		for _, c := range w.Cores {
-			fields := map[string]interface{}{
+			fields := map[string]any{
 				"requests":           c.Requests,
 				"static_requests":    c.StaticRequests,
 				"routed_requests":    c.RoutedRequests,

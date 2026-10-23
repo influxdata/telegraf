@@ -60,7 +60,7 @@ func (sm *SyslogMapper) mapStructuredDataItem(key, value string, msg *rfc5424.Sy
 
 	// Add keys matching one of the sd-IDs
 	for _, sdid := range sm.Sdids {
-		if k := strings.TrimPrefix(key, sdid+sm.Separator); key != k {
+		if k, ok := strings.CutPrefix(key, sdid+sm.Separator); ok {
 			msg.SetParameter(sdid, k, value)
 			return
 		}
@@ -154,7 +154,7 @@ func mapTimestamp(metric telegraf.Metric, msg *rfc5424.SyslogMessage) {
 	msg.SetTimestamp(timestamp.Format(time.RFC3339))
 }
 
-func formatValue(value interface{}) string {
+func formatValue(value any) string {
 	switch v := value.(type) {
 	case string:
 		return v

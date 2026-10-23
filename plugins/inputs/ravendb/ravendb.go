@@ -132,7 +132,7 @@ func (r *RavenDB) ensureClient() error {
 	return nil
 }
 
-func (r *RavenDB) requestJSON(u string, target interface{}) error {
+func (r *RavenDB) requestJSON(u string, target any) error {
 	req, err := http.NewRequest("GET", u, nil)
 	if err != nil {
 		return err
@@ -172,7 +172,7 @@ func (r *RavenDB) gatherServer(acc telegraf.Accumulator) {
 		tags["public_server_url"] = *serverResponse.Config.PublicServerURL
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"backup_current_number_of_running_backups":                      serverResponse.Backup.CurrentNumberOfRunningBackups,
 		"backup_max_number_of_concurrent_backups":                       serverResponse.Backup.MaxNumberOfConcurrentBackups,
 		"certificate_server_certificate_expiration_left_in_sec":         serverResponse.Certificate.ServerCertificateExpirationLeftInSec,
@@ -253,7 +253,7 @@ func (r *RavenDB) gatherDatabases(acc telegraf.Accumulator) {
 			tags["public_server_url"] = *databasesResponse.PublicServerURL
 		}
 
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"counts_alerts":                               dbResponse.Counts.Alerts,
 			"counts_attachments":                          dbResponse.Counts.Attachments,
 			"counts_documents":                            dbResponse.Counts.Documents,
@@ -318,7 +318,7 @@ func (r *RavenDB) gatherIndexes(acc telegraf.Accumulator) {
 				tags["public_server_url"] = *indexesResponse.PublicServerURL
 			}
 
-			fields := map[string]interface{}{
+			fields := map[string]any{
 				"errors":                          indexResponse.Errors,
 				"is_invalid":                      indexResponse.IsInvalid,
 				"lock_mode":                       indexResponse.LockMode,
@@ -359,7 +359,7 @@ func (r *RavenDB) gatherCollections(acc telegraf.Accumulator) {
 				tags["public_server_url"] = *collectionsResponse.PublicServerURL
 			}
 
-			fields := map[string]interface{}{
+			fields := map[string]any{
 				"documents_count":          collectionMetrics.DocumentsCount,
 				"documents_size_in_bytes":  collectionMetrics.DocumentsSizeInBytes,
 				"revisions_size_in_bytes":  collectionMetrics.RevisionsSizeInBytes,

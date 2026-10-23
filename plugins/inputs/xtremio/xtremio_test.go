@@ -145,7 +145,7 @@ func TestFixedValue(t *testing.T) {
 						"name":          "X1-BBU",
 						"model_name":    "Eaton Model Name",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"bbus_power":                        244,
 						"bbus_average_daily_temp":           23,
 						"bbus_enabled":                      true,

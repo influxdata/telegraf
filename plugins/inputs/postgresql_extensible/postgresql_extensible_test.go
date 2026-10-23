@@ -15,20 +15,17 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/plugins/common/postgresql"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/testutil"
 )
 
 func newPlugin() *Postgresql {
 	return &Postgresql{
-		Log: testutil.Logger{},
-		Config: postgresql.Config{
-			Address:       config.NewSecret(nil),
-			OutputAddress: "server",
-			MaxIdle:       1,
-			MaxOpen:       1,
-		},
+		Log:                testutil.Logger{},
+		Address:            config.NewSecret(nil),
+		OutputAddress:      "server",
+		MaxIdle:            1,
+		MaxOpen:            1,
 		PreparedStatements: true,
 		NumericAsFloat:     true,
 	}
@@ -286,119 +283,119 @@ func TestAccRow(t *testing.T) {
 		query          query
 		columns        []string
 		numeric        map[string]bool
-		values         []interface{}
+		values         []any
 		expectedTags   map[string]string
-		expectedFields map[string]interface{}
+		expectedFields map[string]any
 	}{
 		{
 			name:    "db tag from job",
 			columns: []string{"cat"},
-			values:  []interface{}{"gato"},
+			values:  []any{"gato"},
 			expectedTags: map[string]string{
 				"server": "server",
 				"db":     "mydb",
 			},
-			expectedFields: map[string]interface{}{"cat": "gato"},
+			expectedFields: map[string]any{"cat": "gato"},
 		},
 		{
 			name:    "db tag from datname column",
 			columns: []string{"datname", "cat"},
-			values:  []interface{}{"name", "gato"},
+			values:  []any{"name", "gato"},
 			expectedTags: map[string]string{
 				"server": "server",
 				"db":     "name",
 			},
-			expectedFields: map[string]interface{}{"datname": "name", "cat": "gato"},
+			expectedFields: map[string]any{"datname": "name", "cat": "gato"},
 		},
 		{
 			name:    "non-string datname column is ignored",
 			columns: []string{"datname", "cat"},
-			values:  []interface{}{1, "gato"},
+			values:  []any{1, "gato"},
 			expectedTags: map[string]string{
 				"server": "server",
 				"db":     "mydb",
 			},
-			expectedFields: map[string]interface{}{"datname": 1, "cat": "gato"},
+			expectedFields: map[string]any{"datname": 1, "cat": "gato"},
 		},
 		{
 			name:    "null and stats_reset columns are skipped",
 			columns: []string{"stats_reset", "nothing", "value"},
-			values:  []interface{}{time.Now(), nil, int64(42)},
+			values:  []any{time.Now(), nil, int64(42)},
 			expectedTags: map[string]string{
 				"server": "server",
 				"db":     "mydb",
 			},
-			expectedFields: map[string]interface{}{"value": int64(42)},
+			expectedFields: map[string]any{"value": int64(42)},
 		},
 		{
 			name:    "tagvalue columns become tags",
 			query:   query{Tagvalue: "state,pid"},
 			columns: []string{"state", "pid", "count"},
-			values:  []interface{}{"idle", int64(7), int64(3)},
+			values:  []any{"idle", int64(7), int64(3)},
 			expectedTags: map[string]string{
 				"server": "server",
 				"db":     "mydb",
 				"state":  "idle",
 				"pid":    "7",
 			},
-			expectedFields: map[string]interface{}{"count": int64(3)},
+			expectedFields: map[string]any{"count": int64(3)},
 		},
 		{
 			name:    "string columns as tags",
 			query:   query{StringColumnsAsTags: boolPtr(true)},
 			columns: []string{"relname", "raw", "count"},
-			values:  []interface{}{"users", []byte("bytes"), int64(3)},
+			values:  []any{"users", []byte("bytes"), int64(3)},
 			expectedTags: map[string]string{
 				"server":  "server",
 				"db":      "mydb",
 				"relname": "users",
 				"raw":     "bytes",
 			},
-			expectedFields: map[string]interface{}{"count": int64(3)},
+			expectedFields: map[string]any{"count": int64(3)},
 		},
 		{
 			name:    "string columns as fields",
 			columns: []string{"relname", "raw"},
-			values:  []interface{}{"users", []byte("bytes")},
+			values:  []any{"users", []byte("bytes")},
 			expectedTags: map[string]string{
 				"server": "server",
 				"db":     "mydb",
 			},
-			expectedFields: map[string]interface{}{"relname": "users", "raw": "bytes"},
+			expectedFields: map[string]any{"relname": "users", "raw": "bytes"},
 		},
 		{
 			name:    "numeric as float",
 			columns: []string{"ratio", "text", "big", "nan", "bad"},
 			numeric: map[string]bool{"ratio": true, "big": true, "nan": true, "bad": true},
-			values:  []interface{}{"10.5", "10.5", []byte("1e3"), "NaN", "abc"},
+			values:  []any{"10.5", "10.5", []byte("1e3"), "NaN", "abc"},
 			expectedTags: map[string]string{
 				"server": "server",
 				"db":     "mydb",
 			},
-			expectedFields: map[string]interface{}{"ratio": 10.5, "text": "10.5", "big": 1000.0},
+			expectedFields: map[string]any{"ratio": 10.5, "text": "10.5", "big": 1000.0},
 		},
 		{
 			name:    "numeric as string",
 			query:   query{NumericAsFloat: boolPtr(false)},
 			columns: []string{"ratio"},
 			numeric: map[string]bool{"ratio": true},
-			values:  []interface{}{"10.5"},
+			values:  []any{"10.5"},
 			expectedTags: map[string]string{
 				"server": "server",
 				"db":     "mydb",
 			},
-			expectedFields: map[string]interface{}{"ratio": "10.5"},
+			expectedFields: map[string]any{"ratio": "10.5"},
 		},
 		{
 			name:    "timestamp column",
 			query:   query{Timestamp: "ts"},
 			columns: []string{"ts", "value"},
-			values:  []interface{}{time.Date(1980, 7, 23, 0, 0, 0, 0, time.UTC), int64(1)},
+			values:  []any{time.Date(1980, 7, 23, 0, 0, 0, 0, time.UTC), int64(1)},
 			expectedTags: map[string]string{
 				"server": "server",
 				"db":     "mydb",
 			},
-			expectedFields: map[string]interface{}{"value": int64(1)},
+			expectedFields: map[string]any{"value": int64(1)},
 		},
 	}
 
@@ -581,10 +578,10 @@ func (s *testServer) stop() {
 
 func (s *testServer) run(t *testing.T, p *Postgresql) *testutil.Accumulator {
 	p.Log = testutil.Logger{}
-	p.Config.Address = config.NewSecret([]byte(s.address))
-	if p.Config.MaxOpen == 0 {
-		p.Config.MaxIdle = 1
-		p.Config.MaxOpen = 1
+	p.Address = config.NewSecret([]byte(s.address))
+	if p.MaxOpen == 0 {
+		p.MaxIdle = 1
+		p.MaxOpen = 1
 	}
 	require.NoError(t, p.Init())
 
@@ -714,7 +711,9 @@ func TestKeepConnectionsIntegration(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &Postgresql{
 				Log:                       testutil.Logger{},
-				Config:                    postgresql.Config{Address: config.NewSecret([]byte(server.dsn("postgres", appName))), MaxIdle: 1, MaxOpen: 1},
+				Address:                   config.NewSecret([]byte(server.dsn("postgres", appName))),
+				MaxIdle:                   1,
+				MaxOpen:                   1,
 				NumericAsFloat:            true,
 				MaxConnectionsPerDatabase: tt.perDB,
 				MaxParallelDatabases:      2,
@@ -774,7 +773,9 @@ func TestCachedRoleIntegration(t *testing.T) {
 
 	p := &Postgresql{
 		Log:                     testutil.Logger{},
-		Config:                  postgresql.Config{Address: config.NewSecret([]byte(server.address)), MaxIdle: 1, MaxOpen: 1},
+		Address:                 config.NewSecret([]byte(server.address)),
+		MaxIdle:                 1,
+		MaxOpen:                 1,
 		NumericAsFloat:          true,
 		MetadataRefreshInterval: config.Duration(time.Hour),
 		Queries:                 []query{{Measurement: "primary_only", Sqlquery: "SELECT 1 AS value", Role: "primary"}},
@@ -1135,12 +1136,10 @@ func TestConnectionLimitsIntegration(t *testing.T) {
 			}
 
 			p := &Postgresql{
-				Log: testutil.Logger{},
-				Config: postgresql.Config{
-					Address: config.NewSecret([]byte(server.dsn("postgres", appName))),
-					MaxIdle: 1,
-					MaxOpen: 1,
-				},
+				Log:                testutil.Logger{},
+				Address:            config.NewSecret([]byte(server.dsn("postgres", appName))),
+				MaxIdle:            1,
+				MaxOpen:            1,
 				PreparedStatements: true,
 				// Read the server version, the role and the database list on
 				// the first collection only, and keep no connection open
@@ -1233,7 +1232,7 @@ func BenchmarkAccRow(b *testing.B) {
 		"datname", "relname", "schemaname", "n_live_tup", "n_dead_tup",
 		"seq_scan", "idx_scan", "table_size_b", "bloat_pct", "last_vacuum",
 	}
-	row := []interface{}{
+	row := []any{
 		"app_1", "users", "public", int64(20000), int64(6667),
 		int64(15), int64(3), int64(5652480), 34.6, "2026-09-22",
 	}
@@ -1254,8 +1253,8 @@ func BenchmarkAccRow(b *testing.B) {
 
 			// The row buffers are prepared once per result set, as in
 			// gatherMetricsFromQuery
-			values := make([]interface{}, len(columns))
-			pointers := make([]interface{}, len(columns))
+			values := make([]any, len(columns))
+			pointers := make([]any, len(columns))
 			for i := range values {
 				pointers[i] = &values[i]
 			}
@@ -1265,7 +1264,7 @@ func BenchmarkAccRow(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				// simulate rows.Scan writing into the reused buffer
 				for k := range row {
-					*(pointers[k].(*interface{})) = row[k]
+					*(pointers[k].(*any)) = row[k]
 				}
 				p.accRow(&acc, columns, values, nil, j, now, tt.debug)
 				acc.ClearMetrics()

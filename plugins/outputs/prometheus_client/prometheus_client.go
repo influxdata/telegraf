@@ -212,7 +212,7 @@ func (p *PrometheusClient) listenTCP(host string) (net.Listener, error) {
 }
 
 func listenVsock(host string) (net.Listener, error) {
-	_, portStr, err := net.SplitHostPort(host)
+	cidStr, portStr, err := net.SplitHostPort(host)
 	if err != nil {
 		return nil, err
 	}
@@ -220,7 +220,24 @@ func listenVsock(host string) (net.Listener, error) {
 	if err != nil {
 		return nil, err
 	}
-	return vsock.Listen(uint32(port), nil)
+
+	// The documented address carries no CID (vsock://:9273) and binding the
+	// local context ID is right for it. An address that does name one had it
+	// discarded, so the listener came up on this machine's CID instead and a
+	// scraper addressing the configured one never reached it.
+	if cidStr == "" {
+		return vsock.Listen(uint32(port), nil)
+	}
+
+	cid, err := strconv.ParseUint(cidStr, 10, 32)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse CID %s: %w", cidStr, err)
+	}
+	listener, err := vsock.ListenContextID(uint32(cid), uint32(port), nil)
+	if err != nil {
+		return nil, fmt.Errorf("listening on CID %d failed: %w", cid, err)
+	}
+	return listener, nil
 }
 
 func (p *PrometheusClient) listen() (net.Listener, error) {
@@ -258,14 +275,12 @@ func (p *PrometheusClient) Connect() error {
 
 	p.Log.Infof("Listening on %s", p.URL())
 
-	p.wg.Add(1)
-	go func() {
-		defer p.wg.Done()
+	p.wg.Go(func() {
 		err := p.server.Serve(listener)
 		if err != nil && err != http.ErrServerClosed {
 			p.Log.Errorf("Server error: %v", err)
 		}
-	}()
+	})
 
 	return nil
 }

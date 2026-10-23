@@ -85,7 +85,7 @@ func (lvm *LVM) gatherPhysicalVolumes(acc telegraf.Accumulator) error {
 
 			usedPercent := float64(used) / float64(size) * 100
 
-			fields := map[string]interface{}{
+			fields := map[string]any{
 				"size":         size,
 				"free":         free,
 				"used":         used,
@@ -146,7 +146,7 @@ func (lvm *LVM) gatherVolumeGroups(acc telegraf.Accumulator) error {
 
 			usedPercent := (float64(size) - float64(free)) / float64(size) * 100
 
-			fields := map[string]interface{}{
+			fields := map[string]any{
 				"size":                  size,
 				"free":                  free,
 				"used_percent":          usedPercent,
@@ -217,7 +217,7 @@ func (lvm *LVM) gatherLogicalVolumes(acc telegraf.Accumulator) error {
 				return err
 			}
 
-			fields := map[string]interface{}{
+			fields := map[string]any{
 				"size":             size,
 				"data_percent":     dataPercent,
 				"metadata_percent": metadataPercent,

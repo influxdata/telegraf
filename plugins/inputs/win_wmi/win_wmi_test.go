@@ -90,7 +90,7 @@ func TestMethodIntegration(t *testing.T) {
 				Namespace: "ROOT\\default",
 				ClassName: "StdRegProv",
 				Method:    "GetStringValue",
-				Arguments: map[string]interface{}{
+				Arguments: map[string]any{
 					"hDefKey":     `2147483650`,
 					"sSubKeyName": `software\microsoft\windows nt\currentversion`,
 					"sValueName":  `ProductName`,
@@ -106,7 +106,7 @@ func TestMethodIntegration(t *testing.T) {
 		metric.New(
 			"StdRegProv",
 			map[string]string{"ReturnValue": "0"},
-			map[string]interface{}{"sValue": "Windows ..."},
+			map[string]any{"sValue": "Windows ..."},
 			time.Unix(0, 0),
 		),
 	}

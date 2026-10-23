@@ -8,7 +8,7 @@ executors:
     working_directory: '/go/src/github.com/influxdata/telegraf'
     resource_class: large
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.27.0'
+      - image: 'quay.io/influxdb/telegraf-ci:1.27.2'
     environment:
       GOFLAGS: -p=4
   mac:
@@ -19,6 +19,13 @@ executors:
     environment:
       HOMEBREW_NO_AUTO_UPDATE: 1
       GOFLAGS: -p=4
+  # self-hosted machine runners are long-lived, not ephemeral like CircleCI's
+  # own machine executors, so working_directory is keyed by pipeline.id to
+  # keep concurrent jobs on the same host from colliding on the same path.
+  self-hosted-amd:
+    machine: true
+    resource_class: runner-ns/clustered-linux-vm
+    working_directory: /home/circleci/workspace-<< pipeline.id >>
 
 commands:
   check-changed-files-or-halt:
@@ -115,12 +122,12 @@ jobs:
       - run: 'make check-deps'
       - run:
           name: "Install golangci-lint"
-          command: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.1
+          command: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
       - run:
           name: "golangci-lint/Linux"
           # There are only 4 vCPUs available for this executor, so use only 4 instead of the default number
           # (the OS may report the number of CPUs on the host instead of the number of CPUs available to the guest).
-          command: GOGC=80 GOMEMLIMIT=6144MiB /go/bin/golangci-lint run --verbose --timeout=30m --concurrency 4
+          command: GOGC=80 GOMEMLIMIT=6144MiB $GOPATH/bin/golangci-lint run --verbose --timeout=30m --concurrency 4
           no_output_timeout: 30m
   lint-macos:
     executor: telegraf-ci
@@ -129,12 +136,12 @@ jobs:
       - check-changed-files-or-halt
       - run:
           name: "Install golangci-lint"
-          command: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.1
+          command: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
       - run:
           name: "golangci-lint/macOS"
           # There are only 4 vCPUs available for this executor, so use only 4 instead of the default number
           # (the OS may report the number of CPUs on the host instead of the number of CPUs available to the guest).
-          command: GOGC=80 GOMEMLIMIT=6144MiB GOOS=darwin /go/bin/golangci-lint run --verbose --timeout=30m --concurrency 4
+          command: GOGC=80 GOMEMLIMIT=6144MiB GOOS=darwin $GOPATH/bin/golangci-lint run --verbose --timeout=30m --concurrency 4
           no_output_timeout: 30m
   lint-windows:
     executor: telegraf-ci
@@ -143,12 +150,28 @@ jobs:
       - check-changed-files-or-halt
       - run:
           name: "Install golangci-lint"
-          command: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.1
+          command: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
       - run:
           name: "golangci-lint/Windows"
           # There are only 4 vCPUs available for this executor, so use only 4 instead of the default number
           # (the OS may report the number of CPUs on the host instead of the number of CPUs available to the guest).
-          command: GOGC=80 GOMEMLIMIT=6144MiB GOOS=windows /go/bin/golangci-lint run --verbose --timeout=30m --concurrency 4
+          command: GOGC=80 GOMEMLIMIT=6144MiB GOOS=windows $GOPATH/bin/golangci-lint run --verbose --timeout=30m --concurrency 4
+          no_output_timeout: 30m
+      - run:
+          name: "golangci-lint/Windows arm64"
+          # Lint only the packages with files that build for this architecture but not for amd64,
+          # everything else is covered by the amd64 run above
+          command: |
+            pkgs=$(./scripts/arch-only-packages.sh windows arm64)
+            [ -n "$pkgs" ] || exit 0
+            GOGC=80 GOMEMLIMIT=6144MiB GOOS=windows GOARCH=arm64 $GOPATH/bin/golangci-lint run --verbose --timeout=30m --concurrency 4 $pkgs
+          no_output_timeout: 30m
+      - run:
+          name: "golangci-lint/Windows 386"
+          command: |
+            pkgs=$(./scripts/arch-only-packages.sh windows 386)
+            [ -n "$pkgs" ] || exit 0
+            GOGC=80 GOMEMLIMIT=6144MiB GOOS=windows GOARCH=386 $GOPATH/bin/golangci-lint run --verbose --timeout=30m --concurrency 4 $pkgs
           no_output_timeout: 30m
   test-go-linux:
     executor: telegraf-ci
@@ -169,7 +192,7 @@ jobs:
   test-integration:
     machine:
       image: ubuntu-2204:current
-    resource_class: large
+    resource_class: large.gen2
     steps:
       - checkout
       - check-changed-files-or-halt
@@ -407,15 +430,19 @@ jobs:
               --exclude "*" \
               --include "symbols-*.jsonl.gz"
   docker-nightly:
-    machine:
-      image: ubuntu-2204:current
+    executor: self-hosted-amd
     steps:
       - run:
           name: login to quay.io
           command: docker login --username="${QUAY_USER}" --password="${QUAY_PASS}" quay.io
       - run:
           name: clone influxdata/influxdata-docker
-          command: git clone https://github.com/influxdata/influxdata-docker
+          # The self-hosted runner keeps the working directory between runs, and
+          # a rerun of a failed workflow lands in the same one, so drop any clone
+          # a previous attempt left behind.
+          command: |
+            rm -rf influxdata-docker
+            git clone https://github.com/influxdata/influxdata-docker
       - run:
           name: build and push telegraf:nightly
           command: |
@@ -435,6 +462,7 @@ jobs:
   amd64-package-test-nightly:
     machine:
       image: ubuntu-2204:current
+    resource_class: medium.gen2
     steps:
       - checkout
       - attach_workspace:
@@ -447,7 +475,7 @@ jobs:
   package-sign-windows:
     machine:
       image: ubuntu-2204:current
-    resource_class: medium
+    resource_class: medium.gen2
     steps:
       - checkout
       - check-changed-files-or-halt
@@ -482,6 +510,7 @@ jobs:
   package-consolidate:
     docker:
      - image: alpine
+    resource_class: runner-ns/docker
     steps:
       - attach_workspace:
           at: '.'
@@ -511,6 +540,7 @@ jobs:
         auth:
           username: $QUAY_RSIGN_USERNAME
           password: $QUAY_RSIGN_PASSWORD
+    resource_class: medium.gen2
     steps:
       - add_ssh_keys:
           fingerprints:

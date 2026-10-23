@@ -37,10 +37,10 @@ func (k *Kernel) gatherPressure(acc telegraf.Accumulator) error {
 			}
 			stat := stats[typ]
 
-			acc.AddCounter("pressure", map[string]interface{}{
+			acc.AddCounter("pressure", map[string]any{
 				"total": stat.Total,
 			}, tags, now)
-			acc.AddGauge("pressure", map[string]interface{}{
+			acc.AddGauge("pressure", map[string]any{
 				"avg10":  stat.Avg10,
 				"avg60":  stat.Avg60,
 				"avg300": stat.Avg300,

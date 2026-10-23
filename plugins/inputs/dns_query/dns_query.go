@@ -68,13 +68,8 @@ func (d *DNSQuery) Init() error {
 		d.Network = "udp"
 	}
 
-	if d.RecordType == "" {
-		d.RecordType = "NS"
-	}
-
 	if len(d.Domains) == 0 {
 		d.Domains = []string{"."}
-		d.RecordType = "NS"
 	}
 
 	if d.Port < 1 {
@@ -83,6 +78,9 @@ func (d *DNSQuery) Init() error {
 
 	// Convert the record type
 	switch d.RecordType {
+	case "":
+		d.RecordType = "NS"
+		d.record = dns.TypeNS
 	case "A":
 		d.record = dns.TypeA
 	case "AAAA":
@@ -143,7 +141,7 @@ func (d *DNSQuery) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (d *DNSQuery) query(domain, server string) (map[string]interface{}, map[string]string, error) {
+func (d *DNSQuery) query(domain, server string) (map[string]any, map[string]string, error) {
 	tags := map[string]string{
 		"server":      server,
 		"domain":      domain,
@@ -151,7 +149,7 @@ func (d *DNSQuery) query(domain, server string) (map[string]interface{}, map[str
 		"result":      "error",
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"query_time_ms": float64(0),
 		"result_code":   uint64(errorResult),
 	}

@@ -8,10 +8,10 @@ type mqttLogger struct {
 	telegraf.Logger
 }
 
-func (l mqttLogger) Printf(fmt string, args ...interface{}) {
+func (l mqttLogger) Printf(fmt string, args ...any) {
 	l.Logger.Debugf(fmt, args...)
 }
 
-func (l mqttLogger) Println(args ...interface{}) {
+func (l mqttLogger) Println(args ...any) {
 	l.Logger.Debug(args...)
 }

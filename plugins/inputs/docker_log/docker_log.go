@@ -6,12 +6,14 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"sync"
 	"time"
 
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/client"
+	"github.com/moby/moby/client/pkg/versions"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -39,6 +41,8 @@ type DockerLogs struct {
 	common_tls.ClientConfig
 
 	client          *client.Client
+	clientOptions   []client.Opt
+	clientVerified  bool
 	labelFilter     filter.Filter
 	containerFilter filter.Filter
 	stateFilter     filter.Filter
@@ -62,15 +66,17 @@ func (d *DockerLogs) Init() error {
 		d.Endpoint = "unix:///var/run/docker.sock"
 	}
 
+	var options []client.Opt
 	switch d.Endpoint {
 	case "ENV":
-		c, err := client.New(client.FromEnv)
+		options = []client.Opt{client.FromEnv}
+		c, err := client.New(options...)
 		if err != nil {
 			return fmt.Errorf("creating client from environment failed: %w", err)
 		}
 		d.client = c
 	default:
-		options := []client.Opt{
+		options = []client.Opt{
 			client.WithUserAgent("engine-api-cli-1.0"),
 			client.WithHost(d.Endpoint),
 		}
@@ -88,6 +94,7 @@ func (d *DockerLogs) Init() error {
 		}
 		d.client = c
 	}
+	d.clientOptions = options
 
 	// Create label filter
 	labelFilter, err := filter.NewIncludeExcludeFilter(d.LabelInclude, d.LabelExclude)
@@ -136,26 +143,21 @@ func (d *DockerLogs) Stop() {
 	d.wg.Wait()
 }
 
-func (d *DockerLogs) GetState() interface{} {
+func (d *DockerLogs) GetState() any {
 	d.lastRecordMtx.Lock()
-	recordOffsets := make(map[string]time.Time, len(d.lastRecord))
-	for k, v := range d.lastRecord {
-		recordOffsets[k] = v
-	}
+	recordOffsets := maps.Clone(d.lastRecord)
 	d.lastRecordMtx.Unlock()
 
 	return recordOffsets
 }
 
-func (d *DockerLogs) SetState(state interface{}) error {
+func (d *DockerLogs) SetState(state any) error {
 	recordOffsets, ok := state.(map[string]time.Time)
 	if !ok {
 		return fmt.Errorf("state has wrong type %T", state)
 	}
 	d.lastRecordMtx.Lock()
-	for k, v := range recordOffsets {
-		d.lastRecord[k] = v
-	}
+	maps.Copy(d.lastRecord, recordOffsets)
 	d.lastRecordMtx.Unlock()
 
 	return nil
@@ -168,10 +170,19 @@ func (d *DockerLogs) Gather(acc telegraf.Accumulator) error {
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(d.Timeout))
 	defer cancel()
 
+	if !d.clientVerified {
+		if ping, err := d.client.Ping(ctx, client.PingOptions{}); err == nil {
+			if err := d.pinAPIVersion(ping.APIVersion); err != nil {
+				return err
+			}
+		}
+	}
+
 	containers, err := d.client.ContainerList(ctx, client.ContainerListOptions{})
 	if err != nil {
 		return fmt.Errorf("listing containers failed: %w", err)
 	}
+	d.clientVerified = true
 
 	for _, cntnr := range containers.Items {
 		d.mu.Lock()
@@ -216,6 +227,24 @@ func (d *DockerLogs) Gather(acc telegraf.Accumulator) error {
 			}
 		}(cntnr)
 	}
+	return nil
+}
+
+func (d *DockerLogs) pinAPIVersion(version string) error {
+	// Negotiation refuses to go below client.MinAPIVersion and the library
+	// discards that error, leaving the client at a version the daemon rejects
+	if version == "" || !versions.LessThan(version, client.MinAPIVersion) ||
+		!versions.GreaterThan(d.client.ClientVersion(), version) {
+		return nil
+	}
+
+	c, err := client.New(append(d.clientOptions, client.WithAPIVersion(version))...)
+	if err != nil {
+		return fmt.Errorf("creating client for API version %s failed: %w", version, err)
+	}
+	d.client.Close()
+	d.client = c
+
 	return nil
 }
 
@@ -295,17 +324,15 @@ func (d *DockerLogs) tailContainerLogs(
 	} else {
 		last, err = tailMultiplexed(acc, tags, cntnr.ID, logReader)
 	}
-	if err != nil {
-		return err
-	}
-
+	// Record the progress made even if the stream ended with an error to be
+	// able to resume where we left off instead of re-reading the log
 	d.lastRecordMtx.Lock()
 	if ts, ok := d.lastRecord[cntnr.ID]; !ok || ts.Before(last) {
 		d.lastRecord[cntnr.ID] = last
 	}
 	d.lastRecordMtx.Unlock()
 
-	return nil
+	return err
 }
 
 func init() {

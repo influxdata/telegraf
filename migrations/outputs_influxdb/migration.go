@@ -2,18 +2,18 @@ package outputs_influxdb
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/influxdata/toml"
 	"github.com/influxdata/toml/ast"
 
-	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/migrations"
 )
 
 // Migration function
 func migrate(tbl *ast.Table) ([]byte, string, error) {
 	// Decode the old data structure
-	var plugin map[string]interface{}
+	var plugin map[string]any
 	if err := toml.UnmarshalTable(tbl, &plugin); err != nil {
 		return nil, "", err
 	}
@@ -39,7 +39,7 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 			return nil, "", fmt.Errorf("unexpected 'url' entry %v (%T)", ou, ou)
 		}
 
-		if !choice.Contains(ou, urls) {
+		if !slices.Contains(urls, ou) {
 			urls = append(urls, ou)
 		}
 

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	dto "github.com/prometheus/client_model/go"
-	"google.golang.org/protobuf/proto"
 
 	"github.com/influxdata/telegraf"
 )
@@ -425,20 +424,20 @@ func (c *Collection) GetProto() []*dto.MetricFamily {
 
 	for _, entry := range c.GetEntries() {
 		mf := &dto.MetricFamily{
-			Name: proto.String(entry.family.name),
+			Name: new(entry.family.name),
 			Type: metricType(entry.family.typ),
 		}
 
 		if !c.config.CompactEncoding {
-			mf.Help = proto.String(helpString)
+			mf.Help = new(helpString)
 		}
 
 		for _, metric := range c.GetMetrics(entry) {
 			l := make([]*dto.LabelPair, 0, len(metric.labels))
 			for _, label := range metric.labels {
 				l = append(l, &dto.LabelPair{
-					Name:  proto.String(label.name),
-					Value: proto.String(label.value),
+					Name:  new(label.name),
+					Value: new(label.value),
 				})
 			}
 
@@ -447,43 +446,43 @@ func (c *Collection) GetProto() []*dto.MetricFamily {
 			}
 
 			if c.config.ExportTimestamp {
-				m.TimestampMs = proto.Int64(metric.time.UnixNano() / int64(time.Millisecond))
+				m.TimestampMs = new(metric.time.UnixNano() / int64(time.Millisecond))
 			}
 
 			switch entry.family.typ {
 			case telegraf.Gauge:
-				m.Gauge = &dto.Gauge{Value: proto.Float64(metric.scaler.value)}
+				m.Gauge = &dto.Gauge{Value: new(metric.scaler.value)}
 			case telegraf.Counter:
-				m.Counter = &dto.Counter{Value: proto.Float64(metric.scaler.value)}
+				m.Counter = &dto.Counter{Value: new(metric.scaler.value)}
 			case telegraf.Untyped:
-				m.Untyped = &dto.Untyped{Value: proto.Float64(metric.scaler.value)}
+				m.Untyped = &dto.Untyped{Value: new(metric.scaler.value)}
 			case telegraf.Histogram:
 				buckets := make([]*dto.Bucket, 0, len(metric.histogram.buckets))
 				for _, bucket := range metric.histogram.buckets {
 					buckets = append(buckets, &dto.Bucket{
-						UpperBound:      proto.Float64(bucket.bound),
-						CumulativeCount: proto.Uint64(bucket.count),
+						UpperBound:      new(bucket.bound),
+						CumulativeCount: new(bucket.count),
 					})
 				}
 
 				m.Histogram = &dto.Histogram{
 					Bucket:      buckets,
-					SampleCount: proto.Uint64(metric.histogram.count),
-					SampleSum:   proto.Float64(metric.histogram.sum),
+					SampleCount: new(metric.histogram.count),
+					SampleSum:   new(metric.histogram.sum),
 				}
 			case telegraf.Summary:
 				quantiles := make([]*dto.Quantile, 0, len(metric.summary.quantiles))
 				for _, quantile := range metric.summary.quantiles {
 					quantiles = append(quantiles, &dto.Quantile{
-						Quantile: proto.Float64(quantile.quantile),
-						Value:    proto.Float64(quantile.value),
+						Quantile: new(quantile.quantile),
+						Value:    new(quantile.value),
 					})
 				}
 
 				m.Summary = &dto.Summary{
 					Quantile:    quantiles,
-					SampleCount: proto.Uint64(metric.summary.count),
-					SampleSum:   proto.Float64(metric.summary.sum),
+					SampleCount: new(metric.summary.count),
+					SampleSum:   new(metric.summary.sum),
 				}
 			default:
 				panic("unknown telegraf.ValueType")

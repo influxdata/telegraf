@@ -273,8 +273,7 @@ func newReader(log telegraf.Logger, files []string) (*ia.JSONFilesReader, error)
 	for _, file := range files {
 		err := reader.AddFiles(file)
 		if err != nil {
-			var deprecatedFormatError *ia.DeprecatedFormatError
-			if errors.As(err, &deprecatedFormatError) {
+			if deprecatedFormatError, ok := errors.AsType[*ia.DeprecatedFormatError](err); ok {
 				log.Warnf("%v. See the perfmon repo for updated event files", deprecatedFormatError)
 				continue
 			}
@@ -382,7 +381,7 @@ func checkFiles(paths []string, fileInfo fileInfoProvider) error {
 
 func publishCoreMeasurements(metrics []coreMetric, acc telegraf.Accumulator) {
 	for _, m := range metrics {
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		tags := make(map[string]string)
 
 		fields["raw"] = m.values.Raw
@@ -402,7 +401,7 @@ func publishCoreMeasurements(metrics []coreMetric, acc telegraf.Accumulator) {
 
 func publishUncoreMeasurements(metrics []uncoreMetric, acc telegraf.Accumulator) {
 	for _, m := range metrics {
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		tags := make(map[string]string)
 
 		fields["raw"] = m.values.Raw

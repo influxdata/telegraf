@@ -35,12 +35,23 @@ func (ki *KubernetesInventory) gatherPod(p *corev1.Pod, acc telegraf.Accumulator
 		return
 	}
 
-	containerList := make(map[string]*corev1.ContainerStatus, len(p.Status.ContainerStatuses))
-	for i := range p.Status.ContainerStatuses {
-		containerList[p.Status.ContainerStatuses[i].Name] = &p.Status.ContainerStatuses[i]
+	initContainers := make([]corev1.Container, 0, len(p.Spec.InitContainers))
+	for _, c := range p.Spec.InitContainers {
+		if c.RestartPolicy != nil && *c.RestartPolicy == corev1.ContainerRestartPolicyAlways {
+			initContainers = append(initContainers, c)
+		}
+	}
+	ki.gatherPodContainers(p, initContainers, p.Status.InitContainerStatuses, acc)
+	ki.gatherPodContainers(p, p.Spec.Containers, p.Status.ContainerStatuses, acc)
+}
+
+func (ki *KubernetesInventory) gatherPodContainers(p *corev1.Pod, containers []corev1.Container, statuses []corev1.ContainerStatus, acc telegraf.Accumulator) {
+	containerList := make(map[string]*corev1.ContainerStatus, len(statuses))
+	for i := range statuses {
+		containerList[statuses[i].Name] = &statuses[i]
 	}
 
-	for _, c := range p.Spec.Containers {
+	for _, c := range containers {
 		cs, ok := containerList[c.Name]
 		if !ok {
 			cs = &corev1.ContainerStatus{}
@@ -73,7 +84,7 @@ func (ki *KubernetesInventory) gatherPodContainer(p *corev1.Pod, cs corev1.Conta
 		readiness = "ready"
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"restarts_total": cs.RestartCount,
 		"state_code":     stateCode,
 	}
@@ -158,7 +169,7 @@ func (ki *KubernetesInventory) gatherPodContainer(p *corev1.Pod, cs corev1.Conta
 			}
 			running = 2
 		}
-		conditionfields := map[string]interface{}{
+		conditionfields := map[string]any{
 			"status_condition": running,
 			"ready":            podready,
 		}

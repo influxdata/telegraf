@@ -47,7 +47,7 @@ func TestAutoEncoding(t *testing.T) {
 	// Simulate a message receive event
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.onMessage(&acc, msg))
-	acc.AssertContainsFields(t, "measurementName", map[string]interface{}{"fieldKey": "gzip"})
+	acc.AssertContainsFields(t, "measurementName", map[string]any{"fieldKey": "gzip"})
 
 	// Check the decoding
 	encIdentity, err := internal.NewIdentityEncoder()
@@ -64,7 +64,7 @@ func TestAutoEncoding(t *testing.T) {
 	// Simulate a message receive event
 	require.NoError(t, plugin.onMessage(&acc, msg))
 	require.NoError(t, err)
-	acc.AssertContainsFields(t, "measurementName2", map[string]interface{}{"fieldKey": "identity"})
+	acc.AssertContainsFields(t, "measurementName2", map[string]any{"fieldKey": "identity"})
 }
 
 func TestIntegration(t *testing.T) {

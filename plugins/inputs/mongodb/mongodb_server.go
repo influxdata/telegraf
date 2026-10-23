@@ -54,7 +54,7 @@ func (s *server) authLog(err error) {
 	}
 }
 
-func (s *server) runCommand(database string, cmd, result interface{}) error {
+func (s *server) runCommand(database string, cmd, result any) error {
 	r := s.client.Database(database).RunCommand(context.Background(), cmd)
 	if r.Err() != nil {
 		return r.Err()
@@ -95,7 +95,7 @@ func (s *server) gatherReplSetStatus() (*replSetStatus, error) {
 }
 
 func (s *server) gatherTopStatData() (*topStats, error) {
-	var dest map[string]interface{}
+	var dest map[string]any
 	err := s.runCommand("admin", bson.D{
 		{
 			Key:   "top",
@@ -106,7 +106,7 @@ func (s *server) gatherTopStatData() (*topStats, error) {
 		return nil, fmt.Errorf("failed running admin cmd: %w", err)
 	}
 
-	totals, ok := dest["totals"].(map[string]interface{})
+	totals, ok := dest["totals"].(map[string]any)
 	if !ok {
 		return nil, errors.New("collection totals not found or not a map")
 	}

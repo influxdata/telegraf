@@ -306,7 +306,7 @@ func genTopicMetrics(r *apiResponse, cluster, topic string, acc telegraf.Accumul
 
 		acc.AddFields(
 			"burrow_topic",
-			map[string]interface{}{
+			map[string]any{
 				"offset": offset,
 			},
 			tags,
@@ -377,7 +377,7 @@ func genGroupStatusMetrics(r *apiResponse, cluster, group string, acc telegraf.A
 
 	acc.AddFields(
 		"burrow_group",
-		map[string]interface{}{
+		map[string]any{
 			"status":          r.Status.Status,
 			"status_code":     mapStatusToCode(r.Status.Status),
 			"partition_count": partitionCount,
@@ -400,7 +400,7 @@ func (b *Burrow) genGroupLagMetrics(r *apiResponse, cluster, group string, acc t
 		}
 		acc.AddFields(
 			"burrow_partition",
-			map[string]interface{}{
+			map[string]any{
 				"status":      partition.Status,
 				"status_code": mapStatusToCode(partition.Status),
 				"lag":         partition.CurrentLag,

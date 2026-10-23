@@ -22,7 +22,7 @@ func TestFullVmStatProcFile(t *testing.T) {
 	acc := testutil.Accumulator{}
 	require.NoError(t, k.Gather(&acc))
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"nr_free_pages":                 int64(78730),
 		"nr_inactive_anon":              int64(426259),
 		"nr_active_anon":                int64(2515657),
@@ -130,7 +130,7 @@ func TestPartialVmStatProcFile(t *testing.T) {
 	err := k.Gather(&acc)
 	require.NoError(t, err)
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"unevictable_pgs_culled":     int64(1531),
 		"unevictable_pgs_scanned":    int64(0),
 		"unevictable_pgs_rescued":    int64(5426),

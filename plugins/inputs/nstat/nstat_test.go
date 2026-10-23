@@ -5,7 +5,7 @@ import "testing"
 func TestLoadUglyTable(t *testing.T) {
 	uglyStr := `IpExt: InNoRoutes InTruncatedPkts InMcastPkts InCEPkts
 	IpExt: 332 433718 0 2660494435`
-	parsed := map[string]interface{}{
+	parsed := map[string]any{
 		"IpExtInNoRoutes":      int64(332),
 		"IpExtInTruncatedPkts": int64(433718),
 		"IpExtInMcastPkts":     int64(0),
@@ -31,7 +31,7 @@ func TestLoadGoodTable(t *testing.T) {
 				Ip6InDelivers                   	62
 				Ip6InMcastOctets                	1242966`
 
-	parsed := map[string]interface{}{
+	parsed := map[string]any{
 		"Ip6InReceives":     int64(11707),
 		"Ip6InTooBigErrors": int64(0),
 		"Ip6InDelivers":     int64(62),

@@ -1,0 +1,2 @@
+hw.sensors.cpu0.temp0=36.00 degC
+this line has no equals sign

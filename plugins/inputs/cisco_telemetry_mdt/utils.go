@@ -8,7 +8,7 @@ import (
 	"github.com/influxdata/telegraf/internal"
 )
 
-func decode(field *telemetry.TelemetryField) interface{} {
+func decode(field *telemetry.TelemetryField) any {
 	switch val := field.ValueByType.(type) {
 	case *telemetry.TelemetryField_BytesValue:
 		return val.BytesValue
@@ -49,7 +49,7 @@ func xformValueString(field *telemetry.TelemetryField) string {
 }
 
 // xform Uint64 to int64
-func nxosValueXformUint64Toint64(field *telemetry.TelemetryField) interface{} {
+func nxosValueXformUint64Toint64(field *telemetry.TelemetryField) any {
 	if value := field.GetUint64Value(); value != 0 {
 		return int64(value)
 	}
@@ -57,7 +57,7 @@ func nxosValueXformUint64Toint64(field *telemetry.TelemetryField) interface{} {
 }
 
 // xform string to float
-func nxosValueXformStringTofloat(field *telemetry.TelemetryField) interface{} {
+func nxosValueXformStringTofloat(field *telemetry.TelemetryField) any {
 	if value := field.GetStringValue(); value != "" {
 		if v, err := strconv.ParseFloat(value, 64); err == nil {
 			return v
@@ -67,7 +67,7 @@ func nxosValueXformStringTofloat(field *telemetry.TelemetryField) interface{} {
 }
 
 // xform string to uint64
-func nxosValueXformStringToUint64(field *telemetry.TelemetryField) interface{} {
+func nxosValueXformStringToUint64(field *telemetry.TelemetryField) any {
 	if value := field.GetStringValue(); value != "" {
 		if v, err := strconv.ParseUint(value, 10, 64); err == nil {
 			return v
@@ -77,7 +77,7 @@ func nxosValueXformStringToUint64(field *telemetry.TelemetryField) interface{} {
 }
 
 // xform string to int64
-func nxosValueXformStringToInt64(field *telemetry.TelemetryField) interface{} {
+func nxosValueXformStringToInt64(field *telemetry.TelemetryField) any {
 	if value := field.GetStringValue(); value != "" {
 		if v, err := strconv.ParseInt(value, 10, 64); err == nil {
 			return v
@@ -87,7 +87,7 @@ func nxosValueXformStringToInt64(field *telemetry.TelemetryField) interface{} {
 }
 
 // auto-xform float properties
-func nxosValueAutoXformFloatProp(field *telemetry.TelemetryField) interface{} {
+func nxosValueAutoXformFloatProp(field *telemetry.TelemetryField) any {
 	if value := field.GetStringValue(); value != "" {
 		if v, err := strconv.ParseFloat(value, 64); err == nil {
 			return v
@@ -97,7 +97,7 @@ func nxosValueAutoXformFloatProp(field *telemetry.TelemetryField) interface{} {
 }
 
 // xform uint64 to string
-func nxosValueXformUint64ToString(field *telemetry.TelemetryField) interface{} {
+func nxosValueXformUint64ToString(field *telemetry.TelemetryField) any {
 	switch val := field.ValueByType.(type) {
 	case *telemetry.TelemetryField_StringValue:
 		if len(val.StringValue) > 0 {
@@ -110,7 +110,7 @@ func nxosValueXformUint64ToString(field *telemetry.TelemetryField) interface{} {
 }
 
 // Xform value field.
-func nxosValueXform(field *telemetry.TelemetryField, propMap map[string]func(*telemetry.TelemetryField) interface{}, prop map[string]string) interface{} {
+func nxosValueXform(field *telemetry.TelemetryField, propMap map[string]func(*telemetry.TelemetryField) any, prop map[string]string) any {
 	value := decode(field)
 	if value == nil {
 		return nil

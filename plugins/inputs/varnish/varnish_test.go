@@ -87,8 +87,8 @@ func TestFieldConfig(t *testing.T) {
 	}
 }
 
-func flatten(metrics []*testutil.Metric) map[string]interface{} {
-	flat := map[string]interface{}{}
+func flatten(metrics []*testutil.Metric) map[string]any {
+	flat := map[string]any{}
 	for _, m := range metrics {
 		buf := &bytes.Buffer{}
 		for k, v := range m.Tags {
@@ -112,7 +112,7 @@ MEMPOOL.vbc.pool                   10          .   In Pool
 MEMPOOL.vbc.sz_wanted              88          .   Size requested
 `
 
-var parsedSmOutput = map[string]map[string]interface{}{
+var parsedSmOutput = map[string]map[string]any{
 	"MAIN": {
 		"uptime":     uint64(895),
 		"cache_hit":  uint64(95),
@@ -596,7 +596,7 @@ func TestJsonTypes(t *testing.T) {
 					"value": 18446744073709551615
 			}
 		}}`
-	exp := map[string]interface{}{
+	exp := map[string]any{
 		"floatTest":  123.45,
 		"stringTest": "abc_def",
 		"intTest":    int64(12345),

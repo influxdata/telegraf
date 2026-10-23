@@ -34,6 +34,7 @@ type RiemannSocketListener struct {
 	ServiceAddress  string           `toml:"service_address"`
 	MaxConnections  int              `toml:"max_connections"`
 	ReadBufferSize  config.Size      `toml:"read_buffer_size"`
+	MaxMessageSize  config.Size      `toml:"max_message_size"`
 	ReadTimeout     *config.Duration `toml:"read_timeout"`
 	KeepAlivePeriod *config.Duration `toml:"keep_alive_period"`
 	SocketMode      string           `toml:"socket_mode"`
@@ -71,6 +72,9 @@ func (rsl *RiemannSocketListener) Start(acc telegraf.Accumulator) error {
 		rsl.Log.Warnf("Using default service_address tcp://:5555")
 		rsl.ServiceAddress = "tcp://:5555"
 	}
+	if rsl.MaxMessageSize == 0 {
+		rsl.MaxMessageSize = 4 * 1024 * 1024
+	}
 	spl := strings.SplitN(rsl.ServiceAddress, "://", 2)
 	if len(spl) != 2 {
 		return fmt.Errorf("invalid service address: %s", rsl.ServiceAddress)
@@ -105,11 +109,9 @@ func (rsl *RiemannSocketListener) Start(acc telegraf.Accumulator) error {
 		}
 
 		rsl.wg = sync.WaitGroup{}
-		rsl.wg.Add(1)
-		go func() {
-			defer rsl.wg.Done()
+		rsl.wg.Go(func() {
 			rsl.listen(ctx)
-		}()
+		})
 	default:
 		return fmt.Errorf("unknown protocol %q in %q", protocol, rsl.ServiceAddress)
 	}
@@ -171,11 +173,9 @@ func (rsl *riemannListener) listen(ctx context.Context) {
 				rsl.Log.Errorf("Unable to configure keep alive %q: %s", rsl.ServiceAddress, err.Error())
 			}
 
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				rsl.read(c)
-			}()
+			})
 		}
 		rsl.closeAllConnections()
 		wg.Wait()
@@ -254,6 +254,13 @@ func (rsl *riemannListener) read(conn net.Conn) {
 			}
 			return
 		}
+		// Check the announced size before allocating for it as the header
+		// is attacker controlled.
+		if int64(header) > int64(rsl.MaxMessageSize) {
+			rsl.Log.Debugf("Message size %d exceeds the maximum of %d", header, rsl.MaxMessageSize)
+			rsl.riemannReturnErrorResponse(conn, "Message too large")
+			return
+		}
 		data := make([]byte, header)
 
 		if err = readMessages(conn, data); err != nil {
@@ -280,7 +287,7 @@ func (rsl *riemannListener) read(conn net.Conn) {
 			tags["Host"] = m.Host
 			tags["Description"] = m.Description
 			tags["State"] = m.State
-			fieldValues := map[string]interface{}{
+			fieldValues := map[string]any{
 				"Metric": m.Metric,
 				"TTL":    m.TTL.Seconds(),
 			}

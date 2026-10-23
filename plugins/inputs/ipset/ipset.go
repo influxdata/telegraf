@@ -64,7 +64,7 @@ func (i *Ipset) Gather(acc telegraf.Accumulator) error {
 		}
 
 		// Ignore sets created without the "counters" option
-		nocomment := strings.Split(line, "\"")[0]
+		nocomment, _, _ := strings.Cut(line, "\"")
 		if !strings.Contains(nocomment, "packets") || !strings.Contains(nocomment, "bytes") {
 			continue
 		}
@@ -80,7 +80,7 @@ func (i *Ipset) Gather(acc telegraf.Accumulator) error {
 				"rule": data[2],
 			}
 
-			fields := make(map[string]interface{}, 3)
+			fields := make(map[string]any, 3)
 			for i, field := range data {
 				switch field {
 				case "timeout":

@@ -16,7 +16,7 @@ func createTestMetric() telegraf.Metric {
 			"tag":           "tag_value",
 			"duplicate_tag": "tag_value",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"string_value":           "test",
 			"duplicate_string_value": "test",
 			"int_value":              200,
@@ -29,7 +29,7 @@ func createTestMetric() telegraf.Metric {
 	return m
 }
 
-func calculateProcessedValues(mapper Enum, m telegraf.Metric) map[string]interface{} {
+func calculateProcessedValues(mapper Enum, m telegraf.Metric) map[string]any {
 	processed := mapper.Apply(m)
 	return processed[0].Fields()
 }
@@ -39,13 +39,13 @@ func calculateProcessedTags(mapper Enum, m telegraf.Metric) map[string]string {
 	return processed[0].Tags()
 }
 
-func assertFieldValue(t *testing.T, expected interface{}, field string, fields map[string]interface{}) {
+func assertFieldValue(t *testing.T, expected any, field string, fields map[string]any) {
 	value, present := fields[field]
 	require.True(t, present, "value of field '"+field+"' was not present")
 	require.EqualValues(t, expected, value)
 }
 
-func assertTagValue(t *testing.T, expected interface{}, tag string, tags map[string]string) {
+func assertTagValue(t *testing.T, expected any, tag string, tags map[string]string) {
 	value, present := tags[tag]
 	require.True(t, present, "value of tag '"+tag+"' was not present")
 	require.EqualValues(t, expected, value)
@@ -73,7 +73,7 @@ func TestRetainsMetric(t *testing.T) {
 func TestMapsSingleStringValueTag(t *testing.T) {
 	mapper := Enum{Mappings: []*mapping{{
 		Tags:          []string{"tag"},
-		ValueMappings: map[string]interface{}{"tag_value": "valuable"},
+		ValueMappings: map[string]any{"tag_value": "valuable"},
 	}}}
 	err := mapper.Init()
 	require.NoError(t, err)
@@ -83,36 +83,36 @@ func TestMapsSingleStringValueTag(t *testing.T) {
 }
 
 func TestMappings(t *testing.T) {
-	mappings := []map[string][]interface{}{
+	mappings := []map[string][]any{
 		{
-			"field_name":      []interface{}{"string_value"},
-			"target_values":   []interface{}{"test", "test", "test", "not_test", "50", "true"},
-			"mapped_values":   []interface{}{"test_1", 5, true, "test_1", 10, false},
-			"expected_values": []interface{}{"test_1", 5, true, "test", "test", "test"},
+			"field_name":      []any{"string_value"},
+			"target_values":   []any{"test", "test", "test", "not_test", "50", "true"},
+			"mapped_values":   []any{"test_1", 5, true, "test_1", 10, false},
+			"expected_values": []any{"test_1", 5, true, "test", "test", "test"},
 		},
 		{
-			"field_name":     []interface{}{"true_value"},
-			"target_value":   []interface{}{"true", "true", "true", "false", "test", "5"},
-			"mapped_value":   []interface{}{false, 1, "false", false, false, false},
-			"expected_value": []interface{}{false, 1, "false", true, true, true},
+			"field_name":     []any{"true_value"},
+			"target_value":   []any{"true", "true", "true", "false", "test", "5"},
+			"mapped_value":   []any{false, 1, "false", false, false, false},
+			"expected_value": []any{false, 1, "false", true, true, true},
 		},
 		{
-			"field_name":     []interface{}{"int_value"},
-			"target_value":   []interface{}{"200", "200", "200", "200", "test", "5"},
-			"mapped_value":   []interface{}{"http_ok", true, 1, float64(200.001), false, false},
-			"expected_value": []interface{}{"http_ok", true, 1, float64(200.001), 200, 200},
+			"field_name":     []any{"int_value"},
+			"target_value":   []any{"200", "200", "200", "200", "test", "5"},
+			"mapped_value":   []any{"http_ok", true, 1, float64(200.001), false, false},
+			"expected_value": []any{"http_ok", true, 1, float64(200.001), 200, 200},
 		},
 		{
-			"field_name":     []interface{}{"uint_value"},
-			"target_value":   []interface{}{"500", "500", "500", "test", "false", "5"},
-			"mapped_value":   []interface{}{"internal_error", 1, false, false, false, false},
-			"expected_value": []interface{}{"internal_error", 1, false, 500, 500, 500},
+			"field_name":     []any{"uint_value"},
+			"target_value":   []any{"500", "500", "500", "test", "false", "5"},
+			"mapped_value":   []any{"internal_error", 1, false, false, false, false},
+			"expected_value": []any{"internal_error", 1, false, 500, 500, 500},
 		},
 		{
-			"field_name":     []interface{}{"float_value"},
-			"target_value":   []interface{}{"3.14", "3.14", "3.14", "3.14", "not_float", "5"},
-			"mapped_value":   []interface{}{"pi", 1, false, float64(100.2), float64(3.14), "pi"},
-			"expected_value": []interface{}{"pi", 1, false, float64(100.2), float64(3.14), float64(3.14)},
+			"field_name":     []any{"float_value"},
+			"target_value":   []any{"3.14", "3.14", "3.14", "3.14", "not_float", "5"},
+			"mapped_value":   []any{"pi", 1, false, float64(100.2), float64(3.14), "pi"},
+			"expected_value": []any{"pi", 1, false, float64(100.2), float64(3.14), float64(3.14)},
 		},
 	}
 
@@ -123,7 +123,7 @@ func TestMappings(t *testing.T) {
 				Mappings: []*mapping{
 					{
 						Fields: []string{fieldName},
-						ValueMappings: map[string]interface{}{
+						ValueMappings: map[string]any{
 							mappingItem["target_value"][index].(string): mappingItem["mapped_value"][index],
 						},
 					},
@@ -141,7 +141,7 @@ func TestMapsToDefaultValueOnUnknownSourceValue(t *testing.T) {
 	mapper := Enum{Mappings: []*mapping{{
 		Fields:        []string{"string_value"},
 		Default:       int64(42),
-		ValueMappings: map[string]interface{}{"other": int64(1)},
+		ValueMappings: map[string]any{"other": int64(1)},
 	}}}
 	err := mapper.Init()
 	require.NoError(t, err)
@@ -154,7 +154,7 @@ func TestDoNotMapToDefaultValueKnownSourceValue(t *testing.T) {
 	mapper := Enum{Mappings: []*mapping{{
 		Fields:        []string{"string_value"},
 		Default:       int64(42),
-		ValueMappings: map[string]interface{}{"test": int64(1)},
+		ValueMappings: map[string]any{"test": int64(1)},
 	}}}
 	err := mapper.Init()
 	require.NoError(t, err)
@@ -166,7 +166,7 @@ func TestDoNotMapToDefaultValueKnownSourceValue(t *testing.T) {
 func TestNoMappingWithoutDefaultOrDefinedMappingValue(t *testing.T) {
 	mapper := Enum{Mappings: []*mapping{{
 		Fields:        []string{"string_value"},
-		ValueMappings: map[string]interface{}{"other": int64(1)},
+		ValueMappings: map[string]any{"other": int64(1)},
 	}}}
 	err := mapper.Init()
 	require.NoError(t, err)
@@ -179,7 +179,7 @@ func TestWritesToDestination(t *testing.T) {
 	mapper := Enum{Mappings: []*mapping{{
 		Fields:        []string{"string_value"},
 		Dest:          "string_code",
-		ValueMappings: map[string]interface{}{"test": int64(1)},
+		ValueMappings: map[string]any{"test": int64(1)},
 	}}}
 	err := mapper.Init()
 	require.NoError(t, err)
@@ -194,7 +194,7 @@ func TestDoNotWriteToDestinationWithoutDefaultOrDefinedMapping(t *testing.T) {
 	mapper := Enum{Mappings: []*mapping{{
 		Fields:        []string{"string_value"},
 		Dest:          field,
-		ValueMappings: map[string]interface{}{"other": int64(1)},
+		ValueMappings: map[string]any{"other": int64(1)},
 	}}}
 	err := mapper.Init()
 	require.NoError(t, err)
@@ -208,7 +208,7 @@ func TestDoNotWriteToDestinationWithoutDefaultOrDefinedMapping(t *testing.T) {
 func TestMultipleFields(t *testing.T) {
 	mapper := Enum{Mappings: []*mapping{{
 		Fields:        []string{"string_value", "duplicate_string_value"},
-		ValueMappings: map[string]interface{}{"test": "multiple"},
+		ValueMappings: map[string]any{"test": "multiple"},
 	}}}
 	require.NoError(t, mapper.Init())
 	fields := calculateProcessedValues(mapper, createTestMetric())
@@ -220,7 +220,7 @@ func TestMultipleFields(t *testing.T) {
 func TestFieldGlobMatching(t *testing.T) {
 	mapper := Enum{Mappings: []*mapping{{
 		Fields:        []string{"*"},
-		ValueMappings: map[string]interface{}{"test": "glob"},
+		ValueMappings: map[string]any{"test": "glob"},
 	}}}
 	err := mapper.Init()
 	require.NoError(t, err)
@@ -233,7 +233,7 @@ func TestFieldGlobMatching(t *testing.T) {
 func TestTagGlobMatching(t *testing.T) {
 	mapper := Enum{Mappings: []*mapping{{
 		Tags:          []string{"*"},
-		ValueMappings: map[string]interface{}{"tag_value": "glob"},
+		ValueMappings: map[string]any{"tag_value": "glob"},
 	}}}
 	err := mapper.Init()
 	require.NoError(t, err)
@@ -246,11 +246,11 @@ func TestCollidingValueMappings(t *testing.T) {
 	mapper := Enum{Mappings: []*mapping{
 		{
 			Fields:        []string{"status"},
-			ValueMappings: map[string]interface{}{"green": 1, "amber": 2, "red": 3},
+			ValueMappings: map[string]any{"green": 1, "amber": 2, "red": 3},
 		},
 		{
 			Fields:        []string{"status_reverse"},
-			ValueMappings: map[string]interface{}{"green": 3, "amber": 2, "red": 1},
+			ValueMappings: map[string]any{"green": 3, "amber": 2, "red": 1},
 		},
 	}}
 	require.NoError(t, mapper.Init())
@@ -259,7 +259,7 @@ func TestCollidingValueMappings(t *testing.T) {
 		map[string]string{
 			"tag": "tag_value",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"status":         "green",
 			"status_reverse": "green",
 		},
@@ -282,7 +282,7 @@ func TestTracking(t *testing.T) {
 
 	mapper := Enum{Mappings: []*mapping{{
 		Tags:          []string{"*"},
-		ValueMappings: map[string]interface{}{"tag_value": "glob"},
+		ValueMappings: map[string]any{"tag_value": "glob"},
 	}}}
 	err := mapper.Init()
 	require.NoError(t, err)

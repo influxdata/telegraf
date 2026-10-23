@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
+	"net"
 	"strings"
 	"sync"
 	"time"
@@ -68,9 +70,7 @@ func tailStream(
 	defer reader.Close()
 
 	tags := make(map[string]string, len(baseTags)+1)
-	for k, v := range baseTags {
-		tags[k] = v
-	}
+	maps.Copy(tags, baseTags)
 	tags["stream"] = stream
 
 	r := bufio.NewReaderSize(reader, 64*1024)
@@ -83,23 +83,27 @@ func tailStream(
 			if err != nil {
 				acc.AddError(err)
 			} else {
-				acc.AddFields("docker_log", map[string]interface{}{
+				acc.AddFields("docker_log", map[string]any{
 					"container_id": containerID,
 					"message":      message,
 				}, tags, ts)
-			}
 
-			// Store the last processed timestamp
-			if ts.After(lastTS) {
-				lastTS = ts
+				// Store the last processed timestamp
+				if ts.After(lastTS) {
+					lastTS = ts
+				}
 			}
 		}
 
 		if err != nil {
-			if errors.Is(err, io.EOF) || errors.Is(err, context.Canceled) {
+			// Cancelling the context closes the underlying connection, so the
+			// in-flight read surfaces the raw socket error instead of the
+			// context error
+			if errors.Is(err, io.EOF) || errors.Is(err, context.Canceled) || errors.Is(err, net.ErrClosed) {
 				return lastTS, nil
 			}
-			return time.Time{}, err
+			// Keep the progress made so far to be able to resume the stream
+			return lastTS, err
 		}
 	}
 }
@@ -110,25 +114,21 @@ func tailMultiplexed(acc telegraf.Accumulator, tags map[string]string, container
 
 	var tsStdout, tsStderr time.Time
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		var err error
 		tsStdout, err = tailStream(acc, tags, containerID, outReader, "stdout")
 		if err != nil {
 			acc.AddError(err)
 		}
-	}()
+	})
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		var err error
 		tsStderr, err = tailStream(acc, tags, containerID, errReader, "stderr")
 		if err != nil {
 			acc.AddError(err)
 		}
-	}()
+	})
 
 	_, err := stdcopy.StdCopy(outWriter, errWriter, src)
 
@@ -138,11 +138,19 @@ func tailMultiplexed(acc telegraf.Accumulator, tags map[string]string, container
 	_ = src.Close()
 	wg.Wait()
 
-	if err != nil && !errors.Is(err, context.Canceled) {
-		return time.Time{}, err
+	lastTS := tsStdout
+	if tsStderr.After(lastTS) {
+		lastTS = tsStderr
 	}
-	if tsStdout.After(tsStderr) {
-		return tsStdout, nil
+	if err != nil {
+		// Cancelling the context closes the underlying connection, so the
+		// in-flight read surfaces the raw socket error instead of the
+		// context error
+		if errors.Is(err, io.EOF) || errors.Is(err, context.Canceled) || errors.Is(err, net.ErrClosed) {
+			return lastTS, nil
+		}
+		// Keep the progress made so far to be able to resume the stream
+		return lastTS, err
 	}
-	return tsStderr, nil
+	return lastTS, nil
 }

@@ -91,7 +91,7 @@ func TestFixedValue(t *testing.T) {
 					map[string]string{
 						"device": "test",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"count": 1,
 					},
 					time.Unix(0, 0),
@@ -101,7 +101,7 @@ func TestFixedValue(t *testing.T) {
 					map[string]string{
 						"device": "test",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"count": 2,
 					},
 					time.Unix(0, 0),
@@ -111,7 +111,7 @@ func TestFixedValue(t *testing.T) {
 					map[string]string{
 						"device": "test",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"count": 3,
 					},
 					time.Unix(0, 0),
@@ -129,7 +129,7 @@ func TestFixedValue(t *testing.T) {
 					map[string]string{
 						"device": "test",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"count":  1,
 						"field1": float64(0),
 					},
@@ -140,7 +140,7 @@ func TestFixedValue(t *testing.T) {
 					map[string]string{
 						"device": "test",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"count":  2,
 						"field1": float64(0),
 					},
@@ -151,7 +151,7 @@ func TestFixedValue(t *testing.T) {
 					map[string]string{
 						"device": "test",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"count":  3,
 						"field1": float64(0),
 					},
@@ -171,7 +171,7 @@ func TestFixedValue(t *testing.T) {
 					map[string]string{
 						"device": "test",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"count":  1,
 						"field1": float64(0),
 						"field2": float64(0),
@@ -184,7 +184,7 @@ func TestFixedValue(t *testing.T) {
 					map[string]string{
 						"device": "test",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"count":  2,
 						"field1": float64(0),
 						"field2": float64(0),
@@ -197,7 +197,7 @@ func TestFixedValue(t *testing.T) {
 					map[string]string{
 						"device": "test",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"count":  3,
 						"field1": float64(0),
 						"field2": float64(0),
@@ -255,7 +255,7 @@ func TestRandomValue(t *testing.T) {
 				map[string]string{
 					"device": "test",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"count": 1,
 				},
 				time.Unix(0, 0),
@@ -272,7 +272,7 @@ func TestRandomValue(t *testing.T) {
 				map[string]string{
 					"device": "test",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"count":  1,
 					"field1": float64(0),
 				},
@@ -291,7 +291,7 @@ func TestRandomValue(t *testing.T) {
 				map[string]string{
 					"device": "test",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"count":  1,
 					"field1": float64(0),
 					"field2": float64(0),
@@ -395,7 +395,7 @@ func TestRandomValueFailPartial(t *testing.T) {
 					map[string]string{
 						"device": "flappy",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"count": 1,
 					},
 					time.Unix(0, 0),
@@ -405,7 +405,7 @@ func TestRandomValueFailPartial(t *testing.T) {
 					map[string]string{
 						"device": "flappy",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"count": 2,
 					},
 					time.Unix(0, 0),

@@ -90,7 +90,7 @@ func TestParse(t *testing.T) {
 			map[string]string{
 				"quantile": "0.99",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"go_gc_duration_seconds": float64(4.63),
 			},
 			time.Unix(0, 0),
@@ -100,7 +100,7 @@ func TestParse(t *testing.T) {
 			map[string]string{
 				"job": "prometheus",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"prometheus_target_interval_length_seconds": float64(14.99),
 			},
 			time.Unix(0, 0),
@@ -203,7 +203,7 @@ func TestHistograms(t *testing.T) {
 		metric.New(
 			"prometheus_remote_write",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"test_metric_seconds_sum": float64(36.8),
 			},
 			time.Unix(0, 0),
@@ -211,7 +211,7 @@ func TestHistograms(t *testing.T) {
 		metric.New(
 			"prometheus_remote_write",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"test_metric_seconds_count": float64(21),
 			},
 			time.Unix(0, 0),
@@ -219,7 +219,7 @@ func TestHistograms(t *testing.T) {
 		metric.New(
 			"prometheus_remote_write",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"test_float_metric_seconds_sum": float64(55.199999999999996),
 			},
 			time.Unix(0, 0),
@@ -227,7 +227,7 @@ func TestHistograms(t *testing.T) {
 		metric.New(
 			"prometheus_remote_write",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"test_float_metric_seconds_count": float64(30),
 			},
 			time.Unix(0, 0),
@@ -270,7 +270,7 @@ func TestDefaultTags(t *testing.T) {
 				"defaultTag": "defaultTagValue",
 				"__eg__":     "bar",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"foo": float64(1),
 			},
 			time.Unix(0, 0),
@@ -316,7 +316,7 @@ func TestMetricsWithTimestamp(t *testing.T) {
 			map[string]string{
 				"__eg__": "bar",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"foo": float64(1),
 			},
 			testTime,
@@ -342,7 +342,7 @@ func TestBenchmarkData(t *testing.T) {
 				"tags_platform": "python",
 				"tags_sdkver":   "3.11.5",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"benchmark_a": 5.0,
 			},
 			time.Unix(1585699200, 0),
@@ -354,7 +354,7 @@ func TestBenchmarkData(t *testing.T) {
 				"tags_platform": "python",
 				"tags_sdkver":   "3.11.4",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"benchmark_b": 4.0,
 			},
 			time.Unix(1585699200, 0),

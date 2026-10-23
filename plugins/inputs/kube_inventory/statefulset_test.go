@@ -27,7 +27,7 @@ func TestStatefulSet(t *testing.T) {
 		{
 			name: "no statefulsets",
 			handler: &mockHandler{
-				responseMap: map[string]interface{}{
+				responseMap: map[string]any{
 					"/statefulsets/": &v1.StatefulSetList{},
 				},
 			},
@@ -36,7 +36,7 @@ func TestStatefulSet(t *testing.T) {
 		{
 			name: "collect statefulsets",
 			handler: &mockHandler{
-				responseMap: map[string]interface{}{
+				responseMap: map[string]any{
 					"/statefulsets/": &v1.StatefulSetList{
 						Items: []v1.StatefulSet{
 							{
@@ -56,12 +56,10 @@ func TestStatefulSet(t *testing.T) {
 										},
 									},
 								},
-								ObjectMeta: metav1.ObjectMeta{
-									Generation:        332,
-									Namespace:         "ns1",
-									Name:              "sts1",
-									CreationTimestamp: metav1.Time{Time: now},
-								},
+								Generation:        332,
+								Namespace:         "ns1",
+								Name:              "sts1",
+								CreationTimestamp: metav1.Time{Time: now},
 							},
 						},
 					},
@@ -76,7 +74,7 @@ func TestStatefulSet(t *testing.T) {
 						"selector_select1": "s1",
 						"selector_select2": "s2",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"generation":          int64(332),
 						"observed_generation": int64(119),
 						"created":             now.UnixNano(),
@@ -94,7 +92,7 @@ func TestStatefulSet(t *testing.T) {
 		{
 			name: "no label selector",
 			handler: &mockHandler{
-				responseMap: map[string]interface{}{
+				responseMap: map[string]any{
 					"/statefulsets/": &v1.StatefulSetList{
 						Items: []v1.StatefulSet{
 							{
@@ -109,12 +107,10 @@ func TestStatefulSet(t *testing.T) {
 									Replicas: new(int32(3)),
 									Selector: nil,
 								},
-								ObjectMeta: metav1.ObjectMeta{
-									Generation:        332,
-									Namespace:         "ns1",
-									Name:              "sts1",
-									CreationTimestamp: metav1.Time{Time: now},
-								},
+								Generation:        332,
+								Namespace:         "ns1",
+								Name:              "sts1",
+								CreationTimestamp: metav1.Time{Time: now},
 							},
 						},
 					},
@@ -127,7 +123,7 @@ func TestStatefulSet(t *testing.T) {
 						"namespace":        "ns1",
 						"statefulset_name": "sts1",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"generation":          int64(332),
 						"observed_generation": int64(119),
 						"created":             now.UnixNano(),
@@ -145,7 +141,7 @@ func TestStatefulSet(t *testing.T) {
 		{
 			name: "no desired number of replicas",
 			handler: &mockHandler{
-				responseMap: map[string]interface{}{
+				responseMap: map[string]any{
 					"/statefulsets/": &v1.StatefulSetList{
 						Items: []v1.StatefulSet{
 							{
@@ -165,12 +161,10 @@ func TestStatefulSet(t *testing.T) {
 										},
 									},
 								},
-								ObjectMeta: metav1.ObjectMeta{
-									Generation:        332,
-									Namespace:         "ns1",
-									Name:              "sts1",
-									CreationTimestamp: metav1.Time{Time: now},
-								},
+								Generation:        332,
+								Namespace:         "ns1",
+								Name:              "sts1",
+								CreationTimestamp: metav1.Time{Time: now},
 							},
 						},
 					},
@@ -185,7 +179,7 @@ func TestStatefulSet(t *testing.T) {
 						"selector_select1": "s1",
 						"selector_select2": "s2",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"generation":          int64(332),
 						"observed_generation": int64(119),
 						"created":             now.UnixNano(),
@@ -231,7 +225,7 @@ func TestStatefulSetSelectorFilter(t *testing.T) {
 	now := time.Now()
 	now = time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 1, 36, 0, now.Location())
 
-	responseMap := map[string]interface{}{
+	responseMap := map[string]any{
 		"/statefulsets/": &v1.StatefulSetList{
 			Items: []v1.StatefulSet{
 				{
@@ -251,12 +245,10 @@ func TestStatefulSetSelectorFilter(t *testing.T) {
 							},
 						},
 					},
-					ObjectMeta: metav1.ObjectMeta{
-						Generation:        332,
-						Namespace:         "ns1",
-						Name:              "sts1",
-						CreationTimestamp: metav1.Time{Time: now},
-					},
+					Generation:        332,
+					Namespace:         "ns1",
+					Name:              "sts1",
+					CreationTimestamp: metav1.Time{Time: now},
 				},
 			},
 		},

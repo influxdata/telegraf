@@ -105,11 +105,7 @@ func (p *Ping) Init() error {
 	}
 
 	// The interval cannot be below 0.2 seconds, matching ping implementation: https://linux.die.net/man/8/ping
-	if time.Duration(p.PingInterval) < 200*time.Millisecond {
-		p.calcInterval = 200 * time.Millisecond
-	} else {
-		p.calcInterval = time.Duration(p.PingInterval)
-	}
+	p.calcInterval = max(time.Duration(p.PingInterval), 200*time.Millisecond)
 
 	if p.Method == "native" && p.Timeout > 0 {
 		p.Log.Warn(`"timeout" is ignored when method = "native"; use "deadline" to control the total runtime`)
@@ -283,7 +279,7 @@ func (p *Ping) pingToURLNative(acc telegraf.Accumulator, destination string) {
 	stats, err := p.nativePingFunc(destination, int(id))
 	if err != nil {
 		p.Log.Errorf("ping failed: %v", err)
-		fields := make(map[string]interface{}, 1)
+		fields := make(map[string]any, 1)
 		if strings.Contains(err.Error(), "unknown") {
 			fields["result_code"] = 1
 		} else {
@@ -293,7 +289,7 @@ func (p *Ping) pingToURLNative(acc telegraf.Accumulator, destination string) {
 		return
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"result_code":         0,
 		"packets_transmitted": stats.PacketsSent,
 		"packets_received":    stats.PacketsRecv,

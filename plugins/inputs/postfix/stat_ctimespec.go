@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func statCTime(sys interface{}) time.Time {
+func statCTime(sys any) time.Time {
 	stat, ok := sys.(*syscall.Stat_t)
 	if !ok {
 		return time.Time{}

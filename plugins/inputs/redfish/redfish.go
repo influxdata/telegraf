@@ -202,7 +202,7 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (r *Redfish) getData(address string, payload interface{}) error {
+func (r *Redfish) getData(address string, payload any) error {
 	req, err := http.NewRequest("GET", address, nil)
 	if err != nil {
 		return err

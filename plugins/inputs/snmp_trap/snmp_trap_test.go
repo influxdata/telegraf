@@ -77,7 +77,7 @@ func TestReceiveTrapV1(t *testing.T) {
 						"agent_address": "10.20.30.40",
 						"community":     "public",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"sysUpTimeInstance": uint(now),
 						"valueOID":          "payload",
 					},
@@ -142,7 +142,7 @@ func TestReceiveTrapV1(t *testing.T) {
 						"agent_address": "10.20.30.40",
 						"community":     "public",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"sysUpTimeInstance": uint(now),
 						"valueOID":          "payload",
 						"valueHexOID":       "07e801040e021900000e02",
@@ -269,7 +269,7 @@ func TestReceiveTrapV2c(t *testing.T) {
 						"source":    "127.0.0.1",
 						"community": "public",
 					},
-					map[string]interface{}{ // fields
+					map[string]any{ // fields
 						"sysUpTimeInstance": now,
 					},
 					time.Unix(0, 0),
@@ -410,7 +410,7 @@ func TestReceiveTrapV3(t *testing.T) {
 						"context_name": "foo_context_name",
 						"engine_id":    "6261725f656e67696e655f6964",
 					},
-					map[string]interface{}{ // fields
+					map[string]any{ // fields
 						"sysUpTimeInstance": now,
 					},
 					time.Unix(0, 0),
@@ -471,7 +471,7 @@ func TestReceiveTrapV3(t *testing.T) {
 						"version": "3",
 						"source":  "127.0.0.1",
 					},
-					map[string]interface{}{ // fields
+					map[string]any{ // fields
 						"sysUpTimeInstance": now,
 					},
 					time.Unix(0, 0),
@@ -532,7 +532,7 @@ func TestReceiveTrapV3(t *testing.T) {
 						"version": "3",
 						"source":  "127.0.0.1",
 					},
-					map[string]interface{}{ // fields
+					map[string]any{ // fields
 						"sysUpTimeInstance": now,
 					},
 					time.Unix(0, 0),
@@ -593,7 +593,7 @@ func TestReceiveTrapV3(t *testing.T) {
 						"version": "3",
 						"source":  "127.0.0.1",
 					},
-					map[string]interface{}{ // fields
+					map[string]any{ // fields
 						"sysUpTimeInstance": now,
 					},
 					time.Unix(0, 0),
@@ -654,7 +654,7 @@ func TestReceiveTrapV3(t *testing.T) {
 						"version": "3",
 						"source":  "127.0.0.1",
 					},
-					map[string]interface{}{ // fields
+					map[string]any{ // fields
 						"sysUpTimeInstance": now,
 					},
 					time.Unix(0, 0),
@@ -715,7 +715,7 @@ func TestReceiveTrapV3(t *testing.T) {
 						"version": "3",
 						"source":  "127.0.0.1",
 					},
-					map[string]interface{}{ // fields
+					map[string]any{ // fields
 						"sysUpTimeInstance": now,
 					},
 					time.Unix(0, 0),
@@ -776,7 +776,7 @@ func TestReceiveTrapV3(t *testing.T) {
 						"version": "3",
 						"source":  "127.0.0.1",
 					},
-					map[string]interface{}{ // fields
+					map[string]any{ // fields
 						"sysUpTimeInstance": now,
 					},
 					time.Unix(0, 0),
@@ -839,7 +839,7 @@ func TestReceiveTrapV3(t *testing.T) {
 						"version": "3",
 						"source":  "127.0.0.1",
 					},
-					map[string]interface{}{ // fields
+					map[string]any{ // fields
 						"sysUpTimeInstance": now,
 					},
 					time.Unix(0, 0),
@@ -902,7 +902,7 @@ func TestReceiveTrapV3(t *testing.T) {
 						"version": "3",
 						"source":  "127.0.0.1",
 					},
-					map[string]interface{}{ // fields
+					map[string]any{ // fields
 						"sysUpTimeInstance": now,
 					},
 					time.Unix(0, 0),
@@ -965,7 +965,7 @@ func TestReceiveTrapV3(t *testing.T) {
 						"version": "3",
 						"source":  "127.0.0.1",
 					},
-					map[string]interface{}{ // fields
+					map[string]any{ // fields
 						"sysUpTimeInstance": now,
 					},
 					time.Unix(0, 0),
@@ -1028,7 +1028,7 @@ func TestReceiveTrapV3(t *testing.T) {
 						"version": "3",
 						"source":  "127.0.0.1",
 					},
-					map[string]interface{}{ // fields
+					map[string]any{ // fields
 						"sysUpTimeInstance": now,
 					},
 					time.Unix(0, 0),
@@ -1091,7 +1091,7 @@ func TestReceiveTrapV3(t *testing.T) {
 						"version": "3",
 						"source":  "127.0.0.1",
 					},
-					map[string]interface{}{ // fields
+					map[string]any{ // fields
 						"sysUpTimeInstance": now,
 					},
 					time.Unix(0, 0),
@@ -1154,7 +1154,7 @@ func TestReceiveTrapV3(t *testing.T) {
 						"version": "3",
 						"source":  "127.0.0.1",
 					},
-					map[string]interface{}{ // fields
+					map[string]any{ // fields
 						"sysUpTimeInstance": now,
 					},
 					time.Unix(0, 0),
@@ -1219,7 +1219,7 @@ func TestReceiveTrapV3(t *testing.T) {
 						"version": "3",
 						"source":  "127.0.0.1",
 					},
-					map[string]interface{}{ // fields
+					map[string]any{ // fields
 						"sysUpTimeInstance": now,
 					},
 					time.Unix(0, 0),
@@ -1633,13 +1633,13 @@ type testLogger struct {
 	out     chan bool
 }
 
-func (l *testLogger) Print(v ...interface{}) {
+func (l *testLogger) Print(v ...any) {
 	if strings.Contains(fmt.Sprint(v...), l.matcher) {
 		l.out <- true
 	}
 }
 
-func (l *testLogger) Printf(format string, v ...interface{}) {
+func (l *testLogger) Printf(format string, v ...any) {
 	if strings.Contains(fmt.Sprintf(format, v...), l.matcher) {
 		l.out <- true
 	}

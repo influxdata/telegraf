@@ -18,8 +18,8 @@ import (
 
 type client interface {
 	close()
-	getFieldMapping(context.Context, string, string) (map[string]interface{}, error)
-	query(context.Context, *aggregation) (interface{}, int64, error)
+	getFieldMapping(context.Context, string, string) (map[string]any, error)
+	query(context.Context, *aggregation) (any, int64, error)
 }
 
 //go:embed sample.conf
@@ -53,7 +53,7 @@ type aggregation struct {
 
 	mapMetricFields map[string]string
 	measurements    map[string]map[string]string
-	queries         interface{} // prepared once and reused across collections
+	queries         any // prepared once and reused across collections
 }
 
 func (*ElasticsearchQuery) SampleConfig() string {
@@ -208,7 +208,7 @@ func (e *ElasticsearchQuery) gatherAggregation(acc telegraf.Accumulator, aggrega
 
 	// Handle simple non-aggregated results
 	if result == nil {
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"doc_count": hits,
 		}
 		tags := make(map[string]string)
@@ -226,10 +226,10 @@ func (e *ElasticsearchQuery) gatherAggregation(acc telegraf.Accumulator, aggrega
 	return nil
 }
 
-func getMetricField(response map[string]interface{}) (map[string]string, error) {
+func getMetricField(response map[string]any) (map[string]string, error) {
 	mapMetricFields := make(map[string]string, len(response))
 	for _, index := range response {
-		idx, ok := index.(map[string]interface{})
+		idx, ok := index.(map[string]any)
 		if !ok {
 			return nil, fmt.Errorf("unexpected type %T for index", index)
 		}
@@ -238,13 +238,13 @@ func getMetricField(response map[string]interface{}) (map[string]string, error) 
 			return nil, errors.New("no mapping found in index")
 		}
 
-		types, ok := mappings.(map[string]interface{})
+		types, ok := mappings.(map[string]any)
 		if !ok {
 			return nil, fmt.Errorf("unexpected type %T for mappings", mappings)
 		}
 
 		for _, t := range types {
-			fields, ok := t.(map[string]interface{})
+			fields, ok := t.(map[string]any)
 			if !ok {
 				return nil, fmt.Errorf("unexpected type %T for types", t)
 			}
@@ -260,7 +260,7 @@ func getMetricField(response map[string]interface{}) (map[string]string, error) 
 			}
 
 			for _, f := range fields {
-				field, ok := f.(map[string]interface{})
+				field, ok := f.(map[string]any)
 				if !ok {
 					return nil, fmt.Errorf("unexpected type %T for field", f)
 				}
@@ -270,13 +270,13 @@ func getMetricField(response map[string]interface{}) (map[string]string, error) 
 					return nil, fmt.Errorf("unexpected type %T for full_name field", field["full_name"])
 				}
 
-				mapping, ok := field["mapping"].(map[string]interface{})
+				mapping, ok := field["mapping"].(map[string]any)
 				if !ok {
 					return nil, fmt.Errorf("unexpected type %T for mapping field", field["mapping"])
 				}
 
 				for _, fm := range mapping {
-					fieldType, ok := fm.(map[string]interface{})
+					fieldType, ok := fm.(map[string]any)
 					if !ok {
 						return nil, fmt.Errorf("unexpected type %T for field", fm)
 					}
@@ -302,13 +302,9 @@ func getMetricField(response map[string]interface{}) (map[string]string, error) 
 func init() {
 	inputs.Add("elasticsearch_query", func() telegraf.Input {
 		return &ElasticsearchQuery{
-			HealthCheckInterval: config.Duration(15 * time.Minute),
-			HTTPClientConfig: common_http.HTTPClientConfig{
-				Timeout: config.Duration(5 * time.Second),
-				TransportConfig: common_http.TransportConfig{
-					ResponseHeaderTimeout: config.Duration(5 * time.Second),
-				},
-			},
+			HealthCheckInterval:   config.Duration(15 * time.Minute),
+			Timeout:               config.Duration(5 * time.Second),
+			ResponseHeaderTimeout: config.Duration(5 * time.Second),
 		}
 	})
 }

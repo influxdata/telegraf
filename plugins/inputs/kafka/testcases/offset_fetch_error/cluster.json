@@ -1,0 +1,32 @@
+{
+  "brokers": [1, 2],
+  "controller": 1,
+  "topics": {
+    "orders": {
+      "0": {"leader": 1, "log_end_offset": 100},
+      "1": {"leader": 2, "log_end_offset": 100}
+    },
+    "events": {
+      "0": {"leader": 1, "log_end_offset": 30},
+      "1": {"leader": 2, "log_end_offset": 30}
+    }
+  },
+  "groups": {
+    "order-svc": {
+      "coordinator": 1,
+      "members": 2,
+      "offsets": {
+        "orders": {"0": 50, "1": 80},
+        "events": {"0": -1, "1": 20},
+        "retired": {"0": 5}
+      }
+    },
+    "analytics": {
+      "coordinator": 2,
+      "offset_fetch_error": "GROUP_AUTHORIZATION_FAILED",
+      "offsets": {
+        "orders": {"0": 10}
+      }
+    }
+  }
+}

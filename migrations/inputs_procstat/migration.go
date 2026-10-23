@@ -2,18 +2,18 @@ package inputs_procstat
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/influxdata/toml"
 	"github.com/influxdata/toml/ast"
 
-	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/migrations"
 )
 
 // Migration function
 func migrate(tbl *ast.Table) ([]byte, string, error) {
 	// Decode the old data structure
-	var plugin map[string]interface{}
+	var plugin map[string]any
 	if err := toml.UnmarshalTable(tbl, &plugin); err != nil {
 		return nil, "", err
 	}
@@ -37,7 +37,7 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 			return nil, "", fmt.Errorf("setting 'supervisor_unit': %w", err)
 		}
 		for _, u := range oldUnits {
-			if !choice.Contains(u, units) {
+			if !slices.Contains(units, u) {
 				units = append(units, u)
 			}
 		}
@@ -67,7 +67,7 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 		}
 
 		// Add the pid-tagging to 'tag_with' if requested
-		if pt && !choice.Contains("pid", tagwith) {
+		if pt && !slices.Contains(tagwith, "pid") {
 			tagwith = append(tagwith, "pid")
 			plugin["tag_with"] = tagwith
 		}
@@ -86,7 +86,7 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 		}
 
 		// Add the pid-tagging to 'tag_with' if requested
-		if ct && !choice.Contains("cmdline", tagwith) {
+		if ct && !slices.Contains(tagwith, "cmdline") {
 			tagwith = append(tagwith, "cmdline")
 			plugin["tag_with"] = tagwith
 		}

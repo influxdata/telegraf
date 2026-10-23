@@ -26,7 +26,7 @@ func TestSerializeMetricFloat(t *testing.T) {
 	tags := map[string]string{
 		"cpu": "cpu0",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"usage_idle": float64(91.5),
 	}
 	m := metric.New("cpu", tags, fields, now)
@@ -87,7 +87,7 @@ func TestSerialize_TimestampUnits(t *testing.T) {
 			m := metric.New(
 				"cpu",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"value": 42.0,
 				},
 				time.Unix(1525478795, 123456789),
@@ -109,7 +109,7 @@ func TestSerializeMetricInt(t *testing.T) {
 	tags := map[string]string{
 		"cpu": "cpu0",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"usage_idle": int64(90),
 	}
 	m := metric.New("cpu", tags, fields, now)
@@ -128,7 +128,7 @@ func TestSerializeMetricString(t *testing.T) {
 	tags := map[string]string{
 		"cpu": "cpu0",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"usage_idle": "foobar",
 	}
 	m := metric.New("cpu", tags, fields, now)
@@ -147,7 +147,7 @@ func TestSerializeMultiFields(t *testing.T) {
 	tags := map[string]string{
 		"cpu": "cpu0",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"usage_idle":  int64(90),
 		"usage_total": 8559615,
 	}
@@ -167,7 +167,7 @@ func TestSerializeMetricWithEscapes(t *testing.T) {
 	tags := map[string]string{
 		"cpu tag": "cpu0",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"U,age=Idle": int64(90),
 	}
 	m := metric.New("My CPU", tags, fields, now)
@@ -185,7 +185,7 @@ func TestSerializeBatch(t *testing.T) {
 	m := metric.New(
 		"cpu",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"value": 42.0,
 		},
 		time.Unix(0, 0),
@@ -208,7 +208,7 @@ func TestSerializeBatchSkipInf(t *testing.T) {
 		metric.New(
 			"cpu",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"inf":       math.Inf(1),
 				"time_idle": 42,
 			},
@@ -228,7 +228,7 @@ func TestSerializeBatchSkipInfAllFields(t *testing.T) {
 		metric.New(
 			"cpu",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"inf": math.Inf(1),
 			},
 			time.Unix(0, 0),
@@ -268,7 +268,7 @@ func TestSerializeTransformationNonBatch(t *testing.T) {
 			// Get the expectations
 			expectedArray, err := loadJSON(strings.TrimSuffix(filename, ".conf") + "_out.json")
 			require.NoError(t, err)
-			expected := expectedArray.([]interface{})
+			expected := expectedArray.([]any)
 
 			// Serialize
 			serializer := Serializer{
@@ -283,7 +283,7 @@ func TestSerializeTransformationNonBatch(t *testing.T) {
 				require.NoError(t, err)
 
 				// Compare
-				var actual interface{}
+				var actual any
 				require.NoError(t, json.Unmarshal(buf, &actual))
 				require.EqualValuesf(t, expected[i], actual, "mismatch in %d", i)
 			}
@@ -330,7 +330,7 @@ func TestSerializeTransformationBatch(t *testing.T) {
 			require.NoError(t, err)
 
 			// Compare
-			var actual interface{}
+			var actual any
 			require.NoError(t, json.Unmarshal(buf, &actual))
 			require.EqualValues(t, expected, actual)
 		})
@@ -342,19 +342,19 @@ func TestSerializeTransformationIssue12734(t *testing.T) {
 		metric.New(
 			"data",
 			map[string]string{"key": "a"},
-			map[string]interface{}{"value": 10.1},
+			map[string]any{"value": 10.1},
 			time.Unix(0, 1676285135457000000),
 		),
 		metric.New(
 			"data",
 			map[string]string{"key": "b"},
-			map[string]interface{}{"value": 20.2},
+			map[string]any{"value": 20.2},
 			time.Unix(0, 1676285135457000000),
 		),
 		metric.New(
 			"data",
 			map[string]string{"key": "c"},
-			map[string]interface{}{"value": 30.3},
+			map[string]any{"value": 30.3},
 			time.Unix(0, 1676285135457000000),
 		),
 	}
@@ -370,10 +370,10 @@ func TestSerializeTransformationIssue12734(t *testing.T) {
 	}
 	`
 
-	expected := map[string]interface{}{
-		"valueRows": map[string]interface{}{
+	expected := map[string]any{
+		"valueRows": map[string]any{
 			"timestamp": 1.676285135e+9,
-			"values":    []interface{}{10.1, 20.2, 30.3},
+			"values":    []any{10.1, 20.2, 30.3},
 		},
 	}
 
@@ -390,7 +390,7 @@ func TestSerializeTransformationIssue12734(t *testing.T) {
 		require.NoErrorf(t, err, "broke in iteration %d", i)
 
 		// Compare
-		var actual interface{}
+		var actual any
 		require.NoError(t, json.Unmarshal(buf, &actual))
 		require.EqualValuesf(t, expected, actual, "broke in iteration %d", i)
 	}
@@ -430,7 +430,7 @@ func TestSerializeNesting(t *testing.T) {
 			// Get the expectations
 			expectedArray, err := loadJSON(tt.out)
 			require.NoError(t, err)
-			expected := expectedArray.(map[string]interface{})
+			expected := expectedArray.(map[string]any)
 
 			// Serialize
 			serializer := Serializer{
@@ -446,7 +446,7 @@ func TestSerializeNesting(t *testing.T) {
 			require.NoError(t, err)
 
 			// Compare
-			var actual interface{}
+			var actual any
 			require.NoError(t, json.Unmarshal(buf, &actual))
 			require.EqualValues(t, expected, actual)
 		})
@@ -468,7 +468,7 @@ func loadTestConfiguration(filename string) (*Config, []string, error) {
 	}
 
 	header := make([]string, 0)
-	for _, line := range strings.Split(string(buf), "\n") {
+	for line := range strings.SplitSeq(string(buf), "\n") {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "#") {
 			header = append(header, line)
@@ -479,13 +479,13 @@ func loadTestConfiguration(filename string) (*Config, []string, error) {
 	return &cfg, header, err
 }
 
-func loadJSON(filename string) (interface{}, error) {
+func loadJSON(filename string) (any, error) {
 	buf, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
 
-	var data interface{}
+	var data any
 	err = json.Unmarshal(buf, &data)
 	return data, err
 }

@@ -114,7 +114,7 @@ func (q *Quantile) Add(in telegraf.Metric) {
 
 func (q *Quantile) Push(acc telegraf.Accumulator) {
 	for _, aggregate := range q.cache {
-		fields := make(map[string]interface{}, len(aggregate.fields)*len(q.Quantiles))
+		fields := make(map[string]any, len(aggregate.fields)*len(q.Quantiles))
 		for k, algo := range aggregate.fields {
 			for i, qtl := range q.Quantiles {
 				fields[k+q.suffixes[i]] = algo.Quantile(qtl)
@@ -128,7 +128,7 @@ func (q *Quantile) Reset() {
 	q.cache = make(map[uint64]aggregate)
 }
 
-func convert(in interface{}) (float64, bool) {
+func convert(in any) (float64, bool) {
 	switch v := in.(type) {
 	case float64:
 		return v, true

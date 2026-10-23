@@ -54,8 +54,8 @@ func TestCases(t *testing.T) {
 				buf, err := os.ReadFile(fn)
 				require.NoError(t, err)
 				key := strings.TrimSuffix(filepath.Base(fn), filepath.Ext(fn))
-				if strings.HasPrefix(key, "thing_") {
-					endpoints["/api/v1/things/"+strings.TrimPrefix(key, "thing_")+"/states"] = buf
+				if after, ok := strings.CutPrefix(key, "thing_"); ok {
+					endpoints["/api/v1/things/"+after+"/states"] = buf
 				} else {
 					endpoints["/api/v1/site/"+key] = buf
 				}

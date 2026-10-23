@@ -17,7 +17,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/plugins/common/socket"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	parsers_influx_upstream "github.com/influxdata/telegraf/plugins/parsers/influx/influx_upstream"
 	"github.com/influxdata/telegraf/testutil"
@@ -62,11 +61,9 @@ func TestAddressDefaultPort(t *testing.T) {
 func TestReadTimeoutWarning(t *testing.T) {
 	logger := &testutil.CaptureLogger{}
 	plugin := &Syslog{
-		Address: "tcp://localhost:6514",
-		Config: socket.Config{
-			ReadTimeout: config.Duration(time.Second),
-		},
-		Log: logger,
+		Address:     "tcp://localhost:6514",
+		ReadTimeout: config.Duration(time.Second),
+		Log:         logger,
 	}
 	require.NoError(t, plugin.Init())
 
@@ -141,7 +138,7 @@ func TestUnixgram(t *testing.T) {
 				"hostname": "web1",
 				"appname":  "someservice",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"version":       uint16(1),
 				"timestamp":     time.Unix(1456029177, 0).UnixNano(),
 				"procid":        "2341",
@@ -314,11 +311,9 @@ func TestCases(t *testing.T) {
 func TestSocketClosed(t *testing.T) {
 	// Setup the plugin
 	plugin := &Syslog{
-		Address: "tcp://127.0.0.1:0",
-		Config: socket.Config{
-			ReadTimeout: config.Duration(10 * time.Millisecond),
-		},
-		Log: testutil.Logger{},
+		Address:     "tcp://127.0.0.1:0",
+		ReadTimeout: config.Duration(10 * time.Millisecond),
+		Log:         testutil.Logger{},
 	}
 	require.NoError(t, plugin.Init())
 
@@ -351,11 +346,9 @@ func TestSocketClosed(t *testing.T) {
 func TestIssue10121(t *testing.T) {
 	// Setup the plugin
 	plugin := &Syslog{
-		Address: "tcp://127.0.0.1:0",
-		Config: socket.Config{
-			ReadTimeout: config.Duration(10 * time.Millisecond),
-		},
-		Log: testutil.Logger{},
+		Address:     "tcp://127.0.0.1:0",
+		ReadTimeout: config.Duration(10 * time.Millisecond),
+		Log:         testutil.Logger{},
 	}
 	require.NoError(t, plugin.Init())
 

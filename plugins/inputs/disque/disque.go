@@ -78,11 +78,9 @@ func (d *Disque) Gather(acc telegraf.Accumulator) error {
 			u.Host = serv
 			u.Path = ""
 		}
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			acc.AddError(d.gatherServer(u, acc))
-		}()
+		})
 	}
 
 	wg.Wait()
@@ -155,7 +153,7 @@ func (d *Disque) gatherServer(addr *url.URL, acc telegraf.Accumulator) error {
 
 	var read int
 
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	tags := map[string]string{"disque_host": addr.String()}
 	for read < sz {
 		line, err := r.ReadString('\n')

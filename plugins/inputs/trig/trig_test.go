@@ -22,7 +22,7 @@ func TestTrig(t *testing.T) {
 
 		require.NoError(t, s.Gather(&acc))
 
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		fields["sine"] = sine
 		fields["cosine"] = cosine
 

@@ -47,7 +47,7 @@ type TableSource struct {
 	postgresql   *Postgresql
 	metrics      []telegraf.Metric
 	cursor       int
-	cursorValues []interface{}
+	cursorValues []any
 	cursorError  error
 	// tagHashSalt is so that we can use a global tag cache for all tables. The salt is unique per table, and combined
 	// with the tag ID when looked up in the cache.
@@ -255,17 +255,17 @@ func (tsrc *TableSource) Reset() {
 
 // getValues calculates the values for the metric at the cursor position.
 // If the metric cannot be emitted, such as due to dropped tags, or all fields dropped, the return value is nil.
-func (tsrc *TableSource) getValues() ([]interface{}, error) {
+func (tsrc *TableSource) getValues() ([]any, error) {
 	metric := tsrc.metrics[tsrc.cursor]
 
-	values := []interface{}{
+	values := []any{
 		metric.Time().UTC(),
 	}
 
 	if !tsrc.postgresql.TagsAsForeignKeys {
 		if !tsrc.postgresql.TagsAsJsonb {
 			// tags_as_foreignkey=false, tags_as_json=false
-			tagValues := make([]interface{}, len(tsrc.tagColumns.columns))
+			tagValues := make([]any, len(tsrc.tagColumns.columns))
 			for _, tag := range metric.TagList() {
 				tagPos, ok := tsrc.tagColumns.indices[tag.Key]
 				if !ok {
@@ -293,7 +293,7 @@ func (tsrc *TableSource) getValues() ([]interface{}, error) {
 
 	if !tsrc.postgresql.FieldsAsJsonb {
 		// fields_as_json is false
-		fieldValues := make([]interface{}, len(tsrc.fieldColumns.columns))
+		fieldValues := make([]any, len(tsrc.fieldColumns.columns))
 		fieldsEmpty := true
 		for _, field := range metric.FieldList() {
 			// we might have dropped the field due to the table missing the column & schema updates being turned off
@@ -319,7 +319,7 @@ func (tsrc *TableSource) getValues() ([]interface{}, error) {
 	return values, nil
 }
 
-func (tsrc *TableSource) Values() ([]interface{}, error) {
+func (tsrc *TableSource) Values() ([]any, error) {
 	return tsrc.cursorValues, tsrc.cursorError
 }
 
@@ -332,7 +332,7 @@ type TagTableSource struct {
 	tagIDs []int64
 
 	cursor       int
-	cursorValues []interface{}
+	cursorValues []any
 	cursorError  error
 }
 
@@ -400,18 +400,18 @@ func (ttsrc *TagTableSource) Reset() {
 	ttsrc.cursor = -1
 }
 
-func (ttsrc *TagTableSource) getValues() []interface{} {
+func (ttsrc *TagTableSource) getValues() []any {
 	tagID := ttsrc.tagIDs[ttsrc.cursor]
 	tagSet := ttsrc.tagSets[tagID]
 
-	var values []interface{}
+	var values []any
 	if !ttsrc.postgresql.TagsAsJsonb {
-		values = make([]interface{}, len(ttsrc.TableSource.tagColumns.indices)+1)
+		values = make([]any, len(ttsrc.TableSource.tagColumns.indices)+1)
 		for _, tag := range tagSet {
 			values[ttsrc.TableSource.tagColumns.indices[tag.Key]+1] = tag.Value // +1 to account for tag_id column
 		}
 	} else {
-		values = make([]interface{}, 2)
+		values = make([]any, 2)
 		values[1] = utils.TagListToJSON(tagSet)
 	}
 	values[0] = tagID
@@ -419,7 +419,7 @@ func (ttsrc *TagTableSource) getValues() []interface{} {
 	return values
 }
 
-func (ttsrc *TagTableSource) Values() ([]interface{}, error) {
+func (ttsrc *TagTableSource) Values() ([]any, error) {
 	return ttsrc.cursorValues, ttsrc.cursorError
 }
 

@@ -48,7 +48,7 @@ func TestHealth(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle": 42,
 					},
 					now),
@@ -69,7 +69,7 @@ func TestHealth(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle": 42,
 					},
 					now),
@@ -95,7 +95,7 @@ func TestHealth(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle": 42,
 					},
 					now),
@@ -355,7 +355,7 @@ func TestDefaultStatusHealthy(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle": 42,
 					},
 					time.Now(),
@@ -370,7 +370,7 @@ func TestDefaultStatusHealthy(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle": 42,
 					},
 					time.Now(),

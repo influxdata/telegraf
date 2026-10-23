@@ -95,7 +95,7 @@ func (check *NginxUpstreamCheck) createHTTPClient() (*http.Client, error) {
 }
 
 // gatherJSONData query the data source and parse the response JSON
-func (check *NginxUpstreamCheck) gatherJSONData(address string, value interface{}) error {
+func (check *NginxUpstreamCheck) gatherJSONData(address string, value any) error {
 	var method string
 	if check.Method != "" {
 		method = check.Method
@@ -155,7 +155,7 @@ func (check *NginxUpstreamCheck) gatherStatusData(address string, accumulator te
 			"url":      address,
 		}
 
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"status":      server.Status,
 			"status_code": getStatusCode(server.Status),
 			"rise":        server.Rise,
@@ -185,9 +185,7 @@ func newNginxUpstreamCheck() *NginxUpstreamCheck {
 		Method:     "GET",
 		Headers:    make(map[string]string),
 		HostHeader: "",
-		HTTPClientConfig: common_http.HTTPClientConfig{
-			Timeout: config.Duration(time.Second * 5),
-		},
+		Timeout:    config.Duration(time.Second * 5),
 	}
 }
 

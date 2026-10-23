@@ -5,6 +5,7 @@ package win_wmi
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"runtime"
 
 	"github.com/go-ole/go-ole"
@@ -17,16 +18,16 @@ import (
 )
 
 type method struct {
-	Namespace            string                 `toml:"namespace"`
-	ClassName            string                 `toml:"class_name"`
-	Method               string                 `toml:"method"`
-	Arguments            map[string]interface{} `toml:"arguments"`
-	FieldMapping         map[string]string      `toml:"fields"`
-	Filter               string                 `toml:"filter"`
-	TagPropertiesInclude []string               `toml:"tag_properties"`
+	Namespace            string            `toml:"namespace"`
+	ClassName            string            `toml:"class_name"`
+	Method               string            `toml:"method"`
+	Arguments            map[string]any    `toml:"arguments"`
+	FieldMapping         map[string]string `toml:"fields"`
+	Filter               string            `toml:"filter"`
+	TagPropertiesInclude []string          `toml:"tag_properties"`
 
 	host             string
-	connectionParams []interface{}
+	connectionParams []any
 	tagFilter        filter.Filter
 }
 
@@ -174,7 +175,7 @@ func (m *method) execute(acc telegraf.Accumulator) error {
 
 	// Convert the results to fields and tags
 	tags := make(map[string]string)
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 
 	// Add a source tag if we use remote queries
 	if m.host != "" {
@@ -186,12 +187,8 @@ func (m *method) execute(acc telegraf.Accumulator) error {
 		if err != nil {
 			return err
 		}
-		for k, v := range propTags {
-			tags[k] = v
-		}
-		for k, v := range propFields {
-			fields[k] = v
-		}
+		maps.Copy(tags, propTags)
+		maps.Copy(fields, propFields)
 		return nil
 	}); err != nil {
 		return fmt.Errorf("cannot iterate the output properties: %w", err)
@@ -202,7 +199,7 @@ func (m *method) execute(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (m *method) extractData(prop *ole.VARIANT, output *ole.IDispatch) (map[string]string, map[string]interface{}, error) {
+func (m *method) extractData(prop *ole.VARIANT, output *ole.IDispatch) (map[string]string, map[string]any, error) {
 	// Name of the returned result item
 	namePropertyRaw := prop.ToIDispatch()
 	defer namePropertyRaw.Release()
@@ -228,7 +225,7 @@ func (m *method) extractData(prop *ole.VARIANT, output *ole.IDispatch) (map[stri
 
 	// We might get either scalar values or an array of values...
 	tags := make(map[string]string)
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	if value := property.Value(); value != nil {
 		if m.tagFilter != nil && m.tagFilter.Match(name) {
 			if s, err := internal.ToString(value); err == nil && s != "" {

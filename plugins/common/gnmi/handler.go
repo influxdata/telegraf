@@ -2,6 +2,8 @@ package gnmi
 
 import (
 	"encoding/json"
+	"maps"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -12,7 +14,6 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/common/gnmi/extensions/jnpr_gnmi_extention"
 	"github.com/influxdata/telegraf/plugins/common/yangmodel"
@@ -98,7 +99,7 @@ func (h *Handler) handleUpdateMetadata(
 		case eidJuniperTelemetryHeader:
 			// Juniper Header extension
 			// Decode it only if user requested it
-			if choice.Contains("juniper_header", h.VendorExt) {
+			if slices.Contains(h.VendorExt, "juniper_header") {
 				juniperHeader := &jnpr_gnmi_extention.GnmiJuniperTelemetryHeaderExtension{}
 				if err := proto.Unmarshal(currentExt, juniperHeader); err != nil {
 					h.log.Errorf("unmarshal gnmi Juniper Header extension failed: %v", err)
@@ -153,13 +154,10 @@ func (h *Handler) handleUpdates(acc telegraf.Accumulator, updates []*gnmi.Update
 		}
 
 		// Prepare tags from prefix
-		tags := make(map[string]string, len(headerTags))
-		for key, val := range headerTags {
-			tags[key] = val
-		}
-		for key, val := range fullPath.tags(h.TagPathPrefix) {
-			tags[key] = val
-		}
+		pathTags := fullPath.tags(h.TagPathPrefix)
+		tags := make(map[string]string, len(headerTags)+len(pathTags))
+		maps.Copy(tags, headerTags)
+		maps.Copy(tags, pathTags)
 
 		// TODO: Handle each field individually to allow in-JSON tags
 		var tagUpdate bool
@@ -203,20 +201,14 @@ func (h *Handler) handleUpdates(acc telegraf.Accumulator, updates []*gnmi.Update
 		// Prepare tags from prefix
 		fieldTags := field.path.tags(h.TagPathPrefix)
 		tags := make(map[string]string, len(headerTags)+len(fieldTags))
-		for key, val := range headerTags {
-			tags[key] = val
-		}
+		maps.Copy(tags, headerTags)
 		if path != "" {
 			tags["path"] = path
 		}
-		for key, val := range fieldTags {
-			tags[key] = val
-		}
+		maps.Copy(tags, fieldTags)
 
 		// Add the tags derived via tag-subscriptions
-		for k, v := range h.tagStore.lookup(field.path, tags) {
-			tags[k] = v
-		}
+		maps.Copy(tags, h.tagStore.lookup(field.path, tags))
 
 		// Lookup alias for the metric
 		aliasPath, name := h.lookupAlias(field.path)
@@ -322,20 +314,14 @@ func (h *Handler) handleDeletes(acc telegraf.Accumulator, deletes []*gnmi.Path, 
 		// Prepare tags from prefix
 		fieldTags := field.tags(h.TagPathPrefix)
 		tags := make(map[string]string, len(headerTags)+len(fieldTags)+1)
-		for key, val := range headerTags {
-			tags[key] = val
-		}
+		maps.Copy(tags, headerTags)
 		if path != "" {
 			tags["path"] = path
 		}
-		for key, val := range fieldTags {
-			tags[key] = val
-		}
+		maps.Copy(tags, fieldTags)
 
 		// Add the tags derived via tag-subscriptions
-		for k, v := range h.tagStore.lookup(field, tags) {
-			tags[k] = v
-		}
+		maps.Copy(tags, h.tagStore.lookup(field, tags))
 
 		// Lookup alias for the metric
 		aliasPath, name := h.lookupAlias(field)
@@ -364,7 +350,7 @@ func (h *Handler) handleDeletes(acc telegraf.Accumulator, deletes []*gnmi.Path, 
 			tags["path"] = aliasInfo.String()
 		}
 
-		fields := map[string]interface{}{"operation": "delete"}
+		fields := map[string]any{"operation": "delete"}
 		acc.AddFields(name, fields, tags, timestamp)
 	}
 }

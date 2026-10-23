@@ -149,7 +149,7 @@ func getAllRecords(testContext context.Context, address string) []string {
 		info := client.TSInfo(ctx, key)
 		var labels string
 		if l, found := info.Val()["labels"]; found {
-			lmap := l.(map[interface{}]interface{})
+			lmap := l.(map[any]any)
 			collection := make([]string, 0, len(lmap))
 			for k, v := range lmap {
 				collection = append(collection, fmt.Sprintf("%v=%v", k, v))

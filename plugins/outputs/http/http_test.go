@@ -18,9 +18,6 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
-	common_aws "github.com/influxdata/telegraf/plugins/common/aws"
-	common_http "github.com/influxdata/telegraf/plugins/common/http"
-	"github.com/influxdata/telegraf/plugins/common/oauth"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
 	"github.com/influxdata/telegraf/testutil"
@@ -30,7 +27,7 @@ func getMetric() telegraf.Metric {
 	m := metric.New(
 		"cpu",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"value": 42.0,
 		},
 		time.Unix(0, 0),
@@ -149,13 +146,9 @@ func TestHTTPClientConfig(t *testing.T) {
 		{
 			name: "With default client Config",
 			plugin: &HTTP{
-				URL:    u.String(),
-				Method: defaultMethod,
-				HTTPClientConfig: common_http.HTTPClientConfig{
-					TransportConfig: common_http.TransportConfig{
-						IdleConnTimeout: config.Duration(5 * time.Second),
-					},
-				},
+				URL:             u.String(),
+				Method:          defaultMethod,
+				IdleConnTimeout: config.Duration(5 * time.Second),
 			},
 			expectedMaxIdleConns:        0,
 			expectedMaxIdleConnsPerHost: 0,
@@ -163,15 +156,11 @@ func TestHTTPClientConfig(t *testing.T) {
 		{
 			name: "With MaxIdleConns client Config",
 			plugin: &HTTP{
-				URL:    u.String(),
-				Method: defaultMethod,
-				HTTPClientConfig: common_http.HTTPClientConfig{
-					TransportConfig: common_http.TransportConfig{
-						MaxIdleConns:        100,
-						MaxIdleConnsPerHost: 100,
-						IdleConnTimeout:     config.Duration(5 * time.Second),
-					},
-				},
+				URL:                 u.String(),
+				Method:              defaultMethod,
+				MaxIdleConns:        100,
+				MaxIdleConnsPerHost: 100,
+				IdleConnTimeout:     config.Duration(5 * time.Second),
 			},
 			expectedMaxIdleConns:        100,
 			expectedMaxIdleConnsPerHost: 100,
@@ -512,15 +501,11 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 		{
 			name: "success",
 			plugin: &HTTP{
-				URL: u.String() + "/write",
-				HTTPClientConfig: common_http.HTTPClientConfig{
-					OAuth2Config: oauth.OAuth2Config{
-						ClientID:     "howdy",
-						ClientSecret: "secret",
-						TokenURL:     u.String() + "/token",
-						Scopes:       []string{"urn:opc:idm:__myscopes__"},
-					},
-				},
+				URL:          u.String() + "/write",
+				ClientID:     "howdy",
+				ClientSecret: "secret",
+				TokenURL:     u.String() + "/token",
+				Scopes:       []string{"urn:opc:idm:__myscopes__"},
 			},
 			tokenHandler: func(t *testing.T, w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
@@ -539,16 +524,12 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 		{
 			name: "audience",
 			plugin: &HTTP{
-				URL: u.String() + "/write",
-				HTTPClientConfig: common_http.HTTPClientConfig{
-					OAuth2Config: oauth.OAuth2Config{
-						ClientID:     "howdy",
-						ClientSecret: "secret",
-						TokenURL:     u.String() + "/token",
-						Scopes:       []string{"urn:opc:idm:__myscopes__"},
-						Audience:     "audience",
-					},
-				},
+				URL:          u.String() + "/write",
+				ClientID:     "howdy",
+				ClientSecret: "secret",
+				TokenURL:     u.String() + "/token",
+				Scopes:       []string{"urn:opc:idm:__myscopes__"},
+				Audience:     "audience",
 			},
 			tokenHandler: func(t *testing.T, w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
@@ -789,11 +770,9 @@ func TestAwsCredentials(t *testing.T) {
 			plugin: &HTTP{
 				URL:        u.String(),
 				AwsService: "aps",
-				CredentialConfig: common_aws.CredentialConfig{
-					Region:    "us-east-1",
-					AccessKey: "dummy",
-					SecretKey: "dummy",
-				},
+				Region:     "us-east-1",
+				AccessKey:  "dummy",
+				SecretKey:  "dummy",
 			},
 			handler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
 				require.Contains(t, r.Header["Authorization"][0], "AWS4-HMAC-SHA256")

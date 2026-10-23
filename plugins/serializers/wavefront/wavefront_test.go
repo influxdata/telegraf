@@ -175,7 +175,7 @@ func TestSerializeMetricFloat(t *testing.T) {
 		"cpu":  "cpu0",
 		"host": "realHost",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"usage_idle": float64(91.5),
 	}
 	m := metric.New("cpu", tags, fields, now)
@@ -195,7 +195,7 @@ func TestSerializeMetricInt(t *testing.T) {
 		"cpu":  "cpu0",
 		"host": "realHost",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"usage_idle": int64(91),
 	}
 	m := metric.New("cpu", tags, fields, now)
@@ -215,7 +215,7 @@ func TestSerializeMetricBoolTrue(t *testing.T) {
 		"cpu":  "cpu0",
 		"host": "realHost",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"usage_idle": true,
 	}
 	m := metric.New("cpu", tags, fields, now)
@@ -235,7 +235,7 @@ func TestSerializeMetricBoolFalse(t *testing.T) {
 		"cpu":  "cpu0",
 		"host": "realHost",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"usage_idle": false,
 	}
 	m := metric.New("cpu", tags, fields, now)
@@ -255,7 +255,7 @@ func TestSerializeMetricFieldValue(t *testing.T) {
 		"cpu":  "cpu0",
 		"host": "realHost",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"value": int64(91),
 	}
 	m := metric.New("cpu", tags, fields, now)
@@ -275,7 +275,7 @@ func TestSerializeMetricPrefix(t *testing.T) {
 		"cpu":  "cpu0",
 		"host": "realHost",
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"usage_idle": int64(91),
 	}
 	m := metric.New("cpu", tags, fields, now)

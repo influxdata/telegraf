@@ -1683,7 +1683,7 @@ func TestAddCPUMetrics(t *testing.T) {
 				// measurement
 				"powerstat_core",
 				// fields
-				map[string]interface{}{
+				map[string]any{
 					"cpu_frequency_mhz": cpuFreq,
 				},
 				// tags
@@ -1746,7 +1746,7 @@ func TestAddCPUMetrics(t *testing.T) {
 			// measurement
 			"powerstat_core",
 			// fields
-			map[string]interface{}{
+			map[string]any{
 				"cpu_frequency_mhz": cpuFreq,
 			},
 			// tags
@@ -1809,7 +1809,7 @@ func TestAddCPUMetrics(t *testing.T) {
 				// measurement
 				"powerstat_core",
 				// fields
-				map[string]interface{}{
+				map[string]any{
 					"cpu_temperature_celsius": cpuTemp,
 				},
 				// tags
@@ -1875,7 +1875,7 @@ func TestAddCPUMetrics(t *testing.T) {
 				// measurement
 				"powerstat_core",
 				// fields
-				map[string]interface{}{
+				map[string]any{
 					"cpu_busy_frequency_mhz": cpuBusyFreq,
 				},
 				// tags
@@ -2023,7 +2023,7 @@ func TestAddPerCPUMsrMetrics(t *testing.T) {
 				// measurement
 				"powerstat_core",
 				// fields
-				map[string]interface{}{
+				map[string]any{
 					"cpu_temperature_celsius": cpuTemp,
 				},
 				// tags
@@ -2151,7 +2151,7 @@ func TestAddPerCPUMsrMetrics(t *testing.T) {
 				// measurement
 				"powerstat_core",
 				// fields
-				map[string]interface{}{
+				map[string]any{
 					"cpu_c1_state_residency_percent": c1State,
 				},
 				// flags
@@ -2166,7 +2166,7 @@ func TestAddPerCPUMsrMetrics(t *testing.T) {
 				// measurement
 				"powerstat_core",
 				// fields
-				map[string]interface{}{
+				map[string]any{
 					"cpu_c6_state_residency_percent": c6State,
 				},
 				// flags
@@ -2238,7 +2238,7 @@ func TestAddCPUTimeRelatedMsrMetrics(t *testing.T) {
 		// measurement
 		"powerstat_core",
 		// fields
-		map[string]interface{}{
+		map[string]any{
 			"cpu_c0_state_residency_percent": c0State,
 		},
 		// tags
@@ -2253,7 +2253,7 @@ func TestAddCPUTimeRelatedMsrMetrics(t *testing.T) {
 		// measurement
 		"powerstat_core",
 		// fields
-		map[string]interface{}{
+		map[string]any{
 			"cpu_c1_state_residency_percent": c1State,
 		},
 		// tags
@@ -2268,7 +2268,7 @@ func TestAddCPUTimeRelatedMsrMetrics(t *testing.T) {
 		// measurement
 		"powerstat_core",
 		// fields
-		map[string]interface{}{
+		map[string]any{
 			"cpu_c6_state_residency_percent": c6State,
 		},
 		// tags
@@ -2283,7 +2283,7 @@ func TestAddCPUTimeRelatedMsrMetrics(t *testing.T) {
 		// measurement
 		"powerstat_core",
 		// fields
-		map[string]interface{}{
+		map[string]any{
 			"cpu_c3_state_residency_percent": c3State,
 		},
 		// tags
@@ -2494,7 +2494,7 @@ func TestAddCPUPerfMetrics(t *testing.T) {
 				// measurement
 				"powerstat_core",
 				// fields
-				map[string]interface{}{
+				map[string]any{
 					"cpu_c0_substate_c01_percent": c01Percent,
 				},
 				// tags
@@ -2571,7 +2571,7 @@ func TestAddCPUPerfMetrics(t *testing.T) {
 			// measurement
 			"powerstat_core",
 			// fields
-			map[string]interface{}{
+			map[string]any{
 				"cpu_c0_substate_c01_percent": c01Percent,
 			},
 			// tags
@@ -2586,7 +2586,7 @@ func TestAddCPUPerfMetrics(t *testing.T) {
 			// measurement
 			"powerstat_core",
 			// fields
-			map[string]interface{}{
+			map[string]any{
 				"cpu_c0_substate_c0_wait_percent": c0Wait,
 			},
 			// tags
@@ -2645,7 +2645,7 @@ func TestAddPerCPUPerfMetrics(t *testing.T) {
 		// measurement
 		"powerstat_core",
 		// fields
-		map[string]interface{}{
+		map[string]any{
 			"cpu_c0_substate_c01_percent": c01Percent,
 		},
 		// tags
@@ -2660,7 +2660,7 @@ func TestAddPerCPUPerfMetrics(t *testing.T) {
 		// measurement
 		"powerstat_core",
 		// fields
-		map[string]interface{}{
+		map[string]any{
 			"cpu_c0_substate_c02_percent": c02Percent,
 		},
 		// tags
@@ -2785,7 +2785,7 @@ func TestAddPackageMetrics(t *testing.T) {
 			// measurement
 			"powerstat_package",
 			// fields
-			map[string]interface{}{
+			map[string]any{
 				"thermal_design_power_watts": tdp,
 			},
 			// tags
@@ -2833,7 +2833,7 @@ func TestAddPackageMetrics(t *testing.T) {
 			// measurement
 			"powerstat_package",
 			// fields
-			map[string]interface{}{
+			map[string]any{
 				"cpu_base_frequency_mhz": baseFreq,
 			},
 			// tags
@@ -2893,7 +2893,7 @@ func TestAddPackageMetrics(t *testing.T) {
 			// measurement
 			"powerstat_package",
 			// fields
-			map[string]interface{}{
+			map[string]any{
 				"uncore_frequency_limit_mhz_min": initMin,
 				"uncore_frequency_limit_mhz_max": initMax,
 			},
@@ -2909,7 +2909,7 @@ func TestAddPackageMetrics(t *testing.T) {
 			// measurement
 			"powerstat_package",
 			// fields
-			map[string]interface{}{
+			map[string]any{
 				"uncore_frequency_limit_mhz_min": initMin,
 				"uncore_frequency_limit_mhz_max": initMax,
 			},
@@ -3042,7 +3042,7 @@ func TestAddPerPackageRaplMetrics(t *testing.T) {
 			// measurement
 			"powerstat_package",
 			// fields
-			map[string]interface{}{
+			map[string]any{
 				"current_power_consumption_watts": currPower,
 			},
 			// tags
@@ -3055,7 +3055,7 @@ func TestAddPerPackageRaplMetrics(t *testing.T) {
 			// measurement
 			"powerstat_package",
 			// fields
-			map[string]interface{}{
+			map[string]any{
 				"thermal_design_power_watts": tdp,
 			},
 			// tags
@@ -3102,7 +3102,7 @@ func TestAddPerPackageRaplMetrics(t *testing.T) {
 			// measurement
 			"powerstat_package",
 			// fields
-			map[string]interface{}{
+			map[string]any{
 				"current_dram_power_consumption_watts": currPower,
 			},
 			// tags
@@ -3227,7 +3227,7 @@ func TestAddPerPackageMsrMetrics(t *testing.T) {
 			// measurement
 			"powerstat_package",
 			// fields
-			map[string]interface{}{
+			map[string]any{
 				"cpu_base_frequency_mhz": baseFreq,
 			},
 			// tags
@@ -3284,7 +3284,7 @@ func TestAddPerPackageMsrMetrics(t *testing.T) {
 			// measurement
 			"powerstat_package",
 			// fields
-			map[string]interface{}{
+			map[string]any{
 				"cpu_base_frequency_mhz": baseFreq,
 			},
 			// tags
@@ -3297,7 +3297,7 @@ func TestAddPerPackageMsrMetrics(t *testing.T) {
 			// measurement
 			"powerstat_package",
 			// fields
-			map[string]interface{}{
+			map[string]any{
 				"cpu_base_frequency_mhz": baseFreq,
 			},
 			// tags
@@ -3310,7 +3310,7 @@ func TestAddPerPackageMsrMetrics(t *testing.T) {
 			// measurement
 			"powerstat_package",
 			// fields
-			map[string]interface{}{
+			map[string]any{
 				"max_turbo_frequency_mhz": maxTurboFreqList[0].Value,
 			},
 			// tags
@@ -3379,7 +3379,7 @@ func TestAddCPUFrequency(t *testing.T) {
 			// measurement
 			"powerstat_core",
 			// fields
-			map[string]interface{}{
+			map[string]any{
 				"cpu_frequency_mhz": cpuFreqExp,
 			},
 			// tags
@@ -3448,7 +3448,7 @@ func TestAddCPUTemperature(t *testing.T) {
 			// measurement
 			"powerstat_core",
 			// fields
-			map[string]interface{}{
+			map[string]any{
 				"cpu_temperature_celsius": cpuTemp,
 			},
 			// tags
@@ -3518,7 +3518,7 @@ func TestAddCPUC0StateResidency(t *testing.T) {
 			// measurement
 			"powerstat_core",
 			// fields
-			map[string]interface{}{
+			map[string]any{
 				"cpu_c0_state_residency_percent": c0StateExp,
 			},
 			// tags
@@ -3588,7 +3588,7 @@ func TestAddCPUC1StateResidency(t *testing.T) {
 			// measurement
 			"powerstat_core",
 			// fields
-			map[string]interface{}{
+			map[string]any{
 				"cpu_c1_state_residency_percent": c1StateExp,
 			},
 			// tags
@@ -3658,7 +3658,7 @@ func TestAddCPUC3StateResidency(t *testing.T) {
 			// measurement
 			"powerstat_core",
 			// fields
-			map[string]interface{}{
+			map[string]any{
 				"cpu_c3_state_residency_percent": c3StateExp,
 			},
 			// tags
@@ -3728,7 +3728,7 @@ func TestAddCPUC6StateResidency(t *testing.T) {
 			// measurement
 			"powerstat_core",
 			// fields
-			map[string]interface{}{
+			map[string]any{
 				"cpu_c6_state_residency_percent": c6StateExp,
 			},
 			// tags
@@ -3798,7 +3798,7 @@ func TestAddCPUC7StateResidency(t *testing.T) {
 			// measurement
 			"powerstat_core",
 			// fields
-			map[string]interface{}{
+			map[string]any{
 				"cpu_c7_state_residency_percent": c7StateExp,
 			},
 			// tags
@@ -3868,7 +3868,7 @@ func TestAddCPUBusyFrequency(t *testing.T) {
 			// measurement
 			"powerstat_core",
 			// fields
-			map[string]interface{}{
+			map[string]any{
 				"cpu_busy_frequency_mhz": cpuBusyFreqExp,
 			},
 			// tags
@@ -3938,7 +3938,7 @@ func TestAddCPUC0SubstateC01Percent(t *testing.T) {
 			// measurement
 			"powerstat_core",
 			// fields
-			map[string]interface{}{
+			map[string]any{
 				"cpu_c0_substate_c01_percent": c01PercentExp,
 			},
 			// tags
@@ -4008,7 +4008,7 @@ func TestAddCPUC0SubstateC02Percent(t *testing.T) {
 			// measurement
 			"powerstat_core",
 			// fields
-			map[string]interface{}{
+			map[string]any{
 				"cpu_c0_substate_c02_percent": c02PercentExp,
 			},
 			// tags
@@ -4078,7 +4078,7 @@ func TestAddCPUC0SubstateC0WaitPercent(t *testing.T) {
 			// measurement
 			"powerstat_core",
 			// fields
-			map[string]interface{}{
+			map[string]any{
 				"cpu_c0_substate_c0_wait_percent": c0WaitPercentExp,
 			},
 			// tags
@@ -4144,7 +4144,7 @@ func TestAddCurrentPackagePowerConsumption(t *testing.T) {
 			// measurement
 			"powerstat_package",
 			// fields
-			map[string]interface{}{
+			map[string]any{
 				"current_power_consumption_watts": currPowerRounded,
 			},
 			// tags
@@ -4208,7 +4208,7 @@ func TestAddCurrentDramPowerConsumption(t *testing.T) {
 			// measurement
 			"powerstat_package",
 			// fields
-			map[string]interface{}{
+			map[string]any{
 				"current_dram_power_consumption_watts": currPowerRounded,
 			},
 			// tags
@@ -4272,7 +4272,7 @@ func TestAddThermalDesignPower(t *testing.T) {
 			// measurement
 			"powerstat_package",
 			// fields
-			map[string]interface{}{
+			map[string]any{
 				"thermal_design_power_watts": tdpRounded,
 			},
 			// tags
@@ -4335,7 +4335,7 @@ func TestAddCPUBaseFrequency(t *testing.T) {
 			// measurement
 			"powerstat_package",
 			// fields
-			map[string]interface{}{
+			map[string]any{
 				"cpu_base_frequency_mhz": baseFreq,
 			},
 			// tags
@@ -4422,7 +4422,7 @@ func TestAddUncoreFrequency(t *testing.T) {
 			// measurement
 			"powerstat_package",
 			// fields
-			map[string]interface{}{
+			map[string]any{
 				"uncore_frequency_limit_mhz_min": currMin,
 				"uncore_frequency_limit_mhz_max": currMax,
 				"uncore_frequency_mhz_cur":       uint64(curr),
@@ -4483,7 +4483,7 @@ func TestAddUncoreFrequency(t *testing.T) {
 			// measurement
 			"powerstat_package",
 			// fields
-			map[string]interface{}{
+			map[string]any{
 				"uncore_frequency_limit_mhz_min": initMin,
 				"uncore_frequency_limit_mhz_max": initMax,
 			},
@@ -4541,7 +4541,7 @@ func TestAddUncoreFrequency(t *testing.T) {
 			// measurement
 			"powerstat_package",
 			// fields
-			map[string]interface{}{
+			map[string]any{
 				"uncore_frequency_limit_mhz_min": initMin,
 				"uncore_frequency_limit_mhz_max": initMax,
 			},
@@ -4557,7 +4557,7 @@ func TestAddUncoreFrequency(t *testing.T) {
 			// measurement
 			"powerstat_package",
 			// fields
-			map[string]interface{}{
+			map[string]any{
 				"uncore_frequency_limit_mhz_min": currMin,
 				"uncore_frequency_limit_mhz_max": currMax,
 				"uncore_frequency_mhz_cur":       uint64(curr),
@@ -4668,7 +4668,7 @@ func TestAddUncoreFrequencyInitialLimits(t *testing.T) {
 			// measurement
 			"powerstat_package",
 			// fields
-			map[string]interface{}{
+			map[string]any{
 				"uncore_frequency_limit_mhz_min": initMin,
 				"uncore_frequency_limit_mhz_max": initMax,
 			},
@@ -4782,7 +4782,7 @@ func TestAddUncoreFrequencyCurrentValues(t *testing.T) {
 			// measurement
 			"powerstat_package",
 			// fields
-			map[string]interface{}{
+			map[string]any{
 				"uncore_frequency_limit_mhz_min": currMin,
 				"uncore_frequency_limit_mhz_max": currMax,
 				"uncore_frequency_mhz_cur":       uint64(curr),
@@ -5031,7 +5031,7 @@ func TestAddMaxTurboFreqLimits(t *testing.T) {
 			// measurement
 			"powerstat_package",
 			// fields
-			map[string]interface{}{
+			map[string]any{
 				"max_turbo_frequency_mhz": maxTurboFreqList[0].Value,
 			},
 			// tags
@@ -5046,7 +5046,7 @@ func TestAddMaxTurboFreqLimits(t *testing.T) {
 			// measurement
 			"powerstat_package",
 			// fields
-			map[string]interface{}{
+			map[string]any{
 				"max_turbo_frequency_mhz": maxTurboFreqList[1].Value,
 			},
 			// tags
@@ -5095,7 +5095,7 @@ func TestAddMaxTurboFreqLimits(t *testing.T) {
 			// measurement
 			"powerstat_package",
 			// fields
-			map[string]interface{}{
+			map[string]any{
 				"max_turbo_frequency_mhz": maxTurboFreqList[0].Value,
 			},
 			// tags
@@ -5109,7 +5109,7 @@ func TestAddMaxTurboFreqLimits(t *testing.T) {
 			// measurement
 			"powerstat_package",
 			// fields
-			map[string]interface{}{
+			map[string]any{
 				"max_turbo_frequency_mhz": maxTurboFreqList[1].Value,
 			},
 			// tags

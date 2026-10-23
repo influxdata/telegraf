@@ -37,7 +37,7 @@ func (p *Parser) extractMetricsV2(prommetrics *dto.MetricFamily) []telegraf.Metr
 			summary := pm.GetSummary()
 
 			// Add an overall metric containing the number of samples and and its sum
-			summaryFields := make(map[string]interface{})
+			summaryFields := make(map[string]any)
 			summaryFields[metricName+"_count"] = float64(summary.GetSampleCount())
 			summaryFields[metricName+"_sum"] = summary.GetSampleSum()
 			metrics = append(metrics, metric.New("prometheus", tags, summaryFields, t, telegraf.Summary))
@@ -46,7 +46,7 @@ func (p *Parser) extractMetricsV2(prommetrics *dto.MetricFamily) []telegraf.Metr
 			for _, q := range summary.Quantile {
 				quantileTags := tags
 				quantileTags["quantile"] = strconv.FormatFloat(q.GetQuantile(), 'g', -1, 64)
-				quantileFields := map[string]interface{}{
+				quantileFields := map[string]any{
 					metricName: q.GetValue(),
 				}
 				m := metric.New("prometheus", quantileTags, quantileFields, t, telegraf.Summary)
@@ -56,7 +56,7 @@ func (p *Parser) extractMetricsV2(prommetrics *dto.MetricFamily) []telegraf.Metr
 			histogram := pm.GetHistogram()
 
 			// Add an overall metric containing the number of samples and and its sum
-			histFields := make(map[string]interface{})
+			histFields := make(map[string]any)
 			histFields[metricName+"_count"] = float64(histogram.GetSampleCount())
 			histFields[metricName+"_sum"] = histogram.GetSampleSum()
 			metrics = append(metrics, metric.New("prometheus", tags, histFields, t, telegraf.Histogram))
@@ -66,7 +66,7 @@ func (p *Parser) extractMetricsV2(prommetrics *dto.MetricFamily) []telegraf.Metr
 			for _, b := range histogram.Bucket {
 				bucketTags := tags
 				bucketTags["le"] = strconv.FormatFloat(b.GetUpperBound(), 'g', -1, 64)
-				bucketFields := map[string]interface{}{
+				bucketFields := map[string]any{
 					metricName + "_bucket": float64(b.GetCumulativeCount()),
 				}
 				m := metric.New("prometheus", bucketTags, bucketFields, t, telegraf.Histogram)
@@ -80,7 +80,7 @@ func (p *Parser) extractMetricsV2(prommetrics *dto.MetricFamily) []telegraf.Metr
 			if !infSeen {
 				infTags := tags
 				infTags["le"] = "+Inf"
-				infFields := map[string]interface{}{
+				infFields := map[string]any{
 					metricName + "_bucket": float64(histogram.GetSampleCount()),
 				}
 				m := metric.New("prometheus", infTags, infFields, t, telegraf.Histogram)
@@ -96,7 +96,7 @@ func (p *Parser) extractMetricsV2(prommetrics *dto.MetricFamily) []telegraf.Metr
 				v = untyped.GetValue()
 			}
 			if !math.IsNaN(v) {
-				fields := map[string]interface{}{metricName: v}
+				fields := map[string]any{metricName: v}
 				vtype := mapValueType(metricType)
 				metrics = append(metrics, metric.New("prometheus", tags, fields, t, vtype))
 			}

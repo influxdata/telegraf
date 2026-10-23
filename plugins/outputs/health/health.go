@@ -134,15 +134,13 @@ func (h *Health) Connect() error {
 	// Initialize lastMetricTime here to fail if no metrics are received
 	// before the configured max timeout.
 	h.lastMetricTime = time.Now()
-	h.wg.Add(1)
-	go func() {
-		defer h.wg.Done()
+	h.wg.Go(func() {
 		err := h.server.Serve(listener)
 		if err != http.ErrServerClosed {
 			h.Log.Errorf("Serve error on %s: %v", h.origin, err)
 		}
 		h.origin = ""
-	}()
+	})
 
 	return nil
 }

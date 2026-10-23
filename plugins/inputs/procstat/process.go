@@ -75,7 +75,7 @@ func (p *proc) metrics(prefix string, cfg *collectionConfig, t time.Time) ([]tel
 		prefix += "_"
 	}
 
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	numThreads, err := p.NumThreads()
 	if err == nil {
 		fields[prefix+"num_threads"] = numThreads
@@ -259,7 +259,7 @@ func (p *proc) metrics(prefix string, cfg *collectionConfig, t time.Time) ([]tel
 	if cfg.features["sockets"] {
 		for _, protocol := range cfg.socketProtos {
 			// Get the requested connections for the PID
-			var fieldlist []map[string]interface{}
+			var fieldlist []map[string]any
 			switch protocol {
 			case "all":
 				conns, err := gopsnet.ConnectionsPid(protocol, p.Pid)

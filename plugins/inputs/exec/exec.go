@@ -31,7 +31,7 @@ var once sync.Once
 const maxStderrBytes int = 512
 
 type Exec struct {
-	Commands    []interface{}   `toml:"commands"`
+	Commands    []any           `toml:"commands"`
 	Command     string          `toml:"command"`
 	Environment []string        `toml:"environment"`
 	IgnoreError bool            `toml:"ignore_error"`
@@ -109,7 +109,7 @@ func (e *Exec) Init() error {
 				return errors.New("command cannot be empty")
 			}
 			e.cmds = append(e.cmds, c)
-		case []interface{}:
+		case []any:
 			if len(c) == 0 {
 				return errors.New("command cannot be empty")
 			}

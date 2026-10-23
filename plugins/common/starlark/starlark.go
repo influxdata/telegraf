@@ -17,9 +17,9 @@ import (
 )
 
 type Common struct {
-	Source    string                 `toml:"source"`
-	Script    string                 `toml:"script"`
-	Constants map[string]interface{} `toml:"constants"`
+	Source    string         `toml:"source"`
+	Script    string         `toml:"script"`
+	Constants map[string]any `toml:"constants"`
 
 	Log              telegraf.Logger `toml:"-"`
 	StarlarkLoadFunc func(module string, logger telegraf.Logger) (starlark.StringDict, error)
@@ -32,7 +32,7 @@ type Common struct {
 	state      *starlark.Dict
 }
 
-func (s *Common) GetState() interface{} {
+func (s *Common) GetState() any {
 	// Return the actual byte-type instead of nil allowing the persister
 	// to guess instantiate variable of the appropriate type
 	if s.state == nil {
@@ -40,7 +40,7 @@ func (s *Common) GetState() interface{} {
 	}
 
 	// Convert the starlark dict into a golang dictionary for serialization
-	state := make(map[string]interface{}, s.state.Len())
+	state := make(map[string]any, s.state.Len())
 	items := s.state.Items()
 	for _, item := range items {
 		if len(item) != 2 {
@@ -72,7 +72,7 @@ func (s *Common) GetState() interface{} {
 	return buf.Bytes()
 }
 
-func (s *Common) SetState(state interface{}) error {
+func (s *Common) SetState(state any) error {
 	data, ok := state.([]byte)
 	if !ok {
 		return fmt.Errorf("unexpected type %T for state", state)
@@ -82,7 +82,7 @@ func (s *Common) SetState(state interface{}) error {
 	}
 
 	// Decode the binary GOB encoding
-	var dict map[string]interface{}
+	var dict map[string]any
 	if err := gob.NewDecoder(bytes.NewBuffer(data)).Decode(&dict); err != nil {
 		return fmt.Errorf("decoding state failed: %w", err)
 	}
@@ -216,7 +216,7 @@ func (s *Common) addConstants(builtins *starlark.StringDict) error {
 }
 
 func (s *Common) sourceProgram(builtins starlark.StringDict) (*starlark.Program, error) {
-	var src interface{}
+	var src any
 	if s.Source != "" {
 		src = s.Source
 	}
@@ -248,9 +248,8 @@ func (s *Common) Call(name string) (starlark.Value, error) {
 }
 
 func (s *Common) LogError(err error) {
-	var evalErr *starlark.EvalError
-	if errors.As(err, &evalErr) {
-		for _, line := range strings.Split(evalErr.Backtrace(), "\n") {
+	if evalErr, ok := errors.AsType[*starlark.EvalError](err); ok {
+		for line := range strings.SplitSeq(evalErr.Backtrace(), "\n") {
 			s.Log.Error(line)
 		}
 	} else {

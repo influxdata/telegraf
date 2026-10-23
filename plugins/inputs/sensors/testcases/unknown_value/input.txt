@@ -1,0 +1,3 @@
+hw.sensors.foo0.temp0=unknown
+hw.sensors.foo0.temp1=unknown, UNKNOWN
+hw.sensors.foo0.temp2=unknown (zone temperature), CRITICAL

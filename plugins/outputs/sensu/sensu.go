@@ -13,13 +13,13 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"slices"
 	"strconv"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
@@ -57,7 +57,7 @@ type outputMetrics struct {
 type outputMetric struct {
 	Name      string       `json:"name"`
 	Tags      []*outputTag `json:"tags"`
-	Value     interface{}  `json:"value"`
+	Value     any          `json:"value"`
 	Timestamp int64        `json:"timestamp"`
 }
 
@@ -294,7 +294,7 @@ func (s *Sensu) setEndpointURL() error {
 func (s *Sensu) Init() error {
 	if len(s.ContentEncoding) != 0 {
 		validEncoding := []string{"identity", "gzip"}
-		if !choice.Contains(s.ContentEncoding, validEncoding) {
+		if !slices.Contains(validEncoding, s.ContentEncoding) {
 			return fmt.Errorf("unsupported content_encoding [%q] specified", s.ContentEncoding)
 		}
 	}
@@ -395,7 +395,7 @@ func (s *Sensu) getHandlers() []string {
 	return s.Metrics.Handlers
 }
 
-func getFloat(unk interface{}) float64 {
+func getFloat(unk any) float64 {
 	switch i := unk.(type) {
 	case float64:
 		return i

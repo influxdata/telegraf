@@ -166,7 +166,7 @@ func TestAddNodeMetrics(t *testing.T) {
 						Value: 42,
 					},
 				},
-				Dimensions: map[string]interface{}{
+				Dimensions: map[string]any{
 					"cluster_id": "c0760bbd-9e9d-434b-bd4a-39c7cdef8a63",
 					"hostname":   "192.168.122.18",
 					"mesos_id":   "2dfbbd28-29d2-411d-92c4-e2f84c38688e-S1",
@@ -227,7 +227,7 @@ func TestAddContainerMetrics(t *testing.T) {
 						Value: 42.0,
 					},
 				},
-				Dimensions: map[string]interface{}{
+				Dimensions: map[string]any{
 					"cluster_id":          "c0760bbd-9e9d-434b-bd4a-39c7cdef8a63",
 					"container_id":        "f25c457b-fceb-44f0-8f5b-38be34cbb6fb",
 					"executor_id":         "telegraf.192fb45f-cc0c-11e7-af48-ea183c0b541a",
@@ -313,7 +313,7 @@ func TestAddAppMetrics(t *testing.T) {
 						Value: 42.0,
 					},
 				},
-				Dimensions: map[string]interface{}{
+				Dimensions: map[string]any{
 					"cluster_id":   "c0760bbd-9e9d-434b-bd4a-39c7cdef8a63",
 					"container_id": "02d31175-1c01-4459-8520-ef8b1339bc52",
 					"hostname":     "192.168.122.18",
@@ -396,7 +396,7 @@ func TestGatherFilterNode(t *testing.T) {
 								Value: 42.0,
 							},
 						},
-						Dimensions: map[string]interface{}{
+						Dimensions: map[string]any{
 							"hostname": "x",
 						},
 					}, nil

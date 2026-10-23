@@ -242,7 +242,7 @@ func partitionDatums(datums []types.MetricDatum, batchSize int) [][]types.Metric
 	return partitions
 }
 
-func convert(v interface{}) (float64, bool) {
+func convert(v any) (float64, bool) {
 	var value float64
 
 	switch t := v.(type) {

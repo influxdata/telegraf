@@ -125,7 +125,7 @@ func thriftToJSONSpans(thriftData []byte) ([]byte, error) {
 	}
 
 	spans := make([]*zipkincore.Span, 0, size)
-	for i := 0; i < size; i++ {
+	for range size {
 		zs := &zipkincore.Span{}
 		if err = zs.Read(context.Background(), transport); err != nil {
 			return nil, fmt.Errorf("error reading into zipkin struct: %w", err)

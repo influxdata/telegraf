@@ -261,11 +261,11 @@ func TestAddToAccumulatorProcesses(t *testing.T) {
 
 var (
 	testCoreMetrics = []struct {
-		fields map[string]interface{}
+		fields map[string]any
 		tags   map[string]string
 	}{
 		{
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(1),
 			},
 			map[string]string{
@@ -274,7 +274,7 @@ var (
 			},
 		},
 		{
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(2),
 			},
 			map[string]string{
@@ -283,7 +283,7 @@ var (
 			},
 		},
 		{
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(3),
 			},
 			map[string]string{
@@ -292,7 +292,7 @@ var (
 			},
 		},
 		{
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(4),
 			},
 			map[string]string{
@@ -301,7 +301,7 @@ var (
 			},
 		},
 		{
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(5),
 			},
 			map[string]string{
@@ -310,7 +310,7 @@ var (
 			},
 		},
 		{
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(6),
 			},
 			map[string]string{
@@ -320,11 +320,11 @@ var (
 		},
 	}
 	testCoreMetricsShortened = []struct {
-		fields map[string]interface{}
+		fields map[string]any
 		tags   map[string]string
 	}{
 		{
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(1),
 			},
 			map[string]string{
@@ -333,7 +333,7 @@ var (
 			},
 		},
 		{
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(2),
 			},
 			map[string]string{
@@ -343,11 +343,11 @@ var (
 		},
 	}
 	testCoreProcesses = []struct {
-		fields map[string]interface{}
+		fields map[string]any
 		tags   map[string]string
 	}{
 		{
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(1),
 			},
 			map[string]string{
@@ -357,7 +357,7 @@ var (
 			},
 		},
 		{
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(2),
 			},
 			map[string]string{
@@ -367,7 +367,7 @@ var (
 			},
 		},
 		{
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(3),
 			},
 			map[string]string{
@@ -377,7 +377,7 @@ var (
 			},
 		},
 		{
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(4),
 			},
 			map[string]string{
@@ -387,7 +387,7 @@ var (
 			},
 		},
 		{
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(5),
 			},
 			map[string]string{
@@ -397,7 +397,7 @@ var (
 			},
 		},
 		{
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(6),
 			},
 			map[string]string{
@@ -408,11 +408,11 @@ var (
 		},
 	}
 	testCoreProcessesShortened = []struct {
-		fields map[string]interface{}
+		fields map[string]any
 		tags   map[string]string
 	}{
 		{
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(1),
 			},
 			map[string]string{
@@ -422,7 +422,7 @@ var (
 			},
 		},
 		{
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(2),
 			},
 			map[string]string{

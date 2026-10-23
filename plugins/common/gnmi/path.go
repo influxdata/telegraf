@@ -1,6 +1,7 @@
 package gnmi
 
 import (
+	"maps"
 	"strings"
 
 	"github.com/google/gnxi/utils/xpath"
@@ -65,8 +66,8 @@ func newInfoFromString(path string) *pathInfo {
 	parts := strings.Split(path, "/")
 
 	var origin string
-	if strings.HasSuffix(parts[0], ":") {
-		origin = strings.TrimSuffix(parts[0], ":")
+	if before, ok := strings.CutSuffix(parts[0], ":"); ok {
+		origin = before
 		parts = parts[1:]
 	}
 
@@ -126,9 +127,7 @@ func newInfoFromPath(paths ...*gnmi.Path) *pathInfo {
 				path: info.String(),
 				kv:   make(map[string]string, len(elem.Key)),
 			}
-			for k, v := range elem.Key {
-				keyInfo.kv[k] = v
-			}
+			maps.Copy(keyInfo.kv, elem.Key)
 			info.keyValues = append(info.keyValues, keyInfo)
 		}
 	}
@@ -156,9 +155,7 @@ func (pi *pathInfo) append(paths ...*gnmi.Path) *pathInfo {
 			path: elem.path,
 			kv:   make(map[string]string, len(elem.kv)),
 		}
-		for k, v := range elem.kv {
-			keyInfo.kv[k] = v
-		}
+		maps.Copy(keyInfo.kv, elem.kv)
 		path.keyValues = append(path.keyValues, keyInfo)
 	}
 
@@ -177,9 +174,7 @@ func (pi *pathInfo) append(paths ...*gnmi.Path) *pathInfo {
 				path: path.String(),
 				kv:   make(map[string]string, len(elem.Key)),
 			}
-			for k, v := range elem.Key {
-				keyInfo.kv[k] = v
-			}
+			maps.Copy(keyInfo.kv, elem.Key)
 			path.keyValues = append(path.keyValues, keyInfo)
 		}
 	}
@@ -203,9 +198,7 @@ func (pi *pathInfo) appendSegments(segments ...string) *pathInfo {
 			path: elem.path,
 			kv:   make(map[string]string, len(elem.kv)),
 		}
-		for k, v := range elem.kv {
-			keyInfo.kv[k] = v
-		}
+		maps.Copy(keyInfo.kv, elem.kv)
 		path.keyValues = append(path.keyValues, keyInfo)
 	}
 
@@ -323,10 +316,7 @@ func (pi *pathInfo) relative(path *pathInfo, withNamespace bool) string {
 }
 
 func (pi *pathInfo) keepCommonPart(path *pathInfo) {
-	shortestLen := len(pi.segments)
-	if len(path.segments) < shortestLen {
-		shortestLen = len(path.segments)
-	}
+	shortestLen := min(len(path.segments), len(pi.segments))
 
 	// Compare the elements and stop as soon as they do mismatch
 	var matchLen int

@@ -55,7 +55,7 @@ func (p *Round) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 }
 
 // rounds the provided value to Precision.
-func (p *Round) round(value interface{}) interface{} {
+func (p *Round) round(value any) any {
 	switch v := value.(type) {
 	case int:
 		return roundInt(v, int64(p.factor))

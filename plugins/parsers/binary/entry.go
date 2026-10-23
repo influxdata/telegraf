@@ -210,7 +210,7 @@ func (e *Entry) extract(in []byte, offset uint64) ([]byte, uint64, error) {
 	return data[:len(data)-len(e.termination)], n, nil
 }
 
-func (e *Entry) convertType(in []byte, order binary.ByteOrder) (interface{}, error) {
+func (e *Entry) convertType(in []byte, order binary.ByteOrder) (any, error) {
 	switch e.Type {
 	case "uint8", "int8", "uint16", "int16", "uint32", "int32", "float32", "uint64", "int64", "float64":
 		return convertNumericType(in, e.Type, order)
@@ -253,7 +253,7 @@ func convertStringType(in []byte) string {
 	return string(in)
 }
 
-func convertNumericType(in []byte, t string, order binary.ByteOrder) (interface{}, error) {
+func convertNumericType(in []byte, t string, order binary.ByteOrder) (any, error) {
 	bits, err := bitsForType(t)
 	if err != nil {
 		return nil, err

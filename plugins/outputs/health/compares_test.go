@@ -11,22 +11,18 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs/health"
 )
 
-func addr(v float64) *float64 {
-	return &v
-}
-
 func TestFieldNotFoundIsSuccess(t *testing.T) {
 	metrics := []telegraf.Metric{
 		metric.New(
 			"cpu",
 			map[string]string{},
-			map[string]interface{}{},
+			map[string]any{},
 			time.Now()),
 	}
 
 	compares := &health.Compares{
 		Field: "time_idle",
-		GT:    addr(42.0),
+		GT:    new(42.0),
 	}
 	result := compares.Check(metrics)
 	require.True(t, result)
@@ -37,7 +33,7 @@ func TestStringFieldIsFailure(t *testing.T) {
 		metric.New(
 			"cpu",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"time_idle": "foo",
 			},
 			time.Now()),
@@ -45,7 +41,7 @@ func TestStringFieldIsFailure(t *testing.T) {
 
 	compares := &health.Compares{
 		Field: "time_idle",
-		GT:    addr(42.0),
+		GT:    new(42.0),
 	}
 	result := compares.Check(metrics)
 	require.False(t, result)
@@ -63,7 +59,7 @@ func TestFloatConvert(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle": int64(42.0),
 					},
 					time.Now()),
@@ -76,7 +72,7 @@ func TestFloatConvert(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle": uint64(42.0),
 					},
 					time.Now()),
@@ -89,7 +85,7 @@ func TestFloatConvert(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle": float64(42.0),
 					},
 					time.Now()),
@@ -102,7 +98,7 @@ func TestFloatConvert(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle": true,
 					},
 					time.Now()),
@@ -115,7 +111,7 @@ func TestFloatConvert(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle": false,
 					},
 					time.Now()),
@@ -128,7 +124,7 @@ func TestFloatConvert(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle": "42.0",
 					},
 					time.Now()),
@@ -140,7 +136,7 @@ func TestFloatConvert(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			compares := &health.Compares{
 				Field: "time_idle",
-				GT:    addr(0.0),
+				GT:    new(0.0),
 			}
 			actual := compares.Check(tt.metrics)
 			require.Equal(t, tt.expected, actual)
@@ -158,7 +154,7 @@ func TestOperators(t *testing.T) {
 			name: "gt",
 			compares: &health.Compares{
 				Field: "time_idle",
-				GT:    addr(41.0),
+				GT:    new(41.0),
 			},
 			expected: true,
 		},
@@ -166,7 +162,7 @@ func TestOperators(t *testing.T) {
 			name: "not gt",
 			compares: &health.Compares{
 				Field: "time_idle",
-				GT:    addr(42.0),
+				GT:    new(42.0),
 			},
 			expected: false,
 		},
@@ -174,7 +170,7 @@ func TestOperators(t *testing.T) {
 			name: "ge",
 			compares: &health.Compares{
 				Field: "time_idle",
-				GE:    addr(42.0),
+				GE:    new(42.0),
 			},
 			expected: true,
 		},
@@ -182,7 +178,7 @@ func TestOperators(t *testing.T) {
 			name: "not ge",
 			compares: &health.Compares{
 				Field: "time_idle",
-				GE:    addr(43.0),
+				GE:    new(43.0),
 			},
 			expected: false,
 		},
@@ -190,7 +186,7 @@ func TestOperators(t *testing.T) {
 			name: "lt",
 			compares: &health.Compares{
 				Field: "time_idle",
-				LT:    addr(43.0),
+				LT:    new(43.0),
 			},
 			expected: true,
 		},
@@ -198,7 +194,7 @@ func TestOperators(t *testing.T) {
 			name: "not lt",
 			compares: &health.Compares{
 				Field: "time_idle",
-				LT:    addr(42.0),
+				LT:    new(42.0),
 			},
 			expected: false,
 		},
@@ -206,7 +202,7 @@ func TestOperators(t *testing.T) {
 			name: "le",
 			compares: &health.Compares{
 				Field: "time_idle",
-				LE:    addr(42.0),
+				LE:    new(42.0),
 			},
 			expected: true,
 		},
@@ -214,7 +210,7 @@ func TestOperators(t *testing.T) {
 			name: "not le",
 			compares: &health.Compares{
 				Field: "time_idle",
-				LE:    addr(41.0),
+				LE:    new(41.0),
 			},
 			expected: false,
 		},
@@ -222,7 +218,7 @@ func TestOperators(t *testing.T) {
 			name: "eq",
 			compares: &health.Compares{
 				Field: "time_idle",
-				EQ:    addr(42.0),
+				EQ:    new(42.0),
 			},
 			expected: true,
 		},
@@ -230,7 +226,7 @@ func TestOperators(t *testing.T) {
 			name: "not eq",
 			compares: &health.Compares{
 				Field: "time_idle",
-				EQ:    addr(41.0),
+				EQ:    new(41.0),
 			},
 			expected: false,
 		},
@@ -238,7 +234,7 @@ func TestOperators(t *testing.T) {
 			name: "ne",
 			compares: &health.Compares{
 				Field: "time_idle",
-				NE:    addr(41.0),
+				NE:    new(41.0),
 			},
 			expected: true,
 		},
@@ -246,7 +242,7 @@ func TestOperators(t *testing.T) {
 			name: "not ne",
 			compares: &health.Compares{
 				Field: "time_idle",
-				NE:    addr(42.0),
+				NE:    new(42.0),
 			},
 			expected: false,
 		},
@@ -257,7 +253,7 @@ func TestOperators(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle": 42.0,
 					},
 					time.Now()),

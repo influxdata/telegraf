@@ -1,10 +1,15 @@
 package snmp
 
-import "github.com/gosnmp/gosnmp"
+import (
+	"testing"
+
+	"github.com/gosnmp/gosnmp"
+	"github.com/stretchr/testify/require"
+)
 
 type testSNMPConnection struct {
 	host   string
-	values map[string]interface{}
+	values map[string]any
 }
 
 func (tsc *testSNMPConnection) Host() string {
@@ -46,9 +51,35 @@ func (*testSNMPConnection) Reconnect() error {
 	return nil
 }
 
+func (*testSNMPConnection) Close() error {
+	return nil
+}
+
+func TestReconnectResetsEngineID(t *testing.T) {
+	gs, err := NewWrapper(ClientConfig{Version: 3, SecName: "user", EngineID: "stale", EngineBoots: 3, EngineTime: 42})
+	require.NoError(t, err)
+	require.NoError(t, gs.SetAgent("udp://127.0.0.1:161"))
+	require.NoError(t, gs.Connect())
+	defer gs.Close()
+
+	// An open connection keeps the discovered engine ID
+	require.NoError(t, gs.Reconnect())
+	usm, ok := gs.SecurityParameters.(*gosnmp.UsmSecurityParameters)
+	require.True(t, ok)
+	require.Equal(t, "stale", usm.AuthoritativeEngineID)
+
+	// A closed connection discovers the engine ID again on reconnect
+	require.NoError(t, gs.Close())
+	require.NoError(t, gs.Reconnect())
+	require.NotNil(t, gs.Conn)
+	require.Empty(t, usm.AuthoritativeEngineID)
+	require.Zero(t, usm.AuthoritativeEngineBoots)
+	require.Zero(t, usm.AuthoritativeEngineTime)
+}
+
 var tsc = &testSNMPConnection{
 	host: "tsc",
-	values: map[string]interface{}{
+	values: map[string]any{
 		".1.0.0.0.1.1.0":         "foo",
 		".1.0.0.0.1.1.1":         []byte("bar"),
 		".1.0.0.0.1.1.2":         []byte(""),

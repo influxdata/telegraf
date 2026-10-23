@@ -217,13 +217,13 @@ func (i *FieldIterator) Done() {
 }
 
 // AsStarlarkValue converts a field value to a starlark.Value.
-func asStarlarkValue(value interface{}) (starlark.Value, error) {
+func asStarlarkValue(value any) (starlark.Value, error) {
 	v := reflect.ValueOf(value)
 	switch v.Kind() {
 	case reflect.Slice:
 		length := v.Len()
 		array := make([]starlark.Value, 0, length)
-		for i := 0; i < length; i++ {
+		for i := range length {
 			sVal, err := asStarlarkValue(v.Index(i).Interface())
 			if err != nil {
 				return starlark.None, err
@@ -264,7 +264,7 @@ func asStarlarkValue(value interface{}) (starlark.Value, error) {
 }
 
 // AsGoValue converts a starlark.Value to a field value.
-func asGoValue(value interface{}) (interface{}, error) {
+func asGoValue(value any) (any, error) {
 	switch v := value.(type) {
 	case starlark.Float:
 		return float64(v), nil
@@ -284,7 +284,7 @@ func asGoValue(value interface{}) (interface{}, error) {
 }
 
 // ToFields converts a starlark.Value to a map of values.
-func toFields(value starlark.Value) (map[string]interface{}, error) {
+func toFields(value starlark.Value) (map[string]any, error) {
 	if value == nil {
 		return nil, nil
 	}
@@ -292,7 +292,7 @@ func toFields(value starlark.Value) (map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	result := make(map[string]interface{}, len(items))
+	result := make(map[string]any, len(items))
 	for _, item := range items {
 		key, err := toString(item[0], "The type %T is unsupported as type of key for fields")
 		if err != nil {

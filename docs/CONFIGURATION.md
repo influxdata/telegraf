@@ -362,7 +362,8 @@ The agent table configures Telegraf and the defaults used across all plugins.
 
 - **skip_processors_before_aggregators**:
   By default, processors are run before aggregators. Changing
-  this setting to true will skip the first run of processors.
+  this setting to true will skip the first run of processors. Without any
+  aggregators processors only run once.
 
 - **skip_processors_after_aggregators**:
   By default, processors are run a second time after aggregators. Changing
@@ -732,10 +733,10 @@ evaluation is aborted, an error is logged, and the expression is reported as
 > compared to `namepass`/`namedrop` and friends. So consider to use the more
 > restricted filter options where possible in case of high-throughput scenarios.
 
-[CEL]:https://github.com/google/cel-go/tree/master
+[CEL]:https://github.com/cel-expr/cel-go
 [CEL intro]: https://codelabs.developers.google.com/codelabs/cel-go
-[CEL lang]: https://github.com/google/cel-spec/blob/master/doc/langdef.md
-[CEL ext]: https://github.com/google/cel-go/tree/master/ext#readme
+[CEL lang]: https://github.com/cel-expr/cel-spec/blob/master/doc/langdef.md
+[CEL ext]: https://github.com/cel-expr/cel-go/tree/master/ext#readme
 
 ### Modifiers
 

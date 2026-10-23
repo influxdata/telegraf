@@ -59,7 +59,7 @@ func TestWinEventLog_shouldExcludeEmptyField(t *testing.T) {
 	type args struct {
 		field      string
 		fieldType  string
-		fieldValue interface{}
+		fieldValue any
 	}
 	tests := []struct {
 		name     string

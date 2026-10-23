@@ -76,7 +76,7 @@ func TestIfNameIntegration(t *testing.T) {
 			"ifIndex": "1",
 			"agent":   "127.0.0.1",
 		},
-		map[string]interface{}{},
+		map[string]any{},
 		time.Unix(0, 0),
 	)
 
@@ -87,7 +87,7 @@ func TestIfNameIntegration(t *testing.T) {
 			"agent":   "127.0.0.1",
 			"ifName":  "lo",
 		},
-		map[string]interface{}{},
+		map[string]any{},
 		time.Unix(0, 0),
 	)
 
@@ -128,13 +128,11 @@ func TestGetMap(t *testing.T) {
 	const thMax = 3
 	ch := make(chan item, thMax)
 	var wg sync.WaitGroup
-	for th := 0; th < thMax; th++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range thMax {
+		wg.Go(func() {
 			m, age, err := d.getMap("agent")
 			ch <- item{entry: m, age: age, err: err}
-		}()
+		})
 	}
 
 	wg.Wait()
@@ -156,7 +154,7 @@ func TestTracking(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{"ifIndex": "1", "agent": "127.0.0.1"},
-			map[string]interface{}{"value": 42},
+			map[string]any{"value": 42},
 			time.Unix(0, 0),
 		),
 	}
@@ -169,7 +167,7 @@ func TestTracking(t *testing.T) {
 				"agent":   "127.0.0.1",
 				"ifName":  "lo",
 			},
-			map[string]interface{}{"value": 42},
+			map[string]any{"value": 42},
 			time.Unix(0, 0),
 		),
 	}

@@ -177,7 +177,7 @@ func (p *Postgresql) Init() error {
 
 		q.additionalTags = make(map[string]bool)
 		if q.Tagvalue != "" {
-			for _, tag := range strings.Split(q.Tagvalue, ",") {
+			for tag := range strings.SplitSeq(q.Tagvalue, ",") {
 				q.additionalTags[tag] = true
 			}
 		}
@@ -549,8 +549,8 @@ func (p *Postgresql) gatherMetricsFromQuery(
 	}
 
 	// Prepare the row buffers once and reuse them for every row
-	values := make([]interface{}, len(columns))
-	pointers := make([]interface{}, len(columns))
+	values := make([]any, len(columns))
+	pointers := make([]any, len(columns))
 	for i := range values {
 		pointers[i] = &values[i]
 	}
@@ -572,7 +572,7 @@ func (p *Postgresql) gatherMetricsFromQuery(
 func (p *Postgresql) accRow(
 	acc telegraf.Accumulator,
 	columns []string,
-	values []interface{},
+	values []any,
 	numeric map[string]bool,
 	j job,
 	timestamp time.Time,
@@ -596,7 +596,7 @@ func (p *Postgresql) accRow(
 	tags["server"] = p.service.SanitizedAddress
 	tags["db"] = dbname
 
-	fields := make(map[string]interface{}, len(columns))
+	fields := make(map[string]any, len(columns))
 	for i, col := range columns {
 		value := values[i]
 		if debug {
@@ -690,10 +690,8 @@ func matchesRole(role string, inRecovery bool) bool {
 func init() {
 	inputs.Add("postgresql_extensible", func() telegraf.Input {
 		return &Postgresql{
-			Config: postgresql.Config{
-				MaxIdle: 1,
-				MaxOpen: 1,
-			},
+			MaxIdle:             1,
+			MaxOpen:             1,
 			PreparedStatements:  true,
 			KeepIdleConnections: true,
 		}

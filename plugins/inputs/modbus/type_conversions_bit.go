@@ -6,7 +6,7 @@ func determineConverterBit(byteOrder string, bit uint8) (fieldConverterFunc, err
 		return nil, err
 	}
 
-	return func(b []byte) interface{} {
+	return func(b []byte) any {
 		// Swap the bytes according to endianness
 		v := tohost(b)
 		return uint8(v >> bit & 0x01)

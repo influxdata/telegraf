@@ -60,10 +60,8 @@ func TestGetConfigFiles(t *testing.T) {
 
 	// Setup Telegraf
 	agent := &Telegraf{
-		GlobalFlags: GlobalFlags{
-			config:    []string{filepath.Join(root, "telegraf.conf")},
-			configDir: []string{filepath.Join(root, "telegraf.d")},
-		},
+		config:    []string{filepath.Join(root, "telegraf.conf")},
+		configDir: []string{filepath.Join(root, "telegraf.d")},
 	}
 
 	// Fill the configuration files and check the result
@@ -203,10 +201,8 @@ func TestLoadConfigurationsPermissions(t *testing.T) {
 
 			// Setup Telegraf
 			agent := &Telegraf{
-				GlobalFlags: GlobalFlags{
-					config:    []string{filepath.Join(root, "telegraf.conf")},
-					configDir: []string{filepath.Join(root, "telegraf.d")},
-				},
+				config:    []string{filepath.Join(root, "telegraf.conf")},
+				configDir: []string{filepath.Join(root, "telegraf.d")},
 			}
 
 			// Fill the configuration files and check the resulting error

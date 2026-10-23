@@ -88,7 +88,7 @@ var engineStats = map[string]string{
 
 func (e *engine) addEngineStats(keys []string, acc telegraf.Accumulator, tags map[string]string) {
 	engine := reflect.ValueOf(e).Elem()
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	for _, key := range keys {
 		fields[key] = engine.FieldByName(engineStats[key]).Interface()
 	}
@@ -96,7 +96,7 @@ func (e *engine) addEngineStats(keys []string, acc telegraf.Accumulator, tags ma
 }
 
 func (s *storage) addStats(acc telegraf.Accumulator, tags map[string]string) {
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"cache_bytes_in_use":            s.Cache.BytesInUse,
 		"disk_read_bytes_per_sec":       s.Disk.ReadBytesPerSec,
 		"disk_read_bytes_total":         s.Disk.ReadBytesTotal,

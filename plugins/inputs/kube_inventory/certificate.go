@@ -23,13 +23,13 @@ func collectSecrets(ctx context.Context, acc telegraf.Accumulator, ki *Kubernete
 	}
 }
 
-func getFields(cert *x509.Certificate, now time.Time) map[string]interface{} {
+func getFields(cert *x509.Certificate, now time.Time) map[string]any {
 	age := int(now.Sub(cert.NotBefore).Seconds())
 	expiry := int(cert.NotAfter.Sub(now).Seconds())
 	startdate := cert.NotBefore.Unix()
 	enddate := cert.NotAfter.Unix()
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"age":       age,
 		"expiry":    expiry,
 		"startdate": startdate,

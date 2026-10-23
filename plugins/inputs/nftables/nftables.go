@@ -10,6 +10,10 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"slices"
+	"strings"
+
+	"github.com/Masterminds/semver/v3"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -19,12 +23,14 @@ import (
 var sampleConfig string
 
 type Nftables struct {
-	UseSudo bool     `toml:"use_sudo"`
-	Binary  string   `toml:"binary"`
-	Tables  []string `toml:"tables"`
-	Include []string `toml:"include"`
+	UseSudo bool            `toml:"use_sudo"`
+	Binary  string          `toml:"binary"`
+	Tables  []string        `toml:"tables"`
+	Include []string        `toml:"include"`
+	Log     telegraf.Logger `toml:"-"`
 
-	args []string
+	args  []string
+	terse bool
 }
 
 func (*Nftables) SampleConfig() string {
@@ -59,13 +65,49 @@ func (n *Nftables) Init() error {
 	}
 
 	// Construct the command
-	n.args = make([]string, 0, 3)
+	n.args = make([]string, 0, 6)
 	if n.UseSudo {
 		n.args = append(n.args, n.Binary)
 		n.Binary = "sudo"
 	}
-	n.args = append(n.args, "--json", "list", "table")
 	return nil
+}
+
+func (n *Nftables) Start(telegraf.Accumulator) error {
+	// Use --terse to avoid dumping the elements of sets, unless sets are
+	// monitored and the nft version does not support counting elements.
+	if !slices.Contains(n.Include, "sets") {
+		n.terse = true
+	} else {
+		version, err := n.version()
+		if err != nil {
+			n.Log.Warnf("Failed to determine nft --version, will not use --terse: %v", err)
+		} else if version.GreaterThanEqual(semver.New(1, 1, 7, "", "")) {
+			n.terse = true
+		}
+	}
+	return nil
+}
+
+func (*Nftables) Stop() {}
+
+func (n *Nftables) version() (*semver.Version, error) {
+	args := append(n.args, "--version")
+	out, err := exec.Command(n.Binary, args...).Output()
+	if err != nil {
+		if oserr, ok := errors.AsType[*exec.ExitError](err); ok {
+			buf, _, _ := bytes.Cut(oserr.Stderr, []byte("\n"))
+			return nil, fmt.Errorf("error executing nft --version command: %w (%s)", err, bytes.TrimSpace(buf))
+		}
+		return nil, fmt.Errorf("error executing nft --version command: %w", err)
+	}
+
+	// Parse version from output like "nftables v1.1.6 (Commodore Bullmoose #7)"
+	fields := strings.Fields(string(out))
+	if len(fields) < 2 || fields[0] != "nftables" {
+		return nil, fmt.Errorf("unexpected version output %q", strings.TrimSpace(string(out)))
+	}
+	return semver.NewVersion(fields[1])
 }
 
 func (n *Nftables) Gather(acc telegraf.Accumulator) error {
@@ -77,12 +119,15 @@ func (n *Nftables) Gather(acc telegraf.Accumulator) error {
 
 func (n *Nftables) gatherTable(acc telegraf.Accumulator, name string) error {
 	// Run the nft command
-	args := append(n.args, name)
+	args := n.args
+	if n.terse {
+		args = append(args, "--terse")
+	}
+	args = append(args, "--json", "list", "table", name)
 	c := exec.Command(n.Binary, args...)
 	out, err := c.Output()
 	if err != nil {
-		var oserr *exec.ExitError
-		if errors.As(err, &oserr) {
+		if oserr, ok := errors.AsType[*exec.ExitError](err); ok {
 			buf, _, _ := bytes.Cut(oserr.Stderr, []byte("\n"))
 			msg := string(bytes.TrimSpace(buf))
 			if msg == "Error: No such file or directory" {
@@ -110,7 +155,7 @@ func (n *Nftables) gatherTable(acc telegraf.Accumulator, name string) error {
 					if expr.Cntr == nil || expr.Cntr.isNamedRef {
 						continue
 					}
-					fields := map[string]interface{}{
+					fields := map[string]any{
 						"bytes": expr.Cntr.Bytes,
 						"pkts":  expr.Cntr.Packets,
 					}
@@ -124,7 +169,7 @@ func (n *Nftables) gatherTable(acc telegraf.Accumulator, name string) error {
 			}
 		case "counters":
 			for _, counter := range nftable.Counters {
-				fields := map[string]interface{}{
+				fields := map[string]any{
 					"bytes": counter.Bytes,
 					"pkts":  counter.Packets,
 				}
@@ -136,8 +181,20 @@ func (n *Nftables) gatherTable(acc telegraf.Accumulator, name string) error {
 			}
 		case "sets":
 			for _, set := range nftable.Sets {
-				fields := map[string]interface{}{
-					"count": len(set.Elem),
+				// With --terse nft only reports the element count for sets
+				// declared with a size and only if the kernel provides it,
+				// so a missing count does not mean the set is empty. List
+				// the set itself to count its elements in this case.
+				count := set.count()
+				if n.terse && set.Count == nil {
+					c, err := n.countSetElements(set)
+					if err != nil {
+						return err
+					}
+					count = c
+				}
+				fields := map[string]any{
+					"count": count,
 				}
 				tags := map[string]string{
 					"table": set.Table,
@@ -148,6 +205,28 @@ func (n *Nftables) gatherTable(acc telegraf.Accumulator, name string) error {
 		}
 	}
 	return nil
+}
+
+func (n *Nftables) countSetElements(set *namedSet) (int64, error) {
+	// List the set without --terse to get its elements
+	args := append(n.args, "--json", "list", "set", set.Family, set.Table, set.Name)
+	out, err := exec.Command(n.Binary, args...).Output()
+	if err != nil {
+		if oserr, ok := errors.AsType[*exec.ExitError](err); ok {
+			buf, _, _ := bytes.Cut(oserr.Stderr, []byte("\n"))
+			return 0, fmt.Errorf("error listing set %q: %w (%s)", set.Name, err, bytes.TrimSpace(buf))
+		}
+		return 0, fmt.Errorf("error listing set %q: %w", set.Name, err)
+	}
+
+	var nftable table
+	if err := json.Unmarshal(out, &nftable); err != nil {
+		return 0, fmt.Errorf("parsing output for set %q failed: %w", set.Name, err)
+	}
+	if len(nftable.Sets) != 1 {
+		return 0, fmt.Errorf("expected one set in output for %q but got %d", set.Name, len(nftable.Sets))
+	}
+	return nftable.Sets[0].count(), nil
 }
 
 func init() {

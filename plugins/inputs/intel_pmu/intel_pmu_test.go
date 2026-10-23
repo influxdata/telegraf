@@ -125,7 +125,7 @@ func TestGather(t *testing.T) {
 	mIntelPMU := &IntelPMU{entitiesReader: mEntitiesValuesReader}
 
 	type fieldWithTags struct {
-		fields map[string]interface{}
+		fields map[string]any
 		tags   map[string]string
 	}
 
@@ -190,7 +190,7 @@ func TestGather(t *testing.T) {
 			},
 			results: []fieldWithTags{
 				{
-					fields: map[string]interface{}{
+					fields: map[string]any{
 						"raw":     uint64(100),
 						"enabled": uint64(200),
 						"running": uint64(200),
@@ -203,7 +203,7 @@ func TestGather(t *testing.T) {
 					},
 				},
 				{
-					fields: map[string]interface{}{
+					fields: map[string]any{
 						"raw":     uint64(2100),
 						"enabled": uint64(400),
 						"running": uint64(200),
@@ -215,7 +215,7 @@ func TestGather(t *testing.T) {
 					},
 				},
 				{
-					fields: map[string]interface{}{
+					fields: map[string]any{
 						"raw":     uint64(2134562),
 						"enabled": uint64(1000000),
 						"running": uint64(1000000),
@@ -230,7 +230,7 @@ func TestGather(t *testing.T) {
 					},
 				},
 				{
-					fields: map[string]interface{}{
+					fields: map[string]any{
 						"raw":     uint64(2134562),
 						"enabled": uint64(3222222),
 						"running": uint64(2100000),
@@ -553,7 +553,7 @@ func (fakeFileInfo) Size() int64         { return 0 }
 func (f fakeFileInfo) Mode() os.FileMode { return f.fileMode }
 func (fakeFileInfo) ModTime() time.Time  { return time.Time{} }
 func (fakeFileInfo) IsDir() bool         { return false }
-func (fakeFileInfo) Sys() interface{}    { return nil }
+func (fakeFileInfo) Sys() any            { return nil }
 
 // Mocking
 

@@ -206,7 +206,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 	acc.AssertContainsTaggedFields(
 		t,
 		"nginx_sts_connections",
-		map[string]interface{}{
+		map[string]any{
 			"accepted": uint64(555),
 			"active":   uint64(111),
 			"handled":  uint64(666),
@@ -223,7 +223,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 	acc.AssertContainsTaggedFields(
 		t,
 		"nginx_sts_server",
-		map[string]interface{}{
+		map[string]any{
 			"connects":             uint64(1415887),
 			"in_bytes":             uint64(1296356607),
 			"out_bytes":            uint64(4404939605),
@@ -245,7 +245,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 	acc.AssertContainsTaggedFields(
 		t,
 		"nginx_sts_filter",
-		map[string]interface{}{
+		map[string]any{
 			"connects":             uint64(60),
 			"in_bytes":             uint64(2570),
 			"out_bytes":            uint64(53597),
@@ -268,7 +268,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 	acc.AssertContainsTaggedFields(
 		t,
 		"nginx_sts_server",
-		map[string]interface{}{
+		map[string]any{
 			"connects":             uint64(505),
 			"in_bytes":             uint64(171388),
 			"out_bytes":            uint64(1273382),
@@ -290,7 +290,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 	acc.AssertContainsTaggedFields(
 		t,
 		"nginx_sts_upstream",
-		map[string]interface{}{
+		map[string]any{
 			"connects":  uint64(2103849),
 			"in_bytes":  uint64(1774680141),
 			"out_bytes": uint64(11727669190),
@@ -326,7 +326,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 	acc.AssertContainsTaggedFields(
 		t,
 		"nginx_sts_upstream",
-		map[string]interface{}{
+		map[string]any{
 			"connects":  uint64(8),
 			"in_bytes":  uint64(5013),
 			"out_bytes": uint64(487585),
@@ -362,7 +362,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 	acc.AssertContainsTaggedFields(
 		t,
 		"nginx_sts_upstream",
-		map[string]interface{}{
+		map[string]any{
 			"connects":  uint64(7),
 			"in_bytes":  uint64(2926),
 			"out_bytes": uint64(3846638),

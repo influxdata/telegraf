@@ -156,7 +156,7 @@ func (b *Baseband) gatherVFMetric(acc telegraf.Accumulator, metricName string) e
 				return err
 			}
 
-			fields := map[string]interface{}{
+			fields := map[string]any{
 				"value": value,
 			}
 			tags := map[string]string{
@@ -183,7 +183,7 @@ func (b *Baseband) gatherEngineMetric(acc telegraf.Accumulator, metricName strin
 				return err
 			}
 
-			fields := map[string]interface{}{
+			fields := map[string]any{
 				"value": value,
 			}
 			tags := map[string]string{

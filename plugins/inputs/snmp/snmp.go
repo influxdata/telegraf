@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"maps"
 	"sync"
 	"time"
 
@@ -116,6 +117,9 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 			topTags := make(map[string]string)
 			if err := s.gatherTable(acc, gs, t, topTags, false); err != nil {
 				acc.AddError(fmt.Errorf("agent %s: %w", agent, err))
+				// Close the connection so the next request reconnects and, for
+				// SNMPv3, rediscovers the engine ID of a restarted agent.
+				gs.Close()
 				if s.StopOnError {
 					return
 				}
@@ -125,6 +129,7 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 			for _, t := range s.Tables {
 				if err := s.gatherTable(acc, gs, t, topTags, true); err != nil {
 					acc.AddError(fmt.Errorf("agent %s: gathering table %s: %w", agent, t.Name, err))
+					gs.Close()
 					if s.StopOnError {
 						return
 					}
@@ -146,9 +151,7 @@ func (s *Snmp) gatherTable(acc telegraf.Accumulator, gs snmp.Connection, t snmp.
 	for _, tr := range rt.Rows {
 		if !walk {
 			// top-level table. Add tags to topTags.
-			for k, v := range tr.Tags {
-				topTags[k] = v
-			}
+			maps.Copy(topTags, tr.Tags)
 		} else {
 			// real table. Inherit any specified tags.
 			for _, k := range t.InheritTags {
@@ -203,15 +206,13 @@ func (s *Snmp) getConnection(idx int) (snmp.Connection, error) {
 func init() {
 	inputs.Add("snmp", func() telegraf.Input {
 		return &Snmp{
-			Name: "snmp",
-			ClientConfig: snmp.ClientConfig{
-				Retries:        3,
-				MaxRepetitions: 10,
-				Timeout:        config.Duration(5 * time.Second),
-				Version:        2,
-				Path:           []string{"/usr/share/snmp/mibs"},
-				Community:      "public",
-			},
+			Name:           "snmp",
+			Retries:        3,
+			MaxRepetitions: 10,
+			Timeout:        config.Duration(5 * time.Second),
+			Version:        2,
+			Path:           []string{"/usr/share/snmp/mibs"},
+			Community:      "public",
 		}
 	})
 }

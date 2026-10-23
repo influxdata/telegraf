@@ -20,15 +20,15 @@ type event struct {
 }
 
 type data struct {
-	Tags   map[string]string      `json:"tags"`
-	Fields map[string]interface{} `json:"values"`
+	Tags   map[string]string `json:"tags"`
+	Fields map[string]any    `json:"values"`
 }
 
 func newEvent() *event {
 	return &event{
 		Data: data{
 			Tags:   make(map[string]string),
-			Fields: make(map[string]interface{}),
+			Fields: make(map[string]any),
 		},
 	}
 }

@@ -187,7 +187,7 @@ const kibanastatusresponse63 = `
 }
 `
 
-var kibanastatusexpected63 = map[string]interface{}{
+var kibanastatusexpected63 = map[string]any{
 	"status_code":            1,
 	"heap_total_bytes":       int64(149954560),
 	"heap_max_bytes":         int64(149954560),

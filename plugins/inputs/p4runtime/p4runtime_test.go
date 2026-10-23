@@ -137,7 +137,7 @@ func TestOneCounterRead(t *testing.T) {
 					"counter_name":   "foo",
 					"counter_type":   "BOTH",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"bytes":         int64(5),
 					"packets":       int64(1),
 					"counter_index": 5},
@@ -168,7 +168,7 @@ func TestOneCounterRead(t *testing.T) {
 					"counter_name":   "foo",
 					"counter_type":   "BYTES",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"bytes":         int64(5),
 					"packets":       int64(0),
 					"counter_index": 5},
@@ -199,7 +199,7 @@ func TestOneCounterRead(t *testing.T) {
 					"counter_name":   "foo",
 					"counter_type":   "PACKETS",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"bytes":         int64(0),
 					"packets":       int64(1),
 					"counter_index": 5},
@@ -278,7 +278,7 @@ func TestMultipleEntitiesSingleCounterRead(t *testing.T) {
 			createCounter("foo", 0, p4_config.CounterSpec_BOTH),
 		)
 
-		for i := 0; i < totalNumOfEntries; i++ {
+		for i := range totalNumOfEntries {
 			counterEntry := &p4.Entity{
 				Entity: createEntityCounterEntry(
 					0,
@@ -298,7 +298,7 @@ func TestMultipleEntitiesSingleCounterRead(t *testing.T) {
 					"counter_name":   "foo",
 					"counter_type":   "BOTH",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"bytes":         int64(10),
 					"packets":       int64(10),
 					"counter_index": i,
@@ -380,7 +380,7 @@ func TestSingleEntitiesMultipleCounterRead(t *testing.T) {
 					"counter_name":   counterName,
 					"counter_type":   "BOTH",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"bytes":         int64(10),
 					"packets":       int64(10),
 					"counter_index": 1,

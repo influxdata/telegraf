@@ -30,7 +30,7 @@ type fakeFileInfo struct {
 	filemode uint32
 	modtime  time.Time
 	isdir    bool
-	sys      interface{}
+	sys      any
 }
 
 func (f fakeFileInfo) Name() string       { return f.name }
@@ -38,7 +38,7 @@ func (f fakeFileInfo) Size() int64        { return f.size }
 func (f fakeFileInfo) Mode() os.FileMode  { return os.FileMode(f.filemode) }
 func (f fakeFileInfo) ModTime() time.Time { return f.modtime }
 func (f fakeFileInfo) IsDir() bool        { return f.isdir }
-func (f fakeFileInfo) Sys() interface{}   { return f.sys }
+func (f fakeFileInfo) Sys() any           { return f.sys }
 
 func (fakeFileSystem) open(name string) (file, error) {
 	return nil, &os.PathError{Op: "Open", Path: name, Err: errors.New("not implemented by fake filesystem")}

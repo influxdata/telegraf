@@ -24,7 +24,7 @@ func TestSerializer(t *testing.T) {
 			input: metric.New(
 				"cpu",
 				map[string]string{},
-				map[string]interface{}{},
+				map[string]any{},
 				time.Unix(100, 0),
 			),
 			template: "{{ .Name }}",
@@ -35,7 +35,7 @@ func TestSerializer(t *testing.T) {
 			input: metric.New(
 				"cpu",
 				map[string]string{},
-				map[string]interface{}{},
+				map[string]any{},
 				time.Unix(100, 0),
 			),
 			template: "{{ .Time.Unix }}",
@@ -46,7 +46,7 @@ func TestSerializer(t *testing.T) {
 			input: metric.New(
 				"cpu",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"x": 42.0,
 					"y": 43.0,
 				},
@@ -63,7 +63,7 @@ func TestSerializer(t *testing.T) {
 					"host": "localhost",
 					"cpu":  "CPU0",
 				},
-				map[string]interface{}{},
+				map[string]any{},
 				time.Unix(100, 0),
 			),
 			template: `{{ .Tag "cpu" }}`,
@@ -74,7 +74,7 @@ func TestSerializer(t *testing.T) {
 			input: metric.New(
 				"cpu",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"x": 42.0,
 					"y": 43.0,
 				},
@@ -91,7 +91,7 @@ func TestSerializer(t *testing.T) {
 					"host": "localhost",
 					"cpu":  "CPU0",
 				},
-				map[string]interface{}{},
+				map[string]any{},
 				time.Unix(100, 0),
 			),
 			template: `{{ range $k, $v := .Tags }}{{$k}}={{$v}},{{end}}`,
@@ -105,7 +105,7 @@ func TestSerializer(t *testing.T) {
 					"host": "localhost",
 					"cpu":  "CPU0",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"x": 42.0,
 					"y": 43.0,
 				},
@@ -121,7 +121,7 @@ func TestSerializer(t *testing.T) {
 				map[string]string{
 					"tag1": "tag",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"value": 42.0,
 				},
 				time.Unix(0, 0),
@@ -158,7 +158,7 @@ func TestSerializeBatch(t *testing.T) {
 	m := metric.New(
 		"cpu",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"value": 42.0,
 		},
 		time.Unix(0, 0),
@@ -185,7 +185,7 @@ func TestSerializeTrackingMetric(t *testing.T) {
 	m := metric.New(
 		"cpu",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"value": 42.0,
 		},
 		time.Unix(0, 0),
@@ -210,7 +210,7 @@ func TestSerializeBatchTrackingMetrics(t *testing.T) {
 	m := metric.New(
 		"cpu",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"value": 42.0,
 		},
 		time.Unix(0, 0),

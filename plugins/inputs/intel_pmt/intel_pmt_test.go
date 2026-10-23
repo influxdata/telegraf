@@ -72,8 +72,8 @@ func TestEval(t *testing.T) {
 	tests := []struct {
 		name     string
 		eq       string
-		params   map[string]interface{}
-		expected interface{}
+		params   map[string]any
+		expected any
 		err      bool
 	}{
 		{
@@ -93,7 +93,7 @@ func TestEval(t *testing.T) {
 		{
 			name: "Valid equation with params, valid params",
 			eq:   "a + b",
-			params: map[string]interface{}{
+			params: map[string]any{
 				"a": 2,
 				"b": 3,
 			},
@@ -103,7 +103,7 @@ func TestEval(t *testing.T) {
 		{
 			name: "Valid equation with params, invalid params",
 			eq:   "a + b",
-			params: map[string]interface{}{
+			params: map[string]any{
 				"a": 2,
 				// "b" is missing
 			},
@@ -120,7 +120,7 @@ func TestEval(t *testing.T) {
 		{
 			name: "Real equation from PMT - temperature of unused core",
 			eq:   "( ( parameter_0 >> 8 ) & 0xff ) + ( ( parameter_0 & 0xff ) / ( 2 ** 8 ) ) - 64",
-			params: map[string]interface{}{
+			params: map[string]any{
 				"parameter_0": 0,
 			},
 			expected: float64(-64),
@@ -129,7 +129,7 @@ func TestEval(t *testing.T) {
 		{
 			name: "Real equation from PMT - temperature of working core",
 			eq:   "( ( parameter_0 >> 8 ) & 0xff ) + ( ( parameter_0 & 0xff ) / ( 2 ** 8 ) ) - 64",
-			params: map[string]interface{}{
+			params: map[string]any{
 				"parameter_0": 23600,
 			},
 			expected: float64(28.1875),
@@ -138,7 +138,7 @@ func TestEval(t *testing.T) {
 		{
 			name: "Badly parsed real equation from PMT - temperature of working core",
 			eq:   "( ( parameter_0 &gt;&gt; 8 ) & 0xff ) + ( ( parameter_0 & 0xff ) / ( 2 ** 8 ) ) - 64",
-			params: map[string]interface{}{
+			params: map[string]any{
 				"parameter_0": 23600,
 			},
 			expected: nil,
@@ -457,7 +457,7 @@ func TestGather(t *testing.T) {
 						"sample_group":   "test-group",
 						"datatype_idref": "test-datatype",
 					},
-					map[string]interface{}{
+					map[string]any{
 						// 1 from buffer, 2 from equation
 						"value": float64(3),
 					},
@@ -473,7 +473,7 @@ func TestGather(t *testing.T) {
 						"sample_group":   "test-group2",
 						"datatype_idref": "test-datatype2",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"value": float64(28.1875),
 					},
 					time.Time{},
@@ -547,7 +547,7 @@ func TestGather(t *testing.T) {
 						"sample_group":   "test-group",
 						"datatype_idref": "test-datatype",
 					},
-					map[string]interface{}{
+					map[string]any{
 						// 1 from buffer, 2 from equation
 						"value": float64(3),
 					},

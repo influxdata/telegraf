@@ -17,7 +17,7 @@ func migrate(name string, tbl *ast.Table) ([]byte, string, error) {
 	}
 
 	// Decode the old data structure
-	var agent map[string]interface{}
+	var agent map[string]any
 	if err := toml.UnmarshalTable(tbl, &agent); err != nil {
 		return nil, "", err
 	}
@@ -65,7 +65,7 @@ func migrate(name string, tbl *ast.Table) ([]byte, string, error) {
 		return nil, "", migrations.ErrNotApplicable
 	}
 
-	output, err := toml.Marshal(map[string]map[string]interface{}{"agent": agent})
+	output, err := toml.Marshal(map[string]map[string]any{"agent": agent})
 	return output, "", err
 }
 

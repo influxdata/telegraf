@@ -302,7 +302,7 @@ func (p *IntelPMT) aggregateSamples(acc telegraf.Accumulator, guid string, data 
 		return err
 	}
 	for _, sample := range p.pmtAggregatorInterface[guid].AggregatorSamples.AggregatorSample {
-		parameters := make(map[string]interface{})
+		parameters := make(map[string]any)
 		for _, input := range sample.TransformInputs.TransformInput {
 			if _, ok := results[input.SampleIDREF]; !ok {
 				return fmt.Errorf("sample with IDREF %q has not been found", input.SampleIDREF)
@@ -314,7 +314,7 @@ func (p *IntelPMT) aggregateSamples(acc telegraf.Accumulator, guid string, data 
 		if err != nil {
 			return fmt.Errorf("error during eval of sample %q: %w", sample.SampleName, err)
 		}
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"value": res,
 		}
 		tags := map[string]string{
@@ -374,7 +374,7 @@ func transformEquation(eq string) string {
 //
 //	interface - the value of calculation.
 //	error - error if the equation is empty, if hex to dec conversion failed or if the equation is invalid.
-func eval(eq string, params map[string]interface{}) (interface{}, error) {
+func eval(eq string, params map[string]any) (any, error) {
 	if eq == "" {
 		return nil, errors.New("no transformation equation found")
 	}

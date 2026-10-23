@@ -111,12 +111,12 @@ func (s *Supervisor) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (s *Supervisor) parseProcessData(pInfo processInfo, status supervisorInfo) (map[string]string, map[string]interface{}, error) {
+func (s *Supervisor) parseProcessData(pInfo processInfo, status supervisorInfo) (map[string]string, map[string]any, error) {
 	tags := map[string]string{
 		"process": pInfo.Name,
 		"group":   pInfo.Group,
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"uptime": pInfo.Now - pInfo.Start,
 		"state":  pInfo.State,
 	}
@@ -137,7 +137,7 @@ func (s *Supervisor) parseProcessData(pInfo processInfo, status supervisorInfo) 
 }
 
 // Parsing of supervisor instance data
-func (s *Supervisor) parseInstanceData(status supervisorInfo) (map[string]string, map[string]interface{}, error) {
+func (s *Supervisor) parseInstanceData(status supervisorInfo) (map[string]string, map[string]any, error) {
 	splittedURL, err := beautifyServerString(s.Server)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to parse server string: %w", err)
@@ -147,7 +147,7 @@ func (s *Supervisor) parseInstanceData(status supervisorInfo) (map[string]string
 		"source": splittedURL[0],
 		"port":   splittedURL[1],
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"state": status.StateCode,
 	}
 	return tags, fields, nil

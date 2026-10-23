@@ -18,7 +18,7 @@ import (
 
 type (
 	// Operations is an interface to simulate aggregator operations
-	Operations interface{}
+	Operations any
 	// OperationAdd is an array of metrics to add to the aggregator
 	OperationAdd []telegraf.Metric
 	// OperationPush simulate a push call to the aggregator
@@ -36,7 +36,7 @@ func TestAddAndPush(t *testing.T) {
 				metric.New(
 					"name",
 					map[string]string{"host": "hostA"},
-					map[string]interface{}{"value": 1},
+					map[string]any{"value": 1},
 					time.Now()),
 			},
 			OperationPush{},
@@ -46,7 +46,7 @@ func TestAddAndPush(t *testing.T) {
 				metric.New(
 					"name",
 					map[string]string{"host": "hostA", "foo": "bar"},
-					map[string]interface{}{"value": 1},
+					map[string]any{"value": 1},
 					time.Now()),
 			},
 			OperationPush{},
@@ -54,7 +54,7 @@ func TestAddAndPush(t *testing.T) {
 				metric.New(
 					lldName,
 					map[string]string{"host": "hostA"},
-					map[string]interface{}{"name.foo": `{"data":[{"{#FOO}":"bar"}]}`},
+					map[string]any{"name.foo": `{"data":[{"{#FOO}":"bar"}]}`},
 					time.Now(),
 				),
 			},
@@ -64,14 +64,14 @@ func TestAddAndPush(t *testing.T) {
 				metric.New(
 					"name",
 					map[string]string{"host": "hostA", "foo": "bar1"},
-					map[string]interface{}{"value": 1},
+					map[string]any{"value": 1},
 					time.Now()),
 			},
 			OperationAdd{
 				metric.New(
 					"name",
 					map[string]string{"host": "hostA", "foo": "bar2"},
-					map[string]interface{}{"value": 1},
+					map[string]any{"value": 1},
 					time.Now()),
 			},
 			OperationPush{},
@@ -79,7 +79,7 @@ func TestAddAndPush(t *testing.T) {
 				metric.New(
 					lldName,
 					map[string]string{"host": "hostA"},
-					map[string]interface{}{"name.foo": `{"data":[{"{#FOO}":"bar1"},{"{#FOO}":"bar2"}]}`},
+					map[string]any{"name.foo": `{"data":[{"{#FOO}":"bar1"},{"{#FOO}":"bar2"}]}`},
 					time.Now(),
 				),
 			},
@@ -89,12 +89,12 @@ func TestAddAndPush(t *testing.T) {
 				metric.New(
 					"nameA",
 					map[string]string{"host": "hostA", "foo": "bar"},
-					map[string]interface{}{"value": 1},
+					map[string]any{"value": 1},
 					time.Now()),
 				metric.New(
 					"nameB",
 					map[string]string{"host": "hostA", "foo": "bar"},
-					map[string]interface{}{"value": 1},
+					map[string]any{"value": 1},
 					time.Now()),
 			},
 			OperationPush{},
@@ -102,13 +102,13 @@ func TestAddAndPush(t *testing.T) {
 				metric.New(
 					lldName,
 					map[string]string{"host": "hostA"},
-					map[string]interface{}{"nameA.foo": `{"data":[{"{#FOO}":"bar"}]}`},
+					map[string]any{"nameA.foo": `{"data":[{"{#FOO}":"bar"}]}`},
 					time.Now(),
 				),
 				metric.New(
 					lldName,
 					map[string]string{"host": "hostA"},
-					map[string]interface{}{"nameB.foo": `{"data":[{"{#FOO}":"bar"}]}`},
+					map[string]any{"nameB.foo": `{"data":[{"{#FOO}":"bar"}]}`},
 					time.Now(),
 				),
 			},
@@ -118,12 +118,12 @@ func TestAddAndPush(t *testing.T) {
 				metric.New(
 					"nameA",
 					map[string]string{"host": "hostA", "foo1": "bar"},
-					map[string]interface{}{"value": 1},
+					map[string]any{"value": 1},
 					time.Now()),
 				metric.New(
 					"nameA",
 					map[string]string{"host": "hostA", "foo1": "bar", "foo2": "baz"},
-					map[string]interface{}{"value": 1},
+					map[string]any{"value": 1},
 					time.Now()),
 			},
 			OperationPush{},
@@ -131,13 +131,13 @@ func TestAddAndPush(t *testing.T) {
 				metric.New(
 					lldName,
 					map[string]string{"host": "hostA"},
-					map[string]interface{}{"nameA.foo1": `{"data":[{"{#FOO1}":"bar"}]}`},
+					map[string]any{"nameA.foo1": `{"data":[{"{#FOO1}":"bar"}]}`},
 					time.Now(),
 				),
 				metric.New(
 					lldName,
 					map[string]string{"host": "hostA"},
-					map[string]interface{}{"nameA.foo1.foo2": `{"data":[{"{#FOO1}":"bar","{#FOO2}":"baz"}]}`},
+					map[string]any{"nameA.foo1.foo2": `{"data":[{"{#FOO1}":"bar","{#FOO2}":"baz"}]}`},
 					time.Now(),
 				),
 			},
@@ -147,19 +147,19 @@ func TestAddAndPush(t *testing.T) {
 				metric.New(
 					"name",
 					map[string]string{"host": "hostA", "foo": "bar"},
-					map[string]interface{}{"value": 1},
+					map[string]any{"value": 1},
 					time.Now(),
 				),
 				metric.New(
 					"name",
 					map[string]string{"host": "hostA", "foo": "bar"},
-					map[string]interface{}{"value": 1},
+					map[string]any{"value": 1},
 					time.Now(),
 				),
 				metric.New(
 					"name",
 					map[string]string{"host": "hostA", "foo": "bar"},
-					map[string]interface{}{"value": 1},
+					map[string]any{"value": 1},
 					time.Now(),
 				),
 			},
@@ -168,7 +168,7 @@ func TestAddAndPush(t *testing.T) {
 				metric.New(
 					lldName,
 					map[string]string{"host": "hostA"},
-					map[string]interface{}{"name.foo": `{"data":[{"{#FOO}":"bar"}]}`},
+					map[string]any{"name.foo": `{"data":[{"{#FOO}":"bar"}]}`},
 					time.Now(),
 				),
 			},
@@ -178,19 +178,19 @@ func TestAddAndPush(t *testing.T) {
 				metric.New(
 					"name",
 					map[string]string{"host": "hostA", "foo": "bar", "baz": "qux"},
-					map[string]interface{}{"value": 1},
+					map[string]any{"value": 1},
 					time.Now(),
 				),
 				metric.New(
 					"name",
 					map[string]string{"host": "hostA", "baz": "qux", "foo": "bar"},
-					map[string]interface{}{"value": 1},
+					map[string]any{"value": 1},
 					time.Now(),
 				),
 				metric.New(
 					"name",
 					map[string]string{"baz": "qux", "foo": "bar", "host": "hostA"},
-					map[string]interface{}{"value": 1},
+					map[string]any{"value": 1},
 					time.Now(),
 				),
 			},
@@ -199,7 +199,7 @@ func TestAddAndPush(t *testing.T) {
 				metric.New(
 					lldName,
 					map[string]string{"host": "hostA"},
-					map[string]interface{}{"name.baz.foo": `{"data":[{"{#BAZ}":"qux","{#FOO}":"bar"}]}`},
+					map[string]any{"name.baz.foo": `{"data":[{"{#BAZ}":"qux","{#FOO}":"bar"}]}`},
 					time.Now(),
 				),
 			},
@@ -208,7 +208,7 @@ func TestAddAndPush(t *testing.T) {
 			OperationAdd{metric.New(
 				"name",
 				map[string]string{"host": "hostA", "foo": "bar"},
-				map[string]interface{}{"value": 1},
+				map[string]any{"value": 1},
 				time.Now(),
 			)},
 			OperationPush{},
@@ -216,14 +216,14 @@ func TestAddAndPush(t *testing.T) {
 				metric.New(
 					lldName,
 					map[string]string{"host": "hostA"},
-					map[string]interface{}{"name.foo": `{"data":[{"{#FOO}":"bar"}]}`},
+					map[string]any{"name.foo": `{"data":[{"{#FOO}":"bar"}]}`},
 					time.Now(),
 				),
 			},
 			OperationAdd{metric.New(
 				"name",
 				map[string]string{"host": "hostA", "foo": "bar"},
-				map[string]interface{}{"value": 1},
+				map[string]any{"value": 1},
 				time.Now(),
 			)},
 			OperationPush{},
@@ -232,7 +232,7 @@ func TestAddAndPush(t *testing.T) {
 			OperationAdd{metric.New(
 				"name",
 				map[string]string{"host": "hostA", "foo": "bar"},
-				map[string]interface{}{"value": 1},
+				map[string]any{"value": 1},
 				time.Now(),
 			)},
 			OperationPush{},
@@ -240,14 +240,14 @@ func TestAddAndPush(t *testing.T) {
 				metric.New(
 					lldName,
 					map[string]string{"host": "hostA"},
-					map[string]interface{}{"name.foo": `{"data":[{"{#FOO}":"bar"}]}`},
+					map[string]any{"name.foo": `{"data":[{"{#FOO}":"bar"}]}`},
 					time.Now(),
 				),
 			},
 			OperationAdd{metric.New(
 				"name",
 				map[string]string{"host": "hostA", "foo": "bar"},
-				map[string]interface{}{"value": 1},
+				map[string]any{"value": 1},
 				time.Now(),
 			)},
 			OperationPush{},
@@ -255,14 +255,14 @@ func TestAddAndPush(t *testing.T) {
 			OperationAdd{metric.New(
 				"name",
 				map[string]string{"host": "hostA", "foo": "bar"},
-				map[string]interface{}{"value": 1},
+				map[string]any{"value": 1},
 				time.Now(),
 			)},
 			OperationPush{},
 			OperationAdd{metric.New(
 				"name",
 				map[string]string{"host": "hostA", "foo": "bar"},
-				map[string]interface{}{"value": 1},
+				map[string]any{"value": 1},
 				time.Now(),
 			)},
 			OperationPush{},
@@ -270,7 +270,7 @@ func TestAddAndPush(t *testing.T) {
 				metric.New(
 					lldName,
 					map[string]string{"host": "hostA"},
-					map[string]interface{}{"name.foo": `{"data":[{"{#FOO}":"bar"}]}`},
+					map[string]any{"name.foo": `{"data":[{"{#FOO}":"bar"}]}`},
 					time.Now(),
 				),
 			},
@@ -279,7 +279,7 @@ func TestAddAndPush(t *testing.T) {
 			OperationAdd{metric.New(
 				"name",
 				map[string]string{"host": "hostA", "foo": "bar"},
-				map[string]interface{}{"value": 1},
+				map[string]any{"value": 1},
 				time.Now(),
 			)},
 			OperationPush{},
@@ -287,14 +287,14 @@ func TestAddAndPush(t *testing.T) {
 				metric.New(
 					lldName,
 					map[string]string{"host": "hostA"},
-					map[string]interface{}{"name.foo": `{"data":[{"{#FOO}":"bar"}]}`},
+					map[string]any{"name.foo": `{"data":[{"{#FOO}":"bar"}]}`},
 					time.Now(),
 				),
 			},
 			OperationAdd{metric.New(
 				"name",
 				map[string]string{"host": "hostA", "foo": "bar"},
-				map[string]interface{}{"value": 1},
+				map[string]any{"value": 1},
 				time.Now(),
 			)},
 			OperationPush{},
@@ -305,7 +305,7 @@ func TestAddAndPush(t *testing.T) {
 				metric.New(
 					lldName,
 					map[string]string{"host": "hostA"},
-					map[string]interface{}{"name.foo": `{"data":[]}`},
+					map[string]any{"name.foo": `{"data":[]}`},
 					time.Now(),
 				),
 			},
@@ -314,7 +314,7 @@ func TestAddAndPush(t *testing.T) {
 			OperationAdd{metric.New(
 				"name",
 				map[string]string{"host": "hostA", "foo": "bar1"},
-				map[string]interface{}{"value": 1},
+				map[string]any{"value": 1},
 				time.Now(),
 			)},
 			OperationPush{},
@@ -322,14 +322,14 @@ func TestAddAndPush(t *testing.T) {
 				metric.New(
 					lldName,
 					map[string]string{"host": "hostA"},
-					map[string]interface{}{"name.foo": `{"data":[{"{#FOO}":"bar1"}]}`},
+					map[string]any{"name.foo": `{"data":[{"{#FOO}":"bar1"}]}`},
 					time.Now(),
 				),
 			},
 			OperationAdd{metric.New(
 				"name",
 				map[string]string{"host": "hostA", "foo": "bar2"},
-				map[string]interface{}{"value": 1},
+				map[string]any{"value": 1},
 				time.Now(),
 			)},
 			OperationPush{},
@@ -337,7 +337,7 @@ func TestAddAndPush(t *testing.T) {
 				metric.New(
 					lldName,
 					map[string]string{"host": "hostA"},
-					map[string]interface{}{"name.foo": `{"data":[{"{#FOO}":"bar2"}]}`},
+					map[string]any{"name.foo": `{"data":[{"{#FOO}":"bar2"}]}`},
 					time.Now(),
 				),
 			},
@@ -346,7 +346,7 @@ func TestAddAndPush(t *testing.T) {
 			OperationAdd{metric.New(
 				"name",
 				map[string]string{"host": "hostA", "foo": "bar"},
-				map[string]interface{}{"value": 1},
+				map[string]any{"value": 1},
 				time.Now(),
 			)},
 			OperationPush{},
@@ -354,7 +354,7 @@ func TestAddAndPush(t *testing.T) {
 				metric.New(
 					lldName,
 					map[string]string{"host": "hostA"},
-					map[string]interface{}{"name.foo": `{"data":[{"{#FOO}":"bar"}]}`},
+					map[string]any{"name.foo": `{"data":[{"{#FOO}":"bar"}]}`},
 					time.Now(),
 				),
 			},
@@ -362,7 +362,7 @@ func TestAddAndPush(t *testing.T) {
 			OperationCheck{metric.New(
 				lldName,
 				map[string]string{"host": "hostA"},
-				map[string]interface{}{"name.foo": `{"data":[]}`},
+				map[string]any{"name.foo": `{"data":[]}`},
 				time.Now(),
 			)},
 		},
@@ -371,13 +371,13 @@ func TestAddAndPush(t *testing.T) {
 				metric.New(
 					"name",
 					map[string]string{"host": "hostA", "foo": "bar"},
-					map[string]interface{}{"value": 1},
+					map[string]any{"value": 1},
 					time.Now(),
 				),
 				metric.New(
 					"name",
 					map[string]string{"host": "hostB", "foo": "bar"},
-					map[string]interface{}{"value": 1},
+					map[string]any{"value": 1},
 					time.Now(),
 				),
 			},
@@ -386,13 +386,13 @@ func TestAddAndPush(t *testing.T) {
 				metric.New(
 					lldName,
 					map[string]string{"host": "hostA"},
-					map[string]interface{}{"name.foo": `{"data":[{"{#FOO}":"bar"}]}`},
+					map[string]any{"name.foo": `{"data":[{"{#FOO}":"bar"}]}`},
 					time.Now(),
 				),
 				metric.New(
 					lldName,
 					map[string]string{"host": "hostB"},
-					map[string]interface{}{"name.foo": `{"data":[{"{#FOO}":"bar"}]}`},
+					map[string]any{"name.foo": `{"data":[{"{#FOO}":"bar"}]}`},
 					time.Now(),
 				),
 			},
@@ -400,7 +400,7 @@ func TestAddAndPush(t *testing.T) {
 				metric.New(
 					"name",
 					map[string]string{"host": "hostB", "foo": "bar"},
-					map[string]interface{}{"value": 1},
+					map[string]any{"value": 1},
 					time.Now(),
 				),
 			},
@@ -409,7 +409,7 @@ func TestAddAndPush(t *testing.T) {
 				metric.New(
 					lldName,
 					map[string]string{"host": "hostA"},
-					map[string]interface{}{"name.foo": `{"data":[]}`},
+					map[string]any{"name.foo": `{"data":[]}`},
 					time.Now(),
 				),
 			},
@@ -418,13 +418,13 @@ func TestAddAndPush(t *testing.T) {
 			OperationAdd{metric.New(
 				"name",
 				map[string]string{"host": "hostA", "foo": "bar"},
-				map[string]interface{}{"value": 1},
+				map[string]any{"value": 1},
 				time.Now(),
 			)},
 			OperationAdd{metric.New(
 				"name",
 				map[string]string{"host": "hostB", "foo": "bar"},
-				map[string]interface{}{"value": 1},
+				map[string]any{"value": 1},
 				time.Now(),
 			)},
 			OperationPush{},
@@ -432,13 +432,13 @@ func TestAddAndPush(t *testing.T) {
 				metric.New(
 					lldName,
 					map[string]string{"host": "hostA"},
-					map[string]interface{}{"name.foo": `{"data":[{"{#FOO}":"bar"}]}`},
+					map[string]any{"name.foo": `{"data":[{"{#FOO}":"bar"}]}`},
 					time.Now(),
 				),
 				metric.New(
 					lldName,
 					map[string]string{"host": "hostB"},
-					map[string]interface{}{"name.foo": `{"data":[{"{#FOO}":"bar"}]}`},
+					map[string]any{"name.foo": `{"data":[{"{#FOO}":"bar"}]}`},
 					time.Now(),
 				),
 			},
@@ -447,14 +447,14 @@ func TestAddAndPush(t *testing.T) {
 			OperationAdd{metric.New(
 				"name",
 				map[string]string{"host": "hostA", "foo": "a"},
-				map[string]interface{}{"value": 1},
+				map[string]any{"value": 1},
 				time.Now(),
 			)},
 			OperationAdd{
 				metric.New(
 					"name",
 					map[string]string{"host": "hostA", "foo": "a", "bar": "b"},
-					map[string]interface{}{"value": 1},
+					map[string]any{"value": 1},
 					time.Now(),
 				),
 			},
@@ -463,13 +463,13 @@ func TestAddAndPush(t *testing.T) {
 				metric.New(
 					lldName,
 					map[string]string{"host": "hostA"},
-					map[string]interface{}{"name.foo": `{"data":[{"{#FOO}":"a"}]}`},
+					map[string]any{"name.foo": `{"data":[{"{#FOO}":"a"}]}`},
 					time.Now(),
 				),
 				metric.New(
 					lldName,
 					map[string]string{"host": "hostA"},
-					map[string]interface{}{"name.bar.foo": `{"data":[{"{#BAR}":"b","{#FOO}":"a"}]}`},
+					map[string]any{"name.bar.foo": `{"data":[{"{#BAR}":"b","{#FOO}":"a"}]}`},
 					time.Now(),
 				),
 			},
@@ -479,7 +479,7 @@ func TestAddAndPush(t *testing.T) {
 				metric.New(
 					"name",
 					map[string]string{"host": "hostA", "foo": "a", "bar": "b"},
-					map[string]interface{}{"value": 1},
+					map[string]any{"value": 1},
 					time.Now(),
 				),
 			},
@@ -487,7 +487,7 @@ func TestAddAndPush(t *testing.T) {
 				metric.New(
 					"name",
 					map[string]string{"host": "hostA", "foo": "x", "bar": "y"},
-					map[string]interface{}{"value": 1},
+					map[string]any{"value": 1},
 					time.Now(),
 				),
 			},
@@ -495,7 +495,7 @@ func TestAddAndPush(t *testing.T) {
 				metric.New(
 					"name",
 					map[string]string{"host": "hostA", "foo": "a", "bar": "y"},
-					map[string]interface{}{"value": 1},
+					map[string]any{"value": 1},
 					time.Now(),
 				),
 			},
@@ -504,7 +504,7 @@ func TestAddAndPush(t *testing.T) {
 				metric.New(
 					lldName,
 					map[string]string{"host": "hostA"},
-					map[string]interface{}{
+					map[string]any{
 						"name.bar.foo": `{"data":[{"{#BAR}":"b","{#FOO}":"a"},{"{#BAR}":"y","{#FOO}":"a"},{"{#BAR}":"y","{#FOO}":"x"}]}`,
 					},
 					time.Now(),
@@ -516,7 +516,7 @@ func TestAddAndPush(t *testing.T) {
 				metric.New(
 					"name",
 					map[string]string{"host": "hostA", "foo": "a"},
-					map[string]interface{}{"value": 1},
+					map[string]any{"value": 1},
 					time.Now(),
 				),
 			},
@@ -524,7 +524,7 @@ func TestAddAndPush(t *testing.T) {
 				metric.New(
 					"name",
 					map[string]string{"host": "hostA"},
-					map[string]interface{}{"value": 1},
+					map[string]any{"value": 1},
 					time.Now(),
 				),
 			},
@@ -533,7 +533,7 @@ func TestAddAndPush(t *testing.T) {
 				metric.New(
 					lldName,
 					map[string]string{"host": "hostA"},
-					map[string]interface{}{
+					map[string]any{
 						"name.foo": `{"data":[{"{#FOO}":"a"}]}`,
 					},
 					time.Now(),
@@ -545,7 +545,7 @@ func TestAddAndPush(t *testing.T) {
 				metric.New(
 					"name",
 					map[string]string{"host": "hostA"},
-					map[string]interface{}{"value": 1},
+					map[string]any{"value": 1},
 					time.Now(),
 				),
 			},
@@ -553,7 +553,7 @@ func TestAddAndPush(t *testing.T) {
 				metric.New(
 					"name",
 					map[string]string{"host": "hostA", "foo": "a"},
-					map[string]interface{}{"value": 1},
+					map[string]any{"value": 1},
 					time.Now(),
 				),
 			},
@@ -562,7 +562,7 @@ func TestAddAndPush(t *testing.T) {
 				metric.New(
 					lldName,
 					map[string]string{"host": "hostA"},
-					map[string]interface{}{
+					map[string]any{
 						"name.foo": `{"data":[{"{#FOO}":"a"}]}`,
 					},
 					time.Now(),
@@ -572,7 +572,7 @@ func TestAddAndPush(t *testing.T) {
 				metric.New(
 					"name",
 					map[string]string{"host": "hostA"},
-					map[string]interface{}{"value": 1},
+					map[string]any{"value": 1},
 					time.Now(),
 				),
 			},
@@ -582,7 +582,7 @@ func TestAddAndPush(t *testing.T) {
 				metric.New(
 					lldName,
 					map[string]string{"host": "hostA"},
-					map[string]interface{}{
+					map[string]any{
 						"name.foo": `{"data":[]}`,
 					},
 					time.Now(),
@@ -649,7 +649,7 @@ func TestPush(t *testing.T) {
 			Metrics: []telegraf.Metric{
 				metric.New(lldName,
 					map[string]string{"host": "hostA"},
-					map[string]interface{}{"disk.foo": `{"data":[{"{#FOO}":"bar"}]}`},
+					map[string]any{"disk.foo": `{"data":[{"{#FOO}":"bar"}]}`},
 					time.Now(),
 				),
 			},
@@ -673,7 +673,7 @@ func TestPush(t *testing.T) {
 			Metrics: []telegraf.Metric{
 				metric.New(lldName,
 					map[string]string{"host": "hostA"},
-					map[string]interface{}{"disk.foo": `{"data":[{"{#FOO}":"bar1"},{"{#FOO}":"bar2"}]}`},
+					map[string]any{"disk.foo": `{"data":[{"{#FOO}":"bar1"},{"{#FOO}":"bar2"}]}`},
 					time.Now(),
 				),
 			},
@@ -696,7 +696,7 @@ func TestPush(t *testing.T) {
 			Metrics: []telegraf.Metric{
 				metric.New(lldName,
 					map[string]string{"host": "hostA"},
-					map[string]interface{}{"disk.fooA.fooB.fooC": `{"data":[{"{#FOOA}":"bar1","{#FOOB}":"bar2","{#FOOC}":"bar3"}]}`},
+					map[string]any{"disk.fooA.fooB.fooC": `{"data":[{"{#FOOA}":"bar1","{#FOOB}":"bar2","{#FOOC}":"bar3"}]}`},
 					time.Now(),
 				),
 			},
@@ -735,17 +735,17 @@ func TestPush(t *testing.T) {
 			Metrics: []telegraf.Metric{
 				metric.New(lldName,
 					map[string]string{"host": "hostA"},
-					map[string]interface{}{"proc.pid": `{"data":[{"{#PID}":"1234"}]}`},
+					map[string]any{"proc.pid": `{"data":[{"{#PID}":"1234"}]}`},
 					time.Now(),
 				),
 				metric.New(lldName,
 					map[string]string{"host": "hostA"},
-					map[string]interface{}{"disk.foo": `{"data":[{"{#FOO}":"bar"}]}`},
+					map[string]any{"disk.foo": `{"data":[{"{#FOO}":"bar"}]}`},
 					time.Now(),
 				),
 				metric.New(lldName,
 					map[string]string{"host": "hostA"},
-					map[string]interface{}{"net.iface": `{"data":[{"{#IFACE}":"eth0"}]}`},
+					map[string]any{"net.iface": `{"data":[{"{#IFACE}":"eth0"}]}`},
 					time.Now(),
 				),
 			},
@@ -775,12 +775,12 @@ func TestPush(t *testing.T) {
 			Metrics: []telegraf.Metric{
 				metric.New(lldName,
 					map[string]string{"host": "hostA"},
-					map[string]interface{}{"disk.foo": `{"data":[{"{#FOO}":"bar"}]}`},
+					map[string]any{"disk.foo": `{"data":[{"{#FOO}":"bar"}]}`},
 					time.Now(),
 				),
 				metric.New(lldName,
 					map[string]string{"host": "hostB"},
-					map[string]interface{}{"disk.foo": `{"data":[{"{#FOO}":"bar"}]}`},
+					map[string]any{"disk.foo": `{"data":[{"{#FOO}":"bar"}]}`},
 					time.Now(),
 				),
 			},
@@ -825,7 +825,7 @@ func TestPush(t *testing.T) {
 			Metrics: []telegraf.Metric{
 				metric.New(lldName,
 					map[string]string{"host": "hostA"},
-					map[string]interface{}{"disk.foo": `{"data":[]}`},
+					map[string]any{"disk.foo": `{"data":[]}`},
 					time.Now(),
 				),
 			},
@@ -907,7 +907,7 @@ func TestAdd(t *testing.T) {
 	}{
 		"metric without tags is ignored": {
 			Metrics: []telegraf.Metric{
-				metric.New("disk", map[string]string{}, map[string]interface{}{"a": 0}, time.Now()),
+				metric.New("disk", map[string]string{}, map[string]any{"a": 0}, time.Now()),
 			},
 			Current: map[uint64]lldInfo{},
 		},
@@ -916,7 +916,7 @@ func TestAdd(t *testing.T) {
 				metric.New(
 					"disk",
 					map[string]string{"host": "bar"},
-					map[string]interface{}{"a": 0},
+					map[string]any{"a": 0},
 					time.Now(),
 				),
 			},
@@ -927,7 +927,7 @@ func TestAdd(t *testing.T) {
 				metric.New(
 					"disk",
 					map[string]string{"foo": "bar"},
-					map[string]interface{}{"a": 0},
+					map[string]any{"a": 0},
 					time.Now(),
 				),
 			},
@@ -948,7 +948,7 @@ func TestAdd(t *testing.T) {
 				metric.New(
 					"disk",
 					map[string]string{"host": "bar", "foo": "bar"},
-					map[string]interface{}{"a": 0},
+					map[string]any{"a": 0},
 					time.Now(),
 				),
 			},
@@ -969,13 +969,13 @@ func TestAdd(t *testing.T) {
 				metric.New(
 					"disk",
 					map[string]string{"host": "bar", "foo": "bar"},
-					map[string]interface{}{"a": 0},
+					map[string]any{"a": 0},
 					time.Now(),
 				),
 				metric.New(
 					"disk",
 					map[string]string{"host": "bar", "foo": "bar"},
-					map[string]interface{}{"a": 999},
+					map[string]any{"a": 999},
 					time.Now(),
 				),
 			},
@@ -996,13 +996,13 @@ func TestAdd(t *testing.T) {
 				metric.New(
 					"disk",
 					map[string]string{"host": "bar", "foo": "bar1"},
-					map[string]interface{}{"a": 0},
+					map[string]any{"a": 0},
 					time.Now(),
 				),
 				metric.New(
 					"disk",
 					map[string]string{"host": "bar", "foo": "bar2"},
-					map[string]interface{}{"a": 0},
+					map[string]any{"a": 0},
 					time.Now(),
 				),
 			},
@@ -1026,13 +1026,13 @@ func TestAdd(t *testing.T) {
 				metric.New(
 					"disk",
 					map[string]string{"host": "barA", "foo": "bar"},
-					map[string]interface{}{"a": 0},
+					map[string]any{"a": 0},
 					time.Now(),
 				),
 				metric.New(
 					"disk",
 					map[string]string{"host": "barB", "foo": "bar"},
-					map[string]interface{}{"a": 0},
+					map[string]any{"a": 0},
 					time.Now(),
 				),
 			},
@@ -1062,13 +1062,13 @@ func TestAdd(t *testing.T) {
 				metric.New(
 					"disk",
 					map[string]string{"host": "bar", "foo1": "bar", "foo2": "bar"},
-					map[string]interface{}{"a": 0},
+					map[string]any{"a": 0},
 					time.Now(),
 				),
 				metric.New(
 					"disk",
 					map[string]string{"host": "bar", "foo1": "bar"},
-					map[string]interface{}{"a": 0},
+					map[string]any{"a": 0},
 					time.Now(),
 				),
 			},

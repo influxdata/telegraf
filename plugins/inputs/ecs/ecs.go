@@ -3,6 +3,7 @@ package ecs
 
 import (
 	_ "embed"
+	"maps"
 	"os"
 	"strings"
 	"time"
@@ -138,7 +139,7 @@ func resolveEndpoint(ecs *Ecs) {
 }
 
 func accTask(task *ecsTask, tags map[string]string, acc telegraf.Accumulator) {
-	taskFields := map[string]interface{}{
+	taskFields := map[string]any{
 		"desired_status": task.DesiredStatus,
 		"known_status":   task.KnownStatus,
 		"limit_cpu":      task.Limits["CPU"],
@@ -169,28 +170,12 @@ func (ecs *Ecs) accContainers(task *ecsTask, taskTags map[string]string, acc tel
 				containerTags[k] = v
 			}
 		}
-		tags := mergeTags(taskTags, containerTags)
+		tags := make(map[string]string, len(taskTags)+len(containerTags))
+		maps.Copy(tags, taskTags)
+		maps.Copy(tags, containerTags)
 
 		parseContainerStats(c, acc, tags)
 	}
-}
-
-// returns a new map with the same content values as the input map
-func copyTags(in map[string]string) map[string]string {
-	out := make(map[string]string)
-	for k, v := range in {
-		out[k] = v
-	}
-	return out
-}
-
-// returns a new map with the merged content values of the two input maps
-func mergeTags(a, b map[string]string) map[string]string {
-	c := copyTags(a)
-	for k, v := range b {
-		c[k] = v
-	}
-	return c
 }
 
 func (ecs *Ecs) createContainerNameFilters() error {

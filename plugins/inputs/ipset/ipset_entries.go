@@ -70,7 +70,7 @@ func (counter *ipsetEntries) commit(acc telegraf.Accumulator) {
 		return
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"entries": counter.entries,
 		"ips":     counter.ips,
 	}

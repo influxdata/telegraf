@@ -51,7 +51,7 @@ func (p *Unpivot) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 
 	for _, src := range metrics {
 		// Create a copy without fields and tracking information
-		base := metric.New(src.Name(), make(map[string]string), make(map[string]interface{}), src.Time())
+		base := metric.New(src.Name(), make(map[string]string), make(map[string]any), src.Time())
 		for _, t := range src.TagList() {
 			base.AddTag(t.Key, t.Value)
 		}

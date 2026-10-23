@@ -151,7 +151,7 @@ func (n *Nginx) gatherURL(addr *url.URL, acc telegraf.Accumulator) error {
 	}
 
 	tags := getTags(addr)
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"active":   active,
 		"accepts":  accepts,
 		"handled":  handled,

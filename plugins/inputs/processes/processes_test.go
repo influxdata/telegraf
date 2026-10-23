@@ -143,7 +143,7 @@ func TestParkedProcess(t *testing.T) {
 		metric.New(
 			"processes",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"blocked":  0,
 				"dead":     0,
 				"idle":     0,

@@ -229,7 +229,7 @@ func (m *Mavlink) handleFrame(acc telegraf.Accumulator, frm frame.Frame) {
 		"sys_id": strconv.FormatUint(uint64(frm.GetSystemID()), 10),
 		"source": m.URL,
 	}
-	fields := make(map[string]interface{}, t.NumField())
+	fields := make(map[string]any, t.NumField())
 
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)

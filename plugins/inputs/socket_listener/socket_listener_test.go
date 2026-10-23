@@ -22,7 +22,6 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/plugins/common/socket"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	_ "github.com/influxdata/telegraf/plugins/parsers/all"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
@@ -41,19 +40,19 @@ func TestSocketListener(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{"foo": "bar"},
-			map[string]interface{}{"v": int64(1)},
+			map[string]any{"v": int64(1)},
 			time.Unix(0, 123456789),
 		),
 		metric.New(
 			"test",
 			map[string]string{"foo": "baz"},
-			map[string]interface{}{"v": int64(2)},
+			map[string]any{"v": int64(2)},
 			time.Unix(0, 123456790),
 		),
 		metric.New(
 			"test",
 			map[string]string{"foo": "zab"},
-			map[string]interface{}{"v": int64(3)},
+			map[string]any{"v": int64(3)},
 			time.Unix(0, 123456791),
 		),
 	}
@@ -143,12 +142,10 @@ func TestSocketListener(t *testing.T) {
 
 			// Setup plugin according to test specification
 			plugin := &SocketListener{
-				ServiceAddress: proto + "://" + serverAddr,
-				Config: socket.Config{
-					ContentEncoding: tt.encoding,
-					ReadBufferSize:  tt.buffersize,
-				},
-				Log: &testutil.Logger{},
+				ServiceAddress:  proto + "://" + serverAddr,
+				ContentEncoding: tt.encoding,
+				ReadBufferSize:  tt.buffersize,
+				Log:             &testutil.Logger{},
 			}
 			if strings.HasSuffix(tt.schema, "tls") {
 				plugin.ServerConfig = *serverTLS
@@ -208,14 +205,10 @@ func TestLargeReadBufferTCP(t *testing.T) {
 
 	// Setup plugin with a sufficient read buffer
 	plugin := &SocketListener{
-		ServiceAddress: "tcp://127.0.0.1:0",
-		Config: socket.Config{
-			ReadBufferSize: bufsize,
-		},
-		SplitConfig: socket.SplitConfig{
-			SplittingStrategy: "newline",
-		},
-		Log: &testutil.Logger{},
+		ServiceAddress:    "tcp://127.0.0.1:0",
+		ReadBufferSize:    bufsize,
+		SplittingStrategy: "newline",
+		Log:               &testutil.Logger{},
 	}
 	parser := &value.Parser{
 		MetricName: "test",
@@ -230,7 +223,7 @@ func TestLargeReadBufferTCP(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{},
-			map[string]interface{}{"value": string(message)},
+			map[string]any{"value": string(message)},
 			time.Unix(0, 0),
 		),
 	}
@@ -290,10 +283,8 @@ func TestLargeReadBufferUnixgram(t *testing.T) {
 	// Setup plugin with a sufficient read buffer
 	plugin := &SocketListener{
 		ServiceAddress: "unixgram" + "://" + serverAddr,
-		Config: socket.Config{
-			ReadBufferSize: bufsize,
-		},
-		Log: &testutil.Logger{},
+		ReadBufferSize: bufsize,
+		Log:            &testutil.Logger{},
 	}
 	parser := &value.Parser{
 		MetricName: "test",
@@ -308,7 +299,7 @@ func TestLargeReadBufferUnixgram(t *testing.T) {
 		metric.New(
 			"test",
 			map[string]string{},
-			map[string]interface{}{"value": string(message)},
+			map[string]any{"value": string(message)},
 			time.Unix(0, 0),
 		),
 	}

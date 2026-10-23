@@ -46,12 +46,15 @@ func (q *InstantQuery) init(c *client, log telegraf.Logger, options ...apiv1.Opt
 }
 
 func (q *InstantQuery) execute(ctx context.Context, acc telegraf.Accumulator, t time.Time) error {
-	results, warnings, err := q.client.Query(ctx, q.Query, t, q.options...)
+	results, warnings, infos, err := q.client.Query(ctx, q.Query, t, q.options...)
 	if err != nil {
 		return fmt.Errorf("querying %q failed: %w", q.client.url, err)
 	}
 	for _, w := range warnings {
 		q.log.Warnf("query %q produced warning: %s", q.Query, w)
+	}
+	for _, i := range infos {
+		q.log.Debugf("query %q produced info: %s", q.Query, i)
 	}
 
 	return q.convertModelValue(acc, results)
@@ -88,12 +91,15 @@ func (q *RangeQuery) execute(ctx context.Context, acc telegraf.Accumulator, t ti
 		End:   t.Add(-time.Duration(q.End)),
 		Step:  time.Duration(q.Step),
 	}
-	results, warnings, err := q.client.QueryRange(ctx, q.Query, r, q.options...)
+	results, warnings, infos, err := q.client.QueryRange(ctx, q.Query, r, q.options...)
 	if err != nil {
 		return fmt.Errorf("querying %q failed: %w", q.client.url, err)
 	}
 	for _, w := range warnings {
 		q.log.Warnf("query %q produced warning: %s", q.Query, w)
+	}
+	for _, i := range infos {
+		q.log.Debugf("query %q produced info: %s", q.Query, i)
 	}
 	return q.convertModelValue(acc, results)
 }
@@ -108,11 +114,11 @@ func (q *query) convertModelValue(acc telegraf.Accumulator, results model.Value)
 	switch result := results.(type) {
 	case *model.Scalar:
 		tags := make(map[string]string)
-		fields := map[string]interface{}{"value": float64(result.Value)}
+		fields := map[string]any{"value": float64(result.Value)}
 		acc.AddGauge(name, fields, tags, result.Timestamp.Time())
 	case *model.String:
 		tags := make(map[string]string)
-		fields := map[string]interface{}{"value": result.Value}
+		fields := map[string]any{"value": result.Value}
 		acc.AddFields(name, fields, tags, result.Timestamp.Time())
 	case model.Vector:
 		if result.Len() == 0 {
@@ -130,7 +136,7 @@ func (q *query) convertModelValue(acc telegraf.Accumulator, results model.Value)
 			}
 			if sample.Histogram != nil {
 				hist := sample.Histogram
-				fields := make(map[string]interface{}, 2+len(hist.Buckets))
+				fields := make(map[string]any, 2+len(hist.Buckets))
 				fields["count"] = hist.Count
 				fields["sum"] = hist.Sum
 				for _, b := range hist.Buckets {
@@ -138,7 +144,7 @@ func (q *query) convertModelValue(acc telegraf.Accumulator, results model.Value)
 				}
 				acc.AddHistogram(name, fields, tags, sample.Timestamp.Time())
 			} else {
-				fields := map[string]interface{}{"value": float64(sample.Value)}
+				fields := map[string]any{"value": float64(sample.Value)}
 				acc.AddGauge(name, fields, tags, sample.Timestamp.Time())
 			}
 		}
@@ -157,12 +163,12 @@ func (q *query) convertModelValue(acc telegraf.Accumulator, results model.Value)
 				tags[string(k)] = string(v)
 			}
 			for _, v := range stream.Values {
-				fields := map[string]interface{}{"value": float64(v.Value)}
+				fields := map[string]any{"value": float64(v.Value)}
 				acc.AddGauge(name, fields, tags, v.Timestamp.Time())
 			}
 			for _, h := range stream.Histograms {
 				hist := h.Histogram
-				fields := make(map[string]interface{}, 2+len(hist.Buckets))
+				fields := make(map[string]any, 2+len(hist.Buckets))
 				fields["count"] = hist.Count
 				fields["sum"] = hist.Sum
 				for _, b := range hist.Buckets {

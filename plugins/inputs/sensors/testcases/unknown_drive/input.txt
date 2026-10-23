@@ -1,0 +1,2 @@
+hw.sensors.softraid0.drive0=unknown
+hw.sensors.softraid0.drive1=unknown (sd3), CRITICAL

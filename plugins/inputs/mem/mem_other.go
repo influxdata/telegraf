@@ -4,6 +4,6 @@ package mem
 
 const extendedMemorySupported = false
 
-func getExtendedMemoryFields() (map[string]interface{}, error) {
+func getExtendedMemoryFields() (map[string]any, error) {
 	return nil, nil
 }

@@ -15,7 +15,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs/influxdb"
 	"github.com/influxdata/telegraf/selfstat"
 	"github.com/influxdata/telegraf/testutil"
@@ -144,10 +143,8 @@ func TestConnectHTTPConfig(t *testing.T) {
 		HTTPHeaders: map[string]string{
 			"x": "y",
 		},
-		ContentEncoding: "gzip",
-		ClientConfig: tls.ClientConfig{
-			InsecureSkipVerify: true,
-		},
+		ContentEncoding:    "gzip",
+		InsecureSkipVerify: true,
 
 		CreateHTTPClientF: func(config *influxdb.HTTPConfig) (influxdb.Client, error) {
 			actual = config
@@ -199,11 +196,9 @@ func TestWriteRecreateDatabaseIfDatabaseNotFound(t *testing.T) {
 				},
 				WriteF: func() error {
 					return &influxdb.DatabaseNotFoundError{
-						APIError: influxdb.APIError{
-							StatusCode:  http.StatusNotFound,
-							Title:       "404 Not Found",
-							Description: `database not found "telegraf"`,
-						},
+						StatusCode:  http.StatusNotFound,
+						Title:       "404 Not Found",
+						Description: `database not found "telegraf"`,
 					}
 				},
 				URLF: func() string {
@@ -223,7 +218,7 @@ func TestWriteRecreateDatabaseIfDatabaseNotFound(t *testing.T) {
 	m := metric.New(
 		"cpu",
 		map[string]string{},
-		map[string]interface{}{
+		map[string]any{
 			"value": 42.0,
 		},
 		time.Unix(0, 0),
@@ -303,7 +298,7 @@ func TestBytesWrittenHTTP(t *testing.T) {
 			map[string]string{
 				"database": "foo",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(42),
 			},
 			time.Unix(0, 0),
@@ -365,7 +360,7 @@ func TestBytesWrittenHTTPGzip(t *testing.T) {
 			map[string]string{
 				"database": "foo",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(42),
 			},
 			time.Unix(0, 0),
@@ -421,7 +416,7 @@ func TestBytesWrittenUDP(t *testing.T) {
 			map[string]string{
 				"database": "foo",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(42),
 			},
 			time.Unix(0, 0),
@@ -474,7 +469,7 @@ func BenchmarkWrite1k(b *testing.B) {
 			map[string]string{
 				"database": "foo",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(i),
 			},
 			time.Unix(0, 0),
@@ -531,7 +526,7 @@ func BenchmarkWrite5k(b *testing.B) {
 			map[string]string{
 				"database": "foo",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(i),
 			},
 			time.Unix(0, 0),
@@ -588,7 +583,7 @@ func BenchmarkWrite10k(b *testing.B) {
 			map[string]string{
 				"database": "foo",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(i),
 			},
 			time.Unix(0, 0),
@@ -645,7 +640,7 @@ func BenchmarkWrite25k(b *testing.B) {
 			map[string]string{
 				"database": "foo",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(i),
 			},
 			time.Unix(0, 0),
@@ -702,7 +697,7 @@ func BenchmarkWrite50k(b *testing.B) {
 			map[string]string{
 				"database": "foo",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(i),
 			},
 			time.Unix(0, 0),
@@ -759,7 +754,7 @@ func BenchmarkWrite100k(b *testing.B) {
 			map[string]string{
 				"database": "foo",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": float64(i),
 			},
 			time.Unix(0, 0),

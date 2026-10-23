@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"maps"
 	"reflect"
 	"slices"
 	"strconv"
@@ -23,7 +24,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
-type dataNode interface{}
+type dataNode any
 
 type dataDocument interface {
 	Parse(buf []byte) (dataNode, error)
@@ -336,12 +337,10 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, cfg Con
 	}
 
 	// Add default tags
-	for name, v := range p.DefaultTags {
-		tags[name] = v
-	}
+	maps.Copy(tags, p.DefaultTags)
 
 	// Query fields
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 
 	// Handle the field batch definitions if any.
 	if len(cfg.FieldSelection) > 0 {
@@ -471,7 +470,7 @@ func (p *Parser) parseQuery(starttime time.Time, doc, selected dataNode, cfg Con
 	return metric.New(metricname, tags, fields, timestamp), nil
 }
 
-func (p *Parser) executeQuery(doc, selected dataNode, query string) (r interface{}, err error) {
+func (p *Parser) executeQuery(doc, selected dataNode, query string) (r any, err error) {
 	// Check if the query is relative or absolute and set the root for the query
 	root := selected
 	if strings.HasPrefix(query, "/") {
@@ -604,8 +603,7 @@ func (p *Parser) debugEmptyQuery(operation string, root dataNode, initialquery s
 		if len(parts) < 1 {
 			return
 		}
-		for i := len(parts) - 1; i >= 0; i-- {
-			q := parts[i]
+		for _, q := range slices.Backward(parts) {
 			nodes, err := p.document.QueryAll(root, q)
 			if err != nil {
 				p.Log.Tracef("executing query %q in %s failed: %v", q, operation, err)

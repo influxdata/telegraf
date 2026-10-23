@@ -205,7 +205,7 @@ func TestConnectAndWrite(t *testing.T) {
 func TestGetFloat(t *testing.T) {
 	tests := []struct {
 		name           string
-		value          interface{}
+		value          any
 		expectedReturn float64
 	}{
 		{

@@ -100,7 +100,7 @@ func (c *Consul) Gather(acc telegraf.Accumulator) error {
 
 func (c *Consul) gatherHealthCheck(acc telegraf.Accumulator, checks []*api.HealthCheck) {
 	for _, check := range checks {
-		record := make(map[string]interface{})
+		record := make(map[string]any)
 		tags := make(map[string]string)
 
 		record["passing"] = 0

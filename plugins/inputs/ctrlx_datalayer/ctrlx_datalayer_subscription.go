@@ -58,8 +58,8 @@ type subscription struct {
 
 // rule can be used to override default rule settings.
 type rule struct {
-	RuleType string      `json:"rule_type"`
-	Rule     interface{} `json:"rule"`
+	RuleType string `json:"rule_type"`
+	Rule     any    `json:"rule"`
 }
 
 // sampling can be used to override default sampling settings.

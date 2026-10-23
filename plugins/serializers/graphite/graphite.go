@@ -3,6 +3,7 @@ package graphite
 import (
 	"bytes"
 	"fmt"
+	"maps"
 	"math"
 	"regexp"
 	"sort"
@@ -162,14 +163,10 @@ func SerializeBucketName(measurement string, tags map[string]string, template, p
 	if template == "" {
 		template = defaultTemplate
 	}
-	tagsCopy := make(map[string]string)
-	for k, v := range tags {
-		tagsCopy[k] = v
-	}
+	tagsCopy := maps.Clone(tags)
 
 	var out []string
-	templateParts := strings.Split(template, ".")
-	for _, templatePart := range templateParts {
+	for templatePart := range strings.SplitSeq(template, ".") {
 		switch templatePart {
 		case "measurement":
 			out = append(out, measurement)
@@ -216,7 +213,7 @@ func InsertField(bucket, fieldName string) string {
 	return strings.Replace(bucket, "FIELDNAME", fieldName, 1)
 }
 
-func formatValue(value interface{}) string {
+func formatValue(value any) string {
 	switch v := value.(type) {
 	case string:
 		return ""

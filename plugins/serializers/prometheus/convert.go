@@ -181,7 +181,7 @@ func metricType(valueType telegraf.ValueType) *dto.MetricType {
 }
 
 // SampleValue converts a field value into a value suitable for a simple sample value.
-func SampleValue(value interface{}) (float64, bool) {
+func SampleValue(value any) (float64, bool) {
 	switch v := value.(type) {
 	case float64:
 		return v, true
@@ -201,7 +201,7 @@ func SampleValue(value interface{}) (float64, bool) {
 
 // SampleCount converts a field value into a count suitable for a metric family
 // of the Histogram or Summary type.
-func SampleCount(value interface{}) (uint64, bool) {
+func SampleCount(value any) (uint64, bool) {
 	switch v := value.(type) {
 	case float64:
 		if v < 0 {
@@ -222,7 +222,7 @@ func SampleCount(value interface{}) (uint64, bool) {
 
 // SampleSum converts a field value into a sum suitable for a metric family
 // of the Histogram or Summary type.
-func SampleSum(value interface{}) (float64, bool) {
+func SampleSum(value any) (float64, bool) {
 	switch v := value.(type) {
 	case float64:
 		return v, true

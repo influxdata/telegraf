@@ -34,7 +34,7 @@ func gatherPersistentVolume(pv *corev1.PersistentVolume, acc telegraf.Accumulato
 	case "available":
 		phaseType = 4
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"phase_type": phaseType,
 	}
 	tags := map[string]string{

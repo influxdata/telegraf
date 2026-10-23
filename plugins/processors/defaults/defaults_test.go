@@ -22,7 +22,7 @@ func TestDefaults(t *testing.T) {
 		{
 			name: "Test that no values are changed since they are not nil or empty",
 			defaults: &Defaults{
-				DefaultFieldsSets: map[string]interface{}{
+				DefaultFieldsSets: map[string]any{
 					"usage":     30,
 					"wind_feel": "very chill",
 					"is_dead":   true,
@@ -31,7 +31,7 @@ func TestDefaults(t *testing.T) {
 			input: metric.New(
 				"CPU metrics",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"usage":     45,
 					"wind_feel": "a dragon's breath",
 					"is_dead":   false,
@@ -42,7 +42,7 @@ func TestDefaults(t *testing.T) {
 				metric.New(
 					"CPU metrics",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"usage":     45,
 						"wind_feel": "a dragon's breath",
 						"is_dead":   false,
@@ -54,7 +54,7 @@ func TestDefaults(t *testing.T) {
 		{
 			name: "Tests that the missing fields are set on the metric",
 			defaults: &Defaults{
-				DefaultFieldsSets: map[string]interface{}{
+				DefaultFieldsSets: map[string]any{
 					"max_clock_gz":  6,
 					"wind_feel":     "Unknown",
 					"boost_enabled": false,
@@ -64,7 +64,7 @@ func TestDefaults(t *testing.T) {
 			input: metric.New(
 				"CPU metrics",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"usage":       45,
 					"temperature": 64,
 				},
@@ -74,7 +74,7 @@ func TestDefaults(t *testing.T) {
 				metric.New(
 					"CPU metrics",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"usage":         45,
 						"temperature":   64,
 						"max_clock_gz":  6,
@@ -89,7 +89,7 @@ func TestDefaults(t *testing.T) {
 		{
 			name: "Tests that set but empty fields are replaced by specified defaults",
 			defaults: &Defaults{
-				DefaultFieldsSets: map[string]interface{}{
+				DefaultFieldsSets: map[string]any{
 					"max_clock_gz":  6,
 					"wind_feel":     "Unknown",
 					"fan_loudness":  "Inaudible",
@@ -99,7 +99,7 @@ func TestDefaults(t *testing.T) {
 			input: metric.New(
 				"CPU metrics",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"max_clock_gz": "",
 					"wind_feel":    " ",
 					"fan_loudness": "         ",
@@ -110,7 +110,7 @@ func TestDefaults(t *testing.T) {
 				metric.New(
 					"CPU metrics",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"max_clock_gz":  6,
 						"wind_feel":     "Unknown",
 						"fan_loudness":  "Inaudible",
@@ -152,7 +152,7 @@ func TestTagDefaults(t *testing.T) {
 				map[string]string{
 					"wind_feel": "a dragon's breath",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"usage":   45,
 					"is_dead": false,
 				},
@@ -164,7 +164,7 @@ func TestTagDefaults(t *testing.T) {
 					map[string]string{
 						"wind_feel": "a dragon's breath",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"usage":   45,
 						"is_dead": false,
 					},
@@ -182,7 +182,7 @@ func TestTagDefaults(t *testing.T) {
 			input: metric.New(
 				"CPU metrics",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"usage":       45,
 					"temperature": 64,
 				},
@@ -194,7 +194,7 @@ func TestTagDefaults(t *testing.T) {
 					map[string]string{
 						"wind_feel": "Unknown",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"usage":       45,
 						"temperature": 64,
 					},
@@ -218,7 +218,7 @@ func TestTagDefaults(t *testing.T) {
 					"fan_loudness":  "         ",
 					"boost_enabled": "",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"max_clock_gz": 0,
 				},
 				time.Unix(0, 0),
@@ -231,7 +231,7 @@ func TestTagDefaults(t *testing.T) {
 						"fan_loudness":  "Inaudible",
 						"boost_enabled": "false",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"max_clock_gz": 0,
 					},
 					time.Unix(0, 0),
@@ -253,9 +253,9 @@ func TestTagDefaults(t *testing.T) {
 
 func TestTracking(t *testing.T) {
 	inputRaw := []telegraf.Metric{
-		metric.New("foo", map[string]string{}, map[string]interface{}{"value": 42, "topic": "telegraf"}, time.Unix(0, 0)),
-		metric.New("bar", map[string]string{}, map[string]interface{}{"hours": 23}, time.Unix(0, 0)),
-		metric.New("baz", map[string]string{}, map[string]interface{}{"status": "fixed"}, time.Unix(0, 0)),
+		metric.New("foo", map[string]string{}, map[string]any{"value": 42, "topic": "telegraf"}, time.Unix(0, 0)),
+		metric.New("bar", map[string]string{}, map[string]any{"hours": 23}, time.Unix(0, 0)),
+		metric.New("baz", map[string]string{}, map[string]any{"status": "fixed"}, time.Unix(0, 0)),
 	}
 
 	var mu sync.Mutex
@@ -276,25 +276,25 @@ func TestTracking(t *testing.T) {
 		metric.New(
 			"foo",
 			map[string]string{},
-			map[string]interface{}{"value": 42, "status": "unknown", "topic": "telegraf"},
+			map[string]any{"value": 42, "status": "unknown", "topic": "telegraf"},
 			time.Unix(0, 0),
 		),
 		metric.New(
 			"bar",
 			map[string]string{},
-			map[string]interface{}{"value": 6, "status": "unknown", "hours": 23},
+			map[string]any{"value": 6, "status": "unknown", "hours": 23},
 			time.Unix(0, 0),
 		),
 		metric.New(
 			"baz",
 			map[string]string{},
-			map[string]interface{}{"value": 6, "status": "fixed"},
+			map[string]any{"value": 6, "status": "fixed"},
 			time.Unix(0, 0),
 		),
 	}
 
 	plugin := &Defaults{
-		DefaultFieldsSets: map[string]interface{}{
+		DefaultFieldsSets: map[string]any{
 			"value":  6,
 			"status": "unknown",
 		},

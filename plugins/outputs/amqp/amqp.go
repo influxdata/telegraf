@@ -65,7 +65,6 @@ type AMQP struct {
 	serializer   telegraf.Serializer
 	connect      func(*ClientConfig) (Client, error)
 	client       Client
-	config       *ClientConfig
 	sentMessages int
 	encoder      internal.ContentEncoder
 }
@@ -84,12 +83,14 @@ func (q *AMQP) SetSerializer(serializer telegraf.Serializer) {
 }
 
 func (q *AMQP) Init() error {
-	var err error
-	q.config, err = q.makeClientConfig()
-	if err != nil {
+	// Validate the configuration early, the client configuration itself is
+	// created on each connect as the AMQP library wipes the credentials after
+	// a successful connection
+	if _, err := q.makeClientConfig(); err != nil {
 		return err
 	}
 
+	var err error
 	q.encoder, err = internal.NewContentEncoder(q.ContentEncoding)
 	if err != nil {
 		return err
@@ -99,9 +100,16 @@ func (q *AMQP) Init() error {
 }
 
 func (q *AMQP) Connect() error {
-	var err error
-	q.client, err = q.connect(q.config)
-	return err
+	cfg, err := q.makeClientConfig()
+	if err != nil {
+		return fmt.Errorf("creating client configuration failed: %w", err)
+	}
+	client, err := q.connect(cfg)
+	if err != nil {
+		return err
+	}
+	q.client = client
+	return nil
 }
 
 func (q *AMQP) Close() error {
@@ -187,12 +195,10 @@ func (q *AMQP) Write(metrics []telegraf.Metric) error {
 
 func (q *AMQP) publish(key string, body []byte) error {
 	if q.client == nil {
-		client, err := q.connect(q.config)
-		if err != nil {
+		if err := q.Connect(); err != nil {
 			return err
 		}
 		q.sentMessages = 0
-		q.client = client
 	}
 
 	err := q.client.Publish(key, body)

@@ -515,10 +515,7 @@ func (t *stubTopic) SetPublishSettings(settings pubsub.PublishSettings) {
 	t.Settings = settings
 	t.bundler = bundler.NewBundler(&bundledMsg{}, t.sendBundle())
 	t.bundler.DelayThreshold = 10 * time.Second
-	t.bundler.BundleCountThreshold = t.Settings.CountThreshold
-	if t.bundler.BundleCountThreshold > pubsub.MaxPublishRequestCount {
-		t.bundler.BundleCountThreshold = pubsub.MaxPublishRequestCount
-	}
+	t.bundler.BundleCountThreshold = min(t.Settings.CountThreshold, pubsub.MaxPublishRequestCount)
 	t.bundler.BundleByteThreshold = t.Settings.ByteThreshold
 	t.bundler.BundleByteLimit = pubsub.MaxPublishRequestBytes
 	t.bundler.HandlerLimit = 25 * runtime.GOMAXPROCS(0)
@@ -535,8 +532,8 @@ func (r *stubResult) Get(ctx context.Context) (string, error) {
 	}
 }
 
-func (t *stubTopic) sendBundle() func(items interface{}) {
-	return func(items interface{}) {
+func (t *stubTopic) sendBundle() func(items any) {
+	return func(items any) {
 		t.bLock.Lock()
 		defer t.bLock.Unlock()
 

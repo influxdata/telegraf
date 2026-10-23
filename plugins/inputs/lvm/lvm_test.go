@@ -29,7 +29,7 @@ func TestGather(t *testing.T) {
 		"path":      "/dev/sdb",
 		"vol_group": "docker",
 	}
-	pvsFields := map[string]interface{}{
+	pvsFields := map[string]any{
 		"size":         uint64(128316342272),
 		"free":         uint64(3858759680),
 		"used":         uint64(124457582592),
@@ -40,7 +40,7 @@ func TestGather(t *testing.T) {
 	vgsTags := map[string]string{
 		"name": "docker",
 	}
-	vgsFields := map[string]interface{}{
+	vgsFields := map[string]any{
 		"size":                  uint64(128316342272),
 		"free":                  uint64(3858759680),
 		"used_percent":          96.99277612525741,
@@ -54,7 +54,7 @@ func TestGather(t *testing.T) {
 		"name":      "thinpool",
 		"vol_group": "docker",
 	}
-	lvsFields := map[string]interface{}{
+	lvsFields := map[string]any{
 		"size":             uint64(121899057152),
 		"data_percent":     0.36000001430511475,
 		"metadata_percent": 1.3300000429153442,
@@ -66,7 +66,7 @@ func TestGather(t *testing.T) {
 		"name":      "lv",
 		"vol_group": "vg",
 	}
-	lvsFields2 := map[string]interface{}{
+	lvsFields2 := map[string]any{
 		"size":             uint64(200000000000000),
 		"data_percent":     0.0,
 		"metadata_percent": 0.0,

@@ -130,7 +130,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	}
 
 	// Create nagios state.
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"service_output": msg.String(),
 	}
 	if longmsg.Len() != 0 {
@@ -181,7 +181,7 @@ func AddState(runErr error, errMessage []byte, metrics []telegraf.Metric) []tele
 	} else {
 		ts = time.Now().UTC()
 	}
-	f := map[string]interface{}{
+	f := map[string]any{
 		"state": state,
 	}
 	m := metric.New("nagios_state", nil, f, ts)
@@ -234,7 +234,7 @@ func parsePerfData(perfdatas string, timestamp time.Time) ([]telegraf.Metric, er
 			}
 		}
 
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		if perf[2] == "U" {
 			return nil, errors.New("value undetermined")
 		}

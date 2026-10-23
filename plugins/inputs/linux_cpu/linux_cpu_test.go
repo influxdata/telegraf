@@ -72,13 +72,13 @@ func TestGatherCPUFreq(t *testing.T) {
 		"cpu": "1",
 	}
 
-	fields1 := map[string]interface{}{
+	fields1 := map[string]any{
 		"scaling_cur_freq": uint64(250),
 		"scaling_min_freq": uint64(100),
 		"scaling_max_freq": uint64(255),
 	}
 
-	fields2 := map[string]interface{}{
+	fields2 := map[string]any{
 		"scaling_cur_freq": uint64(123),
 		"scaling_min_freq": uint64(80),
 		"scaling_max_freq": uint64(230),
@@ -107,7 +107,7 @@ func TestGatherThermal(t *testing.T) {
 	var acc testutil.Accumulator
 	require.NoError(t, plugin.Gather(&acc))
 
-	acc.AssertContainsFields(t, "linux_cpu", map[string]interface{}{
+	acc.AssertContainsFields(t, "linux_cpu", map[string]any{
 		"throttle_count":      uint64(250),
 		"throttle_max_time":   uint64(100),
 		"throttle_total_time": uint64(255),
@@ -140,7 +140,7 @@ func TestGatherPropertyRemoved(t *testing.T) {
 		"cpu": "0",
 	}
 
-	fields1 := map[string]interface{}{
+	fields1 := map[string]any{
 		"scaling_cur_freq": uint64(250),
 		"scaling_min_freq": uint64(100),
 		"scaling_max_freq": uint64(255),
@@ -173,7 +173,7 @@ func TestGatherPropertyInvalid(t *testing.T) {
 		"cpu": "0",
 	}
 
-	fields1 := map[string]interface{}{
+	fields1 := map[string]any{
 		"scaling_cur_freq": uint64(250),
 		"scaling_min_freq": uint64(100),
 		"scaling_max_freq": uint64(255),

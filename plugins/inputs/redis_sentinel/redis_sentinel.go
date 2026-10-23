@@ -133,7 +133,7 @@ func (r *RedisSentinel) Gather(acc telegraf.Accumulator) error {
 }
 
 // Redis list format has string key/values adjacent, so convert to a map for easier use
-func toMap(vals []interface{}) map[string]string {
+func toMap(vals []any) map[string]string {
 	m := make(map[string]string)
 
 	for idx := 0; idx < len(vals)-1; idx += 2 {
@@ -148,8 +148,8 @@ func toMap(vals []interface{}) map[string]string {
 	return m
 }
 
-func castFieldValue(value string, fieldType configFieldType) (interface{}, error) {
-	var castedValue interface{}
+func castFieldValue(value string, fieldType configFieldType) (any, error) {
+	var castedValue any
 	var err error
 
 	switch fieldType {
@@ -170,8 +170,8 @@ func castFieldValue(value string, fieldType configFieldType) (interface{}, error
 	return castedValue, nil
 }
 
-func prepareFieldValues(fields map[string]string, typeMap map[string]configFieldType) (map[string]interface{}, error) {
-	preparedFields := make(map[string]interface{})
+func prepareFieldValues(fields map[string]string, typeMap map[string]configFieldType) (map[string]any, error) {
+	preparedFields := make(map[string]any)
 
 	for key, val := range fields {
 		key = strings.ReplaceAll(key, "-", "_")
@@ -230,7 +230,7 @@ func (client *redisSentinelClient) gatherMasterStats(acc telegraf.Accumulator) (
 	// This is because we are iterating over a single server response
 	masterNames := make([]string, 0, len(masters))
 	for _, master := range masters {
-		master, ok := master.([]interface{})
+		master, ok := master.([]any)
 		if !ok {
 			return masterNames, errors.New("unable to process master response")
 		}
@@ -271,7 +271,7 @@ func (client *redisSentinelClient) gatherReplicaStats(acc telegraf.Accumulator, 
 	// It's safe to assume that if we fail parsing one item that the rest will fail too
 	// This is because we are iterating over a single server response
 	for _, replica := range replicas {
-		replica, ok := replica.([]interface{})
+		replica, ok := replica.([]any)
 		if !ok {
 			return errors.New("unable to process replica response")
 		}
@@ -303,7 +303,7 @@ func (client *redisSentinelClient) gatherSentinelStats(acc telegraf.Accumulator,
 	// It's safe to assume that if we fail parsing one item that the rest will fail too
 	// This is because we are iterating over a single server response
 	for _, sentinel := range sentinels {
-		sentinel, ok := sentinel.([]interface{})
+		sentinel, ok := sentinel.([]any)
 		if !ok {
 			return errors.New("unable to process sentinel response")
 		}
@@ -321,7 +321,7 @@ func (client *redisSentinelClient) gatherSentinelStats(acc telegraf.Accumulator,
 }
 
 // converts `sentinel masters <name>` output to tags and fields
-func convertSentinelMastersOutput(globalTags, master map[string]string, quorumErr error) (map[string]string, map[string]interface{}, error) {
+func convertSentinelMastersOutput(globalTags, master map[string]string, quorumErr error) (map[string]string, map[string]any, error) {
 	tags := globalTags
 
 	tags["master"] = master["name"]
@@ -341,7 +341,7 @@ func convertSentinelSentinelsOutput(
 	globalTags map[string]string,
 	masterName string,
 	sentinelMaster map[string]string,
-) (map[string]string, map[string]interface{}, error) {
+) (map[string]string, map[string]any, error) {
 	tags := globalTags
 
 	tags["sentinel_ip"] = sentinelMaster["ip"]
@@ -361,7 +361,7 @@ func convertSentinelReplicaOutput(
 	globalTags map[string]string,
 	masterName string,
 	replica map[string]string,
-) (map[string]string, map[string]interface{}, error) {
+) (map[string]string, map[string]any, error) {
 	tags := globalTags
 
 	tags["replica_ip"] = replica["ip"]
@@ -378,7 +378,7 @@ func convertSentinelReplicaOutput(
 
 // convertSentinelInfoOutput parses `INFO` command output
 // Largely copied from the Redis input plugin's gatherInfoOutput()
-func convertSentinelInfoOutput(globalTags map[string]string, rdr io.Reader) (map[string]string, map[string]interface{}, error) {
+func convertSentinelInfoOutput(globalTags map[string]string, rdr io.Reader) (map[string]string, map[string]any, error) {
 	scanner := bufio.NewScanner(rdr)
 	rawFields := make(map[string]string)
 

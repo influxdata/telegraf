@@ -153,11 +153,11 @@ func TestBuildGauge(t *testing.T) {
 	}
 }
 
-func newHostMetric(value interface{}, name, host string) telegraf.Metric {
+func newHostMetric(value any, name, host string) telegraf.Metric {
 	m := metric.New(
 		name,
 		map[string]string{"host": host},
-		map[string]interface{}{"value": value},
+		map[string]any{"value": value},
 		time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 	)
 	return m
@@ -168,13 +168,13 @@ func TestBuildGaugeWithSource(t *testing.T) {
 	pt1 := metric.New(
 		"test1",
 		map[string]string{"hostname": "192.168.0.1", "tag1": "value1"},
-		map[string]interface{}{"value": 0.0},
+		map[string]any{"value": 0.0},
 		mtime,
 	)
 	pt2 := metric.New(
 		"test2",
 		map[string]string{"hostnam": "192.168.0.1", "tag1": "value1"},
-		map[string]interface{}{"value": 1.0},
+		map[string]any{"value": 1.0},
 		mtime,
 	)
 	pt3 := metric.New(
@@ -183,7 +183,7 @@ func TestBuildGaugeWithSource(t *testing.T) {
 			"hostname": "192.168.0.1",
 			"tag2":     "value2",
 			"tag1":     "value1"},
-		map[string]interface{}{"value": 1.0},
+		map[string]any{"value": 1.0},
 		mtime,
 	)
 	pt4 := metric.New(
@@ -192,7 +192,7 @@ func TestBuildGaugeWithSource(t *testing.T) {
 			"hostname": "192.168.0.1",
 			"tag2":     "value2",
 			"tag1":     "value1"},
-		map[string]interface{}{"value": 1.0},
+		map[string]any{"value": 1.0},
 		mtime,
 	)
 	var gaugeTests = []struct {

@@ -10,7 +10,7 @@ import (
 const messagePrefix = "could not migrate one or more options from the 'outputs.amqp' plugin:"
 
 func migrate(tbl *ast.Table) ([]byte, string, error) {
-	var plugin map[string]interface{}
+	var plugin map[string]any
 	if err := toml.UnmarshalTable(tbl, &plugin); err != nil {
 		return nil, "", err
 	}
@@ -74,7 +74,7 @@ func migrate(tbl *ast.Table) ([]byte, string, error) {
 	return output, message, err
 }
 
-func getHeaders(plugin map[string]interface{}) map[string]string {
+func getHeaders(plugin map[string]any) map[string]string {
 	var headers map[string]string
 	if raw, found := plugin["headers"]; found {
 		headers = raw.(map[string]string)
@@ -85,12 +85,12 @@ func getHeaders(plugin map[string]interface{}) map[string]string {
 	return headers
 }
 
-func getBrokers(plugin map[string]interface{}) []interface{} {
-	var brokers []interface{}
+func getBrokers(plugin map[string]any) []any {
+	var brokers []any
 	if raw, found := plugin["brokers"]; found {
-		brokers = raw.([]interface{})
+		brokers = raw.([]any)
 	} else {
-		brokers = make([]interface{}, 1)
+		brokers = make([]any, 1)
 		plugin["brokers"] = brokers
 	}
 	return brokers

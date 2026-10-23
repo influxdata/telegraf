@@ -40,10 +40,10 @@ type responseMetrics struct {
 }
 
 type metric struct {
-	FullName string                 `json:"full_name"`
-	Name     string                 `json:"name"`
-	Type     string                 `json:"type"`
-	Fields   map[string]interface{} `json:"metric"`
+	FullName string         `json:"full_name"`
+	Name     string         `json:"name"`
+	Type     string         `json:"type"`
+	Fields   map[string]any `json:"metric"`
 }
 
 type messageBody struct {
@@ -148,7 +148,7 @@ func (h *GrayLog) gatherServer(
 		return err
 	}
 	for _, mItem := range dat.Metrics {
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		tags := map[string]string{
 			"server": host,
 			"port":   port,
@@ -171,7 +171,7 @@ func (h *GrayLog) gatherServer(
 // Returns:
 //
 //	void
-func (h *GrayLog) flatten(item, fields map[string]interface{}, id string) {
+func (h *GrayLog) flatten(item, fields map[string]any, id string) {
 	if id != "" {
 		id = id + "_"
 	}
@@ -181,7 +181,7 @@ func (h *GrayLog) flatten(item, fields map[string]interface{}, id string) {
 			fields[id+k] = float64(i)
 		case float64:
 			fields[id+k] = i
-		case map[string]interface{}:
+		case map[string]any:
 			h.flatten(i, fields, id+k)
 		default:
 		}

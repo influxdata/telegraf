@@ -123,7 +123,7 @@ func (r *Riak) gatherServer(s string, acc telegraf.Accumulator) error {
 	}
 
 	// Build a map of field values
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"cpu_avg1":                     stats.CPUAvg1,
 		"cpu_avg15":                    stats.CPUAvg15,
 		"cpu_avg5":                     stats.CPUAvg5,

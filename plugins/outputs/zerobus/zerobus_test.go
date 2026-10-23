@@ -148,7 +148,7 @@ func TestMetricToTableSchemaJSONFlattensMetric(t *testing.T) {
 	input := metric.New(
 		"cpu",
 		map[string]string{"host": "server-01"},
-		map[string]interface{}{
+		map[string]any{
 			"active": true,
 			"count":  int64(-42),
 			"ratio":  1.25,
@@ -222,7 +222,7 @@ func TestMetricToTableSchemaJSONRejectsInvalidMetric(t *testing.T) {
 			metric: metric.New(
 				"cpu",
 				map[string]string{"timestamp": "tag"},
-				map[string]interface{}{"value": 1.0},
+				map[string]any{"value": 1.0},
 				time.Now(),
 			),
 			expected: `tag "timestamp" conflicts`,
@@ -232,7 +232,7 @@ func TestMetricToTableSchemaJSONRejectsInvalidMetric(t *testing.T) {
 			metric: metric.New(
 				"cpu",
 				map[string]string{"host": "tag"},
-				map[string]interface{}{"host": "field"},
+				map[string]any{"host": "field"},
 				time.Now(),
 			),
 			expected: `field "host" conflicts`,
@@ -242,7 +242,7 @@ func TestMetricToTableSchemaJSONRejectsInvalidMetric(t *testing.T) {
 			metric: metric.New(
 				"cpu",
 				nil,
-				map[string]interface{}{"value": math.NaN()},
+				map[string]any{"value": math.NaN()},
 				time.Now(),
 			),
 			expected: "non-finite float",
@@ -252,7 +252,7 @@ func TestMetricToTableSchemaJSONRejectsInvalidMetric(t *testing.T) {
 			metric: metric.New(
 				"cpu",
 				nil,
-				map[string]interface{}{"value": uint64(math.MaxInt64) + 1},
+				map[string]any{"value": uint64(math.MaxInt64) + 1},
 				time.Now(),
 			),
 			expected: "exceeding Delta BIGINT maximum",
@@ -284,7 +284,7 @@ func TestSerializeMetricsRejectsMetrics(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{"host": "tag"},
-					map[string]interface{}{"host": "field"},
+					map[string]any{"host": "field"},
 					time.Now(),
 				),
 				testutil.TestMetric(3),
@@ -299,7 +299,7 @@ func TestSerializeMetricsRejectsMetrics(t *testing.T) {
 				metric.New(
 					"cpu",
 					nil,
-					map[string]interface{}{"value": strings.Repeat("x", 2048)},
+					map[string]any{"value": strings.Repeat("x", 2048)},
 					time.Now(),
 				),
 			},
@@ -339,11 +339,11 @@ func TestColumnsFromDescriptor(t *testing.T) {
 		{
 			name: "reads the columns of the table",
 			descriptor: &descriptorpb.DescriptorProto{
-				Name: proto.String("metrics"),
+				Name: new("metrics"),
 				Field: []*descriptorpb.FieldDescriptorProto{
-					{Name: proto.String("timestamp")},
-					{Name: proto.String("host")},
-					{Name: proto.String("value")},
+					{Name: new("timestamp")},
+					{Name: new("host")},
+					{Name: new("value")},
 				},
 			},
 			expected: map[string]bool{"timestamp": true, "host": true, "value": true},
@@ -351,9 +351,9 @@ func TestColumnsFromDescriptor(t *testing.T) {
 		{
 			name: "skips fields without a name",
 			descriptor: &descriptorpb.DescriptorProto{
-				Name: proto.String("metrics"),
+				Name: new("metrics"),
 				Field: []*descriptorpb.FieldDescriptorProto{
-					{Name: proto.String("value")},
+					{Name: new("value")},
 					{},
 				},
 			},

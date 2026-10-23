@@ -5,8 +5,10 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"time"
 
@@ -29,6 +31,7 @@ var defaultTimestampFieldName = "timestamp"
 
 type metricGroup struct {
 	filename string
+	created  time.Time
 	builder  *array.RecordBuilder
 	schema   *arrow.Schema
 	writer   *pqarrow.FileWriter
@@ -140,25 +143,23 @@ func (p *Parquet) Write(metrics []telegraf.Metric) error {
 			p.metricGroups[name] = &metricGroup{
 				builder:  array.NewRecordBuilder(memory.DefaultAllocator, schema),
 				filename: filename,
+				created:  now,
 				schema:   schema,
 				writer:   writer,
 			}
 		}
 
-		if p.RotationInterval != 0 {
-			if err := p.rotateIfNeeded(name); err != nil {
-				perr.MetricsReject = append(perr.MetricsReject, metricIndices[name]...)
-				perr.MetricsRejectErrors = append(perr.MetricsRejectErrors, fmt.Errorf("failed to rotate file %q: %w", p.metricGroups[name].filename, err))
-				perr.Err = fmt.Errorf("failed to rotate file %q: %w", p.metricGroups[name].filename, err)
-				continue
-			}
+		if err := p.rotateIfNeeded(name); err != nil {
+			perr.MetricsReject = append(perr.MetricsReject, metricIndices[name]...)
+			perr.MetricsRejectErrors = append(perr.MetricsRejectErrors, fmt.Errorf("failed to rotate file %q: %w", p.metricGroups[name].filename, err))
+			perr.Err = fmt.Errorf("failed to rotate file %q: %w", p.metricGroups[name].filename, err)
+			continue
 		}
 
 		record, err := p.createRecordBatch(metrics, p.metricGroups[name].builder, p.metricGroups[name].schema)
 		accepted := metricIndices[name]
 		if err != nil {
-			var crbErr *internal.PartialWriteError
-			if errors.As(err, &crbErr) {
+			if crbErr, ok := errors.AsType[*internal.PartialWriteError](err); ok {
 				accepted = make([]int, 0, len(perr.MetricsAccept))
 				for _, idx := range crbErr.MetricsAccept {
 					accepted = append(accepted, metricIndices[name][idx])
@@ -192,25 +193,22 @@ func (p *Parquet) Write(metrics []telegraf.Metric) error {
 }
 
 func (p *Parquet) rotateIfNeeded(name string) error {
-	fileInfo, err := p.root.Stat(p.metricGroups[name].filename)
-	if err != nil {
-		return fmt.Errorf("failed to stat file %q: %w", p.metricGroups[name].filename, err)
-	}
-
-	expireTime := fileInfo.ModTime().Add(time.Duration(p.RotationInterval))
-	if time.Now().Before(expireTime) {
+	group := p.metricGroups[name]
+	interval := time.Duration(p.RotationInterval)
+	if interval == 0 || time.Since(group.created) < interval {
 		return nil
 	}
 
-	if err := p.metricGroups[name].writer.Close(); err != nil {
-		return fmt.Errorf("failed to close file for rotation %q: %w", p.metricGroups[name].filename, err)
+	if err := group.writer.Close(); err != nil {
+		return fmt.Errorf("failed to close file for rotation %q: %w", group.filename, err)
 	}
 
-	writer, err := p.createWriter(name, p.metricGroups[name].filename, p.metricGroups[name].schema)
+	writer, err := p.createWriter(name, group.filename, group.schema)
 	if err != nil {
-		return fmt.Errorf("failed to create new writer for file %q: %w", p.metricGroups[name].filename, err)
+		return fmt.Errorf("failed to create new writer for file %q: %w", group.filename, err)
 	}
-	p.metricGroups[name].writer = writer
+	group.writer = writer
+	group.created = time.Now()
 
 	return nil
 }
@@ -423,8 +421,9 @@ func (p *Parquet) createSchema(metrics []telegraf.Metric) (*arrow.Schema, error)
 		}
 	}
 
-	fields := make([]arrow.Field, 0)
-	for key, value := range rawFields {
+	fields := make([]arrow.Field, 0, len(rawFields)+1)
+	for _, key := range slices.Sorted(maps.Keys(rawFields)) {
+		value := rawFields[key]
 		if p.TimestampFieldName != "" && key == p.TimestampFieldName {
 			p.Log.Warnf("Ignoring the %q field or tag as that column holds the metric time; "+
 				"set 'timestamp_field_name' to another name to keep it", key)
@@ -468,7 +467,7 @@ func (p *Parquet) createWriter(name, filename string, schema *arrow.Schema) (*pq
 	return writer, nil
 }
 
-func goToArrowType(value interface{}) (arrow.DataType, error) {
+func goToArrowType(value any) (arrow.DataType, error) {
 	switch value.(type) {
 	case int8:
 		return arrow.PrimitiveTypes.Int8, nil

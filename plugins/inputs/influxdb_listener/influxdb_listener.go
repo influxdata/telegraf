@@ -307,8 +307,7 @@ func (h *InfluxDBListener) handleWriteInternalParser(res http.ResponseWriter, re
 		lastPos = pos
 
 		// Continue parsing metrics even if some are malformed
-		var parseErr *influx.ParseError
-		if errors.As(err, &parseErr) {
+		if parseErr, ok := errors.AsType[*influx.ParseError](err); ok {
 			parseErrorCount++
 			errStr := parseErr.Error()
 			if firstParseErrorStr == "" {
@@ -423,8 +422,7 @@ func (h *InfluxDBListener) handleWriteUpstreamParser(res http.ResponseWriter, re
 		m, err = parser.Next()
 
 		// Continue parsing metrics even if some are malformed
-		var parseErr *influx_upstream.ParseError
-		if errors.As(err, &parseErr) {
+		if parseErr, ok := errors.AsType[*influx_upstream.ParseError](err); ok {
 			parseErrorCount++
 			errStr := parseErr.Error()
 			if firstParseErrorStr == "" {

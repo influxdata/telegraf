@@ -141,7 +141,7 @@ func (c *Config) collect(in []byte, order binary.ByteOrder, defaultTime time.Tim
 	t := defaultTime
 	name := c.MetricName
 	tags := make(map[string]string)
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 
 	var offset uint64
 	for _, e := range c.Entries {

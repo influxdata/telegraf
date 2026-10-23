@@ -195,7 +195,7 @@ func TestRegression(t *testing.T) {
 				tags := map[string]string{
 					"sensor": temp.SensorKey,
 				}
-				fields := map[string]interface{}{
+				fields := map[string]any{
 					"temp": temp.Temperature,
 				}
 				acc.AddFields("temp", fields, tags)
@@ -234,7 +234,7 @@ func TestRegression(t *testing.T) {
 				tags := map[string]string{
 					"sensor": temp.SensorKey,
 				}
-				fields := map[string]interface{}{
+				fields := map[string]any{
 					"temp": temp.Temperature,
 				}
 				acc.AddFields("temp", fields, tags)

@@ -182,7 +182,7 @@ func sanitizeQuoted(in string) string {
 	}, in)
 }
 
-func (p *SQL) deriveDatatype(value interface{}) string {
+func (p *SQL) deriveDatatype(value any) string {
 	var datatype string
 
 	switch value.(type) {
@@ -372,12 +372,12 @@ func (p *SQL) updateTableCache(tablename string) error {
 	return nil
 }
 
-func (p *SQL) processMetric(metric telegraf.Metric) (string, []string, []interface{}) {
+func (p *SQL) processMetric(metric telegraf.Metric) (string, []string, []any) {
 	// Preallocate the columns and values. Note we always allocate for the
 	// timestamp column even if we don't need it but that's not an issue.
 	entries := len(metric.TagList()) + len(metric.FieldList()) + 1
 	columns := make([]string, 0, entries)
-	values := make([]interface{}, 0, entries)
+	values := make([]any, 0, entries)
 	if p.TimestampColumn != "" {
 		columns = append(columns, p.TimestampColumn)
 		values = append(values, metric.Time())
@@ -399,7 +399,7 @@ func (p *SQL) processMetric(metric telegraf.Metric) (string, []string, []interfa
 	return strings.Join(append([]string{metric.Name()}, columns...), "\n"), columns, values
 }
 
-func (p *SQL) sendIndividual(sql string, values []interface{}) error {
+func (p *SQL) sendIndividual(sql string, values []any) error {
 	switch p.Driver {
 	case "clickhouse":
 		// ClickHouse needs to batch inserts with prepared statements
@@ -431,7 +431,7 @@ func (p *SQL) sendIndividual(sql string, values []interface{}) error {
 	return nil
 }
 
-func (p *SQL) sendBatch(sql string, values [][]interface{}) error {
+func (p *SQL) sendBatch(sql string, values [][]any) error {
 	tx, err := p.db.Begin()
 	if err != nil {
 		return fmt.Errorf("begin failed: %w", err)
@@ -460,7 +460,7 @@ func (p *SQL) sendBatch(sql string, values [][]interface{}) error {
 }
 
 func (p *SQL) Write(metrics []telegraf.Metric) error {
-	batchedQueries := make(map[string][][]interface{})
+	batchedQueries := make(map[string][][]any)
 
 	for _, metric := range metrics {
 		tablename := metric.Name()

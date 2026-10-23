@@ -26,7 +26,7 @@ func (*SysctlFS) SampleConfig() string {
 }
 
 func (sfs *SysctlFS) Gather(acc telegraf.Accumulator) error {
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 
 	for _, n := range []string{"aio-nr", "aio-max-nr", "dquot-nr", "dquot-max", "super-nr", "super-max"} {
 		if err := sfs.gatherOne(n, fields); err != nil {
@@ -51,7 +51,7 @@ func (sfs *SysctlFS) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (sfs *SysctlFS) gatherList(file string, fields map[string]interface{}, fieldNames ...string) error {
+func (sfs *SysctlFS) gatherList(file string, fields map[string]any, fieldNames ...string) error {
 	bs, err := os.ReadFile(sfs.path + "/" + file)
 	if err != nil {
 		// Ignore non-existing entries
@@ -80,7 +80,7 @@ func (sfs *SysctlFS) gatherList(file string, fields map[string]interface{}, fiel
 	return nil
 }
 
-func (sfs *SysctlFS) gatherOne(name string, fields map[string]interface{}) error {
+func (sfs *SysctlFS) gatherOne(name string, fields map[string]any) error {
 	bs, err := os.ReadFile(sfs.path + "/" + name)
 	if err != nil {
 		// Ignore non-existing entries

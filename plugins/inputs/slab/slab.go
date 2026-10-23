@@ -45,7 +45,7 @@ func (ss *Slab) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (ss *Slab) getSlabStats() (map[string]interface{}, error) {
+func (ss *Slab) getSlabStats() (map[string]any, error) {
 	out, err := ss.runCmd("/bin/cat", []string{ss.statFile})
 	if err != nil {
 		return nil, err
@@ -58,7 +58,7 @@ func (ss *Slab) getSlabStats() (map[string]interface{}, error) {
 	scanner.Scan() // for "slabinfo - version: 2.1"
 	scanner.Scan() // for "# name <active_objs> <num_objs> <objsize> ..."
 
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	// Read data rows
 	for scanner.Scan() {
 		line := scanner.Text()

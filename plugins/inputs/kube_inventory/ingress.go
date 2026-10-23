@@ -25,7 +25,7 @@ func gatherIngress(i netv1.Ingress, acc telegraf.Accumulator) {
 		return
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"created":    i.GetCreationTimestamp().UnixNano(),
 		"generation": i.Generation,
 	}

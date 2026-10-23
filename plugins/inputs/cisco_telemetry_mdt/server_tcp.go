@@ -29,8 +29,7 @@ func (c *CiscoTelemetryMDT) acceptTCPClients() {
 		mutex.Unlock()
 
 		// Individual client connection routine
-		c.wg.Add(1)
-		go func() {
+		c.wg.Go(func() {
 			c.Log.Debugf("Accepted Cisco MDT TCP dialout connection from %s", conn.RemoteAddr())
 			c.acc.AddError(c.handleTCPClient(conn))
 			c.Log.Debugf("Closed Cisco MDT TCP dialout connection from %s", conn.RemoteAddr())
@@ -42,8 +41,7 @@ func (c *CiscoTelemetryMDT) acceptTCPClients() {
 			if err := conn.Close(); err != nil {
 				c.Log.Warnf("closing connection failed: %v", err)
 			}
-			c.wg.Done()
-		}()
+		})
 	}
 
 	// Close all remaining client connections

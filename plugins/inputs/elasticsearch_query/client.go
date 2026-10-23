@@ -135,13 +135,13 @@ type queryData struct {
 	name        string
 	function    string
 	isParent    bool
-	aggregation map[string]interface{}
+	aggregation map[string]any
 }
 
-func (q *queryData) addSubAggregation(name string, subAggregation map[string]interface{}) {
-	aggs, ok := q.aggregation["aggs"].(map[string]interface{})
+func (q *queryData) addSubAggregation(name string, subAggregation map[string]any) {
+	aggs, ok := q.aggregation["aggs"].(map[string]any)
 	if !ok {
-		aggs = make(map[string]interface{})
+		aggs = make(map[string]any)
 		q.aggregation["aggs"] = aggs
 	}
 	aggs[name] = subAggregation
@@ -158,11 +158,11 @@ func (a *aggregation) buildQueries() error {
 			continue
 		}
 
-		var agg map[string]interface{}
+		var agg map[string]any
 		switch a.MetricFunction {
 		case "avg", "sum", "min", "max":
-			agg = map[string]interface{}{
-				a.MetricFunction: map[string]interface{}{
+			agg = map[string]any{
+				a.MetricFunction: map[string]any{
 					"field": k,
 				},
 			}
@@ -182,7 +182,7 @@ func (a *aggregation) buildQueries() error {
 
 	// Create a terms aggregation per tag
 	for _, term := range a.Tags {
-		terms := map[string]interface{}{
+		terms := map[string]any{
 			"field": term,
 			"size":  1000,
 		}
@@ -194,7 +194,7 @@ func (a *aggregation) buildQueries() error {
 			function:    "terms",
 			name:        strings.ReplaceAll(term, ".", "_"),
 			isParent:    true,
-			aggregation: map[string]interface{}{"terms": terms},
+			aggregation: map[string]any{"terms": terms},
 		}
 
 		// add each previous parent aggregations as subaggregations of this terms aggregation
@@ -229,8 +229,8 @@ func (a *aggregation) buildQueries() error {
 	return nil
 }
 
-func (a *aggregation) buildRangeQuery(from, to time.Time) map[string]interface{} {
-	rangeQuery := map[string]interface{}{
+func (a *aggregation) buildRangeQuery(from, to time.Time) map[string]any {
+	rangeQuery := map[string]any{
 		"gte": from,
 		"lte": to,
 	}
@@ -248,16 +248,16 @@ func (a *aggregation) buildSearchBody(log telegraf.Logger) ([]byte, error) {
 	now := time.Now().UTC()
 	from := now.Add(-time.Duration(a.QueryPeriod))
 
-	query := map[string]interface{}{
-		"bool": map[string]interface{}{
-			"filter": []interface{}{
-				map[string]interface{}{
-					"query_string": map[string]interface{}{
+	query := map[string]any{
+		"bool": map[string]any{
+			"filter": []any{
+				map[string]any{
+					"query_string": map[string]any{
 						"query": a.FilterQuery,
 					},
 				},
-				map[string]interface{}{
-					"range": map[string]interface{}{
+				map[string]any{
+					"range": map[string]any{
 						a.DateField: a.buildRangeQuery(from, now),
 					},
 				},
@@ -271,12 +271,12 @@ func (a *aggregation) buildSearchBody(log telegraf.Logger) ([]byte, error) {
 	}
 	log.Debugf("{\"query\": %s}", string(data))
 
-	body := map[string]interface{}{
+	body := map[string]any{
 		"query": query,
 		"size":  0,
 	}
 
-	aggs := make(map[string]interface{})
+	aggs := make(map[string]any)
 	for _, v := range queries {
 		if v.isParent && v.aggregation != nil {
 			aggs[v.name] = v.aggregation
@@ -310,7 +310,7 @@ func (r *searchResponse) totalHits() int64 {
 
 type aggregationIterator struct {
 	name   string
-	fields map[string]interface{}
+	fields map[string]any
 	tags   map[string]string
 }
 
@@ -326,7 +326,7 @@ func (m *aggregationIterator) iterate(acc telegraf.Accumulator, nameFunction map
 		// we've reached a leaf node. Add the accumulated metric and reset it
 		if len(m.fields) > 0 {
 			acc.AddFields(m.name, m.fields, m.tags)
-			m.fields = make(map[string]interface{})
+			m.fields = make(map[string]any)
 		}
 		return nil
 	}
@@ -388,19 +388,19 @@ func (m *aggregationIterator) iterate(acc telegraf.Accumulator, nameFunction map
 	// parent terms aggregation
 	if len(m.fields) > 0 {
 		acc.AddFields(m.name, m.fields, m.tags)
-		m.fields = make(map[string]interface{})
+		m.fields = make(map[string]any)
 	}
 
 	return nil
 }
 
-func aggregate(acc telegraf.Accumulator, measurement string, nameFunction map[string]string, response interface{}) error {
+func aggregate(acc telegraf.Accumulator, measurement string, nameFunction map[string]string, response any) error {
 	// The query method returns map[string]json.RawMessage for aggregation responses.
 	r := response.(map[string]json.RawMessage)
 
 	m := &aggregationIterator{
 		name:   measurement,
-		fields: make(map[string]interface{}),
+		fields: make(map[string]any),
 		tags:   make(map[string]string),
 	}
 

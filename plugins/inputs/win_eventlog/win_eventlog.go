@@ -106,10 +106,9 @@ func (w *WinEventLog) Init() error {
 func (w *WinEventLog) Start(telegraf.Accumulator) error {
 	subscription, err := w.evtSubscribe()
 	if err != nil {
-		startupErr := fmt.Errorf("subscription of Windows Event Log failed: %w", err)
 		return &internal.StartupError{
-			Err:   startupErr,
-			Retry: isRetriableSubscriptionError(err),
+			Err:   fmt.Errorf("subscription of Windows Event Log failed: %w", err),
+			Retry: errors.Is(err, windows.ERROR_EVT_CHANNEL_NOT_FOUND),
 		}
 	}
 	w.subscription = subscription
@@ -118,11 +117,7 @@ func (w *WinEventLog) Start(telegraf.Accumulator) error {
 	return nil
 }
 
-func isRetriableSubscriptionError(err error) bool {
-	return errors.Is(err, windows.ERROR_EVT_CHANNEL_NOT_FOUND)
-}
-
-func (w *WinEventLog) GetState() interface{} {
+func (w *WinEventLog) GetState() any {
 	bookmarkXML, err := w.renderBookmark()
 	if err != nil {
 		w.Log.Errorf("State-persistence failed, cannot render bookmark: %v", err)
@@ -131,7 +126,7 @@ func (w *WinEventLog) GetState() interface{} {
 	return bookmarkXML
 }
 
-func (w *WinEventLog) SetState(state interface{}) error {
+func (w *WinEventLog) SetState(state any) error {
 	bookmarkXML, ok := state.(string)
 	if !ok {
 		return fmt.Errorf("invalid type %T for state", state)
@@ -168,7 +163,7 @@ func (w *WinEventLog) Gather(acc telegraf.Accumulator) error {
 			fieldsUsage := make(map[string]int)
 
 			tags := make(map[string]string)
-			fields := make(map[string]interface{})
+			fields := make(map[string]any)
 			event := events[i]
 			evt := reflect.ValueOf(&event).Elem()
 			timeStamp := time.Now()
@@ -177,7 +172,7 @@ func (w *WinEventLog) Gather(acc telegraf.Accumulator) error {
 				fieldName := evt.Type().Field(i).Name
 				fieldType := evt.Field(i).Type().String()
 				fieldValue := evt.Field(i).Interface()
-				computedValues := make(map[string]interface{})
+				computedValues := make(map[string]any)
 				switch fieldName {
 				case "Source":
 					fieldValue = event.Source.Name
@@ -308,7 +303,7 @@ func (w *WinEventLog) shouldProcessField(field string) (should bool, list string
 	return false, "excluded"
 }
 
-func (w *WinEventLog) shouldExcludeEmptyField(field, fieldType string, fieldValue interface{}) (should bool) {
+func (w *WinEventLog) shouldExcludeEmptyField(field, fieldType string, fieldValue any) (should bool) {
 	if w.fieldEmptyFilter == nil || !w.fieldEmptyFilter.Match(field) {
 		return false
 	}

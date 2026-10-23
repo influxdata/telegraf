@@ -248,7 +248,7 @@ func (o *Opensearch) Write(metrics []telegraf.Metric) error {
 		}
 
 		// Handle NaN and inf field-values
-		fields := make(map[string]interface{})
+		fields := make(map[string]any)
 		for k, value := range metric.Fields() {
 			v, ok := value.(float64)
 			if !ok || o.FloatHandling == "none" || !(math.IsNaN(v) || math.IsInf(v, 0)) {
@@ -266,7 +266,7 @@ func (o *Opensearch) Write(metrics []telegraf.Metric) error {
 			}
 		}
 
-		m := make(map[string]interface{})
+		m := make(map[string]any)
 
 		m["@timestamp"] = metric.Time()
 		m["measurement_name"] = name

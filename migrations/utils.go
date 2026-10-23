@@ -4,23 +4,23 @@ import (
 	"fmt"
 )
 
-type pluginTOMLStruct map[string]map[string][]interface{}
+type pluginTOMLStruct map[string]map[string][]any
 
 func CreateTOMLStruct(category, name string) pluginTOMLStruct {
-	return map[string]map[string][]interface{}{
+	return map[string]map[string][]any{
 		category: {
-			name: make([]interface{}, 0),
+			name: make([]any, 0),
 		},
 	}
 }
 
-func (p *pluginTOMLStruct) Add(category, name string, plugin interface{}) {
-	cfg := map[string]map[string][]interface{}(*p)
+func (p *pluginTOMLStruct) Add(category, name string, plugin any) {
+	cfg := map[string]map[string][]any(*p)
 	cfg[category][name] = append(cfg[category][name], plugin)
 }
 
-func AsStringSlice(raw interface{}) ([]string, error) {
-	rawList, ok := raw.([]interface{})
+func AsStringSlice(raw any) ([]string, error) {
+	rawList, ok := raw.([]any)
 	if !ok {
 		return nil, fmt.Errorf("unexpected type : %T", raw)
 	}

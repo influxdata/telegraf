@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -17,7 +18,6 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -184,9 +184,9 @@ func (s *SQL) Init() error {
 	}
 
 	availDrivers := dbsql.Drivers()
-	if !choice.Contains(s.driverName, availDrivers) {
+	if !slices.Contains(availDrivers, s.driverName) {
 		for d, r := range aliases {
-			if choice.Contains(r, availDrivers) {
+			if slices.Contains(availDrivers, r) {
 				availDrivers = append(availDrivers, d)
 			}
 		}
@@ -209,7 +209,7 @@ func (s *SQL) Init() error {
 		s.DisconnectedServersBehavior = "error"
 	}
 
-	if !choice.Contains(s.DisconnectedServersBehavior, disconnectedServersBehavior) {
+	if !slices.Contains(disconnectedServersBehavior, s.DisconnectedServersBehavior) {
 		return fmt.Errorf("%q is not a valid value for disconnected_servers_behavior", s.DisconnectedServersBehavior)
 	}
 
@@ -384,8 +384,8 @@ func (q *query) parse(acc telegraf.Accumulator, rows *dbsql.Rows, t time.Time, l
 	}
 
 	// Prepare the list of datapoints according to the received row
-	columnData := make([]interface{}, len(columnNames))
-	columnDataPtr := make([]interface{}, len(columnNames))
+	columnData := make([]any, len(columnNames))
+	columnDataPtr := make([]any, len(columnNames))
 
 	for i := range columnData {
 		columnDataPtr[i] = &columnData[i]
@@ -396,7 +396,7 @@ func (q *query) parse(acc telegraf.Accumulator, rows *dbsql.Rows, t time.Time, l
 		measurement := q.Measurement
 		timestamp := t
 		tags := make(map[string]string)
-		fields := make(map[string]interface{}, len(columnNames))
+		fields := make(map[string]any, len(columnNames))
 
 		// Do the parsing with (hopefully) automatic type conversion
 		if err := rows.Scan(columnDataPtr...); err != nil {
@@ -416,7 +416,7 @@ func (q *query) parse(acc telegraf.Accumulator, rows *dbsql.Rows, t time.Time, l
 			}
 
 			if q.TimeColumn != "" && name == q.TimeColumn {
-				var fieldvalue interface{}
+				var fieldvalue any
 				var skipParsing bool
 
 				switch v := columnData[i].(type) {
@@ -503,7 +503,7 @@ func (q *query) parse(acc telegraf.Accumulator, rows *dbsql.Rows, t time.Time, l
 
 			// Try automatic conversion for all remaining fields
 			if q.fieldFilter.Match(name) {
-				var fieldvalue interface{}
+				var fieldvalue any
 				switch v := columnData[i].(type) {
 				case string, int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, bool:
 					fieldvalue = v

@@ -271,7 +271,7 @@ func (w *Wavefront) buildTags(mTags map[string]string) (string, map[string]strin
 	return source, tags
 }
 
-func buildValue(v interface{}, name string, w *Wavefront) (float64, error) {
+func buildValue(v any, name string, w *Wavefront) (float64, error) {
 	switch p := v.(type) {
 	case bool:
 		if w.ConvertBool {
@@ -363,7 +363,7 @@ func init() {
 			ImmediateFlush:       true,
 			SendInternalMetrics:  true,
 			HTTPMaximumBatchSize: 10000,
-			HTTPClientConfig:     common_http.HTTPClientConfig{Timeout: config.Duration(10 * time.Second)},
+			Timeout:              config.Duration(10 * time.Second),
 			CSPBaseURL:           "https://console.cloud.vmware.com",
 		}
 	})

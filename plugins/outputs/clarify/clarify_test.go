@@ -69,7 +69,7 @@ func TestGenerateID(t *testing.T) {
 				map[string]string{
 					"tag1": "78sx",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"time_idle": math.NaN(),
 				},
 				time.Now()),
@@ -83,7 +83,7 @@ func TestGenerateID(t *testing.T) {
 					"tag1": "78sx",
 					"tag2": "33t2",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"time_idle": math.NaN(),
 				},
 				time.Now()),
@@ -94,7 +94,7 @@ func TestGenerateID(t *testing.T) {
 			metric.New(
 				"temperature",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"cpu1": 12,
 					"cpu2": 13,
 				},
@@ -109,7 +109,7 @@ func TestGenerateID(t *testing.T) {
 					"clarify_input_id": "e5e82f63-3700-4997-835d-eb366b7294a2",
 					"xid":              "78sx",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"value": 1337,
 				},
 				time.Now()),
@@ -147,7 +147,7 @@ func TestProcessMetrics(t *testing.T) {
 				map[string]string{
 					"tag1": "78sx",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"time_idle": 1337.3,
 				},
 				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
@@ -174,7 +174,7 @@ func TestProcessMetrics(t *testing.T) {
 					"tag1": "78sx",
 					"tag2": "33t2",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"time_idle": 200,
 				},
 				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
@@ -199,7 +199,7 @@ func TestProcessMetrics(t *testing.T) {
 			metric.New(
 				"temperature",
 				map[string]string{},
-				map[string]interface{}{
+				map[string]any{
 					"cpu1": 12,
 					"cpu2": 13,
 				},
@@ -232,7 +232,7 @@ func TestProcessMetrics(t *testing.T) {
 					"clarify_input_id": "e5e82f63-3700-4997-835d-eb366b7294a2",
 					"xid":              "78sx",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"value": 123.333,
 				},
 				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
@@ -259,7 +259,7 @@ func TestProcessMetrics(t *testing.T) {
 				map[string]string{
 					"node_id": "ns=1;s=Omron PLC.Objects.new_Controller_0.GlobalVars.counter1",
 				},
-				map[string]interface{}{
+				map[string]any{
 					"value":   12345.6789,
 					"quality": "GOOD",
 				},

@@ -70,7 +70,7 @@ func getTestFileSystem() fakeFileSystem {
 			Mode() FileMode     // file mode bits
 			ModTime() time.Time // modification time
 			IsDir() bool        // returns bool indicating if a Dir or not
-			Sys() interface{}   // underlying data source. always nil (in this case)
+			Sys() any           // underlying data source. always nil (in this case)
 		}
 
 	*/

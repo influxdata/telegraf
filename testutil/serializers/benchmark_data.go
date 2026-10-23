@@ -15,7 +15,7 @@ func BenchmarkMetrics() [4]telegraf.Metric {
 				"cpu":  "cpu0",
 				"host": "realHost",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"usage_idle": 91.5,
 			},
 			time.Unix(1787161794, 0),
@@ -25,7 +25,7 @@ func BenchmarkMetrics() [4]telegraf.Metric {
 				"cpu":  "cpu0",
 				"host": "realHost",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"usage_idle": 91,
 			},
 			time.Unix(1787161794, 0),
@@ -35,7 +35,7 @@ func BenchmarkMetrics() [4]telegraf.Metric {
 				"cpu":  "cpu0",
 				"host": "realHost",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"usage_idle": true,
 			},
 			time.Unix(1787161794, 0),
@@ -45,7 +45,7 @@ func BenchmarkMetrics() [4]telegraf.Metric {
 				"cpu":  "cpu0",
 				"host": "realHost",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"usage_idle": false,
 			},
 			time.Unix(1787161794, 0),

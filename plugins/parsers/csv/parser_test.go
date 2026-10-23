@@ -54,7 +54,7 @@ func TestHeaderOverride(t *testing.T) {
 
 	testCSV := `line1,line2,line3
 3.4,70,test_name`
-	expectedFields := map[string]interface{}{
+	expectedFields := map[string]any{
 		"first":  3.4,
 		"second": int64(70),
 	}
@@ -242,7 +242,7 @@ func TestValueConversion(t *testing.T) {
 	testCSV := `3.3,4,true,hello`
 
 	expectedTags := make(map[string]string)
-	expectedFields := map[string]interface{}{
+	expectedFields := map[string]any{
 		"first":  3.3,
 		"second": 4,
 		"third":  true,
@@ -282,7 +282,7 @@ func TestSkipComment(t *testing.T) {
 
 	testCSV := `#3.3,4,true,hello
 4,9.9,true,name_this`
-	expectedFields := map[string]interface{}{
+	expectedFields := map[string]any{
 		"first":  int64(4),
 		"second": 9.9,
 		"third":  true,
@@ -305,7 +305,7 @@ func TestTrimSpace(t *testing.T) {
 	require.NoError(t, p.Init())
 
 	testCSV := ` 3.3, 4,    true,hello`
-	expectedFields := map[string]interface{}{
+	expectedFields := map[string]any{
 		"first":  3.3,
 		"second": int64(4),
 		"third":  true,
@@ -329,7 +329,7 @@ func TestTrimSpace(t *testing.T) {
 
 	metrics, err = p.Parse([]byte(testCSV))
 	require.NoError(t, err)
-	require.Equal(t, map[string]interface{}{"col1": "test  space", "col2": int64(80), "col3": "test_name"}, metrics[0].Fields())
+	require.Equal(t, map[string]any{"col1": "test  space", "col2": int64(80), "col3": "test_name"}, metrics[0].Fields())
 }
 
 func TestTrimSpaceDelimitedBySpace(t *testing.T) {
@@ -346,7 +346,7 @@ abcdefgh        0       2    false
   abcdef      3.3       4     true
        f        0       2    false`
 
-	expectedFields := map[string]interface{}{
+	expectedFields := map[string]any{
 		"first":  "abcdef",
 		"second": 3.3,
 		"third":  int64(4),
@@ -372,7 +372,7 @@ func TestSkipRows(t *testing.T) {
 line1,line2,line3
 hello,80,test_name2`
 
-	expectedFields := map[string]interface{}{
+	expectedFields := map[string]any{
 		"line2": int64(80),
 	}
 	expectedTags := map[string]string{
@@ -416,7 +416,7 @@ func TestSkipColumns(t *testing.T) {
 	require.NoError(t, p.Init())
 
 	testCSV := `hello,80,test_name`
-	expectedFields := map[string]interface{}{
+	expectedFields := map[string]any{
 		"line1": int64(80),
 		"line2": "test_name",
 	}
@@ -440,7 +440,7 @@ trash,80,test_name`
 	// we should expect an error if we try to get col1
 	metrics, err := p.Parse([]byte(testCSV))
 	require.NoError(t, err)
-	require.Equal(t, map[string]interface{}{"col2": int64(80), "col3": "test_name"}, metrics[0].Fields())
+	require.Equal(t, map[string]any{"col2": int64(80), "col3": "test_name"}, metrics[0].Fields())
 }
 
 func TestMultiHeader(t *testing.T) {
@@ -456,7 +456,7 @@ func TestMultiHeader(t *testing.T) {
 
 	metrics, err := p.Parse([]byte(testCSV))
 	require.NoError(t, err)
-	require.Equal(t, map[string]interface{}{"col1": int64(80), "col2": "test_name"}, metrics[0].Fields())
+	require.Equal(t, map[string]any{"col1": int64(80), "col2": "test_name"}, metrics[0].Fields())
 
 	testCSVRows := []string{"col,col\r\n", "1,2\r\n", "80,test_name\r\n"}
 
@@ -474,7 +474,7 @@ func TestMultiHeader(t *testing.T) {
 	require.Nil(t, m)
 	m, err = p.ParseLine(testCSVRows[2])
 	require.NoError(t, err)
-	require.Equal(t, map[string]interface{}{"col1": int64(80), "col2": "test_name"}, m.Fields())
+	require.Equal(t, map[string]any{"col1": int64(80), "col2": "test_name"}, m.Fields())
 }
 
 func TestParseStream(t *testing.T) {
@@ -497,7 +497,7 @@ func TestParseStream(t *testing.T) {
 		metric.New(
 			"csv",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"a": int64(1),
 				"b": int64(2),
 				"c": int64(3),
@@ -527,7 +527,7 @@ func TestParseLineMultiMetricErrorMessage(t *testing.T) {
 		metric.New(
 			"csv",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"a": int64(1),
 				"b": int64(2),
 				"c": int64(3),
@@ -558,7 +558,7 @@ func TestTimestampUnixFloatPrecision(t *testing.T) {
 		metric.New(
 			"csv",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"value": 42,
 			},
 			time.Unix(1551129661, 954561233),
@@ -588,7 +588,7 @@ func TestSkipMeasurementColumn(t *testing.T) {
 		metric.New(
 			"csv",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"id":    1,
 				"value": 5,
 			},
@@ -619,7 +619,7 @@ func TestSkipTimestampColumn(t *testing.T) {
 		metric.New(
 			"csv",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"id":    1,
 				"value": 5,
 			},
@@ -671,7 +671,7 @@ func TestEmptyMeasurementName(t *testing.T) {
 	expected := []telegraf.Metric{
 		metric.New("csv",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"b": 2,
 			},
 			time.Unix(0, 0),
@@ -697,7 +697,7 @@ func TestNumericMeasurementName(t *testing.T) {
 	expected := []telegraf.Metric{
 		metric.New("1",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"b": 2,
 			},
 			time.Unix(0, 0),
@@ -722,7 +722,7 @@ func TestStaticMeasurementName(t *testing.T) {
 	expected := []telegraf.Metric{
 		metric.New("csv",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"a": 1,
 				"b": 2,
 			},
@@ -749,7 +749,7 @@ func TestSkipEmptyStringValue(t *testing.T) {
 	expected := []telegraf.Metric{
 		metric.New("csv",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"a": 1,
 			},
 			time.Unix(0, 0),
@@ -775,7 +775,7 @@ func TestSkipSpecifiedStringValue(t *testing.T) {
 	expected := []telegraf.Metric{
 		metric.New("csv",
 			map[string]string{},
-			map[string]interface{}{
+			map[string]any{
 				"a": 1,
 			},
 			time.Unix(0, 0),
@@ -800,12 +800,12 @@ func TestSkipErrorOnCorruptedCSVLine(t *testing.T) {
 corrupted_line
 07/11/09 04:06:07 PM,3,4`
 
-	expectedFields0 := map[string]interface{}{
+	expectedFields0 := map[string]any{
 		"a": int64(1),
 		"b": int64(2),
 	}
 
-	expectedFields1 := map[string]interface{}{
+	expectedFields1 := map[string]any{
 		"a": int64(3),
 		"b": int64(4),
 	}
@@ -913,7 +913,7 @@ timestamp,type,name,status
 2020-11-23T08:19:27+10:00,Reader,R002,1
 #2020-11-04T13:23:04+10:00,Reader,R031,0
 2020-11-04T13:29:47+10:00,Coordinator,C001,0`
-	expectedFields := []map[string]interface{}{
+	expectedFields := []map[string]any{
 		{
 			"name":      "R002",
 			"status":    int64(1),
@@ -1071,7 +1071,7 @@ timestamp,type,name,status
 				"type":         "Reader",
 				"version":      "1.0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"name":   "R002",
 				"status": int64(1),
 			},
@@ -1085,7 +1085,7 @@ timestamp,type,name,status
 				"type":         "Coordinator",
 				"version":      "1.0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"name":   "C001",
 				"status": int64(0),
 			},
@@ -1125,7 +1125,7 @@ timestamp,type,name,status
 				"type":         "Reader",
 				"version":      "1.0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"name":   "R009",
 				"status": int64(5),
 			},
@@ -1164,7 +1164,7 @@ func TestParseCSVLinewiseResetModeNone(t *testing.T) {
 				"type":         "Reader",
 				"version":      "1.0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"name":   "R002",
 				"status": int64(1),
 			},
@@ -1178,7 +1178,7 @@ func TestParseCSVLinewiseResetModeNone(t *testing.T) {
 				"type":         "Coordinator",
 				"version":      "1.0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"name":   "C001",
 				"status": int64(0),
 			},
@@ -1230,7 +1230,7 @@ func TestParseCSVLinewiseResetModeNone(t *testing.T) {
 			"type":         "Reader",
 			"version":      "1.0",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"name":   "R009",
 			"status": int64(5),
 		},
@@ -1266,7 +1266,7 @@ timestamp,type,name,status
 				"type":         "Reader",
 				"version":      "1.0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"name":   "R002",
 				"status": int64(1),
 			},
@@ -1280,7 +1280,7 @@ timestamp,type,name,status
 				"type":         "Coordinator",
 				"version":      "1.0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"name":   "C001",
 				"status": int64(0),
 			},
@@ -1336,7 +1336,7 @@ timestamp,category,id,flag
 				"category":     "Reader",
 				"version":      "1.0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"id":   "R002",
 				"flag": int64(1),
 			},
@@ -1350,7 +1350,7 @@ timestamp,category,id,flag
 				"category":     "Coordinator",
 				"version":      "1.0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"id":   "C001",
 				"flag": int64(0),
 			},
@@ -1387,7 +1387,7 @@ func TestParseCSVLinewiseResetModeAlways(t *testing.T) {
 				"type":         "Reader",
 				"version":      "1.0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"name":   "R002",
 				"status": int64(1),
 			},
@@ -1401,7 +1401,7 @@ func TestParseCSVLinewiseResetModeAlways(t *testing.T) {
 				"type":         "Coordinator",
 				"version":      "1.0",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"name":   "C001",
 				"status": int64(0),
 			},
@@ -1454,7 +1454,7 @@ func TestParseCSVLinewiseResetModeAlways(t *testing.T) {
 			"type":         "Reader",
 			"version":      "1.0",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"name":   "R009",
 			"status": int64(5),
 		},
@@ -1492,7 +1492,7 @@ func TestBenchmarkData(t *testing.T) {
 				"tags_platform": "python",
 				"tags_sdkver":   "3.11.5",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 5,
 			},
 			time.Unix(1653643420, 0),
@@ -1504,7 +1504,7 @@ func TestBenchmarkData(t *testing.T) {
 				"tags_platform": "python",
 				"tags_sdkver":   "3.11.4",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"value": 4,
 			},
 			time.Unix(1653643420, 0),

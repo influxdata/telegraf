@@ -172,7 +172,9 @@ func (s *Server) Start(t *testing.T) string {
 		parts := strings.Split(r.URL.Path, "/")
 		switch {
 		case r.URL.Path == "/_ping":
-			// Ping response
+			// The client reads the API version from the headers, not the body.
+			w.Header().Set("Api-Version", s.APIVersion)
+			w.Header().Set("Ostype", "linux")
 			var err error
 			response, err = json.Marshal(&client.PingResult{
 				APIVersion: s.APIVersion,

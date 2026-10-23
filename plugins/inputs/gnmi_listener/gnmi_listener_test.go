@@ -39,13 +39,11 @@ import (
 func TestMutualTLSFail(t *testing.T) {
 	// Setup plugin
 	plugin := &GNMIListener{
-		Address: "127.0.0.1:0",
-		ServerConfig: common_tls.ServerConfig{
-			TLSCert:           "../../../testutil/pki/servercert.pem",
-			TLSKey:            "../../../testutil/pki/serverkey.pem",
-			TLSAllowedCACerts: []string{"../../../testutil/pki/cacert.pem"},
-		},
-		Log: testutil.Logger{LogLevel: new(telegraf.Trace)},
+		Address:           "127.0.0.1:0",
+		TLSCert:           "../../../testutil/pki/servercert.pem",
+		TLSKey:            "../../../testutil/pki/serverkey.pem",
+		TLSAllowedCACerts: []string{"../../../testutil/pki/cacert.pem"},
+		Log:               testutil.Logger{LogLevel: new(telegraf.Trace)},
 	}
 	require.NoError(t, plugin.Init())
 

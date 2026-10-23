@@ -77,9 +77,9 @@ func (k *Kapacitor) createHTTPClient() (*http.Client, error) {
 }
 
 type object struct {
-	Name   string                 `json:"name"`
-	Values map[string]interface{} `json:"values"`
-	Tags   map[string]string      `json:"tags"`
+	Name   string            `json:"name"`
+	Values map[string]any    `json:"values"`
+	Tags   map[string]string `json:"tags"`
 }
 
 type memstats struct {
@@ -156,7 +156,7 @@ func (k *Kapacitor) gatherURL(
 
 	if s.MemStats != nil {
 		acc.AddFields("kapacitor_memstats",
-			map[string]interface{}{
+			map[string]any{
 				"alloc_bytes":         s.MemStats.Alloc,
 				"buck_hash_sys_bytes": s.MemStats.BuckHashSys,
 				"frees":               s.MemStats.Frees,
@@ -192,7 +192,7 @@ func (k *Kapacitor) gatherURL(
 	}
 
 	acc.AddFields("kapacitor",
-		map[string]interface{}{
+		map[string]any{
 			"num_enabled_tasks": s.NumEnabledTasks,
 			"num_subscriptions": s.NumSubscriptions,
 			"num_tasks":         s.NumTasks,

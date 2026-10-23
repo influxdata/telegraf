@@ -116,7 +116,7 @@ func buildConsulAgent(acc telegraf.Accumulator, agentInfo *agentInfo) error {
 	}
 
 	for _, counters := range agentInfo.Counters {
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"count":  counters.Count,
 			"sum":    counters.Sum,
 			"max":    counters.Max,
@@ -131,7 +131,7 @@ func buildConsulAgent(acc telegraf.Accumulator, agentInfo *agentInfo) error {
 	}
 
 	for _, gauges := range agentInfo.Gauges {
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"value": gauges.Value,
 		}
 		tags := gauges.Labels
@@ -140,7 +140,7 @@ func buildConsulAgent(acc telegraf.Accumulator, agentInfo *agentInfo) error {
 	}
 
 	for _, points := range agentInfo.Points {
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"value": points.Points,
 		}
 		tags := make(map[string]string)
@@ -149,7 +149,7 @@ func buildConsulAgent(acc telegraf.Accumulator, agentInfo *agentInfo) error {
 	}
 
 	for _, samples := range agentInfo.Samples {
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"count":  samples.Count,
 			"sum":    samples.Sum,
 			"max":    samples.Max,

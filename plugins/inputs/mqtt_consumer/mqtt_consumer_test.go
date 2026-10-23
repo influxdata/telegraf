@@ -222,7 +222,7 @@ func TestTopicTag(t *testing.T) {
 					map[string]string{
 						"topic": "telegraf",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle": 42,
 					},
 					time.Unix(0, 0),
@@ -242,7 +242,7 @@ func TestTopicTag(t *testing.T) {
 					map[string]string{
 						"topic_tag": "telegraf",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle": 42,
 					},
 					time.Unix(0, 0),
@@ -260,7 +260,7 @@ func TestTopicTag(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle": 42,
 					},
 					time.Unix(0, 0),
@@ -291,7 +291,7 @@ func TestTopicTag(t *testing.T) {
 					map[string]string{
 						"testTag": "telegraf",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"testNumber": 123,
 						"time_idle":  42,
 					},
@@ -323,7 +323,7 @@ func TestTopicTag(t *testing.T) {
 					map[string]string{
 						"testTag": "telegraf",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"testNumber": 123,
 						"testString": "hello",
 						"time_idle":  42,
@@ -357,7 +357,7 @@ func TestTopicTag(t *testing.T) {
 					map[string]string{
 						"testTag": "telegraf",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"testNumber": 123,
 						"testString": "hello",
 						"time_idle":  42,
@@ -389,7 +389,7 @@ func TestTopicTag(t *testing.T) {
 					map[string]string{
 						"testTag": "telegraf",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle": 42,
 					},
 					time.Unix(0, 0),
@@ -419,7 +419,7 @@ func TestTopicTag(t *testing.T) {
 					map[string]string{
 						"testTag": "telegraf",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"testNumber": 123,
 						"testString": "hello",
 						"time_idle":  42,
@@ -452,7 +452,7 @@ func TestTopicTag(t *testing.T) {
 					map[string]string{
 						"testTag": "telegraf",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"testNumber": 123,
 						"testString": "hello",
 						"time_idle":  42,
@@ -486,7 +486,7 @@ func TestTopicTag(t *testing.T) {
 						"testTag": "telegraf",
 						"moreTag": "foo",
 					},
-					map[string]interface{}{
+					map[string]any{
 						"testNumber": 123,
 						"testString": "hello",
 						"time_idle":  42,
@@ -517,7 +517,7 @@ func TestTopicTag(t *testing.T) {
 				metric.New(
 					"cpu",
 					map[string]string{},
-					map[string]interface{}{
+					map[string]any{
 						"time_idle": 42,
 					},
 					time.Unix(0, 0),

@@ -15,7 +15,7 @@ func logName(pluginType, name, alias string) string {
 	return pluginType + "." + name + "::" + alias
 }
 
-func SetLoggerOnPlugin(i interface{}, logger telegraf.Logger) {
+func SetLoggerOnPlugin(i any, logger telegraf.Logger) {
 	valI := reflect.ValueOf(i)
 
 	if valI.Type().Kind() != reflect.Pointer {
@@ -38,7 +38,7 @@ func SetLoggerOnPlugin(i interface{}, logger telegraf.Logger) {
 	field.Set(reflect.ValueOf(logger))
 }
 
-func SetStatisticsOnPlugin(plugin interface{}, logger telegraf.Logger, tags map[string]string) {
+func SetStatisticsOnPlugin(plugin any, logger telegraf.Logger, tags map[string]string) {
 	// Find the statistics collector
 	instance := reflect.Indirect(reflect.ValueOf(plugin))
 	field := instance.FieldByName("Statistics")

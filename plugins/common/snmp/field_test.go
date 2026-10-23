@@ -34,7 +34,7 @@ func TestConvertDefault(t *testing.T) {
 	tests := []struct {
 		name     string
 		ent      gosnmp.SnmpPDU
-		expected interface{}
+		expected any
 		errmsg   string
 	}{
 		{
@@ -91,7 +91,7 @@ func TestConvertHex(t *testing.T) {
 	tests := []struct {
 		name     string
 		ent      gosnmp.SnmpPDU
-		expected interface{}
+		expected any
 		errmsg   string
 	}{
 		{
@@ -165,7 +165,7 @@ func TestConvertHextoint(t *testing.T) {
 		name       string
 		conversion string
 		ent        gosnmp.SnmpPDU
-		expected   interface{}
+		expected   any
 		errmsg     string
 	}{
 		{

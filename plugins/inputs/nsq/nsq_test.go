@@ -37,12 +37,12 @@ func TestNSQStatsV1(t *testing.T) {
 	// actually validate the tests
 	tests := []struct {
 		m string
-		f map[string]interface{}
+		f map[string]any
 		g map[string]string
 	}{
 		{
 			"nsq_server",
-			map[string]interface{}{
+			map[string]any{
 				"server_count": int64(1),
 				"topic_count":  int64(2),
 			},
@@ -53,7 +53,7 @@ func TestNSQStatsV1(t *testing.T) {
 		},
 		{
 			"nsq_topic",
-			map[string]interface{}{
+			map[string]any{
 				"depth":         int64(12),
 				"backend_depth": int64(13),
 				"message_count": int64(14),
@@ -66,7 +66,7 @@ func TestNSQStatsV1(t *testing.T) {
 		},
 		{
 			"nsq_channel",
-			map[string]interface{}{
+			map[string]any{
 				"depth":          int64(0),
 				"backend_depth":  int64(1),
 				"inflight_count": int64(2),
@@ -85,7 +85,7 @@ func TestNSQStatsV1(t *testing.T) {
 		},
 		{
 			"nsq_client",
-			map[string]interface{}{
+			map[string]any{
 				"ready_count":    int64(200),
 				"inflight_count": int64(7),
 				"message_count":  int64(8),
@@ -102,7 +102,7 @@ func TestNSQStatsV1(t *testing.T) {
 		},
 		{
 			"nsq_topic",
-			map[string]interface{}{
+			map[string]any{
 				"depth":         int64(28),
 				"backend_depth": int64(29),
 				"message_count": int64(30),
@@ -115,7 +115,7 @@ func TestNSQStatsV1(t *testing.T) {
 		},
 		{
 			"nsq_channel",
-			map[string]interface{}{
+			map[string]any{
 				"depth":          int64(15),
 				"backend_depth":  int64(16),
 				"inflight_count": int64(17),
@@ -134,7 +134,7 @@ func TestNSQStatsV1(t *testing.T) {
 		},
 		{
 			"nsq_client",
-			map[string]interface{}{
+			map[string]any{
 				"ready_count":    int64(22),
 				"inflight_count": int64(23),
 				"message_count":  int64(24),
@@ -297,12 +297,12 @@ func TestNSQStatsPreV1(t *testing.T) {
 	// actually validate the tests
 	tests := []struct {
 		m string
-		f map[string]interface{}
+		f map[string]any
 		g map[string]string
 	}{
 		{
 			"nsq_server",
-			map[string]interface{}{
+			map[string]any{
 				"server_count": int64(1),
 				"topic_count":  int64(2),
 			},
@@ -313,7 +313,7 @@ func TestNSQStatsPreV1(t *testing.T) {
 		},
 		{
 			"nsq_topic",
-			map[string]interface{}{
+			map[string]any{
 				"depth":         int64(12),
 				"backend_depth": int64(13),
 				"message_count": int64(14),
@@ -326,7 +326,7 @@ func TestNSQStatsPreV1(t *testing.T) {
 		},
 		{
 			"nsq_channel",
-			map[string]interface{}{
+			map[string]any{
 				"depth":          int64(0),
 				"backend_depth":  int64(1),
 				"inflight_count": int64(2),
@@ -345,7 +345,7 @@ func TestNSQStatsPreV1(t *testing.T) {
 		},
 		{
 			"nsq_client",
-			map[string]interface{}{
+			map[string]any{
 				"ready_count":    int64(200),
 				"inflight_count": int64(7),
 				"message_count":  int64(8),
@@ -362,7 +362,7 @@ func TestNSQStatsPreV1(t *testing.T) {
 		},
 		{
 			"nsq_topic",
-			map[string]interface{}{
+			map[string]any{
 				"depth":         int64(28),
 				"backend_depth": int64(29),
 				"message_count": int64(30),
@@ -375,7 +375,7 @@ func TestNSQStatsPreV1(t *testing.T) {
 		},
 		{
 			"nsq_channel",
-			map[string]interface{}{
+			map[string]any{
 				"depth":          int64(15),
 				"backend_depth":  int64(16),
 				"inflight_count": int64(17),
@@ -394,7 +394,7 @@ func TestNSQStatsPreV1(t *testing.T) {
 		},
 		{
 			"nsq_client",
-			map[string]interface{}{
+			map[string]any{
 				"ready_count":    int64(22),
 				"inflight_count": int64(23),
 				"message_count":  int64(24),

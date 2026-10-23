@@ -52,7 +52,7 @@ func TestPartitionRecords(t *testing.T) {
 }
 
 func TestConvertValueSupported(t *testing.T) {
-	intInputValues := []interface{}{-1, int8(-2), int16(-3), int32(-4), int64(-5)}
+	intInputValues := []any{-1, int8(-2), int16(-3), int32(-4), int64(-5)}
 	intOutputValues := []string{"-1", "-2", "-3", "-4", "-5"}
 	intOutputValueTypes := []types.MeasureValueType{
 		types.MeasureValueTypeBigint,
@@ -63,7 +63,7 @@ func TestConvertValueSupported(t *testing.T) {
 	}
 	testConvertValueSupportedCases(t, intInputValues, intOutputValues, intOutputValueTypes)
 
-	uintInputValues := []interface{}{uint(1), uint8(2), uint16(3), uint32(4), uint64(5)}
+	uintInputValues := []any{uint(1), uint8(2), uint16(3), uint32(4), uint64(5)}
 	uintOutputValues := []string{"1", "2", "3", "4", "5"}
 	uintOutputValueTypes := []types.MeasureValueType{
 		types.MeasureValueTypeBigint,
@@ -74,7 +74,7 @@ func TestConvertValueSupported(t *testing.T) {
 	}
 	testConvertValueSupportedCases(t, uintInputValues, uintOutputValues, uintOutputValueTypes)
 
-	otherInputValues := []interface{}{"foo", float32(22.123), 22.1234, true}
+	otherInputValues := []any{"foo", float32(22.123), 22.1234, true}
 	otherOutputValues := []string{"foo", "22.123", "22.1234", "true"}
 	otherOutputValueTypes := []types.MeasureValueType{
 		types.MeasureValueTypeVarchar,
@@ -91,7 +91,7 @@ func TestConvertValueUnsupported(t *testing.T) {
 }
 
 func testConvertValueSupportedCases(t *testing.T,
-	inputValues []interface{}, outputValues []string, outputValueTypes []types.MeasureValueType) {
+	inputValues []any, outputValues []string, outputValueTypes []types.MeasureValueType) {
 	for i, inputValue := range inputValues {
 		v, vt, ok := convertValue(inputValue)
 		require.True(t, ok, "Expected successful conversion")

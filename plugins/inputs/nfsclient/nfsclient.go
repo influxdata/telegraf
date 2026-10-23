@@ -8,11 +8,11 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -335,7 +335,7 @@ func (n *NFSClient) parseStat(mountpoint, export, version string, line []string,
 		"errors",
 	}
 
-	var fields = make(map[string]interface{})
+	var fields = make(map[string]any)
 
 	switch first {
 	case "READ", "WRITE":
@@ -423,10 +423,10 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 
 		// This denotes a new mount has been found, so set
 		// mount and export, and stop skipping (for now)
-		if lineLength > 4 && choice.Contains("fstype", line) && (choice.Contains("nfs", line) || choice.Contains("nfs4", line)) {
+		if lineLength > 4 && slices.Contains(line, "fstype") && (slices.Contains(line, "nfs") || slices.Contains(line, "nfs4")) {
 			mount = line[4]
 			export = line[1]
-		} else if lineLength > 5 && (choice.Contains("(nfs)", line) || choice.Contains("(nfs4)", line)) {
+		} else if lineLength > 5 && (slices.Contains(line, "(nfs)") || slices.Contains(line, "(nfs4)")) {
 			version = strings.Split(line[5], "/")[1]
 		}
 
@@ -495,8 +495,7 @@ func convertToUint64(line []string) ([]uint64, error) {
 	for _, l := range line[1:] {
 		val, err := strconv.ParseUint(l, 10, 64)
 		if err != nil {
-			var numError *strconv.NumError
-			if errors.As(err, &numError) {
+			if numError, ok := errors.AsType[*strconv.NumError](err); ok {
 				if errors.Is(numError.Err, strconv.ErrRange) {
 					return nil, fmt.Errorf("errrange: line:[%v] raw:[%v] -> parsed:[%v]", line, l, val)
 				}

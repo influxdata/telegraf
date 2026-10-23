@@ -55,45 +55,45 @@ func (*CaptureLogger) Level() telegraf.LogLevel {
 }
 
 // AddAttribute is not supported by the test-logger
-func (*CaptureLogger) AddAttribute(string, interface{}) {}
+func (*CaptureLogger) AddAttribute(string, any) {}
 
-func (l *CaptureLogger) Errorf(format string, args ...interface{}) {
+func (l *CaptureLogger) Errorf(format string, args ...any) {
 	l.logf(LevelError, format, args...)
 }
 
-func (l *CaptureLogger) Error(args ...interface{}) {
+func (l *CaptureLogger) Error(args ...any) {
 	l.loga(LevelError, args...)
 }
 
-func (l *CaptureLogger) Warnf(format string, args ...interface{}) {
+func (l *CaptureLogger) Warnf(format string, args ...any) {
 	l.logf(LevelWarn, format, args...)
 }
 
-func (l *CaptureLogger) Warn(args ...interface{}) {
+func (l *CaptureLogger) Warn(args ...any) {
 	l.loga(LevelWarn, args...)
 }
 
-func (l *CaptureLogger) Infof(format string, args ...interface{}) {
+func (l *CaptureLogger) Infof(format string, args ...any) {
 	l.logf(LevelInfo, format, args...)
 }
 
-func (l *CaptureLogger) Info(args ...interface{}) {
+func (l *CaptureLogger) Info(args ...any) {
 	l.loga(LevelInfo, args...)
 }
 
-func (l *CaptureLogger) Debugf(format string, args ...interface{}) {
+func (l *CaptureLogger) Debugf(format string, args ...any) {
 	l.logf(LevelDebug, format, args...)
 }
 
-func (l *CaptureLogger) Debug(args ...interface{}) {
+func (l *CaptureLogger) Debug(args ...any) {
 	l.loga(LevelDebug, args...)
 }
 
-func (l *CaptureLogger) Tracef(format string, args ...interface{}) {
+func (l *CaptureLogger) Tracef(format string, args ...any) {
 	l.logf(LevelTrace, format, args...)
 }
 
-func (l *CaptureLogger) Trace(args ...interface{}) {
+func (l *CaptureLogger) Trace(args ...any) {
 	l.loga(LevelTrace, args...)
 }
 

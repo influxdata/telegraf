@@ -28,35 +28,35 @@ type mongoStatus struct {
 }
 
 type serverStatus struct {
-	SampleTime         time.Time              `bson:""`
-	Flattened          map[string]interface{} `bson:""`
-	Host               string                 `bson:"host"`
-	Version            string                 `bson:"version"`
-	Process            string                 `bson:"process"`
-	Pid                int64                  `bson:"pid"`
-	Uptime             int64                  `bson:"uptime"`
-	UptimeMillis       int64                  `bson:"uptimeMillis"`
-	UptimeEstimate     int64                  `bson:"uptimeEstimate"`
-	LocalTime          time.Time              `bson:"localTime"`
-	Asserts            *assertsStats          `bson:"asserts"`
-	BackgroundFlushing *flushStats            `bson:"backgroundFlushing"`
-	ExtraInfo          *extraInfo             `bson:"extra_info"`
-	Connections        *connectionStats       `bson:"connections"`
-	Dur                *durStats              `bson:"dur"`
-	GlobalLock         *globalLockStats       `bson:"globalLock"`
-	Locks              map[string]lockStats   `bson:"locks,omitempty"`
-	Network            *networkStats          `bson:"network"`
-	Opcounters         *opcountStats          `bson:"opcounters"`
-	OpcountersRepl     *opcountStats          `bson:"opcountersRepl"`
-	OpLatencies        *opLatenciesStats      `bson:"opLatencies"`
-	RecordStats        *dbRecordStats         `bson:"recordStats"`
-	Mem                *memStats              `bson:"mem"`
-	Repl               *replStatus            `bson:"repl"`
-	ShardCursorType    map[string]interface{} `bson:"shardCursorType"`
-	StorageEngine      *storageEngine         `bson:"storageEngine"`
-	WiredTiger         *wiredTiger            `bson:"wiredTiger"`
-	Metrics            *metricsStats          `bson:"metrics"`
-	TCMallocStats      *tcMallocStats         `bson:"tcmalloc"`
+	SampleTime         time.Time            `bson:""`
+	Flattened          map[string]any       `bson:""`
+	Host               string               `bson:"host"`
+	Version            string               `bson:"version"`
+	Process            string               `bson:"process"`
+	Pid                int64                `bson:"pid"`
+	Uptime             int64                `bson:"uptime"`
+	UptimeMillis       int64                `bson:"uptimeMillis"`
+	UptimeEstimate     int64                `bson:"uptimeEstimate"`
+	LocalTime          time.Time            `bson:"localTime"`
+	Asserts            *assertsStats        `bson:"asserts"`
+	BackgroundFlushing *flushStats          `bson:"backgroundFlushing"`
+	ExtraInfo          *extraInfo           `bson:"extra_info"`
+	Connections        *connectionStats     `bson:"connections"`
+	Dur                *durStats            `bson:"dur"`
+	GlobalLock         *globalLockStats     `bson:"globalLock"`
+	Locks              map[string]lockStats `bson:"locks,omitempty"`
+	Network            *networkStats        `bson:"network"`
+	Opcounters         *opcountStats        `bson:"opcounters"`
+	OpcountersRepl     *opcountStats        `bson:"opcountersRepl"`
+	OpLatencies        *opLatenciesStats    `bson:"opLatencies"`
+	RecordStats        *dbRecordStats       `bson:"recordStats"`
+	Mem                *memStats            `bson:"mem"`
+	Repl               *replStatus          `bson:"repl"`
+	ShardCursorType    map[string]any       `bson:"shardCursorType"`
+	StorageEngine      *storageEngine       `bson:"storageEngine"`
+	WiredTiger         *wiredTiger          `bson:"wiredTiger"`
+	Metrics            *metricsStats        `bson:"metrics"`
+	TCMallocStats      *tcMallocStats       `bson:"tcmalloc"`
 }
 
 // dbStats stores stats from all dbs
@@ -72,19 +72,19 @@ type db struct {
 
 // dbStatsData stores stats from a db
 type dbStatsData struct {
-	DB          string      `bson:"db"`
-	Collections int64       `bson:"collections"`
-	Objects     int64       `bson:"objects"`
-	AvgObjSize  float64     `bson:"avgObjSize"`
-	DataSize    int64       `bson:"dataSize"`
-	StorageSize int64       `bson:"storageSize"`
-	NumExtents  int64       `bson:"numExtents"`
-	Indexes     int64       `bson:"indexes"`
-	IndexSize   int64       `bson:"indexSize"`
-	Ok          int64       `bson:"ok"`
-	GleStats    interface{} `bson:"gleStats"`
-	FsUsedSize  int64       `bson:"fsUsedSize"`
-	FsTotalSize int64       `bson:"fsTotalSize"`
+	DB          string  `bson:"db"`
+	Collections int64   `bson:"collections"`
+	Objects     int64   `bson:"objects"`
+	AvgObjSize  float64 `bson:"avgObjSize"`
+	DataSize    int64   `bson:"dataSize"`
+	StorageSize int64   `bson:"storageSize"`
+	NumExtents  int64   `bson:"numExtents"`
+	Indexes     int64   `bson:"indexes"`
+	IndexSize   int64   `bson:"indexSize"`
+	Ok          int64   `bson:"ok"`
+	GleStats    any     `bson:"gleStats"`
+	FsUsedSize  int64   `bson:"fsUsedSize"`
+	FsTotalSize int64   `bson:"fsTotalSize"`
 }
 
 type colStats struct {
@@ -249,15 +249,15 @@ type dataHandleStats struct {
 
 // replStatus stores data related to replica sets.
 type replStatus struct {
-	SetName           string      `bson:"setName"`
-	IsWritablePrimary interface{} `bson:"isWritablePrimary"` // mongodb 5.x
-	IsMaster          interface{} `bson:"ismaster"`
-	Secondary         interface{} `bson:"secondary"`
-	IsReplicaSet      interface{} `bson:"isreplicaset"`
-	ArbiterOnly       interface{} `bson:"arbiterOnly"`
-	Hosts             []string    `bson:"hosts"`
-	Passives          []string    `bson:"passives"`
-	Me                string      `bson:"me"`
+	SetName           string   `bson:"setName"`
+	IsWritablePrimary any      `bson:"isWritablePrimary"` // mongodb 5.x
+	IsMaster          any      `bson:"ismaster"`
+	Secondary         any      `bson:"secondary"`
+	IsReplicaSet      any      `bson:"isreplicaset"`
+	ArbiterOnly       any      `bson:"arbiterOnly"`
+	Hosts             []string `bson:"hosts"`
+	Passives          []string `bson:"passives"`
+	Me                string   `bson:"me"`
 }
 
 // dbRecordStats stores data related to memory operations across databases.
@@ -275,12 +275,12 @@ type recordAccesses struct {
 
 // memStats stores data related to memory statistics.
 type memStats struct {
-	Bits              int64       `bson:"bits"`
-	Resident          int64       `bson:"resident"`
-	Virtual           int64       `bson:"virtual"`
-	Supported         interface{} `bson:"supported"`
-	Mapped            int64       `bson:"mapped"`
-	MappedWithJournal int64       `bson:"mappedWithJournal"`
+	Bits              int64 `bson:"bits"`
+	Resident          int64 `bson:"resident"`
+	Virtual           int64 `bson:"virtual"`
+	Supported         any   `bson:"supported"`
+	Mapped            int64 `bson:"mapped"`
+	MappedWithJournal int64 `bson:"mappedWithJournal"`
 }
 
 // flushStats stores information about memory flushes.
@@ -1309,11 +1309,7 @@ func newStatLine(oldMongo, newMongo mongoStatus, key string, sampleSecs int64) *
 			if me.State == 2 {
 				// OptimeDate.Unix() type is int64
 				lag := master.OptimeDate.Unix() - me.OptimeDate.Unix()
-				if lag < 0 {
-					returnVal.ReplLag = 0
-				} else {
-					returnVal.ReplLag = lag
-				}
+				returnVal.ReplLag = max(lag, 0)
 			}
 
 			// Preparations for the average health state of the replica-set

@@ -52,7 +52,7 @@ func (ib *Infiniband) Gather(acc telegraf.Accumulator) error {
 func addStats(dev, port string, stats []rdmamap.RdmaStatEntry, acc telegraf.Accumulator) {
 	// Allow users to filter by card and port
 	tags := map[string]string{"device": dev, "port": port}
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 
 	for _, entry := range stats {
 		fields[entry.Name] = entry.Value

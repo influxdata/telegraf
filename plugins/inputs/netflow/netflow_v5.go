@@ -40,7 +40,7 @@ func (*netflowv5Decoder) decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 			"source":  src,
 			"version": "NetFlowV5",
 		}
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"flows":             msg.Count,
 			"sys_uptime":        msg.SysUptime,
 			"seq_number":        msg.FlowSequence,

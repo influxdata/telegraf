@@ -50,7 +50,7 @@ func TestSendEvent(t *testing.T) {
 		t.Errorf("POST send returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"id": "id1",
 	}
 
@@ -69,7 +69,7 @@ func TestMultipleEvents(t *testing.T) {
 		t.Errorf("POST send returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
 	}
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"id": "id1",
 	}
 
@@ -79,7 +79,7 @@ func TestMultipleEvents(t *testing.T) {
 
 	acc.AssertContainsTaggedFields(t, "mandrill_webhooks", fields, tags)
 
-	fields = map[string]interface{}{
+	fields = map[string]any{
 		"id": "id2",
 	}
 

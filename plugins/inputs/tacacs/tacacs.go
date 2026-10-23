@@ -114,7 +114,7 @@ func authenReplyToString(code uint8) string {
 func (t *Tacacs) pollServer(acc telegraf.Accumulator, client *tacplus.Client) error {
 	// Create the fields for this metric
 	tags := map[string]string{"source": client.Addr}
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 
 	secret, err := t.Secret.Get()
 	if err != nil {

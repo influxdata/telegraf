@@ -59,7 +59,7 @@ func TestDisqueGeneratesMetricsIntegration(t *testing.T) {
 	err = acc.GatherError(r.Gather)
 	require.NoError(t, err)
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"uptime":                     uint64(1452705),
 		"clients":                    uint64(31),
 		"blocked_clients":            uint64(13),
@@ -129,7 +129,7 @@ func TestDisqueCanPullStatsFromMultipleServersIntegration(t *testing.T) {
 	err = acc.GatherError(r.Gather)
 	require.NoError(t, err)
 
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"uptime":                     uint64(1452705),
 		"clients":                    uint64(31),
 		"blocked_clients":            uint64(13),

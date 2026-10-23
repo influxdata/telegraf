@@ -211,7 +211,7 @@ func (p *Parser) parseValue(value string) ([]telegraf.Metric, error) {
 	return p.parser.Parse([]byte(value))
 }
 
-func toBytes(value interface{}) ([]byte, error) {
+func toBytes(value any) ([]byte, error) {
 	if v, ok := value.(string); ok {
 		return []byte(v), nil
 	}

@@ -12,8 +12,8 @@ func (me *mandrillEvent) tags() map[string]string {
 	}
 }
 
-func (me *mandrillEvent) fields() map[string]interface{} {
-	return map[string]interface{}{
+func (me *mandrillEvent) fields() map[string]any {
+	return map[string]any{
 		"id": me.ID,
 	}
 }

@@ -60,7 +60,7 @@ func TestRabbitMQGeneratesMetricsSet1(t *testing.T) {
 			map[string]string{
 				"url": ts.URL,
 			},
-			map[string]interface{}{
+			map[string]any{
 				"messages":               int64(50),
 				"messages_ready":         int64(72),
 				"messages_unacked":       int64(94),
@@ -89,7 +89,7 @@ func TestRabbitMQGeneratesMetricsSet1(t *testing.T) {
 				"url":         ts.URL,
 				"vhost":       "sorandomsorandom",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"consumers":                 int64(3),
 				"consumer_utilisation":      float64(1.0),
 				"head_message_timestamp":    int64(1446362534),
@@ -127,7 +127,7 @@ func TestRabbitMQGeneratesMetricsSet1(t *testing.T) {
 				"url":         ts.URL,
 				"vhost":       "sorandomsorandom",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"consumers":                 int64(2),
 				"consumer_utilisation":      float64(0.8),
 				"head_message_timestamp":    int64(1446366000),
@@ -165,7 +165,7 @@ func TestRabbitMQGeneratesMetricsSet1(t *testing.T) {
 				"url":         ts.URL,
 				"vhost":       "sorandomsorandom",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"consumers":                 int64(1),
 				"consumer_utilisation":      float64(0.9),
 				"head_message_timestamp":    int64(1446372000),
@@ -203,7 +203,7 @@ func TestRabbitMQGeneratesMetricsSet1(t *testing.T) {
 				"url":         ts.URL,
 				"vhost":       "sorandomsorandom",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"consumers":                 int64(2),
 				"consumer_utilisation":      float64(0.85),
 				"head_message_timestamp":    int64(1446375000),
@@ -237,7 +237,7 @@ func TestRabbitMQGeneratesMetricsSet1(t *testing.T) {
 				"node": "rabbit@vagrant-ubuntu-trusty-64",
 				"url":  ts.URL,
 			},
-			map[string]interface{}{
+			map[string]any{
 				"disk_free":                 int64(3776),
 				"disk_free_limit":           int64(50000000),
 				"disk_free_alarm":           int64(0),
@@ -302,7 +302,7 @@ func TestRabbitMQGeneratesMetricsSet1(t *testing.T) {
 				"url":         ts.URL,
 				"vhost":       "sorandomsorandom",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"messages_publish_in":       int64(3678),
 				"messages_publish_in_rate":  float64(3.2),
 				"messages_publish_out":      int64(3677),
@@ -319,7 +319,7 @@ func TestRabbitMQGeneratesMetricsSet1(t *testing.T) {
 				"url":            ts.URL,
 				"vhost":          "/",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"acks_uncommitted":           int64(1),
 				"consumers":                  int64(2),
 				"messages_unacknowledged":    int64(3),
@@ -393,7 +393,7 @@ func TestRabbitMQGeneratesMetricsSet2(t *testing.T) {
 			map[string]string{
 				"url": ts.URL,
 			},
-			map[string]interface{}{
+			map[string]any{
 				"messages":               int64(30),
 				"messages_ready":         int64(30),
 				"messages_unacked":       int64(0),
@@ -422,7 +422,7 @@ func TestRabbitMQGeneratesMetricsSet2(t *testing.T) {
 				"url":         ts.URL,
 				"vhost":       "/",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"consumers":                 int64(1),
 				"consumer_utilisation":      float64(1.0),
 				"memory":                    int64(15840),
@@ -459,7 +459,7 @@ func TestRabbitMQGeneratesMetricsSet2(t *testing.T) {
 				"url":         ts.URL,
 				"vhost":       "/",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"consumers":                 int64(1),
 				"consumer_utilisation":      float64(1.0),
 				"memory":                    int64(15600),
@@ -496,7 +496,7 @@ func TestRabbitMQGeneratesMetricsSet2(t *testing.T) {
 				"url":         ts.URL,
 				"vhost":       "/",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"consumers":                 int64(1),
 				"consumer_utilisation":      float64(1.0),
 				"memory":                    int64(15584),
@@ -529,7 +529,7 @@ func TestRabbitMQGeneratesMetricsSet2(t *testing.T) {
 				"node": "rabbit@rmqserver",
 				"url":  ts.URL,
 			},
-			map[string]interface{}{
+			map[string]any{
 				"disk_free":                 int64(25086496768),
 				"disk_free_limit":           int64(50000000),
 				"disk_free_alarm":           int64(0),
@@ -593,7 +593,7 @@ func TestRabbitMQGeneratesMetricsSet2(t *testing.T) {
 				"url":         ts.URL,
 				"vhost":       "/",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"consumers":                 int64(1),
 				"consumer_utilisation":      float64(1.0),
 				"memory":                    int64(12000),
@@ -630,7 +630,7 @@ func TestRabbitMQGeneratesMetricsSet2(t *testing.T) {
 				"url":         ts.URL,
 				"vhost":       "/",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"consumers":                 int64(1),
 				"consumer_utilisation":      float64(1.0),
 				"memory":                    int64(15000),
@@ -668,7 +668,7 @@ func TestRabbitMQGeneratesMetricsSet2(t *testing.T) {
 				"url":         ts.URL,
 				"vhost":       "/",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"messages_publish_in":       int64(284725),
 				"messages_publish_in_rate":  float64(0.0),
 				"messages_publish_out":      int64(284572),
@@ -686,7 +686,7 @@ func TestRabbitMQGeneratesMetricsSet2(t *testing.T) {
 				"url":         ts.URL,
 				"vhost":       "/",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"messages_publish_in":       int64(0),
 				"messages_publish_in_rate":  float64(0.0),
 				"messages_publish_out":      int64(0),
@@ -704,7 +704,7 @@ func TestRabbitMQGeneratesMetricsSet2(t *testing.T) {
 				"url":         ts.URL,
 				"vhost":       "/",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"messages_publish_in":       int64(0),
 				"messages_publish_in_rate":  float64(0.0),
 				"messages_publish_out":      int64(0),
@@ -722,7 +722,7 @@ func TestRabbitMQGeneratesMetricsSet2(t *testing.T) {
 				"url":         ts.URL,
 				"vhost":       "/",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"messages_publish_in":       int64(0),
 				"messages_publish_in_rate":  float64(0.0),
 				"messages_publish_out":      int64(0),
@@ -740,7 +740,7 @@ func TestRabbitMQGeneratesMetricsSet2(t *testing.T) {
 				"url":         ts.URL,
 				"vhost":       "/",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"messages_publish_in":       int64(0),
 				"messages_publish_in_rate":  float64(0.0),
 				"messages_publish_out":      int64(0),
@@ -758,7 +758,7 @@ func TestRabbitMQGeneratesMetricsSet2(t *testing.T) {
 				"url":         ts.URL,
 				"vhost":       "/",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"messages_publish_in":       int64(0),
 				"messages_publish_in_rate":  float64(0.0),
 				"messages_publish_out":      int64(0),
@@ -776,7 +776,7 @@ func TestRabbitMQGeneratesMetricsSet2(t *testing.T) {
 				"url":         ts.URL,
 				"vhost":       "/",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"messages_publish_in":       int64(0),
 				"messages_publish_in_rate":  float64(0.0),
 				"messages_publish_out":      int64(0),
@@ -794,7 +794,7 @@ func TestRabbitMQGeneratesMetricsSet2(t *testing.T) {
 				"url":         ts.URL,
 				"vhost":       "/",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"messages_publish_in":       int64(18006),
 				"messages_publish_in_rate":  float64(0.0),
 				"messages_publish_out":      int64(60798),

@@ -258,15 +258,15 @@ func startMultipleItemGCSServer(t *testing.T) *httptest.Server {
 			offset := r.URL.Query().Get("startOffset")
 
 			if offset == "prefix/1604148850990" {
-				objListing["items"] = []interface{}{firstElement, secondElement, thirdElement, fourthElement}
+				objListing["items"] = []any{firstElement, secondElement, thirdElement, fourthElement}
 			} else if offset == "prefix/1604148850991" {
-				objListing["items"] = []interface{}{secondElement, thirdElement, fourthElement}
+				objListing["items"] = []any{secondElement, thirdElement, fourthElement}
 			} else if offset == "prefix/16041488509912" {
-				objListing["items"] = []interface{}{thirdElement, fourthElement}
+				objListing["items"] = []any{thirdElement, fourthElement}
 			} else if offset == "prefix/16041488509913" {
-				objListing["items"] = []interface{}{thirdElement, fourthElement}
+				objListing["items"] = []any{thirdElement, fourthElement}
 			} else {
-				objListing["items"] = []interface{}{firstElement, secondElement, thirdElement, fourthElement}
+				objListing["items"] = []any{firstElement, secondElement, thirdElement, fourthElement}
 			}
 
 			if data, err := json.Marshal(objListing); err == nil {
@@ -307,17 +307,17 @@ func stateFullGCSServer(t *testing.T) *httptest.Server {
 			pageToken := r.URL.Query().Get("pageToken")
 
 			if pageToken == "page2" {
-				objListing["items"] = []interface{}{secondElement}
+				objListing["items"] = []any{secondElement}
 				objListing["nextPageToken"] = "page3"
 			} else if pageToken == "page3" {
-				objListing["items"] = []interface{}{thirdElement}
+				objListing["items"] = []any{thirdElement}
 				objListing["nextPageToken"] = "page4"
 			} else if pageToken == "page4" {
-				objListing["items"] = []interface{}{fourthElement}
+				objListing["items"] = []any{fourthElement}
 			} else if offset == "prefix/1604148850994" {
-				objListing["items"] = make([]interface{}, 0)
+				objListing["items"] = make([]any, 0)
 			} else {
-				objListing["items"] = []interface{}{firstElement}
+				objListing["items"] = []any{firstElement}
 				objListing["nextPageToken"] = "page2"
 			}
 
@@ -422,10 +422,10 @@ func failPath(path string, t *testing.T, w http.ResponseWriter) {
 	t.Fatalf("unexpected path: %s", path)
 }
 
-func parseJSONFromFile(t *testing.T, jsonFilePath string) map[string]interface{} {
+func parseJSONFromFile(t *testing.T, jsonFilePath string) map[string]any {
 	data := readJSON(t, jsonFilePath)
 
-	var element map[string]interface{}
+	var element map[string]any
 	if err := json.Unmarshal(data, &element); err != nil {
 		require.NoErrorf(t, err, "could not parse from data file %s", jsonFilePath)
 	}

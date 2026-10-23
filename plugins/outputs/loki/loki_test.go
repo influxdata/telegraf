@@ -26,7 +26,7 @@ func getMetric() telegraf.Metric {
 		map[string]string{
 			"key1": "value1",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"line":  "my log",
 			"field": 3.14,
 		},
@@ -41,7 +41,7 @@ func getOutOfOrderMetrics() []telegraf.Metric {
 			map[string]string{
 				"key1": "value1",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"line":  "newer log",
 				"field": 3.14,
 			},
@@ -52,7 +52,7 @@ func getOutOfOrderMetrics() []telegraf.Metric {
 			map[string]string{
 				"key1": "value1",
 			},
-			map[string]interface{}{
+			map[string]any{
 				"line":  "older log",
 				"field": 3.14,
 			},
