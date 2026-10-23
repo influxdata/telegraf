@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log" //nolint:depguard // just for debug
+	"math"
 	"net/url"
 	"os"
 	"slices"
@@ -443,4 +444,18 @@ func (o *OpcUAClient) UpdateNamespaceArray(ctx context.Context) error {
 // NamespaceArray returns the cached namespace array
 func (o *OpcUAClient) NamespaceArray() []string {
 	return o.namespaceArray
+}
+
+// OperationLimit extracts a server operation limit from the read result of
+// the corresponding capability property. Zero means "no limit".
+func OperationLimit(result *ua.DataValue) int {
+	if result.Status != ua.StatusOK || result.Value == nil {
+		return 0
+	}
+	limit, ok := result.Value.Value().(uint32)
+	if !ok {
+		return 0
+	}
+	// Clamp to avoid overflowing int on 32-bit platforms
+	return int(min(limit, math.MaxInt32))
 }
