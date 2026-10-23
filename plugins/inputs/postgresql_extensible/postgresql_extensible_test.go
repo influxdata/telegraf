@@ -1018,9 +1018,10 @@ func (s *connSampler) stop() {
 	s.db.Close()
 }
 
-// TestConnectionLimitsIntegration proves that the plugin never opens more
-// connections than max_parallel_databases * max_connections_per_database by
-// counting the real sessions in pg_stat_activity while a collection runs
+// TestConnectionLimitsIntegration counts the real sessions in
+// pg_stat_activity while a collection runs. They never exceed
+// max_parallel_databases * max_connections_per_database, plus the one
+// reading the server information when the address database is not queried.
 func TestConnectionLimitsIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
