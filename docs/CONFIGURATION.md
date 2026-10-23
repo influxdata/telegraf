@@ -366,9 +366,9 @@ The agent table configures Telegraf and the defaults used across all plugins.
   aggregators processors only run once.
 
 - **skip_processors_after_aggregators**:
-  By default, processors are not run a second time after aggregators. Changing
-  this setting to false will run processors on the aggregator output too.
-  Defaults to false if `skip_processors_before_aggregators` is set.
+  By default, processors are not run on aggregator output if they already ran
+  before the aggregators. Set this to `false` to always run processors on the
+  aggregator output too.
 
 - **buffer_strategy**:
   The type of buffer to use for telegraf output plugins. Supported modes are
