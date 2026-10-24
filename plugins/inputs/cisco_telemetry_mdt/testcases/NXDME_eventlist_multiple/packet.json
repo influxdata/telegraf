@@ -1,0 +1,164 @@
+{
+    "nodeIdStr": "switch-1",
+    "subscriptionIdStr": "2",
+    "encodingPath": "EVENT-LIST",
+    "msgTimestamp": "1792489136496",
+    "dataGpbkv": [
+        {
+            "fields": [
+                {
+                    "name": "keys",
+                    "fields": [
+                        {
+                            "name": "EVENT-LIST",
+                            "stringValue": "EVENT-LIST"
+                        }
+                    ]
+                },
+                {
+                    "name": "content",
+                    "fields": [
+                        {
+                            "fields": [
+                                {
+                                    "name": "children",
+                                    "fields": [
+                                        {
+                                            "fields": [
+                                                {
+                                                    "name": "imdata",
+                                                    "fields": [
+                                                        {
+                                                            "fields": [
+                                                                {
+                                                                    "name": "aaaSequence",
+                                                                    "fields": [
+                                                                        {
+                                                                            "fields": [
+                                                                                {
+                                                                                    "name": "attributes",
+                                                                                    "fields": [
+                                                                                        {
+                                                                                            "fields": [
+                                                                                                {
+                                                                                                    "name": "command",
+                                                                                                    "stringValue": "show system internal access-list resource utilization "
+                                                                                                },
+                                                                                                {
+                                                                                                    "name": "dateTime",
+                                                                                                    "stringValue": "Tue Oct 20 18:38:56 2026"
+                                                                                                },
+                                                                                                {
+                                                                                                    "name": "dn",
+                                                                                                    "stringValue": "sys/accounting/log/sequence-26974203"
+                                                                                                },
+                                                                                                {
+                                                                                                    "name": "identity",
+                                                                                                    "stringValue": "vsh.bin.16414"
+                                                                                                },
+                                                                                                {
+                                                                                                    "name": "rn",
+                                                                                                    "stringValue": ""
+                                                                                                },
+                                                                                                {
+                                                                                                    "name": "sequenceNumber",
+                                                                                                    "sint64Value": "26974203"
+                                                                                                },
+                                                                                                {
+                                                                                                    "name": "status",
+                                                                                                    "stringValue": "Success"
+                                                                                                },
+                                                                                                {
+                                                                                                    "name": "type",
+                                                                                                    "stringValue": "Update"
+                                                                                                },
+                                                                                                {
+                                                                                                    "name": "user",
+                                                                                                    "stringValue": "root"
+                                                                                                }
+                                                                                            ]
+                                                                                        }
+                                                                                    ]
+                                                                                }
+                                                                            ]
+                                                                        }
+                                                                    ]
+                                                                }
+                                                            ]
+                                                        },
+                                                        {
+                                                            "fields": [
+                                                                {
+                                                                    "name": "aaaSequence",
+                                                                    "fields": [
+                                                                        {
+                                                                            "fields": [
+                                                                                {
+                                                                                    "name": "attributes",
+                                                                                    "fields": [
+                                                                                        {
+                                                                                            "fields": [
+                                                                                                {
+                                                                                                    "name": "command",
+                                                                                                    "stringValue": "show hardware internal forwarding l2 table utilization instance all "
+                                                                                                },
+                                                                                                {
+                                                                                                    "name": "dateTime",
+                                                                                                    "stringValue": "Tue Oct 20 18:38:55 2026"
+                                                                                                },
+                                                                                                {
+                                                                                                    "name": "dn",
+                                                                                                    "stringValue": "sys/accounting/log/sequence-26974202"
+                                                                                                },
+                                                                                                {
+                                                                                                    "name": "identity",
+                                                                                                    "stringValue": "vsh.bin.16403"
+                                                                                                },
+                                                                                                {
+                                                                                                    "name": "rn",
+                                                                                                    "stringValue": ""
+                                                                                                },
+                                                                                                {
+                                                                                                    "name": "sequenceNumber",
+                                                                                                    "sint64Value": "26974202"
+                                                                                                },
+                                                                                                {
+                                                                                                    "name": "status",
+                                                                                                    "stringValue": "Success"
+                                                                                                },
+                                                                                                {
+                                                                                                    "name": "type",
+                                                                                                    "stringValue": "Update"
+                                                                                                },
+                                                                                                {
+                                                                                                    "name": "user",
+                                                                                                    "stringValue": "root"
+                                                                                                }
+                                                                                            ]
+                                                                                        }
+                                                                                    ]
+                                                                                }
+                                                                            ]
+                                                                        }
+                                                                    ]
+                                                                }
+                                                            ]
+                                                        }
+                                                    ]
+                                                },
+                                                {
+                                                    "name": "subscriptionId",
+                                                    "uint64Value": "18379759394883829764"
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
