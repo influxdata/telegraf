@@ -1146,7 +1146,7 @@ func TestRemoteWriteHistogramSplitAcrossBatchesIntegration(t *testing.T) {
 	// Every series must hold the value of its own metric
 	client, err := api.NewClient(api.Config{Address: addr})
 	require.NoError(t, err)
-	result, _, err := apiv1.NewAPI(client).Query(t.Context(), `{__name__=~"http_request_duration_seconds_.*"}`, ts)
+	result, _, _, err := apiv1.NewAPI(client).Query(t.Context(), `{__name__=~"http_request_duration_seconds_.*"}`, ts)
 	require.NoError(t, err)
 	vector, ok := result.(model.Vector)
 	require.Truef(t, ok, "unexpected result type %T", result)
