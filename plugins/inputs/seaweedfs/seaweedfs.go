@@ -2,6 +2,7 @@
 package seaweedfs
 
 import (
+	"context"
 	_ "embed"
 	"encoding/json"
 	"errors"
@@ -15,7 +16,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/plugins/common/tls"
+	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -37,15 +38,20 @@ const (
 	defaultCollection = "default"
 )
 
-// SeaweedFS reads volume, disk and collection metrics from the SeaweedFS master
-// and volume servers.
+// SeaweedFS reads the inventory of a SeaweedFS cluster that its Prometheus
+// endpoint does not expose: needle counts per collection and, optionally, the
+// per-volume detail (files, deleted bytes, read-only state).
+//
+// Capacity metrics such as disk usage, volume counts, writable/read-only
+// volumes and per-collection bytes are deliberately not emitted here; the
+// SeaweedFS Prometheus endpoint already provides them and the README maps each
+// one to its metric name.
 type SeaweedFS struct {
-	Servers         []string        `toml:"servers"`
-	VolumeServers   []string        `toml:"volume_servers"`
-	DetailedVolumes bool            `toml:"detailed_volumes"`
-	ResponseTimeout config.Duration `toml:"response_timeout"`
+	Servers         []string `toml:"servers"`
+	VolumeServers   []string `toml:"volume_servers"`
+	DetailedVolumes bool     `toml:"detailed_volumes"`
 
-	tls.ClientConfig
+	httpconfig.HTTPClientConfig
 
 	Log        telegraf.Logger `toml:"-"`
 	httpClient *http.Client
@@ -147,9 +153,14 @@ type volumeTarget struct {
 
 // clusterInfo is the cluster-wide information read from the master topology.
 type clusterInfo struct {
-	targets   []volumeTarget
-	index     map[string]volumeTarget
-	writables map[string]int64
+	targets []volumeTarget
+	index   map[string]volumeTarget
+}
+
+// volumeRecord is one volume of the inventory together with its collection.
+type volumeRecord struct {
+	collection string
+	info       volumeInfo
 }
 
 // volumeServerCounts are the counts reported for a volume server.
@@ -159,36 +170,10 @@ type volumeServerCounts struct {
 	disks    int64
 }
 
-// collectionStats aggregates all volumes of one collection.
+// collectionStats aggregates the inventory counts of one collection.
 type collectionStats struct {
-	volumeCount         int64
-	readonlyVolumeCount int64
-	sizeBytes           int64
-	fileCount           int64
-	deleteCount         int64
-	deletedBytes        int64
-}
-
-// add accumulates the counters of a volume.
-func (c *collectionStats) add(volume volumeInfo) {
-	c.volumeCount++
-	if volume.ReadOnly {
-		c.readonlyVolumeCount++
-	}
-	c.sizeBytes += int64(volume.Size)
-	c.fileCount += int64(volume.FileCount)
-	c.deleteCount += int64(volume.DeleteCount)
-	c.deletedBytes += int64(volume.DeletedByteCount)
-}
-
-// merge adds the counters of another collection statistic.
-func (c *collectionStats) merge(other *collectionStats) {
-	c.volumeCount += other.volumeCount
-	c.readonlyVolumeCount += other.readonlyVolumeCount
-	c.sizeBytes += other.sizeBytes
-	c.fileCount += other.fileCount
-	c.deleteCount += other.deleteCount
-	c.deletedBytes += other.deletedBytes
+	fileCount   int64
+	deleteCount int64
 }
 
 // SampleConfig returns the default configuration of the plugin.
@@ -207,25 +192,22 @@ func (s *SeaweedFS) Init() error {
 		}
 	}
 
-	if s.ResponseTimeout <= 0 {
-		s.ResponseTimeout = config.Duration(defaultResponseTimeout)
+	if s.Timeout == 0 {
+		s.Timeout = config.Duration(defaultResponseTimeout)
 	}
 
-	tlsCfg, err := s.ClientConfig.TLSConfig()
+	client, err := s.HTTPClientConfig.CreateClient(context.Background(), s.Log)
 	if err != nil {
-		return err
+		return fmt.Errorf("creating HTTP client failed: %w", err)
 	}
-	s.httpClient = &http.Client{
-		Transport: &http.Transport{TLSClientConfig: tlsCfg},
-		Timeout:   time.Duration(s.ResponseTimeout),
-	}
+	s.httpClient = client
 
 	return nil
 }
 
 // Gather collects the metrics of the cluster.
 func (s *SeaweedFS) Gather(acc telegraf.Accumulator) error {
-	master := s.gatherMasters(acc)
+	master, maxVolumeID := s.gatherMasters(acc)
 	if master == "" {
 		return nil
 	}
@@ -236,13 +218,13 @@ func (s *SeaweedFS) Gather(acc telegraf.Accumulator) error {
 		return nil
 	}
 
-	info := gatherCluster(acc, master, &status.Topology)
+	info := gatherCluster(acc, master, maxVolumeID, &status.Topology)
 	targets := s.selectVolumeServers(info)
 
-	// Every volume server is queried in parallel, each gathering the statistics
-	// of the collections it holds. Merging happens afterwards, so no state is
+	// Every volume server is queried in parallel, each returning the inventory
+	// of the volumes it holds. Merging happens afterwards, so no state is
 	// shared between the goroutines.
-	results := make([]map[string]*collectionStats, len(targets))
+	results := make([][]volumeRecord, len(targets))
 	var wg sync.WaitGroup
 	for i, target := range targets {
 		wg.Add(1)
@@ -253,15 +235,15 @@ func (s *SeaweedFS) Gather(acc telegraf.Accumulator) error {
 	}
 	wg.Wait()
 
-	emitCollections(acc, mergeCollections(results), info.writables)
+	emitCollections(acc, master, mergeVolumes(results))
 
 	return nil
 }
 
-// gatherMasters queries the leader state of every configured master and adds a
-// "seaweedfs_master" metric for each of them. It returns the address of the
-// master used for the cluster-wide queries, which is the first leader found.
-func (s *SeaweedFS) gatherMasters(acc telegraf.Accumulator) string {
+// gatherMasters queries the leader state of every configured master. It returns
+// the address of the master used for the cluster-wide queries, which is the
+// first leader found, and the highest assigned volume ID.
+func (s *SeaweedFS) gatherMasters(acc telegraf.Accumulator) (string, int64) {
 	statuses := make([]*clusterStatus, len(s.Servers))
 
 	var wg sync.WaitGroup
@@ -276,15 +258,6 @@ func (s *SeaweedFS) gatherMasters(acc telegraf.Accumulator) string {
 				return
 			}
 			statuses[idx] = &status
-
-			acc.AddFields(
-				"seaweedfs_master",
-				map[string]any{
-					"is_leader":     status.IsLeader,
-					"max_volume_id": status.MaxVolumeID,
-				},
-				map[string]string{"server": normalizeURL(address)},
-			)
 		}(i, server)
 	}
 	wg.Wait()
@@ -294,31 +267,27 @@ func (s *SeaweedFS) gatherMasters(acc telegraf.Accumulator) string {
 	// redirect and keeps working when proxying is unavailable.
 	for i, status := range statuses {
 		if status != nil && status.IsLeader {
-			return normalizeURL(s.Servers[i])
+			return normalizeURL(s.Servers[i]), status.MaxVolumeID
 		}
 	}
 	for i, status := range statuses {
 		if status != nil {
-			return normalizeURL(s.Servers[i])
+			return normalizeURL(s.Servers[i]), status.MaxVolumeID
 		}
 	}
 
-	return ""
+	return "", 0
 }
 
-// gatherCluster adds the cluster-wide metrics and a metric for every volume
-// server known to the master.
+// gatherCluster adds the cluster-wide metric and returns the volume servers
+// known to the master.
 func gatherCluster(
 	acc telegraf.Accumulator,
 	master string,
+	maxVolumeID int64,
 	topology *topologyInfo,
 ) clusterInfo {
-	writables := make(map[string]int64, len(topology.Layouts))
-	for _, layout := range topology.Layouts {
-		writables[normalizeCollection(layout.Collection)] += int64(len(layout.Writables))
-	}
-
-	var volumeCount, ecShardCount, serverCount int64
+	var ecShardCount, serverCount int64
 	var dataCenterCount, rackCount int64
 	targets := make([]volumeTarget, 0, len(topology.DataCenters))
 	index := make(map[string]volumeTarget)
@@ -346,7 +315,6 @@ func gatherCluster(
 				index[address] = target
 
 				serverCount++
-				volumeCount += node.Volumes
 				ecShardCount += node.ECShards
 			}
 		}
@@ -355,9 +323,8 @@ func gatherCluster(
 	acc.AddFields(
 		"seaweedfs_cluster",
 		map[string]any{
-			"volume_count":        volumeCount,
+			"max_volume_id":       maxVolumeID,
 			"ec_shard_count":      ecShardCount,
-			"max_volume_slots":    topology.Max,
 			"free_volume_slots":   topology.Free,
 			"volume_server_count": serverCount,
 			"data_center_count":   dataCenterCount,
@@ -367,7 +334,7 @@ func gatherCluster(
 		map[string]string{"server": master},
 	)
 
-	return clusterInfo{targets: targets, index: index, writables: writables}
+	return clusterInfo{targets: targets, index: index}
 }
 
 // selectVolumeServers returns the volume servers to query. Without an explicit
@@ -397,12 +364,12 @@ func (s *SeaweedFS) selectVolumeServers(info clusterInfo) []volumeTarget {
 	return targets
 }
 
-// gatherVolumeServer adds the disk, volume and collection metrics of a single
-// volume server and returns the collection statistics of that server.
+// gatherVolumeServer adds the volume server and disk metrics of a single volume
+// server and returns the inventory of the volumes it holds.
 func (s *SeaweedFS) gatherVolumeServer(
 	acc telegraf.Accumulator,
 	target volumeTarget,
-) map[string]*collectionStats {
+) []volumeRecord {
 	tags := map[string]string{"server": target.address}
 	if target.datacenter != "" {
 		tags["datacenter"] = target.datacenter
@@ -417,25 +384,26 @@ func (s *SeaweedFS) gatherVolumeServer(
 		// Without the master topology nothing is known about the server, so
 		// only a reachable server is reported.
 		if target.known {
-			counts := volumeServerCounts{volumes: target.volumes, ecShards: target.ecShards}
-			addVolumeServer(acc, target, tags, counts)
+			addVolumeServer(acc, target, tags, volumeServerCounts{
+				volumes:  target.volumes,
+				ecShards: target.ecShards,
+			})
 		}
 		return nil
 	}
 
-	// The master is the authoritative source for the volume count. For a
-	// configured volume server the master does not know, fall back to the
-	// inventory reported by the server itself.
+	// The master is the authoritative source for the occupancy of the slots of
+	// a volume server. For a configured volume server the master does not know,
+	// fall back to the inventory reported by the server itself.
 	volumeCount := target.volumes
 	if !target.known {
 		volumeCount = int64(len(status.Volumes))
 	}
-	counts := volumeServerCounts{
+	addVolumeServer(acc, target, tags, volumeServerCounts{
 		volumes:  volumeCount,
 		ecShards: target.ecShards,
 		disks:    int64(len(status.DiskStatuses)),
-	}
-	addVolumeServer(acc, target, tags, counts)
+	})
 
 	// The disk ID of a volume is the index of the disk location on the volume
 	// server, which is the order the disk statuses are reported in.
@@ -456,14 +424,7 @@ func (s *SeaweedFS) gatherVolumeServer(
 		}
 		acc.AddFields(
 			"seaweedfs_disk",
-			map[string]any{
-				"total_bytes":  int64(disk.All),
-				"used_bytes":   int64(disk.Used),
-				"free_bytes":   int64(disk.Free),
-				"used_percent": disk.PercentUsed,
-				"free_percent": disk.PercentFree,
-				"volume_count": volumesPerDisk[i],
-			},
+			map[string]any{"volume_count": volumesPerDisk[i]},
 			diskTags,
 		)
 		if disk.Error != "" && s.Log != nil {
@@ -471,15 +432,10 @@ func (s *SeaweedFS) gatherVolumeServer(
 		}
 	}
 
-	collections := make(map[string]*collectionStats)
+	records := make([]volumeRecord, 0, len(status.Volumes))
 	for _, volume := range status.Volumes {
 		collection := normalizeCollection(volume.Collection)
-		stats, found := collections[collection]
-		if !found {
-			stats = &collectionStats{}
-			collections[collection] = stats
-		}
-		stats.add(volume)
+		records = append(records, volumeRecord{collection: collection, info: volume})
 
 		if s.DetailedVolumes {
 			acc.AddFields(
@@ -502,7 +458,7 @@ func (s *SeaweedFS) gatherVolumeServer(
 		}
 	}
 
-	return collections
+	return records
 }
 
 // addVolumeServer adds the metric describing a volume server. The volume slots
@@ -514,54 +470,64 @@ func addVolumeServer(
 	counts volumeServerCounts,
 ) {
 	fields := map[string]any{
-		"volume_count":   counts.volumes,
 		"ec_shard_count": counts.ecShards,
 		"disk_count":     counts.disks,
 	}
 	if target.known {
-		fields["max_volume_slots"] = target.maxSlots
 		fields["free_volume_slots"] = freeVolumeSlots(target.maxSlots, counts.volumes, counts.ecShards)
 	}
 
 	acc.AddFields("seaweedfs_volume_server", fields, tags)
 }
 
-// mergeCollections combines the collection statistics of all volume servers.
-func mergeCollections(results []map[string]*collectionStats) map[string]*collectionStats {
-	collections := make(map[string]*collectionStats)
+// mergeVolumes collapses the inventories of all volume servers into a single
+// list holding every volume exactly once.
+//
+// Volume IDs are unique within a cluster and shared by all replicas of a
+// volume, and each replica reports the same file and byte counts. Summing the
+// inventories per server would therefore multiply the collection statistics by
+// the replication factor.
+func mergeVolumes(results [][]volumeRecord) []volumeRecord {
+	seen := make(map[uint32]struct{})
+	merged := make([]volumeRecord, 0, len(results))
 	for _, result := range results {
-		for collection, stats := range result {
-			merged, found := collections[collection]
-			if !found {
-				collections[collection] = stats
+		for _, record := range result {
+			if _, found := seen[record.info.ID]; found {
 				continue
 			}
-			merged.merge(stats)
+			seen[record.info.ID] = struct{}{}
+			merged = append(merged, record)
 		}
 	}
 
-	return collections
+	return merged
 }
 
-// emitCollections adds one metric per collection.
-func emitCollections(
-	acc telegraf.Accumulator,
-	collections map[string]*collectionStats,
-	writables map[string]int64,
-) {
+// emitCollections adds one metric per collection carrying the counts the
+// Prometheus endpoint does not expose.
+func emitCollections(acc telegraf.Accumulator, master string, records []volumeRecord) {
+	collections := make(map[string]*collectionStats, len(records))
+	for _, record := range records {
+		stats, found := collections[record.collection]
+		if !found {
+			stats = &collectionStats{}
+			collections[record.collection] = stats
+		}
+		stats.fileCount += int64(record.info.FileCount)
+		stats.deleteCount += int64(record.info.DeleteCount)
+	}
+
 	for collection, stats := range collections {
 		acc.AddFields(
 			"seaweedfs_collection",
 			map[string]any{
-				"volume_count":          stats.volumeCount,
-				"readonly_volume_count": stats.readonlyVolumeCount,
-				"writable_volume_count": writables[collection],
-				"size_bytes":            stats.sizeBytes,
-				"file_count":            stats.fileCount,
-				"delete_count":          stats.deleteCount,
-				"deleted_bytes":         stats.deletedBytes,
+				"file_count":   stats.fileCount,
+				"delete_count": stats.deleteCount,
 			},
-			map[string]string{"collection": collection},
+			map[string]string{
+				"server":     master,
+				"collection": collection,
+			},
 		)
 	}
 }

@@ -13,6 +13,8 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	httpconfig "github.com/influxdata/telegraf/plugins/common/http"
+	"github.com/influxdata/telegraf/plugins/common/proxy"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -127,18 +129,39 @@ func TestInit(t *testing.T) {
 	t.Run("defaults", func(t *testing.T) {
 		plugin := &SeaweedFS{Servers: []string{"localhost:9333"}, Log: testutil.Logger{}}
 		require.NoError(t, plugin.Init())
-		require.Equal(t, defaultResponseTimeout, time.Duration(plugin.ResponseTimeout))
+		require.Equal(t, config.Duration(defaultResponseTimeout), plugin.Timeout)
 		require.Equal(t, defaultResponseTimeout, plugin.httpClient.Timeout)
 	})
 
-	t.Run("response timeout", func(t *testing.T) {
+	t.Run("timeout", func(t *testing.T) {
 		plugin := &SeaweedFS{
-			Servers:         []string{"localhost:9333"},
-			ResponseTimeout: config.Duration(2 * time.Second),
-			Log:             testutil.Logger{},
+			Servers: []string{"localhost:9333"},
+			HTTPClientConfig: httpconfig.HTTPClientConfig{
+				Timeout: config.Duration(2 * time.Second),
+			},
+			Log: testutil.Logger{},
 		}
 		require.NoError(t, plugin.Init())
 		require.Equal(t, 2*time.Second, plugin.httpClient.Timeout)
+	})
+
+	t.Run("proxy", func(t *testing.T) {
+		// The proxy is applied by the common HTTP client, which is the reason
+		// for using it instead of a hand-rolled transport.
+		plugin := &SeaweedFS{
+			Servers: []string{"localhost:9333"},
+			HTTPClientConfig: httpconfig.HTTPClientConfig{
+				TransportConfig: httpconfig.TransportConfig{
+					HTTPProxy: proxy.HTTPProxy{HTTPProxyURL: "http://proxy.local:3128"},
+				},
+			},
+			Log: testutil.Logger{},
+		}
+		require.NoError(t, plugin.Init())
+
+		transport, ok := plugin.httpClient.Transport.(*http.Transport)
+		require.True(t, ok)
+		require.NotNil(t, transport.Proxy)
 	})
 }
 
@@ -156,23 +179,12 @@ func TestGather(t *testing.T) {
 	require.NoError(t, plugin.Gather(&acc))
 	require.Empty(t, acc.Errors)
 
-	// Leader state of the master
-	acc.AssertContainsTaggedFields(t,
-		"seaweedfs_master",
-		map[string]any{
-			"is_leader":     true,
-			"max_volume_id": int64(14),
-		},
-		map[string]string{"server": cluster.server.URL},
-	)
-
 	// Cluster-wide topology, read from the leader
 	acc.AssertContainsTaggedFields(t,
 		"seaweedfs_cluster",
 		map[string]any{
-			"volume_count":        int64(14),
+			"max_volume_id":       int64(14),
 			"ec_shard_count":      int64(0),
-			"max_volume_slots":    int64(35),
 			"free_volume_slots":   int64(21),
 			"volume_server_count": int64(1),
 			"data_center_count":   int64(1),
@@ -186,9 +198,7 @@ func TestGather(t *testing.T) {
 	acc.AssertContainsTaggedFields(t,
 		"seaweedfs_volume_server",
 		map[string]any{
-			"volume_count":      int64(14),
 			"ec_shard_count":    int64(0),
-			"max_volume_slots":  int64(35),
 			"free_volume_slots": int64(21),
 			"disk_count":        int64(2),
 		},
@@ -199,17 +209,10 @@ func TestGather(t *testing.T) {
 		},
 	)
 
-	// Disk usage of the volume server
+	// Per-disk volume counts, which the Prometheus endpoint does not expose
 	acc.AssertContainsTaggedFields(t,
 		"seaweedfs_disk",
-		map[string]any{
-			"total_bytes":  int64(490164953088),
-			"used_bytes":   int64(81732874240),
-			"free_bytes":   int64(408432078848),
-			"used_percent": 16.674564,
-			"free_percent": 83.32543,
-			"volume_count": int64(4),
-		},
+		map[string]any{"volume_count": int64(4)},
 		map[string]string{
 			"server": cluster.server.URL,
 			"path":   "/data1",
@@ -217,14 +220,7 @@ func TestGather(t *testing.T) {
 	)
 	acc.AssertContainsTaggedFields(t,
 		"seaweedfs_disk",
-		map[string]any{
-			"total_bytes":  int64(490164953088),
-			"used_bytes":   int64(81732874240),
-			"free_bytes":   int64(408432078848),
-			"used_percent": 57.5,
-			"free_percent": 42.5,
-			"volume_count": int64(0),
-		},
+		map[string]any{"volume_count": int64(0)},
 		map[string]string{
 			"server":    cluster.server.URL,
 			"path":      "/data2",
@@ -232,26 +228,23 @@ func TestGather(t *testing.T) {
 		},
 	)
 
-	// Collections are aggregated, the number of writable volumes comes from the
-	// volume layouts of the master
+	// The needle counts per collection, tagged with the cluster they belong to
 	acc.AssertContainsTaggedFields(t,
 		"seaweedfs_collection",
 		map[string]any{
-			"volume_count":          int64(4),
-			"readonly_volume_count": int64(0),
-			"writable_volume_count": int64(7),
-			"size_bytes":            int64(26456818),
-			"file_count":            int64(44),
-			"delete_count":          int64(0),
-			"deleted_bytes":         int64(0),
+			"file_count":   int64(44),
+			"delete_count": int64(0),
 		},
-		map[string]string{"collection": "default"},
+		map[string]string{
+			"server":     cluster.server.URL,
+			"collection": "default",
+		},
 	)
 
 	// Per-volume metrics are only emitted on request
 	acc.AssertDoesNotContainMeasurement(t, "seaweedfs_volume")
-	// master, cluster, volume server, two disks and one collection
-	require.Len(t, acc.Metrics, 6)
+	// cluster, volume server, two disks and one collection
+	require.Len(t, acc.Metrics, 5)
 }
 
 // TestGatherDetailedVolumes tests the opt-in per-volume metrics.
@@ -287,8 +280,8 @@ func TestGatherDetailedVolumes(t *testing.T) {
 		},
 	)
 
-	// six cluster-wide metrics plus one metric per volume
-	require.Len(t, acc.Metrics, 10)
+	// five cluster-level metrics plus one metric per volume
+	require.Len(t, acc.Metrics, 9)
 }
 
 // TestGatherMultipleMasters tests that the cluster metrics are read from the
@@ -306,31 +299,12 @@ func TestGatherMultipleMasters(t *testing.T) {
 	require.NoError(t, plugin.Gather(&acc))
 	require.Empty(t, acc.Errors)
 
-	// One metric per master with its own leader state
-	acc.AssertContainsTaggedFields(t,
-		"seaweedfs_master",
-		map[string]any{
-			"is_leader":     false,
-			"max_volume_id": int64(14),
-		},
-		map[string]string{"server": cluster.server.URL + "/nonleader"},
-	)
-	acc.AssertContainsTaggedFields(t,
-		"seaweedfs_master",
-		map[string]any{
-			"is_leader":     true,
-			"max_volume_id": int64(14),
-		},
-		map[string]string{"server": cluster.server.URL},
-	)
-
-	// The cluster metrics are tagged with the leader
+	// The cluster metric is tagged with the leader
 	acc.AssertContainsTaggedFields(t,
 		"seaweedfs_cluster",
 		map[string]any{
-			"volume_count":        int64(14),
+			"max_volume_id":       int64(14),
 			"ec_shard_count":      int64(0),
-			"max_volume_slots":    int64(35),
 			"free_volume_slots":   int64(21),
 			"volume_server_count": int64(1),
 			"data_center_count":   int64(1),
@@ -374,12 +348,10 @@ func TestGatherExplicitVolumeServers(t *testing.T) {
 	require.Empty(t, acc.Errors)
 
 	// The configured server is not part of the topology, so neither the
-	// datacenter and rack tags nor the volume slots are known. The volume count
-	// is taken from the inventory of the server itself.
+	// datacenter and rack tags nor the volume slots are known.
 	acc.AssertContainsTaggedFields(t,
 		"seaweedfs_volume_server",
 		map[string]any{
-			"volume_count":   int64(1),
 			"ec_shard_count": int64(0),
 			"disk_count":     int64(1),
 		},
@@ -388,14 +360,7 @@ func TestGatherExplicitVolumeServers(t *testing.T) {
 
 	acc.AssertContainsTaggedFields(t,
 		"seaweedfs_disk",
-		map[string]any{
-			"total_bytes":  int64(100),
-			"used_bytes":   int64(40),
-			"free_bytes":   int64(60),
-			"used_percent": 40.0,
-			"free_percent": 60.0,
-			"volume_count": int64(1),
-		},
+		map[string]any{"volume_count": int64(1)},
 		map[string]string{
 			"server": second.URL,
 			"path":   "/data9",
@@ -403,19 +368,104 @@ func TestGatherExplicitVolumeServers(t *testing.T) {
 	)
 
 	// The discovered volume server is not queried, only the configured one
-	require.Len(t, acc.Metrics, 5)
+	require.Len(t, acc.Metrics, 4)
 	acc.AssertContainsTaggedFields(t,
 		"seaweedfs_collection",
 		map[string]any{
-			"volume_count":          int64(1),
-			"readonly_volume_count": int64(0),
-			"writable_volume_count": int64(7),
-			"size_bytes":            int64(10),
-			"file_count":            int64(2),
-			"delete_count":          int64(0),
-			"deleted_bytes":         int64(0),
+			"file_count":   int64(2),
+			"delete_count": int64(0),
 		},
-		map[string]string{"collection": "lab"},
+		map[string]string{
+			"server":     cluster.server.URL,
+			"collection": "lab",
+		},
+	)
+}
+
+// TestGatherReplication tests that the replicas of a volume are counted once in
+// the collection statistics.
+func TestGatherReplication(t *testing.T) {
+	// Two volume servers holding the same two volumes, as replication "001"
+	// does: the replicas report identical file and byte counts.
+	const volumeInventory = `{
+  "DiskStatuses": [{"dir": "/data1", "all": 100, "used": 10, "free": 90, "percent_free": 90, "percent_used": 10}],
+  "Volumes": [
+    {"Collection": "lab", "Size": 10, "Id": 1, "DiskId": 0, "FileCount": 5, "Version": 3},
+    {"Collection": "lab", "Size": 20, "Id": 2, "DiskId": 0, "FileCount": 6, "Version": 3}
+  ]
+}`
+
+	newVolumeServer := func() *httptest.Server {
+		mux := http.NewServeMux()
+		mux.HandleFunc(volumeStatusPath, func(w http.ResponseWriter, _ *http.Request) {
+			fmt.Fprint(w, volumeInventory)
+		})
+		return httptest.NewServer(mux)
+	}
+	first := newVolumeServer()
+	defer first.Close()
+	second := newVolumeServer()
+	defer second.Close()
+
+	topology := fmt.Sprintf(`{
+  "Topology": {
+    "Max": 100,
+    "Free": 96,
+    "DataCenters": [{"Id": "dc1", "Racks": [{"Id": "rack1", "DataNodes": [
+      {"Url": %q, "Volumes": 2, "Max": 50},
+      {"Url": %q, "Volumes": 2, "Max": 50}
+    ]}]}],
+    "Layouts": []
+  },
+  "Version": "4.48"
+}`, strings.TrimPrefix(first.URL, "http://"), strings.TrimPrefix(second.URL, "http://"))
+
+	mux := http.NewServeMux()
+	mux.HandleFunc(clusterStatusPath, func(w http.ResponseWriter, _ *http.Request) {
+		fmt.Fprint(w, `{"IsLeader":true,"Leader":"self","MaxVolumeId":2}`)
+	})
+	mux.HandleFunc(dirStatusPath, func(w http.ResponseWriter, _ *http.Request) {
+		fmt.Fprint(w, topology)
+	})
+	master := httptest.NewServer(mux)
+	defer master.Close()
+
+	plugin := &SeaweedFS{
+		Servers: []string{master.URL},
+		Log:     testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Gather(&acc))
+	require.Empty(t, acc.Errors)
+
+	// 5 + 6 files in total, not 2*(5+6): the same volume ID is one volume
+	acc.AssertContainsTaggedFields(t,
+		"seaweedfs_collection",
+		map[string]any{
+			"file_count":   int64(11),
+			"delete_count": int64(0),
+		},
+		map[string]string{
+			"server":     master.URL,
+			"collection": "lab",
+		},
+	)
+
+	// Both replicas are reachable, so both report their slots
+	acc.AssertContainsTaggedFields(t,
+		"seaweedfs_volume_server",
+		map[string]any{
+			"ec_shard_count":    int64(0),
+			"free_volume_slots": int64(48),
+			"disk_count":        int64(1),
+		},
+		map[string]string{
+			"server":     first.URL,
+			"datacenter": "dc1",
+			"rack":       "rack1",
+		},
 	)
 }
 
@@ -442,9 +492,7 @@ func TestGatherVolumeServerError(t *testing.T) {
 	acc.AssertContainsTaggedFields(t,
 		"seaweedfs_volume_server",
 		map[string]any{
-			"volume_count":      int64(14),
 			"ec_shard_count":    int64(0),
-			"max_volume_slots":  int64(35),
 			"free_volume_slots": int64(21),
 			"disk_count":        int64(0),
 		},
@@ -478,8 +526,8 @@ func TestGatherMasterError(t *testing.T) {
 	require.Empty(t, acc.Metrics)
 }
 
-// TestGatherTopologyError tests that the leader state is reported even if the
-// topology cannot be read.
+// TestGatherTopologyError tests that nothing is reported if the topology cannot
+// be read.
 func TestGatherTopologyError(t *testing.T) {
 	cluster := newTestCluster(t)
 	cluster.failDirStatus = true
@@ -495,10 +543,7 @@ func TestGatherTopologyError(t *testing.T) {
 
 	require.Len(t, acc.Errors, 1)
 	require.ErrorContains(t, acc.Errors[0], "reading topology")
-
-	// Only the master metric was added
-	require.Len(t, acc.Metrics, 1)
-	require.Equal(t, "seaweedfs_master", acc.Metrics[0].Measurement)
+	require.Empty(t, acc.Metrics)
 }
 
 // TestGatherInvalidJSON tests that a malformed reply is reported as an error.
@@ -536,10 +581,15 @@ func TestGatherAddressWithoutScheme(t *testing.T) {
 	require.Empty(t, acc.Errors)
 
 	acc.AssertContainsTaggedFields(t,
-		"seaweedfs_master",
+		"seaweedfs_cluster",
 		map[string]any{
-			"is_leader":     true,
-			"max_volume_id": int64(14),
+			"max_volume_id":       int64(14),
+			"ec_shard_count":      int64(0),
+			"free_volume_slots":   int64(21),
+			"volume_server_count": int64(1),
+			"data_center_count":   int64(1),
+			"rack_count":          int64(1),
+			"volume_layout_count": int64(2),
 		},
 		map[string]string{"server": cluster.server.URL},
 	)
@@ -588,40 +638,60 @@ func TestFreeVolumeSlots(t *testing.T) {
 	}
 }
 
-// TestMergeCollections tests the merge of the per-server collection statistics.
-func TestMergeCollections(t *testing.T) {
-	first := map[string]*collectionStats{
-		"lab": {volumeCount: 2, readonlyVolumeCount: 1, sizeBytes: 100, fileCount: 10},
+// TestMergeVolumes tests that replicas are collapsed into one volume.
+func TestMergeVolumes(t *testing.T) {
+	first := []volumeRecord{
+		{collection: "lab", info: volumeInfo{ID: 1, FileCount: 5}},
+		{collection: "lab", info: volumeInfo{ID: 2, FileCount: 6}},
 	}
-	second := map[string]*collectionStats{
-		"lab":     {volumeCount: 3, sizeBytes: 50, fileCount: 5, deleteCount: 1},
-		"default": {volumeCount: 1, sizeBytes: 7},
+	second := []volumeRecord{
+		{collection: "lab", info: volumeInfo{ID: 1, FileCount: 5}},
+		{collection: "lab", info: volumeInfo{ID: 3, FileCount: 7}},
 	}
 
-	merged := mergeCollections([]map[string]*collectionStats{first, second, nil})
-	require.Len(t, merged, 2)
-	require.Equal(t, &collectionStats{
-		volumeCount:         5,
-		readonlyVolumeCount: 1,
-		sizeBytes:           150,
-		fileCount:           15,
-		deleteCount:         1,
-	}, merged["lab"])
-	require.Equal(t, &collectionStats{volumeCount: 1, sizeBytes: 7}, merged["default"])
+	merged := mergeVolumes([][]volumeRecord{first, second, nil})
+	require.Len(t, merged, 3)
+
+	ids := make(map[uint32]struct{}, len(merged))
+	for _, record := range merged {
+		ids[record.info.ID] = struct{}{}
+	}
+	for _, id := range []uint32{1, 2, 3} {
+		_, found := ids[id]
+		require.True(t, found, "volume %d missing", id)
+	}
 }
 
-// TestCollectionStatsAdd tests the accumulation of a single volume.
-func TestCollectionStatsAdd(t *testing.T) {
-	stats := &collectionStats{}
-	stats.add(volumeInfo{Size: 10, FileCount: 2, DeleteCount: 1, DeletedByteCount: 3})
-	stats.add(volumeInfo{Size: 5, FileCount: 1, ReadOnly: true})
+// TestEmitCollections tests the aggregation of the collection counts.
+func TestEmitCollections(t *testing.T) {
+	records := []volumeRecord{
+		{collection: "lab", info: volumeInfo{ID: 1, FileCount: 10, DeleteCount: 2}},
+		{collection: "lab", info: volumeInfo{ID: 2, FileCount: 5, DeleteCount: 1}},
+		{collection: "default", info: volumeInfo{ID: 3, FileCount: 7}},
+	}
 
-	require.Equal(t, int64(2), stats.volumeCount)
-	require.Equal(t, int64(1), stats.readonlyVolumeCount)
-	require.Equal(t, int64(15), stats.sizeBytes)
-	require.Equal(t, int64(3), stats.fileCount)
-	require.Equal(t, int64(1), stats.deleteCount)
-	require.Equal(t, int64(3), stats.deletedBytes)
+	var acc testutil.Accumulator
+	emitCollections(&acc, "http://master:9333", records)
+
+	acc.AssertContainsTaggedFields(t,
+		"seaweedfs_collection",
+		map[string]any{"file_count": int64(15), "delete_count": int64(3)},
+		map[string]string{"server": "http://master:9333", "collection": "lab"},
+	)
+	acc.AssertContainsTaggedFields(t,
+		"seaweedfs_collection",
+		map[string]any{"file_count": int64(7), "delete_count": int64(0)},
+		map[string]string{"server": "http://master:9333", "collection": "default"},
+	)
+}
+
+// TestSampleConfig tests that the sample configuration matches the plugin
+// options. It fails on unknown or removed keys, e.g. a renamed option that was
+// not updated in the sample.
+func TestSampleConfig(t *testing.T) {
+	cfg := config.NewConfig()
+	require.NoError(t, cfg.LoadConfigData([]byte(sampleConfig), config.EmptySourcePath))
+	require.Len(t, cfg.Inputs, 1)
 }
 
 // TestRegistration tests that the plugin is registered.
