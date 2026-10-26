@@ -3,14 +3,19 @@ package prometheusremotewrite
 import (
 	"bytes"
 	"fmt"
+	"io"
+	"net/http"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/golang/snappy"
+	"github.com/prometheus/client_golang/api"
+	apiv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/prompb"
 	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
@@ -179,9 +184,6 @@ http_request_duration_seconds_bucket{le="+Inf"} 144320
 				telegraf.Histogram,
 			),
 			expected: []byte(`
-http_request_duration_seconds_count 0
-http_request_duration_seconds_sum 0
-http_request_duration_seconds_bucket{le="+Inf"} 0
 http_request_duration_seconds_bucket{le="0.5"} 129389
 `),
 		},
@@ -971,6 +973,195 @@ func TestRemoteWriteAccumulateSamples(t *testing.T) {
 			require.Equal(t, tt.expected, actual)
 		})
 	}
+}
+
+func TestRemoteWriteHistogramSplitAcrossBatches(t *testing.T) {
+	// A scrape can be cut into several batches by the agent, so the
+	// buckets of a histogram may arrive in a different batch than its
+	// count and sum. The serializer must only write the values it
+	// received and not fill in the rest of the histogram.
+	batches := [][]telegraf.Metric{
+		{
+			metric.New(
+				"prometheus",
+				map[string]string{"handler": "x"},
+				map[string]any{
+					"http_request_duration_seconds_count": 6.0,
+					"http_request_duration_seconds_sum":   0.114,
+				},
+				time.Unix(1, 0),
+				telegraf.Histogram,
+			),
+			metric.New(
+				"prometheus",
+				map[string]string{"handler": "x", "le": "0.1"},
+				map[string]any{"http_request_duration_seconds_bucket": 6.0},
+				time.Unix(1, 0),
+				telegraf.Histogram,
+			),
+		},
+		{
+			metric.New(
+				"prometheus",
+				map[string]string{"handler": "x", "le": "+Inf"},
+				map[string]any{"http_request_duration_seconds_bucket": 6.0},
+				time.Unix(1, 0),
+				telegraf.Histogram,
+			),
+		},
+	}
+	expected := [][]prompb.TimeSeries{
+		{
+			{
+				Labels: []prompb.Label{
+					{Name: "__name__", Value: "http_request_duration_seconds_count"},
+					{Name: "handler", Value: "x"},
+				},
+				Samples: []prompb.Sample{{Value: 6, Timestamp: 1000}},
+			},
+			{
+				Labels: []prompb.Label{
+					{Name: "__name__", Value: "http_request_duration_seconds_sum"},
+					{Name: "handler", Value: "x"},
+				},
+				Samples: []prompb.Sample{{Value: 0.114, Timestamp: 1000}},
+			},
+			{
+				Labels: []prompb.Label{
+					{Name: "__name__", Value: "http_request_duration_seconds_bucket"},
+					{Name: "handler", Value: "x"},
+					{Name: "le", Value: "+Inf"},
+				},
+				Samples: []prompb.Sample{{Value: 6, Timestamp: 1000}},
+			},
+			{
+				Labels: []prompb.Label{
+					{Name: "__name__", Value: "http_request_duration_seconds_bucket"},
+					{Name: "handler", Value: "x"},
+					{Name: "le", Value: "0.1"},
+				},
+				Samples: []prompb.Sample{{Value: 6, Timestamp: 1000}},
+			},
+		},
+		{
+			{
+				Labels: []prompb.Label{
+					{Name: "__name__", Value: "http_request_duration_seconds_bucket"},
+					{Name: "handler", Value: "x"},
+					{Name: "le", Value: "+Inf"},
+				},
+				Samples: []prompb.Sample{{Value: 6, Timestamp: 1000}},
+			},
+		},
+	}
+
+	s := &Serializer{
+		Log:         &testutil.CaptureLogger{},
+		SortMetrics: true,
+	}
+	for i, batch := range batches {
+		data, err := s.SerializeBatch(batch)
+		require.NoError(t, err)
+
+		actual, err := prompbToTimeseries(data)
+		require.NoError(t, err)
+		require.Equal(t, expected[i], actual)
+	}
+}
+
+func TestRemoteWriteHistogramSplitAcrossBatchesIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	container := testutil.Container{
+		Image:        "prom/prometheus",
+		ExposedPorts: []string{"9090"},
+		Cmd: []string{
+			"--config.file=/etc/prometheus/prometheus.yml",
+			"--storage.tsdb.path=/prometheus",
+			"--web.enable-remote-write-receiver",
+		},
+		WaitingFor: wait.ForAll(
+			wait.ForMappedPort("9090"),
+			wait.ForLog("Server is ready to receive web requests."),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+	defer container.Terminate()
+	addr := "http://" + container.Address + ":" + container.Ports["9090"]
+
+	// Write a histogram whose +Inf bucket arrives in a second batch, each
+	// batch being a separate remote-write request
+	ts := time.Now()
+	batches := [][]telegraf.Metric{
+		{
+			metric.New(
+				"prometheus",
+				map[string]string{"handler": "x"},
+				map[string]any{
+					"http_request_duration_seconds_count": 6.0,
+					"http_request_duration_seconds_sum":   0.114,
+				},
+				ts,
+				telegraf.Histogram,
+			),
+			metric.New(
+				"prometheus",
+				map[string]string{"handler": "x", "le": "0.1"},
+				map[string]any{"http_request_duration_seconds_bucket": 6.0},
+				ts,
+				telegraf.Histogram,
+			),
+		},
+		{
+			metric.New(
+				"prometheus",
+				map[string]string{"handler": "x", "le": "+Inf"},
+				map[string]any{"http_request_duration_seconds_bucket": 6.0},
+				ts,
+				telegraf.Histogram,
+			),
+		},
+	}
+
+	s := &Serializer{Log: &testutil.CaptureLogger{}}
+	for _, batch := range batches {
+		data, err := s.SerializeBatch(batch)
+		require.NoError(t, err)
+
+		req, err := http.NewRequest(http.MethodPost, addr+"/api/v1/write", bytes.NewBuffer(data))
+		require.NoError(t, err)
+		req.Header.Set("Content-Encoding", "snappy")
+		req.Header.Set("Content-Type", "application/x-protobuf")
+		req.Header.Set("X-Prometheus-Remote-Write-Version", "0.1.0")
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		body, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		require.NoError(t, err)
+		require.Equalf(t, http.StatusNoContent, resp.StatusCode, "write rejected: %s", body)
+	}
+
+	// Every series must hold the value of its own metric
+	client, err := api.NewClient(api.Config{Address: addr})
+	require.NoError(t, err)
+	result, _, err := apiv1.NewAPI(client).Query(t.Context(), `{__name__=~"http_request_duration_seconds_.*"}`, ts)
+	require.NoError(t, err)
+	vector, ok := result.(model.Vector)
+	require.Truef(t, ok, "unexpected result type %T", result)
+
+	expected := map[string]float64{
+		`http_request_duration_seconds_bucket{handler="x", le="+Inf"}`: 6,
+		`http_request_duration_seconds_bucket{handler="x", le="0.1"}`:  6,
+		`http_request_duration_seconds_count{handler="x"}`:             6,
+		`http_request_duration_seconds_sum{handler="x"}`:               0.114,
+	}
+	actual := make(map[string]float64, len(vector))
+	for _, sample := range vector {
+		actual[sample.Metric.String()] = float64(sample.Value)
+	}
+	require.Equal(t, expected, actual)
 }
 
 func TestRemoteWriteAccumulateNativeHistograms(t *testing.T) {
