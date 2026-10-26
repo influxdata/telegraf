@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/common/sudo"
 )
 
 // This is here so we can override it during testing
@@ -19,7 +20,7 @@ type scanDevice struct {
 func (s *Smartctl) scan() ([]scanDevice, error) {
 	cmd := execCommand(s.Path, scanArgs...)
 	if s.UseSudo {
-		cmd = execCommand("sudo", append([]string{"-n", s.Path}, scanArgs...)...)
+		cmd = execCommand(sudo.Binary(), append([]string{"-n", s.Path}, scanArgs...)...)
 	}
 	out, err := internal.StdOutputTimeout(cmd, time.Duration(s.Timeout))
 	if err != nil {

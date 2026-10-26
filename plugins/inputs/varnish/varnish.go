@@ -20,6 +20,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/common/sudo"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -83,7 +84,7 @@ func varnishRunner(cmdName string, useSudo bool, cmdArgs []string, timeout confi
 	if useSudo {
 		cmdArgs = append([]string{cmdName}, cmdArgs...)
 		cmdArgs = append([]string{"-n"}, cmdArgs...)
-		cmd = exec.Command("sudo", cmdArgs...)
+		cmd = exec.Command(sudo.Binary(), cmdArgs...)
 	}
 
 	var out bytes.Buffer
