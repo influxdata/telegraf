@@ -366,6 +366,7 @@ func gatherInfoOutput(rdr io.Reader, acc telegraf.Accumulator, tags map[string]s
 
 	scanner := bufio.NewScanner(rdr)
 	fields := make(map[string]any)
+	threads := make(map[string]string)
 	for scanner.Scan() {
 		line := scanner.Text()
 
@@ -431,6 +432,10 @@ func gatherInfoOutput(rdr io.Reader, acc telegraf.Accumulator, tags map[string]s
 				gatherErrorStatsLine(name, kline, acc, tags)
 				continue
 			}
+			if section == "Threads" && strings.HasPrefix(name, "io_thread_") {
+				threads[name] = strings.TrimSpace(parts[1])
+				continue
+			}
 
 			metric = name
 		}
@@ -470,6 +475,12 @@ func gatherInfoOutput(rdr io.Reader, acc telegraf.Accumulator, tags map[string]s
 
 		fields[metric] = val
 	}
+
+	// Threads comes before Replication in INFO, so emit after the loop to get the replication_role tag
+	for name, line := range threads {
+		gatherThreadsLine(name, line, acc, tags)
+	}
+
 	var keyspaceHitrate float64
 	if keyspaceHits != 0 || keyspaceMisses != 0 {
 		keyspaceHitrate = float64(keyspaceHits) / float64(keyspaceHits+keyspaceMisses)
@@ -639,6 +650,32 @@ func gatherErrorStatsLine(name, line string, acc telegraf.Accumulator, globalTag
 
 	fields := map[string]any{"total": ival}
 	acc.AddFields("redis_errorstat", fields, tags)
+}
+
+// Parse the special Threads lines.
+// Example:
+//
+//	io_thread_0:clients=12,reads=1234,writes=5678
+//
+// Tag: io_thread=0; Fields: clients=12i,reads=1234i,writes=5678i
+func gatherThreadsLine(name, line string, acc telegraf.Accumulator, globalTags map[string]string) {
+	fields := make(map[string]any)
+	tags := make(map[string]string, len(globalTags)+1)
+	maps.Copy(tags, globalTags)
+	tags["io_thread"] = strings.TrimPrefix(name, "io_thread_")
+	for part := range strings.SplitSeq(line, ",") {
+		kv := strings.Split(part, "=")
+		if len(kv) != 2 {
+			continue
+		}
+
+		ival, err := strconv.ParseInt(kv[1], 10, 64)
+		if err == nil {
+			fields[kv[0]] = ival
+		}
+	}
+
+	acc.AddFields("redis_io_thread", fields, tags)
 }
 
 func setExistingFieldsFromStruct(fields map[string]any, o *redisFieldTypes) {

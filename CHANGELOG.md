@@ -34,6 +34,11 @@
   `<measurement>-<YYYYMMDDhhmmss>-<uuid>.parquet` and never reuses a file.
   This fixes an edge case where dataloss could occur when auto rotating
   parquet files and multiple writers using the same directory.
+- PR [#19973](https://github.com/influxdata/telegraf/pull/19973) moves the
+  `io_thread_<n>` string fields of the `inputs.redis` `redis` measurement,
+  reported by Redis 8 and later, to the new `redis_io_thread` measurement with
+  an `io_thread` tag and integer `clients`, `reads` and `writes` fields. Please
+  update queries, dashboards and processors using the former string fields.
 
 ## v1.40.2 [2026-10-12]
 
