@@ -153,6 +153,7 @@ func (s *S7comm) Init() error {
 func (s *S7comm) Start(telegraf.Accumulator) error {
 	s.Log.Debugf("Connecting to %q...", s.Server)
 	if err := s.handler.Connect(); err != nil {
+		s.handler.Close()
 		return &internal.StartupError{
 			Err:   fmt.Errorf("connecting to %q failed: %w", s.Server, err),
 			Retry: true,
