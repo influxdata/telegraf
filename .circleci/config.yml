@@ -7,7 +7,7 @@ executors:
   telegraf-ci: &telegraf-ci # YAML anchor lets telegraf-ci-gen2 reuse definition
     working_directory: '/go/src/github.com/influxdata/telegraf'
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.27.2'
+      - image: 'quay.io/influxdb/telegraf-ci:1.27.3'
     environment:
       GOFLAGS: -p=4
     resource_class: large
