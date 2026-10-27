@@ -113,19 +113,34 @@ func (p *Process) cmdStart() error {
 		return fmt.Errorf("error opening stdin pipe: %w", err)
 	}
 
-	p.Stdout, err = p.Cmd.StdoutPipe()
+	// Create the output pipes ourselves instead of using StdoutPipe and
+	// StderrPipe, as Wait closes those before all output is read.
+	stdout, stdoutWriter, err := os.Pipe()
 	if err != nil {
 		return fmt.Errorf("error opening stdout pipe: %w", err)
 	}
-
-	p.Stderr, err = p.Cmd.StderrPipe()
+	stderr, stderrWriter, err := os.Pipe()
 	if err != nil {
+		stdout.Close()
+		stdoutWriter.Close()
 		return fmt.Errorf("error opening stderr pipe: %w", err)
 	}
+	p.Cmd.Stdout = stdoutWriter
+	p.Cmd.Stderr = stderrWriter
+	p.Stdout = stdout
+	p.Stderr = stderr
 
 	p.Log.Infof("Starting process: %s %s", p.name, p.args)
 
-	if err := p.Cmd.Start(); err != nil {
+	err = p.Cmd.Start()
+
+	// The process holds its own copy of the write ends now, close ours so the
+	// readers get EOF when the process exits
+	stdoutWriter.Close()
+	stderrWriter.Close()
+	if err != nil {
+		stdout.Close()
+		stderr.Close()
 		return fmt.Errorf("error starting process: %w", err)
 	}
 	atomic.StoreInt32(&p.pid, int32(p.Cmd.Process.Pid))
@@ -173,11 +188,12 @@ func (p *Process) cmdWait(ctx context.Context) error {
 	processCtx, processCancel := context.WithCancel(context.Background())
 	defer processCancel()
 
-	wg.Go(func() {
+	var readers sync.WaitGroup
+	readers.Go(func() {
 		p.ReadStdoutFn(p.Stdout)
 	})
 
-	wg.Go(func() {
+	readers.Go(func() {
 		p.ReadStderrFn(p.Stderr)
 	})
 
@@ -194,6 +210,23 @@ func (p *Process) cmdWait(ctx context.Context) error {
 	p.Unlock()
 	processCancel()
 	wg.Wait()
+
+	// Let the readers consume everything the process wrote before exiting.
+	// Close the pipes after the grace period in case a child of the process
+	// still holds them open.
+	drained := make(chan struct{})
+	go func() {
+		readers.Wait()
+		close(drained)
+	}()
+	select {
+	case <-drained:
+	case <-time.After(5 * time.Second):
+	}
+	p.Stdout.Close()
+	p.Stderr.Close()
+	<-drained
+
 	return err
 }
 
