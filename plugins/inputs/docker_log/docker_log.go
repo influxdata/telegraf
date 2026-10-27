@@ -325,9 +325,11 @@ func (d *DockerLogs) tailContainerLogs(
 		last, err = tailMultiplexed(acc, tags, cntnr.ID, logReader)
 	}
 	// Record the progress made even if the stream ended with an error to be
-	// able to resume where we left off instead of re-reading the log
+	// able to resume where we left off instead of re-reading the log. Never
+	// store a zero time for streams without any line as the daemon treats it
+	// as no filter and would replay the whole log on the next attempt.
 	d.lastRecordMtx.Lock()
-	if ts, ok := d.lastRecord[cntnr.ID]; !ok || ts.Before(last) {
+	if ts := d.lastRecord[cntnr.ID]; ts.Before(last) {
 		d.lastRecord[cntnr.ID] = last
 	}
 	d.lastRecordMtx.Unlock()
