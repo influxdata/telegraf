@@ -4,7 +4,8 @@ This plugin writes metrics to [parquet][parquet] files. By default, metrics are
 grouped by metric name and written all to the same file.
 
 > [!IMPORTANT]
-> If a metric schema does not match the schema in the file it will be dropped.
+> A parquet file fixes its schema when it is created. When a metric brings a new
+> column, the plugin starts a new file. See [schema changes](#schema-changes).
 
 To lean more about the parquet format, check out the [parquet docs][docs] as
 well as a blog post on [querying parquet][querying].
@@ -30,8 +31,8 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```toml @sample.conf
 # A plugin that writes metrics to parquet files
 [[outputs.parquet]]
-  ## Directory to write parquet files in. If a file already exists the output
-  ## will attempt to continue using the existing file.
+  ## Directory to write parquet files in. Existing files are never modified.
+  ## A new file is created at startup, on rotation, and on schema change.
   # directory = "."
 
   ## Files are rotated after the time interval specified. When set to 0 no time
@@ -54,18 +55,27 @@ based on the union of all fields and tags. If a field and tag have the same name
 then the field takes precedence. Columns are ordered by name, with the
 timestamp column last.
 
-The consequence of schema generation is that the very first flush sequence a
-metric is seen takes much longer due to the additional looping through the
-metrics to generate the schema. Subsequent flush intervals are significantly
-faster.
+Every flush checks its metrics for columns the current file does not have yet.
 
 When writing to a file, the schema is used to look for each value and if it is
-not present a null value is added. The result is that if additional fields are
-present after the first metric flush those fields are omitted.
+not present a null value is added.
 
 The `timestamp_field_name` column holds the metric time, so a field or tag with
 that same name is dropped and logged. Set `timestamp_field_name` to another name
 or rename the field or tag to keep both.
+
+### Schema changes
+
+Since parquet column schemas are set at file creation, a metric that brings a
+new field or tag rotates to a new file with the extra column. Rotation events
+are logged.
+
+While Telegraf runs, columns are only added and never dropped, so a metric
+missing a column writes `null` there. Column types are fixed, so a metric with
+a value that does not fit its column type is rejected.
+
+Files for the same metric can have different columns, so read them by column
+name. For example, use `union_by_name = true` in DuckDB.
 
 ### Write
 

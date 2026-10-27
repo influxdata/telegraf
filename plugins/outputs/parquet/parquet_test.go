@@ -751,3 +751,80 @@ func TestFailedWriterLeavesNoFile(t *testing.T) {
 	require.NoError(t, err)
 	require.Empty(t, entries)
 }
+
+func TestNewColumnStartsANewFile(t *testing.T) {
+	dir := t.TempDir()
+	p := &Parquet{Directory: dir, TimestampFieldName: "timestamp", Log: testutil.Logger{}}
+	require.NoError(t, p.Init())
+
+	require.NoError(t, p.Write([]telegraf.Metric{
+		metric.New("demo", nil, map[string]any{"a": int64(1)}, time.Now()),
+	}))
+	require.NoError(t, p.Write([]telegraf.Metric{
+		metric.New("demo", nil, map[string]any{"a": int64(2), "b": int64(3)}, time.Now()),
+	}))
+	require.NoError(t, p.Close())
+
+	written, err := filepath.Glob(filepath.Join(dir, "*.parquet"))
+	require.NoError(t, err)
+	require.Len(t, written, 2)
+
+	schemas := make([][]string, 0, len(written))
+	for _, name := range written {
+		schemas = append(schemas, columnNames(t, name))
+	}
+	require.ElementsMatch(t, [][]string{{"a", "timestamp"}, {"a", "b", "timestamp"}}, schemas)
+}
+
+func TestMissingColumnKeepsTheSameFile(t *testing.T) {
+	dir := t.TempDir()
+	p := &Parquet{Directory: dir, TimestampFieldName: "timestamp", Log: testutil.Logger{}}
+	require.NoError(t, p.Init())
+
+	require.NoError(t, p.Write([]telegraf.Metric{
+		metric.New("demo", nil, map[string]any{"a": int64(1), "b": int64(2)}, time.Now()),
+	}))
+	require.NoError(t, p.Write([]telegraf.Metric{
+		metric.New("demo", nil, map[string]any{"a": int64(3)}, time.Now()),
+	}))
+	require.NoError(t, p.Close())
+
+	written, err := filepath.Glob(filepath.Join(dir, "*.parquet"))
+	require.NoError(t, err)
+	require.Len(t, written, 1)
+	require.Equal(t, []string{"a", "b", "timestamp"}, columnNames(t, written[0]))
+}
+
+func TestFieldNamedLikeTheTimestampKeepsTheSameFile(t *testing.T) {
+	dir := t.TempDir()
+	p := &Parquet{Directory: dir, TimestampFieldName: "timestamp", Log: testutil.Logger{}}
+	require.NoError(t, p.Init())
+
+	require.NoError(t, p.Write([]telegraf.Metric{
+		metric.New("demo", nil, map[string]any{"a": int64(1)}, time.Now()),
+	}))
+	require.NoError(t, p.Write([]telegraf.Metric{
+		metric.New("demo", nil, map[string]any{"a": int64(2), "timestamp": "x"}, time.Now()),
+	}))
+	require.NoError(t, p.Close())
+
+	written, err := filepath.Glob(filepath.Join(dir, "*.parquet"))
+	require.NoError(t, err)
+	require.Len(t, written, 1)
+}
+
+func columnNames(t *testing.T, path string) []string {
+	t.Helper()
+
+	reader, err := file.OpenParquetFile(path, false)
+	require.NoError(t, err)
+	defer reader.Close()
+
+	schema := reader.MetaData().Schema
+	names := make([]string, 0, schema.NumColumns())
+	for i := 0; i < schema.NumColumns(); i++ {
+		names = append(names, schema.Column(i).Name())
+	}
+
+	return names
+}
