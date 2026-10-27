@@ -93,16 +93,16 @@ func (*Parquet) Connect() error {
 }
 
 func (p *Parquet) Close() error {
-	if p.root != nil {
-		p.root.Close()
-	}
-
 	var errorOccurred bool
 	for _, metrics := range p.metricGroups {
 		if err := metrics.writer.Close(); err != nil {
 			p.Log.Errorf("failed to close file %q: %v", metrics.filename, err)
 			errorOccurred = true
 		}
+	}
+
+	if p.root != nil {
+		p.root.Close()
 	}
 
 	if errorOccurred {
@@ -461,7 +461,11 @@ func (p *Parquet) createWriter(name, filename string, schema *arrow.Schema) (*pq
 
 	writer, err := pqarrow.NewFileWriter(schema, file, parquet.NewWriterProperties(), pqarrow.DefaultWriterProps())
 	if err != nil {
-		return nil, fmt.Errorf("failed to create parquet writer for file %q: %w", filename, err)
+		// Do not leave an empty file without a parquet footer behind for readers
+		return nil, errors.Join(
+			fmt.Errorf("failed to create parquet writer for file %q: %w", filename, err),
+			p.root.Remove(filename),
+		)
 	}
 
 	return writer, nil

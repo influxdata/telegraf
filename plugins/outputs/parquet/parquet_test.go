@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/apache/arrow-go/v18/arrow"
 	"github.com/apache/arrow-go/v18/parquet"
 	"github.com/apache/arrow-go/v18/parquet/file"
 	"github.com/stretchr/testify/require"
@@ -707,4 +708,23 @@ func TestColumnsSortedByNameWithTimestampLast(t *testing.T) {
 	require.Equal(t, []string{
 		"host", "region", "usage_idle", "usage_iowait", "usage_steal", "usage_system", "usage_user", "timestamp",
 	}, names)
+}
+
+func TestFailedWriterLeavesNoFile(t *testing.T) {
+	testDir := t.TempDir()
+	plugin := &Parquet{
+		Directory: testDir,
+		Log:       testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+	defer plugin.Close()
+
+	// Parquet has no representation for month intervals, so creating the writer fails
+	schema := arrow.NewSchema([]arrow.Field{{Name: "value", Type: arrow.FixedWidthTypes.MonthInterval}}, nil)
+	_, err := plugin.createWriter("test", "test", schema)
+	require.ErrorContains(t, err, "failed to create parquet writer")
+
+	entries, err := os.ReadDir(testDir)
+	require.NoError(t, err)
+	require.Empty(t, entries)
 }
