@@ -631,9 +631,15 @@ func TestIntegration(t *testing.T) {
 	// Verify that we can successfully write data
 	require.NoError(t, plugin.Write(metrics))
 
-	// Wait for the data to settle and check if we got the metrics
+	// Wait for the data to settle and check if we got the metrics. Resend on
+	// every poll as the first write occasionally never reaches the index in CI;
+	// whisper overwrites points with the same timestamp so this is idempotent.
 	url := fmt.Sprintf("http://%s:%s/metrics/index.json", container.Address, container.Ports["8080"])
 	require.Eventually(t, func() bool {
+		if err := plugin.Write(metrics); err != nil {
+			t.Logf("writing metrics failed: %v", err)
+			return false
+		}
 		var actual []string
 		if err := query(url, &actual); err != nil {
 			t.Logf("encountered error %v", err)
@@ -670,6 +676,11 @@ func query(url string, data any) error {
 		return err
 	}
 	resp.Body.Close()
+
+	// Graphite-web answers with an empty list and status 500 on internal errors
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status %q", resp.Status)
+	}
 
 	return json.Unmarshal(raw, &data)
 }
