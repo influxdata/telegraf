@@ -149,12 +149,12 @@ If you would like to see support for something else here, please open an issue.
 
 ### State persistence
 
-You can access a global `state` dictionary which can be persisted when enabling
-state-persistence in the agent section.
+You can access a script-global `state` dictionary which can be persisted when
+enabling state-persistence in the agent section.
 
 >[!IMPORTANT]
-> Do NOT declare a global `state` variable in your script as this will override
-> the already declared one and the state is NOT persisted!
+> Do NOT declare a script-global `state` variable in your script as this will
+> override the already declared one and the state is NOT persisted!
 
 The types of all keys and values, as well as the insert order of dictionaries,
 are preserved. However, storing and restoring the `state` has the following
