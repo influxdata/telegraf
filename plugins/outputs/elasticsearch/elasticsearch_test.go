@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"net"
 	"net/http"
 	"net/http/httptest"
+	"runtime"
 	"slices"
 	"strings"
 	"sync"
@@ -62,6 +64,36 @@ func TestConnect(t *testing.T) {
 			defer plugin.Close()
 		})
 	}
+}
+
+func TestLocalAddress(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Binding to 127.0.0.2 requires a loopback alias outside of Linux")
+	}
+
+	// Setup a mock Elasticsearch endpoint
+	server := startMockServer(t)
+	defer server.close()
+
+	// Setup plugin
+	plugin := &Elasticsearch{
+		URLs:         []string{"http://" + server.addr()},
+		IndexName:    "test-%Y.%m.%d",
+		LocalAddress: "127.0.0.2",
+		Timeout:      config.Duration(time.Second * 5),
+		Log:          testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+	defer plugin.Close()
+	require.NoError(t, plugin.Write(testutil.MockMetrics()))
+
+	// Check the connection came from the configured local address
+	remotes := server.remoteAddresses()
+	require.NotEmpty(t, remotes)
+	host, _, err := net.SplitHostPort(remotes[0])
+	require.NoError(t, err)
+	require.Equal(t, "127.0.0.2", host)
 }
 
 func TestInitFail(t *testing.T) {
@@ -162,6 +194,15 @@ func TestInitFail(t *testing.T) {
 				Headers:   map[string]any{"X-Invalid": []any{"string-value", 123, "another-string"}},
 			},
 			expected: `header "X-Invalid" contains non-string value in array: 123 with type int`,
+		},
+		{
+			name: "invalid local address",
+			plugin: &Elasticsearch{
+				URLs:         []string{"http://localhost:9200"},
+				IndexName:    "test-%Y.%m.%d",
+				LocalAddress: "::1",
+			},
+			expected: "invalid local address",
 		},
 	}
 
@@ -1045,6 +1086,7 @@ type mockServer struct {
 	server *httptest.Server
 	msgs   []string
 	hdrs   []http.Header
+	addrs  []string
 	sync.Mutex
 }
 
@@ -1080,6 +1122,7 @@ func startMockServer(t *testing.T) *mockServer {
 			s.Lock()
 			s.msgs = append(s.msgs, string(body))
 			s.hdrs = append(s.hdrs, r.Header.Clone())
+			s.addrs = append(s.addrs, r.RemoteAddr)
 			s.Unlock()
 
 			if _, err := w.Write([]byte("{}")); err != nil {
@@ -1115,4 +1158,10 @@ func (s *mockServer) headers() []http.Header {
 	s.Lock()
 	defer s.Unlock()
 	return slices.Clone(s.hdrs)
+}
+
+func (s *mockServer) remoteAddresses() []string {
+	s.Lock()
+	defer s.Unlock()
+	return slices.Clone(s.addrs)
 }
