@@ -305,7 +305,7 @@ require (
 	github.com/abbot/go-http-auth v0.4.0 // indirect
 	github.com/adrg/xdg v0.5.3 // indirect
 	github.com/alecthomas/participle v0.4.1 // indirect
-	github.com/andybalholm/brotli v1.2.6 // indirect
+	github.com/andybalholm/brotli v1.2.7 // indirect
 	github.com/antithesishq/antithesis-sdk-go v0.8.0-default-no-op // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
 	github.com/apache/arrow/go/v15 v15.0.2 // indirect
