@@ -409,12 +409,18 @@ func (p *SQL) sendIndividual(sql string, values []any) error {
 		}
 		stmt, err := tx.Prepare(sql)
 		if err != nil {
+			if errRollback := tx.Rollback(); errRollback != nil {
+				return fmt.Errorf("prepare failed: %w, unable to rollback: %w", err, errRollback)
+			}
 			return fmt.Errorf("prepare failed: %w", err)
 		}
 		defer stmt.Close()
 
 		_, err = stmt.Exec(values...)
 		if err != nil {
+			if errRollback := tx.Rollback(); errRollback != nil {
+				return fmt.Errorf("execution failed: %w, unable to rollback: %w", err, errRollback)
+			}
 			return fmt.Errorf("execution failed: %w", err)
 		}
 		err = tx.Commit()
@@ -439,6 +445,9 @@ func (p *SQL) sendBatch(sql string, values [][]any) error {
 
 	batch, err := tx.Prepare(sql)
 	if err != nil {
+		if errRollback := tx.Rollback(); errRollback != nil {
+			return fmt.Errorf("prepare failed: %w, unable to rollback: %w", err, errRollback)
+		}
 		return fmt.Errorf("prepare failed: %w", err)
 	}
 	defer batch.Close()
