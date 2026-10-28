@@ -305,18 +305,7 @@ func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
 		return fmt.Errorf("checking existence of template %q failed: %w", a.TemplateName, err)
 	}
 
-	templatePattern := a.IndexName
-	if strings.Contains(templatePattern, "%") {
-		templatePattern = templatePattern[0:strings.Index(templatePattern, "%")]
-	}
-	if strings.Contains(templatePattern, "{{") {
-		templatePattern = templatePattern[0:strings.Index(templatePattern, "{{")]
-	}
-	if templatePattern == "" {
-		return errors.New("template cannot be created for dynamic index names without an index prefix")
-	}
-
-	if a.OverwriteTemplate || !templateExists || templatePattern != "" {
+	if a.OverwriteTemplate || !templateExists {
 		// Create an index template
 		tmpl, err := createNewTemplate(a.IndexName, a.IndexTemplate, a.majorReleaseNumber)
 		if err != nil {
