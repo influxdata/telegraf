@@ -19,6 +19,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/common/postgresql"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -28,6 +29,12 @@ var sampleConfig string
 
 // Columns never reported as a field or tag
 var ignoredColumns = map[string]bool{"stats_reset": true}
+
+// Values accepted by numeric_type
+var numericTypes = []string{"string", "float"}
+
+// Column types that string_columns_as_tags turns into tags
+var textTypes = map[string]bool{"TEXT": true, "VARCHAR": true, "BPCHAR": true, "CHAR": true, "NAME": true}
 
 type Postgresql struct {
 	Databases                 []string        `deprecated:"1.22.4;use the sqlquery option to specify database to use"`
@@ -42,7 +49,7 @@ type Postgresql struct {
 	MaxParallelDatabases      int             `toml:"max_parallel_databases"`
 	KeepIdleConnections       bool            `toml:"keep_idle_connections"`
 	StringColumnsAsTags       bool            `toml:"string_columns_as_tags"`
-	NumericAsFloat            bool            `toml:"numeric_as_float"`
+	NumericType               string          `toml:"numeric_type"`
 	Log                       telegraf.Logger `toml:"-"`
 	postgresql.Config
 
@@ -76,7 +83,7 @@ type query struct {
 	Timeout             config.Duration `toml:"timeout"`
 	Role                string          `toml:"role"`
 	StringColumnsAsTags *bool           `toml:"string_columns_as_tags"`
-	NumericAsFloat      *bool           `toml:"numeric_as_float"`
+	NumericType         string          `toml:"numeric_type"`
 
 	additionalTags map[string]bool
 	stringTags     bool
@@ -96,6 +103,8 @@ type resultSet struct {
 	values  []any
 	// numeric names the columns of the NUMERIC type
 	numeric map[string]bool
+	// text names the columns of the text types
+	text map[string]bool
 	// debug tells whether every column value is logged
 	debug bool
 }
@@ -130,6 +139,12 @@ func (p *Postgresql) Init() error {
 	}
 	if p.Role == "" {
 		p.Role = "any"
+	}
+	if p.NumericType == "" {
+		p.NumericType = "string"
+	}
+	if err := choice.Check(p.NumericType, numericTypes); err != nil {
+		return fmt.Errorf("config option 'numeric_type': %w", err)
 	}
 
 	// Compile the database name filters
@@ -184,10 +199,13 @@ func (p *Postgresql) Init() error {
 		if q.StringColumnsAsTags != nil {
 			q.stringTags = *q.StringColumnsAsTags
 		}
-		q.numericFloat = p.NumericAsFloat
-		if q.NumericAsFloat != nil {
-			q.numericFloat = *q.NumericAsFloat
+		if q.NumericType == "" {
+			q.NumericType = p.NumericType
 		}
+		if err := choice.Check(q.NumericType, numericTypes); err != nil {
+			return fmt.Errorf("query %d: config option 'numeric_type': %w", i, err)
+		}
+		q.numericFloat = q.NumericType == "float"
 
 		q.additionalTags = make(map[string]bool)
 		if q.Tagvalue != "" {
@@ -555,9 +573,13 @@ func (p *Postgresql) gatherMetricsFromQuery(
 		return err
 	}
 	numeric := make(map[string]bool, len(columnTypes))
+	text := make(map[string]bool, len(columnTypes))
 	for _, ct := range columnTypes {
-		if ct.DatabaseTypeName() == "NUMERIC" {
+		switch typeName := ct.DatabaseTypeName(); {
+		case typeName == "NUMERIC":
 			numeric[ct.Name()] = true
+		case textTypes[typeName]:
+			text[ct.Name()] = true
 		}
 	}
 
@@ -572,6 +594,7 @@ func (p *Postgresql) gatherMetricsFromQuery(
 		columns: columns,
 		values:  values,
 		numeric: numeric,
+		text:    text,
 		// Logging every value is only done on demand: the arguments of a
 		// disabled Debugf call are still boxed and allocated for every
 		// column of every row
@@ -646,20 +669,16 @@ func (p *Postgresql) accRow(acc telegraf.Accumulator, rs *resultSet, j job, time
 			continue
 		}
 
-		switch v := value.(type) {
-		case []byte:
-			if q.stringTags {
-				tags[col] = string(v)
-			} else {
-				fields[col] = string(v)
-			}
-		case string:
-			if q.stringTags {
+		if q.stringTags && rs.text[col] {
+			if v, err := internal.ToString(value); err == nil {
 				tags[col] = v
-			} else {
-				fields[col] = v
+				continue
 			}
-		default:
+		}
+
+		if v, ok := value.([]byte); ok {
+			fields[col] = string(v)
+		} else {
 			fields[col] = value
 		}
 	}

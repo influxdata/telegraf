@@ -101,12 +101,14 @@ to use them.
   ## max_connections setting of the server.
   # keep_idle_connections = true
 
-  ## Use all string columns as tags instead of fields. Queries may override this.
+  ## Use the columns of the text types (text, varchar, char and name) as tags
+  ## instead of fields. Queries may override this.
   # string_columns_as_tags = false
 
-  ## Convert numeric columns to floating point fields instead of string
-  ## fields. Queries may override this.
-  # numeric_as_float = false
+  ## Field type for columns of the PostgreSQL numeric type, which has more
+  ## precision than a float can hold. Available values are "string" and
+  ## "float". Queries may override this.
+  # numeric_type = "string"
 
   ## Queries to run
   ##
@@ -128,8 +130,8 @@ to use them.
   ## The timeout option limits the runtime of the query and defaults to the
   ## remaining time of the collection cycle.
   ##
-  ## The role, string_columns_as_tags and numeric_as_float options override
-  ## the plugin-level settings for this query.
+  ## The role, string_columns_as_tags and numeric_type options override the
+  ## plugin-level settings for this query.
   [[inputs.postgresql_extensible.query]]
     measurement = "pg_stat_database"
     sqlquery = "SELECT * FROM pg_stat_database"
@@ -138,7 +140,7 @@ to use them.
     # timeout = "10s"
     # role = "any"
     # string_columns_as_tags = false
-    # numeric_as_float = false
+    # numeric_type = "string"
   [[inputs.postgresql_extensible.query]]
     script = "your_sql-filepath.sql"
     min_version = 901
@@ -446,10 +448,11 @@ By default, the following format will be used
       column if present
     * server - the sanitized connection address
     * all columns listed in `tagvalue`
-    * all string columns if `string_columns_as_tags` is set
+    * all columns of the `text`, `varchar`, `char` and `name` types if
+      `string_columns_as_tags` is set
   * fields:
     * all remaining columns; `numeric` columns are converted to floats if
-      `numeric_as_float` is set
+      `numeric_type` is `"float"`
 
 The `stats_reset` column is never reported. To drop further columns use the
 `fieldexclude` and `tagexclude` options every input plugin supports.

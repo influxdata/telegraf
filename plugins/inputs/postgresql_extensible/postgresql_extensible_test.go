@@ -28,7 +28,7 @@ func newPlugin() *Postgresql {
 		MaxIdle:            1,
 		MaxOpen:            1,
 		PreparedStatements: true,
-		NumericAsFloat:     true,
+		NumericType:        "float",
 	}
 }
 
@@ -55,14 +55,14 @@ func TestInitDefaults(t *testing.T) {
 	p = newPlugin()
 	p.Role = "primary"
 	p.StringColumnsAsTags = true
-	p.NumericAsFloat = true
+	p.NumericType = "float"
 	p.Queries = []query{
 		{Sqlquery: "SELECT 1"},
 		{
 			Sqlquery:            "SELECT 2",
 			Role:                "replica",
 			StringColumnsAsTags: new(false),
-			NumericAsFloat:      new(false),
+			NumericType:         "string",
 		},
 	}
 	require.NoError(t, p.Init())
@@ -93,7 +93,7 @@ func TestRegisteredDefaults(t *testing.T) {
 	require.Zero(t, p.MaxConnectionsPerDatabase)
 	require.Zero(t, p.MaxParallelDatabases)
 	require.Empty(t, p.Role)
-	require.False(t, p.NumericAsFloat)
+	require.Empty(t, p.NumericType)
 	require.False(t, p.StringColumnsAsTags)
 	require.True(t, p.KeepIdleConnections)
 	require.True(t, p.PreparedStatements)
@@ -197,6 +197,24 @@ func TestInitErrors(t *testing.T) {
 			expected: `compiling datname_exclude "[a-" failed`,
 		},
 		{
+			name: "invalid numeric type",
+			plugin: func() *Postgresql {
+				p := newPlugin()
+				p.NumericType = "decimal"
+				return p
+			}(),
+			expected: "config option 'numeric_type'",
+		},
+		{
+			name: "invalid query numeric type",
+			plugin: func() *Postgresql {
+				p := newPlugin()
+				p.Queries = []query{{Sqlquery: "SELECT 1", NumericType: "decimal"}}
+				return p
+			}(),
+			expected: "query 0: config option 'numeric_type'",
+		},
+		{
 			name: "missing script",
 			plugin: func() *Postgresql {
 				p := newPlugin()
@@ -286,6 +304,7 @@ func TestAccRow(t *testing.T) {
 		query          query
 		columns        []string
 		numeric        map[string]bool
+		text           map[string]bool
 		values         []any
 		expectedTags   map[string]string
 		expectedFields map[string]any
@@ -347,6 +366,7 @@ func TestAccRow(t *testing.T) {
 			name:    "string columns as tags",
 			query:   query{StringColumnsAsTags: new(true)},
 			columns: []string{"relname", "raw", "count"},
+			text:    map[string]bool{"relname": true, "raw": true},
 			values:  []any{"users", []byte("bytes"), int64(3)},
 			expectedTags: map[string]string{
 				"server":  "server",
@@ -355,6 +375,20 @@ func TestAccRow(t *testing.T) {
 				"raw":     "bytes",
 			},
 			expectedFields: map[string]any{"count": int64(3)},
+		},
+		{
+			name:    "string columns as tags skip numeric columns",
+			query:   query{StringColumnsAsTags: new(true), NumericType: "string"},
+			columns: []string{"relname", "ratio", "uuid"},
+			numeric: map[string]bool{"ratio": true},
+			text:    map[string]bool{"relname": true},
+			values:  []any{"users", "2.5", "a0eebc99"},
+			expectedTags: map[string]string{
+				"server":  "server",
+				"db":      "mydb",
+				"relname": "users",
+			},
+			expectedFields: map[string]any{"ratio": "2.5", "uuid": "a0eebc99"},
 		},
 		{
 			name:    "string columns as fields",
@@ -379,7 +413,7 @@ func TestAccRow(t *testing.T) {
 		},
 		{
 			name:    "numeric as string",
-			query:   query{NumericAsFloat: new(false)},
+			query:   query{NumericType: "string"},
 			columns: []string{"ratio"},
 			numeric: map[string]bool{"ratio": true},
 			values:  []any{"10.5"},
@@ -413,7 +447,7 @@ func TestAccRow(t *testing.T) {
 			var acc testutil.Accumulator
 			j := job{datname: "mydb", query: &p.Queries[0]}
 			now := time.Now()
-			p.accRow(&acc, &resultSet{columns: tt.columns, values: tt.values, numeric: tt.numeric}, j, now)
+			p.accRow(&acc, &resultSet{columns: tt.columns, values: tt.values, numeric: tt.numeric, text: tt.text}, j, now)
 			require.Len(t, acc.Metrics, 1)
 
 			metric := acc.Metrics[0]
@@ -616,7 +650,7 @@ func TestGeneratesMetricsIntegration(t *testing.T) {
 	defer server.stop()
 
 	acc := server.run(t, &Postgresql{
-		NumericAsFloat: true,
+		NumericType: "float",
 		Queries: []query{{
 			Sqlquery:   "SELECT * FROM pg_stat_database WHERE datname = 'postgres'",
 			MinVersion: 901,
@@ -644,7 +678,7 @@ func TestMultipleDatabasesIntegration(t *testing.T) {
 	defer server.stop()
 
 	acc := server.run(t, &Postgresql{
-		NumericAsFloat: true,
+		NumericType:    "float",
 		DatnameInclude: []string{"app_.*", "postgres"},
 		DatnameExclude: []string{"app_2"},
 		Queries: []query{{
@@ -716,7 +750,7 @@ func TestKeepConnectionsIntegration(t *testing.T) {
 				Address:                   config.NewSecret([]byte(server.dsn("postgres", appName))),
 				MaxIdle:                   1,
 				MaxOpen:                   1,
-				NumericAsFloat:            true,
+				NumericType:               "float",
 				MaxConnectionsPerDatabase: tt.perDB,
 				MaxParallelDatabases:      2,
 				KeepIdleConnections:       tt.keep,
@@ -752,7 +786,7 @@ func TestQueryTimeoutIntegration(t *testing.T) {
 	defer server.stop()
 
 	acc := server.run(t, &Postgresql{
-		NumericAsFloat: true,
+		NumericType: "float",
 		Queries: []query{
 			{Measurement: "slow", Sqlquery: "SELECT pg_sleep(5), 1 AS value", Timeout: config.Duration(500 * time.Millisecond)},
 			{Measurement: "fast", Sqlquery: "SELECT 1 AS value"},
@@ -778,7 +812,7 @@ func TestCachedRoleIntegration(t *testing.T) {
 		Address:                 config.NewSecret([]byte(server.address)),
 		MaxIdle:                 1,
 		MaxOpen:                 1,
-		NumericAsFloat:          true,
+		NumericType:             "float",
 		MetadataRefreshInterval: config.Duration(time.Hour),
 		Queries:                 []query{{Measurement: "primary_only", Sqlquery: "SELECT 1 AS value", Role: "primary"}},
 	}
@@ -813,7 +847,7 @@ func TestRoleFilterIntegration(t *testing.T) {
 
 	// The container is always a primary
 	acc := server.run(t, &Postgresql{
-		NumericAsFloat: true,
+		NumericType: "float",
 		Queries: []query{
 			{Measurement: "primary_only", Sqlquery: "SELECT 1 AS value", Role: "primary"},
 			{Measurement: "replica_only", Sqlquery: "SELECT 1 AS value", Role: "replica"},
@@ -864,7 +898,7 @@ func TestColumnTypesIntegration(t *testing.T) {
 		{
 			name:   "numeric as float",
 			sql:    "SELECT 10.5::numeric AS myvalue",
-			plugin: func(_ *query, p *Postgresql) { p.NumericAsFloat = true },
+			plugin: func(_ *query, p *Postgresql) { p.NumericType = "float" },
 			check: func(t *testing.T, acc *testutil.Accumulator) {
 				v, found := acc.FloatField("postgresql", "myvalue")
 				require.True(t, found)
@@ -875,8 +909,8 @@ func TestColumnTypesIntegration(t *testing.T) {
 			name: "query overrides numeric as float",
 			sql:  "SELECT 10.5::numeric AS myvalue",
 			plugin: func(q *query, p *Postgresql) {
-				p.NumericAsFloat = true
-				q.NumericAsFloat = new(false)
+				p.NumericType = "float"
+				q.NumericType = "string"
 			},
 			check: func(t *testing.T, acc *testutil.Accumulator) {
 				v, found := acc.StringField("postgresql", "myvalue")
@@ -891,6 +925,20 @@ func TestColumnTypesIntegration(t *testing.T) {
 				v, found := acc.StringField("postgresql", "myvalue")
 				require.True(t, found)
 				require.Equal(t, "hello world", v)
+			},
+		},
+		{
+			name: "string columns as tags",
+			sql: "SELECT 'a'::text AS t, 'b'::varchar AS v, 'c'::char(1) AS c, 'd'::name AS n, " +
+				"2 / 0.8 AS ratio, 3 AS count",
+			plugin: func(_ *query, p *Postgresql) { p.StringColumnsAsTags = true },
+			check: func(t *testing.T, acc *testutil.Accumulator) {
+				require.Len(t, acc.Metrics, 1)
+				m := acc.Metrics[0]
+				for k, v := range map[string]string{"t": "a", "v": "b", "c": "c", "n": "d"} {
+					require.Equal(t, v, m.Tags[k], k)
+				}
+				require.Equal(t, map[string]any{"ratio": "2.5000000000000000", "count": int64(3)}, m.Fields)
 			},
 		},
 		{
@@ -1149,7 +1197,7 @@ func TestConnectionLimitsIntegration(t *testing.T) {
 				// connections alone
 				MetadataRefreshInterval:   metadataInterval,
 				KeepIdleConnections:       false,
-				NumericAsFloat:            true,
+				NumericType:               "float",
 				DatnameInclude:            tt.datnameInclude,
 				DatnameExclude:            tt.datnameExclude,
 				MaxParallelDatabases:      tt.parallelDBs,
