@@ -19,6 +19,7 @@ import (
 // Last-Modified header and can fail HEAD requests on demand.
 type remoteConfigServer struct {
 	sync.Mutex
+	t          *testing.T
 	modified   string
 	failHeads  int
 	headsCount int
@@ -44,7 +45,11 @@ func (s *remoteConfigServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Last-Modified", s.modified)
 	w.Header().Set("Content-Type", "text/plain")
 	if r.Method == http.MethodGet {
-		_, _ = w.Write([]byte("[agent]\n"))
+		if _, err := w.Write([]byte("[agent]\n")); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			s.t.Error(err)
+			return
+		}
 	}
 }
 
@@ -86,7 +91,7 @@ func TestWatchRemoteConfigs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			srv := &remoteConfigServer{modified: tt.modified, failHeads: tt.failHeads}
+			srv := &remoteConfigServer{t: t, modified: tt.modified, failHeads: tt.failHeads}
 			ts := httptest.NewServer(srv)
 			defer ts.Close()
 
