@@ -47,10 +47,13 @@ type quantile struct {
 	value    float64
 }
 
+// histogram collects the parts of a classic histogram. The count and sum
+// are nil until a metric carrying them was added, as a batch may contain the
+// buckets only.
 type histogram struct {
 	buckets []bucket
-	count   uint64
-	sum     float64
+	count   *uint64
+	sum     *float64
 }
 
 func (h *histogram) merge(b bucket) {
@@ -63,10 +66,12 @@ func (h *histogram) merge(b bucket) {
 	h.buckets = append(h.buckets, b)
 }
 
+// summary collects the parts of a summary. The count and sum are nil until a
+// metric carrying them was added, as a batch may contain the quantiles only.
 type summary struct {
 	quantiles []quantile
-	count     uint64
-	sum       float64
+	count     *uint64
+	sum       *float64
 }
 
 func (s *summary) merge(q quantile) {
@@ -281,14 +286,14 @@ func (c *Collection) Add(m telegraf.Metric, now time.Time) {
 					continue
 				}
 
-				existingMetric.histogram.sum = sum
+				existingMetric.histogram.sum = &sum
 			case strings.HasSuffix(field.Key, "_count"):
 				count, ok := SampleCount(field.Value)
 				if !ok {
 					continue
 				}
 
-				existingMetric.histogram.count = count
+				existingMetric.histogram.count = &count
 			default:
 				continue
 			}
@@ -313,14 +318,14 @@ func (c *Collection) Add(m telegraf.Metric, now time.Time) {
 					continue
 				}
 
-				existingMetric.summary.sum = sum
+				existingMetric.summary.sum = &sum
 			case strings.HasSuffix(field.Key, "_count"):
 				count, ok := SampleCount(field.Value)
 				if !ok {
 					continue
 				}
 
-				existingMetric.summary.count = count
+				existingMetric.summary.count = &count
 			default:
 				quantileTag, ok := m.GetTag("quantile")
 				if !ok {
@@ -457,6 +462,12 @@ func (c *Collection) GetProto() []*dto.MetricFamily {
 			case telegraf.Untyped:
 				m.Untyped = &dto.Untyped{Value: new(metric.scaler.value)}
 			case telegraf.Histogram:
+				// The exposition format always carries the count and the
+				// sum, so a histogram without them cannot be exported
+				// without inventing values.
+				if metric.histogram.count == nil || metric.histogram.sum == nil {
+					continue
+				}
 				buckets := make([]*dto.Bucket, 0, len(metric.histogram.buckets))
 				for _, bucket := range metric.histogram.buckets {
 					buckets = append(buckets, &dto.Bucket{
@@ -467,10 +478,13 @@ func (c *Collection) GetProto() []*dto.MetricFamily {
 
 				m.Histogram = &dto.Histogram{
 					Bucket:      buckets,
-					SampleCount: new(metric.histogram.count),
-					SampleSum:   new(metric.histogram.sum),
+					SampleCount: metric.histogram.count,
+					SampleSum:   metric.histogram.sum,
 				}
 			case telegraf.Summary:
+				if metric.summary.count == nil || metric.summary.sum == nil {
+					continue
+				}
 				quantiles := make([]*dto.Quantile, 0, len(metric.summary.quantiles))
 				for _, quantile := range metric.summary.quantiles {
 					quantiles = append(quantiles, &dto.Quantile{
@@ -481,8 +495,8 @@ func (c *Collection) GetProto() []*dto.MetricFamily {
 
 				m.Summary = &dto.Summary{
 					Quantile:    quantiles,
-					SampleCount: new(metric.summary.count),
-					SampleSum:   new(metric.summary.sum),
+					SampleCount: metric.summary.count,
+					SampleSum:   metric.summary.sum,
 				}
 			default:
 				panic("unknown telegraf.ValueType")
