@@ -8,6 +8,7 @@ import (
 	"math"
 	"os"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -29,6 +30,9 @@ var sampleConfig string
 
 // Columns never reported as a field or tag
 var ignoredColumns = map[string]bool{"stats_reset": true}
+
+// Values accepted by role
+var roles = []string{"any", "primary", "replica"}
 
 // Values accepted by numeric_type
 var numericTypes = []string{"string", "float"}
@@ -134,11 +138,11 @@ func (p *Postgresql) Init() error {
 	if p.MaxParallelDatabases <= 0 {
 		p.MaxParallelDatabases = 1
 	}
-	if err := validateRole(p.Role); err != nil {
-		return err
-	}
 	if p.Role == "" {
 		p.Role = "any"
+	}
+	if err := choice.Check(p.Role, roles); err != nil {
+		return fmt.Errorf("config option 'role': %w", err)
 	}
 	if p.NumericType == "" {
 		p.NumericType = "string"
@@ -188,11 +192,11 @@ func (p *Postgresql) Init() error {
 				q.Sqlquery += " is not null"
 			}
 		}
-		if err := validateRole(q.Role); err != nil {
-			return fmt.Errorf("query %d: %w", i, err)
-		}
 		if q.Role == "" {
 			q.Role = p.Role
+		}
+		if err := choice.Check(q.Role, roles); err != nil {
+			return fmt.Errorf("query %d: config option 'role': %w", i, err)
 		}
 
 		q.stringTags = p.StringColumnsAsTags
@@ -255,6 +259,10 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	}
 	defer cancel()
 
+	if !p.KeepIdleConnections {
+		defer p.closeIdleConnections()
+	}
+
 	if err := p.refreshMetadata(ctx); err != nil {
 		acc.AddError(err)
 	}
@@ -279,10 +287,6 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	}
 
 	timestamp := time.Now()
-
-	if !p.KeepIdleConnections {
-		defer p.closeIdleConnections()
-	}
 
 	// Determine the databases to run the queries in
 	datnames := []string{p.service.ConnectionDatabase}
@@ -516,8 +520,12 @@ func (p *Postgresql) refreshDatnames(ctx context.Context) error {
 		return fmt.Errorf("reading database list failed: %w", err)
 	}
 
-	if len(datnames) == 0 {
-		p.Log.Warn("No database matches the datname_include/datname_exclude filters")
+	if !slices.Equal(datnames, p.datnames) {
+		if len(datnames) == 0 {
+			p.Log.Warn("No database matches the datname_include/datname_exclude filters")
+		} else {
+			p.Log.Debugf("Databases matching the filters: %s", strings.Join(datnames, ", "))
+		}
 	}
 	p.datnames = datnames
 
@@ -690,15 +698,6 @@ func refreshDue(updated, now time.Time, interval time.Duration) bool {
 		return true
 	}
 	return !now.Before(updated.Truncate(interval).Add(interval))
-}
-
-func validateRole(role string) error {
-	switch role {
-	case "", "any", "primary", "replica":
-		return nil
-	default:
-		return fmt.Errorf("invalid role %q, expected one of \"any\", \"primary\" or \"replica\"", role)
-	}
 }
 
 func matchesVersion(q *query, dbVersion int) bool {

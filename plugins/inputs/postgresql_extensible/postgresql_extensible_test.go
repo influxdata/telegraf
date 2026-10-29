@@ -167,7 +167,7 @@ func TestInitErrors(t *testing.T) {
 				p.Role = "master"
 				return p
 			}(),
-			expected: `invalid role "master"`,
+			expected: "config option 'role': unknown choice master",
 		},
 		{
 			name: "invalid query role",
@@ -176,7 +176,7 @@ func TestInitErrors(t *testing.T) {
 				p.Queries = []query{{Sqlquery: "SELECT 1", Role: "standby"}}
 				return p
 			}(),
-			expected: `query 0: invalid role "standby"`,
+			expected: "query 0: config option 'role': unknown choice standby",
 		},
 		{
 			name: "invalid include regex",
@@ -731,10 +731,14 @@ func TestKeepConnectionsIntegration(t *testing.T) {
 		name     string
 		keep     bool
 		include  []string
+		role     string
 		perDB    int
 		expected int
 	}{
 		{name: "single database closed", keep: false, perDB: 3, expected: 0},
+		// The server is a primary, so no query runs and only the connection
+		// reading the server version and role has to be closed
+		{name: "no query run closed", keep: false, role: "replica", perDB: 3, expected: 0},
 		// The three queries run at the same time on the pool of the address
 		{name: "single database kept", keep: true, perDB: 3, expected: 3},
 		{name: "multiple databases closed", keep: false, include: []string{"app_.*"}, perDB: 3, expected: 0},
@@ -755,6 +759,7 @@ func TestKeepConnectionsIntegration(t *testing.T) {
 				MaxParallelDatabases:      2,
 				KeepIdleConnections:       tt.keep,
 				DatnameInclude:            tt.include,
+				Role:                      tt.role,
 				Queries: []query{
 					{Measurement: "q1", Sqlquery: "SELECT pg_sleep(0.1), 1 AS v"},
 					{Measurement: "q2", Sqlquery: "SELECT pg_sleep(0.1), 2 AS v"},
