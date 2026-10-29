@@ -42,8 +42,10 @@ could help answer your question more quickly.
 
 ### AI Generated Code
 
-We currently cannot accept AI generated code contributions. Code contributed
-should be your own per the CLA.
+We accept AI generated code that follows the
+[InfluxData Policy on AI-Generated Code Contributions][ai policy]. You must
+understand and test every change you submit, and be ready to explain how you
+checked it.
 
 ### Creating a pull request
 
@@ -153,6 +155,7 @@ make test-all
 - [Code of Conduct][code of conduct]
 
 [cla]: https://www.influxdata.com/legal/cla/
+[ai policy]: https://www.influxdata.com/ai-generated-code-contributions-policy
 [new issue]: https://github.com/influxdata/telegraf/issues/new/choose
 [pull request]: https://github.com/influxdata/telegraf/compare
 [inputs]: /docs/INPUTS.md
