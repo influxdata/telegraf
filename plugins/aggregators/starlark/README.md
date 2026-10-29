@@ -124,7 +124,7 @@ about the Starlark processor.
 
 ### State persistence
 
-Refer to the section [Libraries available][processor_state] of the documentation
+Refer to the section [State persistence][processor_state] of the documentation
 about the Starlark processor.
 
 [processor_state]: /plugins/processors/starlark/README.md#state-persistence
