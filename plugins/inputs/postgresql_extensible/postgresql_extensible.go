@@ -530,7 +530,7 @@ func (p *Postgresql) refreshDatnames(ctx context.Context) error {
 		return fmt.Errorf("reading database list failed: %w", err)
 	}
 
-	if !slices.Equal(datnames, p.datnames) {
+	if p.metadataUpdated.IsZero() || !slices.Equal(datnames, p.datnames) {
 		if len(datnames) == 0 {
 			p.Log.Warn("No database matches the datname_include/datname_exclude filters")
 		} else {
