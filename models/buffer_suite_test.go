@@ -934,6 +934,33 @@ func (s *BufferSuiteTest) TestPartialWriteBackToFront() {
 	s.Equal(int64(0), buf.Stats().MetricsDropped.Get(), "metrics dropped")
 }
 
+func (s *BufferSuiteTest) TestPartialWriteFrontAndGaps() {
+	buf := s.newTestBuffer(6)
+	defer buf.Close()
+
+	metrics := make([]telegraf.Metric, 0, 6)
+	for i := range 6 {
+		metrics = append(metrics, metric.New("cpu", map[string]string{}, map[string]any{"value": i}, time.Unix(0, 0)))
+	}
+	buf.Add(metrics...)
+
+	// Accept the first metric and two later ones, keep the others
+	tx := buf.BeginTransaction(6)
+	s.Len(tx.Batch, 6)
+	tx.Accept = []int{0, 2, 4}
+	buf.EndTransaction(tx)
+	s.Equal(3, buf.Len())
+
+	// The next batch must contain exactly the metrics that were not accepted
+	tx = buf.BeginTransaction(6)
+	testutil.RequireMetricsEqual(s.T(), []telegraf.Metric{metrics[1], metrics[3], metrics[5]}, tx.Batch)
+	tx.AcceptAll()
+	buf.EndTransaction(tx)
+	s.Equal(0, buf.Len())
+
+	s.Equal(int64(6), buf.Stats().MetricsWritten.Get(), "metrics written")
+}
+
 type mockMetric struct {
 	telegraf.Metric
 	AcceptF func()
