@@ -30,6 +30,8 @@ func TestConnect(t *testing.T) {
 		template          string
 		manageTemplate    bool
 		overwriteTemplate bool
+		existingTemplate  bool
+		expectedOverwrite bool
 	}{
 		{
 			name:              "template management",
@@ -37,6 +39,36 @@ func TestConnect(t *testing.T) {
 			template:          "telegraf",
 			manageTemplate:    true,
 			overwriteTemplate: true,
+			expectedOverwrite: true,
+		},
+		{
+			name:              "create non-existing template",
+			index:             "test-%Y.%m.%d",
+			template:          "telegraf",
+			manageTemplate:    true,
+			expectedOverwrite: true,
+		},
+		{
+			name:              "overwrite existing template",
+			index:             "test-%Y.%m.%d",
+			template:          "telegraf",
+			manageTemplate:    true,
+			overwriteTemplate: true,
+			existingTemplate:  true,
+			expectedOverwrite: true,
+		},
+		{
+			name:             "keep existing template",
+			index:            "test-%Y.%m.%d",
+			template:         "telegraf",
+			manageTemplate:   true,
+			existingTemplate: true,
+		},
+		{
+			name:             "no template management",
+			index:            "test-%Y.%m.%d",
+			template:         "telegraf",
+			existingTemplate: true,
 		},
 	}
 
@@ -45,6 +77,12 @@ func TestConnect(t *testing.T) {
 			// Setup a mock Elasticsearch endpoint
 			server := startMockServer(t)
 			defer server.close()
+
+			// Pre-populate the template if requested
+			const existing = `{"existing": true}`
+			if tt.existingTemplate {
+				server.setTemplate(tt.template, existing)
+			}
 
 			// Setup plugin
 			plugin := &Elasticsearch{
@@ -60,6 +98,18 @@ func TestConnect(t *testing.T) {
 			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Connect())
 			defer plugin.Close()
+
+			// Check the template state
+			tmpl, found := server.template(tt.template)
+			if tt.expectedOverwrite {
+				require.True(t, found, "template not created")
+				require.NotEqual(t, existing, tmpl, "template not updated")
+			} else {
+				require.Equal(t, tt.existingTemplate, found)
+				if tt.existingTemplate {
+					require.Equal(t, existing, tmpl, "existing template modified")
+				}
+			}
 		})
 	}
 }
@@ -1042,19 +1092,51 @@ func TestWriteIntegration(t *testing.T) {
 }
 
 type mockServer struct {
-	server *httptest.Server
-	msgs   []string
-	hdrs   []http.Header
+	server    *httptest.Server
+	msgs      []string
+	hdrs      []http.Header
+	templates map[string]string
 	sync.Mutex
 }
 
 func startMockServer(t *testing.T) *mockServer {
 	s := &mockServer{
-		msgs: make([]string, 0),
-		hdrs: make([]http.Header, 0),
+		msgs:      make([]string, 0),
+		hdrs:      make([]http.Header, 0),
+		templates: make(map[string]string),
 	}
 
 	s.server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if name, found := strings.CutPrefix(r.URL.Path, "/_template/"); found {
+			switch r.Method {
+			case http.MethodHead:
+				s.Lock()
+				_, exists := s.templates[name]
+				s.Unlock()
+				if !exists {
+					w.WriteHeader(http.StatusNotFound)
+				}
+			case http.MethodPut:
+				body, err := io.ReadAll(r.Body)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
+				s.Lock()
+				s.templates[name] = string(body)
+				s.Unlock()
+				if _, err := w.Write([]byte(`{"acknowledged": true}`)); err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+				}
+			default:
+				w.WriteHeader(http.StatusMethodNotAllowed)
+				t.Errorf("unexpected method %q for template %q", r.Method, name)
+			}
+			return
+		}
+
 		switch r.URL.Path {
 		case "/_bulk":
 			// The request body is compressed if the plugin is configured to use
@@ -1115,4 +1197,17 @@ func (s *mockServer) headers() []http.Header {
 	s.Lock()
 	defer s.Unlock()
 	return slices.Clone(s.hdrs)
+}
+
+func (s *mockServer) setTemplate(name, body string) {
+	s.Lock()
+	defer s.Unlock()
+	s.templates[name] = body
+}
+
+func (s *mockServer) template(name string) (string, bool) {
+	s.Lock()
+	defer s.Unlock()
+	body, found := s.templates[name]
+	return body, found
 }

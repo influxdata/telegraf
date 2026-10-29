@@ -880,5 +880,5 @@ specified configuration. There is no predefined metric format.
 ## Example Output
 
 ```text
-modbus,name=device,slave_id=1,type=holding_register energy=3254.5,power=23.5,frequency=49,97 1701777274026591864
+modbus,name=device,slave_id=1,type=holding_register energy=3254.5,power=23.5,frequency=49.97 1701777274026591864
 ```

@@ -228,17 +228,42 @@ func TestCases(t *testing.T) {
 	}
 }
 
-func TestAgent_SkipProcessorsAfterAggregatorsDefaultsFalse(t *testing.T) {
-	c := config.NewConfig()
-	c.Agent.OmitHostname = true
+func TestSkipProcessorsAfterAggregatorsDefault(t *testing.T) {
+	tests := []struct {
+		name              string
+		skipBefore        bool
+		skipAfter         *bool
+		expectedSkipAfter bool
+	}{
+		{
+			name:              "skip after aggregators by default",
+			skipBefore:        false,
+			expectedSkipAfter: true,
+		},
+		{
+			name:              "run after aggregators when skipping before",
+			skipBefore:        true,
+			expectedSkipAfter: false,
+		},
+		{
+			name:              "explicit setting is kept",
+			skipBefore:        true,
+			skipAfter:         new(true),
+			expectedSkipAfter: true,
+		},
+	}
 
-	a := NewAgent(c)
-	ctx, cancel := context.WithTimeout(t.Context(), 1*time.Second)
-	defer cancel()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := config.NewConfig()
+			c.Agent.SkipProcessorsBeforeAggregators = tt.skipBefore
+			c.Agent.SkipProcessorsAfterAggregators = tt.skipAfter
 
-	require.NoError(t, a.Run(ctx))
-	require.NotNil(t, c.Agent.SkipProcessorsAfterAggregators)
-	require.False(t, *c.Agent.SkipProcessorsAfterAggregators)
+			NewAgent(c)
+			require.NotNil(t, c.Agent.SkipProcessorsAfterAggregators)
+			require.Equal(t, tt.expectedSkipAfter, *c.Agent.SkipProcessorsAfterAggregators)
+		})
+	}
 }
 
 // Implement a "test-mode" like call but collect the metrics
