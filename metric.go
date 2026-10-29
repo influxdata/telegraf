@@ -97,7 +97,8 @@ type Metric interface {
 	HasField(key string) bool
 
 	// AddField sets the field on the Metric.  If the Metric already has the field
-	// set then the current value is replaced.
+	// set then the current value is replaced.  A value that cannot be stored as a
+	// field is ignored, the same as in metric.New.
 	AddField(key string, value any)
 
 	// RemoveField removes the field if it is set.
