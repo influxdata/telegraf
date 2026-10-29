@@ -303,6 +303,44 @@ func TestStatePersistenceMux(t *testing.T) {
 	require.Equal(t, ts.UTC(), state[id])
 }
 
+func TestStatePersistenceEmptyLog(t *testing.T) {
+	id := "1234567890"
+	server := &mock.Server{
+		Inspect: map[string]container.InspectResponse{id: {Config: &container.Config{Tty: true}}},
+		List: []container.Summary{{
+			ID:    id,
+			Names: []string{"/" + id},
+			Image: "influxdata/telegraf:1.11.0",
+			State: "running",
+		}},
+		Logs: map[string]mock.Logs{id: {}},
+	}
+	addr := server.Start(t)
+	defer server.Close()
+
+	plugin := &DockerLogs{
+		Endpoint: addr,
+		Timeout:  config.Duration(time.Second * 5),
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	// Wait for the stream to end without any line
+	require.NoError(t, plugin.Gather(&acc))
+	require.Eventually(t, func() bool {
+		plugin.mu.Lock()
+		defer plugin.mu.Unlock()
+		return len(plugin.containerList) == 0
+	}, 5*time.Second, 50*time.Millisecond)
+	require.Empty(t, acc.Errors)
+
+	// A zero timestamp must not be recorded as it would replay the whole log
+	require.Empty(t, plugin.GetState())
+}
+
 func TestGatherLegacyAPIVersion(t *testing.T) {
 	server := &mock.Server{
 		APIVersion: "1.39",
