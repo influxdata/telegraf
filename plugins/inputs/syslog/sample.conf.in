@@ -26,6 +26,12 @@
   ## By default best effort parsing is off.
   # best_effort = false
 
+  ## Accept CR and LF characters within the message body of an RFC3164 datagram
+  ## (default = false -- CR and LF characters generate an error)
+  ## Some outputs require additional processing as they do not handle embedded newlines
+  ## (for example influxdb v1)
+  # embedded_newlines = false
+
   ## The RFC standard to use for message parsing
   ## By default RFC5424 is used. RFC3164 only supports UDP transport (no streaming support)
   ## Must be one of "RFC5424", or "RFC3164".
