@@ -700,11 +700,123 @@ func TestRunningOutputNoRetriggerOnSuccessfulPartialWriteError(t *testing.T) {
 	cancel()
 	wg.Wait()
 
-	// Check for writing errors and make sure all metrics were written,
-	// including the ones added while writing took place
-	require.Equal(t, errCount.Load(), plugin.writes.Load())
-	require.Equal(t, triggerCount.Load(), plugin.writes.Load())
+	// Every batch is fully accepted or rejected, so a single trigger drains
+	// all batches and returns one combined error
+	require.Equal(t, uint32(1), triggerCount.Load())
+	require.Equal(t, uint32(1), errCount.Load())
 	require.Equal(t, batchCount, int(plugin.writes.Load()))
+}
+
+func TestRunningOutputWriteContinuesAfterRejectedBatch(t *testing.T) {
+	var calls int
+	plugin := &mockOutput{
+		preWriteHook: func(m []telegraf.Metric) error {
+			calls++
+			if calls > 1 {
+				return nil
+			}
+			reject := make([]int, 0, len(m))
+			for i := range m {
+				reject = append(reject, i)
+			}
+			return &internal.PartialWriteError{
+				Err:           errors.New("too old"),
+				MetricsReject: reject,
+			}
+		},
+	}
+	model, err := NewRunningOutput(plugin, &OutputConfig{}, 5, 100)
+	require.NoError(t, err)
+	require.NoError(t, model.Init())
+	require.NoError(t, model.Connect())
+	defer model.Close()
+
+	for i := range 15 {
+		model.AddMetric(testutil.TestMetric(i, "test"))
+	}
+
+	// The first batch is rejected, the next two are written in the same call
+	var werr *internal.PartialWriteError
+	require.ErrorAs(t, model.Write(), &werr)
+	require.Equal(t, uint32(3), plugin.writes.Load())
+	require.Len(t, plugin.Metrics(), 10)
+	require.Zero(t, model.buffer.Len())
+	require.False(t, model.lastWriteFailed.Load())
+}
+
+func TestRunningOutputWriteStopsOnKeptMetrics(t *testing.T) {
+	plugin := &mockOutput{
+		preWriteHook: func([]telegraf.Metric) error {
+			return &internal.PartialWriteError{
+				Err:           errors.New("partly failed"),
+				MetricsReject: []int{0},
+			}
+		},
+	}
+	model, err := NewRunningOutput(plugin, &OutputConfig{}, 5, 100)
+	require.NoError(t, err)
+	require.NoError(t, model.Init())
+	require.NoError(t, model.Connect())
+	defer model.Close()
+
+	for i := range 15 {
+		model.AddMetric(testutil.TestMetric(i, "test"))
+	}
+
+	// Metrics kept for retry stop the loop after the first batch
+	require.Error(t, model.Write())
+	require.Equal(t, uint32(1), plugin.writes.Load())
+	require.Equal(t, 14, model.buffer.Len())
+}
+
+func TestRunningOutputWriteStopsOnError(t *testing.T) {
+	plugin := &mockOutput{
+		batchAcceptSize: -1,
+	}
+	model, err := NewRunningOutput(plugin, &OutputConfig{}, 5, 100)
+	require.NoError(t, err)
+	require.NoError(t, model.Init())
+	require.NoError(t, model.Connect())
+	defer model.Close()
+
+	for i := range 15 {
+		model.AddMetric(testutil.TestMetric(i, "test"))
+	}
+
+	require.EqualError(t, model.Write(), "failed write")
+	require.Equal(t, uint32(1), plugin.writes.Load())
+	require.Equal(t, 15, model.buffer.Len())
+	require.True(t, model.lastWriteFailed.Load())
+}
+
+func TestRunningOutputWriteCombinesErrors(t *testing.T) {
+	plugin := &mockOutput{
+		preWriteHook: func(m []telegraf.Metric) error {
+			reject := make([]int, 0, len(m))
+			for i := range m {
+				reject = append(reject, i)
+			}
+			return &internal.PartialWriteError{
+				Err:           errors.New("too old"),
+				MetricsReject: reject,
+			}
+		},
+	}
+	model, err := NewRunningOutput(plugin, &OutputConfig{}, 5, 100)
+	require.NoError(t, err)
+	require.NoError(t, model.Init())
+	require.NoError(t, model.Connect())
+	defer model.Close()
+
+	for i := range 15 {
+		model.AddMetric(testutil.TestMetric(i, "test"))
+	}
+
+	err = model.Write()
+	require.EqualError(t, err, "3 batches had errors, last: too old")
+	var werr *internal.PartialWriteError
+	require.ErrorAs(t, err, &werr)
+	require.Zero(t, model.buffer.Len())
 }
 
 func TestRunningOutputNoRetriggerOnUnsuccessfulPartialWriteError(t *testing.T) {
