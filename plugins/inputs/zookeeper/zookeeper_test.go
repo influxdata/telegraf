@@ -2,6 +2,7 @@ package zookeeper
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -23,6 +24,27 @@ func TestInit(t *testing.T) {
 	require.Equal(t, config.Duration(5*time.Second), plugin.Timeout)
 
 	require.Nil(t, plugin.tlsConfig)
+}
+
+func TestParseMntrSkipsQuantileLines(t *testing.T) {
+	mntr := "zk_version	3.6.3\n" +
+		"zk_avg_latency	0\n" +
+		"zk_om_commit_process_time_ms{quantile=\"0.5\"}	NaN\n" +
+		"zk_om_commit_process_time_ms{quantile=\"0.9\"}	NaN\n" +
+		"zk_proposal_latency{quantile=\"0.99\"}	66.0\n" +
+		"zk_packets_received	42\n" +
+		"zk_server_state	standalone\n"
+
+	plugin := &Zookeeper{Log: testutil.Logger{}}
+
+	fields, state := plugin.parseMntr(strings.NewReader(mntr))
+
+	require.Equal(t, "standalone", state)
+	require.Equal(t, int64(42), fields["packets_received"])
+	require.Equal(t, int64(0), fields["avg_latency"])
+	require.Equal(t, "3.6.3", fields["version"])
+	require.NotContains(t, fields, "om_commit_process_time_ms")
+	require.NotContains(t, fields, "proposal_latency")
 }
 
 func TestZookeeperGeneratesMetricsIntegration(t *testing.T) {

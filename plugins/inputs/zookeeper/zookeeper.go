@@ -8,6 +8,7 @@ import (
 	"crypto/tls"
 	_ "embed"
 	"fmt"
+	"io"
 	"net"
 	"regexp"
 	"strconv"
@@ -29,6 +30,7 @@ type Zookeeper struct {
 	Servers     []string        `toml:"servers"`
 	Timeout     config.Duration `toml:"timeout"`
 	ParseFloats string          `toml:"parse_floats"`
+	Log         telegraf.Logger `toml:"-"`
 
 	common_tls.ClientConfig
 
@@ -68,7 +70,6 @@ func (z *Zookeeper) Gather(acc telegraf.Accumulator) error {
 }
 
 func (z *Zookeeper) gatherServer(ctx context.Context, address string, acc telegraf.Accumulator) error {
-	var zookeeperState string
 	_, _, err := net.SplitHostPort(address)
 	if err != nil {
 		address = address + ":2181"
@@ -92,20 +93,41 @@ func (z *Zookeeper) gatherServer(ctx context.Context, address string, acc telegr
 		return err
 	}
 	rdr := bufio.NewReader(c)
-	scanner := bufio.NewScanner(rdr)
 
 	service := strings.Split(address, ":")
 	if len(service) != 2 {
 		return fmt.Errorf("invalid service address: %s", address)
 	}
 
+	fields, zookeeperState := z.parseMntr(rdr)
+
+	srv := "localhost"
+	if service[0] != "" {
+		srv = service[0]
+	}
+
+	tags := map[string]string{
+		"server": srv,
+		"port":   service[1],
+		"state":  zookeeperState,
+	}
+	acc.AddFields("zookeeper", fields, tags)
+
+	return nil
+}
+
+func (z *Zookeeper) parseMntr(rdr io.Reader) (map[string]any, string) {
+	var zookeeperState string
 	fields := make(map[string]any)
+
+	scanner := bufio.NewScanner(rdr)
 	for scanner.Scan() {
 		line := scanner.Text()
 		parts := zookeeperFormatRE.FindStringSubmatch(line)
 
 		if len(parts) != 3 {
-			return fmt.Errorf("unexpected line in mntr response: %q", line)
+			z.Log.Debugf("skipping unexpected line in mntr response: %q", line)
+			continue
 		}
 
 		measurement := strings.TrimPrefix(parts[1], "zk_")
@@ -136,19 +158,7 @@ func (z *Zookeeper) gatherServer(ctx context.Context, address string, acc telegr
 		fields[measurement] = sValue
 	}
 
-	srv := "localhost"
-	if service[0] != "" {
-		srv = service[0]
-	}
-
-	tags := map[string]string{
-		"server": srv,
-		"port":   service[1],
-		"state":  zookeeperState,
-	}
-	acc.AddFields("zookeeper", fields, tags)
-
-	return nil
+	return fields, zookeeperState
 }
 
 func (z *Zookeeper) dial(ctx context.Context, addr string) (net.Conn, error) {
