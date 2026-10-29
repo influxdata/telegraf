@@ -1,0 +1,60 @@
+{
+    "Topology": {
+        "Max": 35,
+        "Free": 21,
+        "DataCenters": [
+            {
+                "Id": "DefaultDataCenter",
+                "Racks": [
+                    {
+                        "Id": "DefaultRack",
+                        "DataNodes": [
+                            {
+                                "Url": "seaweedfs-volume-0.seaweedfs-volume.s3:8080",
+                                "PublicUrl": "seaweedfs-volume-0.seaweedfs-volume.s3:8080",
+                                "Volumes": 14,
+                                "EcShards": 0,
+                                "Max": 35,
+                                "VolumeIds": " 1-14"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        "Layouts": [
+            {
+                "replication": "000",
+                "ttl": "",
+                "writables": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7
+                ],
+                "collection": "",
+                "diskType": "hdd"
+            },
+            {
+                "replication": "000",
+                "ttl": "",
+                "writables": [
+                    8,
+                    9,
+                    10,
+                    11,
+                    12,
+                    13,
+                    14
+                ],
+                "collection": "lab",
+                "diskType": "hdd"
+            }
+        ]
+    },
+    "TopologyId": "19bf2227-1303-4b70-b2bc-c0f2546905f4",
+    "Version": "30GB 4.48 530be3e37"
+}

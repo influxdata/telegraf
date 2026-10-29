@@ -1,0 +1,108 @@
+{
+  "DiskStatuses": [
+    {
+      "dir": "/data1",
+      "all": 490164953088,
+      "used": 81732874240,
+      "free": 408432078848,
+      "percent_free": 83.32543,
+      "percent_used": 16.674564
+    },
+    {
+      "dir": "/data2",
+      "all": 490164953088,
+      "used": 81732874240,
+      "free": 408432078848,
+      "percent_free": 42.5,
+      "percent_used": 57.5,
+      "disk_type": "ssd"
+    }
+  ],
+  "Version": "30GB 4.48 530be3e37",
+  "Volumes": [
+    {
+      "Collection": "",
+      "DiskType": "",
+      "RemoteStorageName": "",
+      "ReplicaPlacement": {},
+      "Ttl": {
+        "Count": 0,
+        "Unit": 0
+      },
+      "Size": 3828300,
+      "DeletedByteCount": 0,
+      "ModifiedAtSecond": 1792782250,
+      "Id": 1,
+      "DiskId": 0,
+      "CompactRevision": 0,
+      "FileCount": 6,
+      "DeleteCount": 0,
+      "Version": 3,
+      "ReadOnly": false,
+      "ReadOnlyCanDelete": false
+    },
+    {
+      "Collection": "",
+      "DiskType": "",
+      "RemoteStorageName": "",
+      "ReplicaPlacement": {},
+      "Ttl": {
+        "Count": 0,
+        "Unit": 0
+      },
+      "Size": 7664300,
+      "DeletedByteCount": 0,
+      "ModifiedAtSecond": 1792782190,
+      "Id": 2,
+      "DiskId": 0,
+      "CompactRevision": 0,
+      "FileCount": 12,
+      "DeleteCount": 0,
+      "Version": 3,
+      "ReadOnly": false,
+      "ReadOnlyCanDelete": false
+    },
+    {
+      "Collection": "",
+      "DiskType": "",
+      "RemoteStorageName": "",
+      "ReplicaPlacement": {},
+      "Ttl": {
+        "Count": 0,
+        "Unit": 0
+      },
+      "Size": 8777261,
+      "DeletedByteCount": 0,
+      "ModifiedAtSecond": 1792781950,
+      "Id": 3,
+      "DiskId": 0,
+      "CompactRevision": 0,
+      "FileCount": 16,
+      "DeleteCount": 0,
+      "Version": 3,
+      "ReadOnly": false,
+      "ReadOnlyCanDelete": false
+    },
+    {
+      "Collection": "",
+      "DiskType": "",
+      "RemoteStorageName": "",
+      "ReplicaPlacement": {},
+      "Ttl": {
+        "Count": 0,
+        "Unit": 0
+      },
+      "Size": 6186957,
+      "DeletedByteCount": 0,
+      "ModifiedAtSecond": 1792782130,
+      "Id": 4,
+      "DiskId": 0,
+      "CompactRevision": 0,
+      "FileCount": 10,
+      "DeleteCount": 0,
+      "Version": 3,
+      "ReadOnly": false,
+      "ReadOnlyCanDelete": false
+    }
+  ]
+}
