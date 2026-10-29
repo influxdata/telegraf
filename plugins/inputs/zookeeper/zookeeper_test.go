@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"net"
+	"strings"
 	"testing"
 	"time"
 
@@ -61,6 +62,28 @@ func TestGatherIncompleteResponse(t *testing.T) {
 	var acc testutil.Accumulator
 	require.ErrorContains(t, acc.GatherError(plugin.Gather), "reading mntr response failed")
 	require.Empty(t, acc.GetTelegrafMetrics())
+}
+
+func TestParseMntrSkipsQuantileLines(t *testing.T) {
+	mntr := "zk_version	3.6.3\n" +
+		"zk_avg_latency	0\n" +
+		"zk_om_commit_process_time_ms{quantile=\"0.5\"}	NaN\n" +
+		"zk_om_commit_process_time_ms{quantile=\"0.9\"}	NaN\n" +
+		"zk_proposal_latency{quantile=\"0.99\"}	66.0\n" +
+		"zk_packets_received	42\n" +
+		"zk_server_state	standalone\n"
+
+	plugin := &Zookeeper{Log: testutil.Logger{}}
+
+	fields, state, err := plugin.parseMntr(strings.NewReader(mntr))
+	require.NoError(t, err)
+
+	require.Equal(t, "standalone", state)
+	require.Equal(t, int64(42), fields["packets_received"])
+	require.Equal(t, int64(0), fields["avg_latency"])
+	require.Equal(t, "3.6.3", fields["version"])
+	require.NotContains(t, fields, "om_commit_process_time_ms")
+	require.NotContains(t, fields, "proposal_latency")
 }
 
 func TestZookeeperGeneratesMetricsIntegration(t *testing.T) {
