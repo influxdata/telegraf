@@ -337,23 +337,12 @@ func (r *RunningOutput) Write() error {
 	// because 'doTransaction' will abort early for empty batches.
 	nBuffer := r.buffer.Len()
 	nBatches := nBuffer/r.MetricBatchSize + 1
-	var lastErr error
-	var errCount int
 	for range nBatches {
-		resolved, err := r.doTransaction()
-		if err == nil {
-			continue
-		}
-		errCount++
-		lastErr = err
-		if !resolved {
-			break
+		if err := r.doTransaction(); err != nil {
+			return err
 		}
 	}
-	if errCount > 1 {
-		return fmt.Errorf("%d batches had errors, last: %w", errCount, lastErr)
-	}
-	return lastErr
+	return nil
 }
 
 // WriteBatch writes a single batch of metrics to the output.
@@ -377,27 +366,25 @@ func (r *RunningOutput) WriteBatch() error {
 		r.triggerBatchCheck()
 	}()
 
-	_, err := r.doTransaction()
-	return err
+	return r.doTransaction()
 }
 
-func (r *RunningOutput) doTransaction() (bool, error) {
+func (r *RunningOutput) doTransaction() error {
 	tx := r.buffer.BeginTransaction(r.MetricBatchSize)
 	if len(tx.Batch) == 0 {
-		return true, nil
+		return nil
 	}
 	err := r.writeMetrics(tx.Batch)
 	r.updateTransaction(tx, err)
-	resolved := len(tx.InferKeep()) == 0
 	r.buffer.EndTransaction(tx)
 
 	if err != nil {
 		r.WriteErrors.Incr(1)
 		GlobalWriteErrors.Incr(1)
-		return resolved, err
+		return err
 	}
 
-	return true, nil
+	return nil
 }
 
 func (r *RunningOutput) writeMetrics(metrics []telegraf.Metric) error {
@@ -437,9 +424,9 @@ func (r *RunningOutput) updateTransaction(tx *Transaction, err error) {
 	// Transfer the accepted and rejected indices based on the write error
 	// values. Only allow to retrigger before the flush interval if at least
 	// one metric was accepted in order to avoid
+	r.lastWriteFailed.Store(len(writeErr.MetricsAccept) == 0)
 	tx.Accept = writeErr.MetricsAccept
 	tx.Reject = writeErr.MetricsReject
-	r.lastWriteFailed.Store(len(writeErr.MetricsAccept) == 0 && len(tx.InferKeep()) > 0)
 }
 
 func (r *RunningOutput) LogBufferStatus() {
