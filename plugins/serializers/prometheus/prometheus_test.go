@@ -130,14 +130,9 @@ http_request_duration_seconds_count 144320
 				time.Unix(0, 0),
 				telegraf.Histogram,
 			),
-			expected: []byte(`
-# HELP http_request_duration_seconds Telegraf collected metric
-# TYPE http_request_duration_seconds histogram
-http_request_duration_seconds_bucket{le="0.5"} 129389
-http_request_duration_seconds_bucket{le="+Inf"} 0
-http_request_duration_seconds_sum 0
-http_request_duration_seconds_count 0
-`),
+			// A histogram without count and sum cannot be exported without
+			// inventing values, so nothing is written.
+			expected: []byte(``),
 		},
 		{
 			name: "simple with timestamp",
@@ -742,6 +737,70 @@ cpu_time_user{cpu="cpu3"} 94148
 rpc_duration_seconds_sum 1.7560473e+07
 rpc_duration_seconds_count 2693
 `),
+		},
+		{
+			name: "histogram without count and sum is left out of the batch",
+			metrics: []telegraf.Metric{
+				metric.New(
+					"prometheus",
+					map[string]string{"handler": "complete"},
+					map[string]any{
+						"http_request_duration_seconds_sum":   0.114,
+						"http_request_duration_seconds_count": 6,
+					},
+					time.Unix(0, 0),
+					telegraf.Histogram,
+				),
+				metric.New(
+					"prometheus",
+					map[string]string{"handler": "complete", "le": "+Inf"},
+					map[string]any{
+						"http_request_duration_seconds_bucket": 6.0,
+					},
+					time.Unix(0, 0),
+					telegraf.Histogram,
+				),
+				metric.New(
+					"prometheus",
+					map[string]string{"handler": "split", "le": "0.1"},
+					map[string]any{
+						"http_request_duration_seconds_bucket": 3.0,
+					},
+					time.Unix(0, 0),
+					telegraf.Histogram,
+				),
+				metric.New(
+					"prometheus",
+					map[string]string{"handler": "split", "le": "+Inf"},
+					map[string]any{
+						"http_request_duration_seconds_bucket": 3.0,
+					},
+					time.Unix(0, 0),
+					telegraf.Histogram,
+				),
+			},
+			expected: []byte(`
+# HELP http_request_duration_seconds Telegraf collected metric
+# TYPE http_request_duration_seconds histogram
+http_request_duration_seconds_bucket{handler="complete",le="+Inf"} 6
+http_request_duration_seconds_sum{handler="complete"} 0.114
+http_request_duration_seconds_count{handler="complete"} 6
+`),
+		},
+		{
+			name: "summary without count and sum is left out of the batch",
+			metrics: []telegraf.Metric{
+				metric.New(
+					"prometheus",
+					map[string]string{"quantile": "0.5"},
+					map[string]any{
+						"rpc_duration_seconds": 1.5,
+					},
+					time.Unix(0, 0),
+					telegraf.Summary,
+				),
+			},
+			expected: []byte(``),
 		},
 	}
 	for _, tt := range tests {
