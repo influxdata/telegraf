@@ -782,6 +782,45 @@ func TestKeepConnectionsIntegration(t *testing.T) {
 	}
 }
 
+func TestAddressWithoutDbnameIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	server := startServer(t, "monitor")
+	defer server.stop()
+
+	admin, err := sql.Open("pgx", server.dsn("postgres", ""))
+	require.NoError(t, err)
+	defer admin.Close()
+	_, err = admin.Exec("CREATE ROLE monitor LOGIN")
+	require.NoError(t, err)
+
+	// Without a dbname the server connects to the database named after the
+	// user, so the queries for "postgres" need a pool of their own
+	address := fmt.Sprintf("host=%s port=%s user=monitor sslmode=disable", server.host, server.port)
+	p := &Postgresql{
+		Log:            testutil.Logger{},
+		Address:        config.NewSecret([]byte(address)),
+		MaxIdle:        1,
+		MaxOpen:        1,
+		DatnameInclude: []string{"postgres", "monitor"},
+		Queries:        []query{{Sqlquery: "SELECT current_database() AS current"}},
+	}
+	require.NoError(t, p.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, p.Start(&acc))
+	defer p.Stop()
+	require.NoError(t, p.Gather(&acc))
+	require.Empty(t, acc.Errors)
+
+	require.Len(t, acc.Metrics, 2)
+	for _, m := range acc.Metrics {
+		require.Equal(t, m.Tags["db"], m.Fields["current"])
+	}
+}
+
 func TestQueryTimeoutIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")

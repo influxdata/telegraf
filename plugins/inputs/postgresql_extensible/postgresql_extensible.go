@@ -70,6 +70,7 @@ type Postgresql struct {
 
 	dbVersion       int
 	inRecovery      bool
+	currentDatabase string
 	datnames        []string
 	metadataUpdated time.Time
 }
@@ -118,6 +119,8 @@ type collection struct {
 	queries                []*query
 	timestamp              time.Time
 	connectionsPerDatabase int
+	// connDatname is the database the pool of the address is connected to
+	connDatname string
 	// debug tells whether the connections of this collection are counted
 	// for the debug line at its end
 	debug bool
@@ -290,8 +293,14 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 
 	// Determine the databases to run the queries in
 	datnames := []string{p.service.ConnectionDatabase}
+	connDatname := p.service.ConnectionDatabase
 	if len(p.includeRegex) > 0 || len(p.excludeRegex) > 0 {
 		datnames = p.datnames
+		// Without a dbname in the address the server connects to the database
+		// named after the user, not to the ConnectionDatabase. The single
+		// database mode is excluded here only to keep the behavior of old
+		// configurations.
+		connDatname = p.currentDatabase
 	}
 	if len(datnames) == 0 {
 		return nil
@@ -302,6 +311,7 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	coll := &collection{
 		queries:                queries,
 		timestamp:              timestamp,
+		connDatname:            connDatname,
 		connectionsPerDatabase: p.MaxConnectionsPerDatabase,
 		debug:                  p.Log.Level() >= telegraf.Debug,
 	}
@@ -413,7 +423,7 @@ func (p *Postgresql) poolFor(datname string, connections int) (*postgresql.Servi
 // database uses the pool created at startup, any other database gets one of
 // its own, kept between collections while keep_idle_connections is set.
 func (p *Postgresql) gatherInDatabase(ctx context.Context, acc telegraf.Accumulator, datname string, coll *collection) error {
-	if datname == p.service.ConnectionDatabase {
+	if datname == coll.connDatname {
 		p.gatherDatabase(ctx, acc, p.service, datname, coll)
 		return nil
 	}
@@ -482,8 +492,8 @@ func (p *Postgresql) refreshMetadata(ctx context.Context) error {
 	}
 
 	row := p.service.DB.QueryRowContext(ctx,
-		`SELECT setting::integer / 100, pg_is_in_recovery() FROM pg_settings WHERE name = 'server_version_num'`)
-	if err := row.Scan(&p.dbVersion, &p.inRecovery); err != nil {
+		`SELECT setting::integer / 100, pg_is_in_recovery(), current_database() FROM pg_settings WHERE name = 'server_version_num'`)
+	if err := row.Scan(&p.dbVersion, &p.inRecovery, &p.currentDatabase); err != nil {
 		return fmt.Errorf("querying server version and role failed: %w", err)
 	}
 
