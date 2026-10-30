@@ -288,20 +288,23 @@ func toFields(value starlark.Value) (map[string]any, error) {
 	if value == nil {
 		return nil, nil
 	}
-	items, err := items(value, "The type %T is unsupported as type of collection of fields")
+	items, err := items(value, "type %T is unsupported as type of collection of fields")
 	if err != nil {
 		return nil, err
 	}
 	result := make(map[string]any, len(items))
 	for _, item := range items {
-		key, err := toString(item[0], "The type %T is unsupported as type of key for fields")
-		if err != nil {
-			return nil, err
+		skey, ok := item[0].(starlark.String)
+		if !ok {
+			return nil, fmt.Errorf("type %T is unsupported as type of key for fields", item[0])
 		}
+		key := skey.GoString()
+
 		value, err := asGoValue(item[1])
 		if err != nil {
 			return nil, err
 		}
+
 		result[key] = value
 	}
 	return result, nil

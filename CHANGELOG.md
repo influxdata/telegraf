@@ -46,6 +46,11 @@
   `row_number` tag and, with `include_delete_field` enabled, the `delete`
   field is emitted as a separate metric like for NX-API table rows. Please
   check your metrics and queries for the mentioned data.
+- PR [#19856](https://github.com/influxdata/telegraf/pull/19856) changes the
+  on-disk format for persisted states of `processors.starlark` and
+  `aggregators.starlark`. While states from previous Telegraf versions can still
+  be read, the new state format cannot be used with older Telegraf versions,
+  i.e. you cannot downgrade Telegraf in case you persist starlark states.
 
 ## v1.40.2 [2026-10-12]
 
