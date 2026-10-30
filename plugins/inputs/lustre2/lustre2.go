@@ -76,6 +76,12 @@ func (l *Lustre2) Gather(acc telegraf.Accumulator) error {
 			"/proc/fs/lustre/osd-zfs/*/brw_stats",
 			// eviction count
 			"/sys/fs/lustre/obdfilter/*/eviction_count",
+			// newer Lustre versions (e.g. 2.17) moved the files above to debugfs
+			"/sys/kernel/debug/lustre/obdfilter/*/stats",
+			"/sys/kernel/debug/lustre/osd-ldiskfs/*/stats",
+			"/sys/kernel/debug/lustre/osd-zfs/*/stats",
+			"/sys/kernel/debug/lustre/osd-ldiskfs/*/brw_stats",
+			"/sys/kernel/debug/lustre/osd-zfs/*/brw_stats",
 		}
 	}
 

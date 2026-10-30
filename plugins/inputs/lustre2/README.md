@@ -29,7 +29,9 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 # This plugin ONLY supports Linux
 [[inputs.lustre2]]
   ## An array of /proc globs to search for Lustre stats
-  ## If not specified, the default will work on Lustre 2.12.x
+  ## If not specified, the default will work on Lustre 2.12.x and newer
+  ## versions like 2.17.x, which moved many files to /sys/kernel/debug/lustre
+  ## (usually only readable by root)
   ##
   # mgs_procfiles = [
   #   "/sys/fs/lustre/mgs/*/eviction_count",
@@ -42,6 +44,11 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   #   "/proc/fs/lustre/osd-ldiskfs/*/brw_stats",
   #   "/proc/fs/lustre/osd-zfs/*/brw_stats",
   #   "/sys/fs/lustre/odbfilter/*/eviction_count",
+  #   "/sys/kernel/debug/lustre/obdfilter/*/stats",
+  #   "/sys/kernel/debug/lustre/osd-ldiskfs/*/stats",
+  #   "/sys/kernel/debug/lustre/osd-zfs/*/stats",
+  #   "/sys/kernel/debug/lustre/osd-ldiskfs/*/brw_stats",
+  #   "/sys/kernel/debug/lustre/osd-zfs/*/brw_stats",
   # ]
   # mds_procfiles = [
   #   "/proc/fs/lustre/mdt/*/md_stats",
@@ -56,9 +63,10 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 Newer Lustre versions (e.g. 2.17) moved many statistics files to
 `/sys/kernel/debug/lustre`, e.g. `obdfilter/*/stats`, `osd-*/*/stats`,
 `osd-*/*/brw_stats`, `*/*/exports/*/stats` and the RPC service statistics in
-`ost/OSS/*/stats` or `mds/MDS/*/stats`. Configure these locations explicitly
-in that case. Note that `/sys/kernel/debug` is usually only accessible by
-`root`, so Telegraf must be run with sufficient permissions to read them.
+`ost/OSS/*/stats` or `mds/MDS/*/stats`. The defaults include the new
+locations of the `obdfilter` and `osd-*` statistics, all others have to be
+configured explicitly. Note that `/sys/kernel/debug` is usually only accessible
+by `root`, so Telegraf must be run with sufficient permissions to read them.
 
 ## Metrics
 
