@@ -537,13 +537,12 @@ jobs:
             printf -v payload '{ "pullRequestNumber": "%s" }' "$PR"
             curl -X POST "https://182c7jdgog.execute-api.us-east-1.amazonaws.com/prod/shareArtifacts" --data "$payload"
   package-sign:
-    circleci_ip_ranges: true
     docker:
       - image: quay.io/influxdb/rsign:latest
         auth:
           username: $QUAY_RSIGN_USERNAME
           password: $QUAY_RSIGN_PASSWORD
-    resource_class: medium.gen2
+    resource_class: runner-ns/docker
     steps:
       - add_ssh_keys:
           fingerprints:
