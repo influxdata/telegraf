@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -247,6 +248,13 @@ func (l *Lustre2) getLustreProcStats(fileglob string, wantedFields []*mapping) e
 			continue
 		}
 
+		if rpcStatsDetector.Match(wholeFile) {
+			if err := l.getLustreRPCStats(tags{name: name, client: client}, string(wholeFile)); err != nil {
+				return fmt.Errorf("failed to parse file %s: %w", file, err)
+			}
+			continue
+		}
+
 		for job := range strings.SplitSeq(string(wholeFile), "- ") {
 			lines := strings.Split(job, "\n")
 			jobid := ""
@@ -301,6 +309,45 @@ func (l *Lustre2) getLustreProcStats(fileglob string, wantedFields []*mapping) e
 				}
 			}
 		}
+	}
+	return nil
+}
+
+// rpcStatsDetector matches the statistics of Lustre RPC services and clients, e.g.
+// ost/OSS/*/stats, mds/MDS/*/stats, ldlm/services/*/stats, lwp/*/stats or osp/*/stats
+var rpcStatsDetector = regexp.MustCompile(`(?m)^req_waittime\s`)
+
+// getLustreRPCStats reports all counters of RPC statistics, as the available
+// counters depend on the service and the RPCs it has handled. Counter lines
+// have the format "<counter> <samples> samples [<unit>] <min> <max> <sum> <sumsq>".
+func (l *Lustre2) getLustreRPCStats(t tags, contents string) error {
+	fields, ok := l.allFields[t]
+	if !ok {
+		fields = make(map[string]any)
+		l.allFields[t] = fields
+	}
+
+	for line := range strings.Lines(contents) {
+		parts := strings.Fields(line)
+		if len(parts) < 4 || parts[2] != "samples" {
+			continue
+		}
+
+		samples, err := strconv.ParseUint(parts[1], 10, 64)
+		if err != nil {
+			return fmt.Errorf("failed to parse samples of %s: %w", parts[0], err)
+		}
+		fields[parts[0]+"_samples"] = samples
+
+		// min, max and sum are only reported by counters keeping them
+		if len(parts) < 7 {
+			continue
+		}
+		sum, err := strconv.ParseUint(parts[6], 10, 64)
+		if err != nil {
+			return fmt.Errorf("failed to parse sum of %s: %w", parts[0], err)
+		}
+		fields[parts[0]+"_sum"] = sum
 	}
 	return nil
 }
@@ -479,9 +526,22 @@ var wantedBrwstatsFields = []*mapping{
 		inProc:   "disk I/O size",
 		reportAs: "disk_io_size",
 	},
+	{
+		inProc:   "discontiguous blocks",
+		reportAs: "discontiguous_blocks",
+	},
+	{
+		inProc:   "disk fragmented I/Os",
+		reportAs: "disk_fragmented_ios",
+	},
+	{
+		inProc:   "block maps msec",
+		reportAs: "block_maps_msec",
+	},
 }
 
-var wantedOstFields = []*mapping{
+// Read and write counters of obdfilter/*/stats and, for Data-on-MDT, mdt/*/md_stats
+var wantedReadWriteFields = []*mapping{
 	{
 		inProc:   "write_bytes",
 		field:    6,
@@ -502,6 +562,10 @@ var wantedOstFields = []*mapping{
 		field:    1,
 		reportAs: "read_calls",
 	},
+}
+
+// Counters of osd-ldiskfs/*/stats and osd-zfs/*/stats
+var wantedOsdFields = []*mapping{
 	{
 		inProc: "cache_hit",
 	},
@@ -538,9 +602,27 @@ var wantedOstFields = []*mapping{
 		field:    6,
 		reportAs: "cache_access_pages",
 	},
+	{
+		inProc:   "copy",
+		field:    6,
+		reportAs: "copy_pages",
+	},
+	{
+		inProc:   "zerocopy",
+		field:    6,
+		reportAs: "zerocopy_pages",
+	},
+	{
+		inProc:   "tail",
+		field:    6,
+		reportAs: "tail_pages",
+	},
 }
 
-var wantedOstJobstatsFields = []*mapping{
+var wantedOstFields = slices.Concat(wantedReadWriteFields, wantedOsdFields)
+
+// Read and write counters of obdfilter/*/job_stats and, for Data-on-MDT, mdt/*/job_stats
+var wantedJobstatsReadWriteFields = []*mapping{
 	{ // The read line has several fields, so we need to differentiate what they are
 		inProc:   "read",
 		field:    3,
@@ -665,6 +747,9 @@ var wantedOstJobstatsFields = []*mapping{
 		field:    11,
 		reportAs: "jobstats_write_bytes",
 	},
+}
+
+var wantedOstJobstatsFields = slices.Concat(wantedJobstatsReadWriteFields, []*mapping{
 	{
 		inProc:   "getattr",
 		field:    3,
@@ -715,9 +800,9 @@ var wantedOstJobstatsFields = []*mapping{
 		field:    3,
 		reportAs: "jobstats_quotactl",
 	},
-}
+})
 
-var wantedMdsFields = []*mapping{
+var wantedMdsFields = slices.Concat([]*mapping{
 	{
 		inProc: "open",
 	},
@@ -766,9 +851,21 @@ var wantedMdsFields = []*mapping{
 	{
 		inProc: "crossdir_rename",
 	},
-}
+	{
+		inProc: "parallel_rename_file",
+	},
+	{
+		inProc: "parallel_rename_dir",
+	},
+	{
+		inProc: "rename_trylocks",
+	},
+	{
+		inProc: "punch",
+	},
+}, wantedReadWriteFields, wantedOsdFields)
 
-var wantedMdtJobstatsFields = []*mapping{
+var wantedMdtJobstatsFields = slices.Concat([]*mapping{
 	{
 		inProc:   "open",
 		field:    3,
@@ -849,7 +946,37 @@ var wantedMdtJobstatsFields = []*mapping{
 		field:    3,
 		reportAs: "jobstats_crossdir_rename",
 	},
-}
+	{
+		inProc:   "parallel_rename_file",
+		field:    3,
+		reportAs: "jobstats_parallel_rename_file",
+	},
+	{
+		inProc:   "parallel_rename_dir",
+		field:    3,
+		reportAs: "jobstats_parallel_rename_dir",
+	},
+	{
+		inProc:   "rename_trylocks",
+		field:    3,
+		reportAs: "jobstats_rename_trylocks",
+	},
+	{
+		inProc:   "migrate",
+		field:    3,
+		reportAs: "jobstats_migrate",
+	},
+	{
+		inProc:   "fallocate",
+		field:    3,
+		reportAs: "jobstats_fallocate",
+	},
+	{
+		inProc:   "punch",
+		field:    3,
+		reportAs: "jobstats_punch",
+	},
+}, wantedJobstatsReadWriteFields)
 
 func init() {
 	inputs.Add("lustre2", func() telegraf.Input {
