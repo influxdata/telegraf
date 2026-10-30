@@ -120,6 +120,13 @@ From `/proc/fs/lustre/obdfilter/*/job_stats`:
     - jobstats_write_calls
     - jobstats_write_max_size
     - jobstats_write_min_size
+    - jobstats_read_time (sum of read latencies in microseconds, newer versions)
+    - jobstats_read_min_time (in microseconds, newer versions)
+    - jobstats_read_max_time (in microseconds, newer versions)
+    - jobstats_write_time (sum of write latencies in microseconds, newer
+      versions)
+    - jobstats_write_min_time (in microseconds, newer versions)
+    - jobstats_write_max_time (in microseconds, newer versions)
 
 From `/proc/fs/lustre/mdt/*/md_stats`:
 
