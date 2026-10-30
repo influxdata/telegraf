@@ -1,6 +1,7 @@
 package snmp_trap
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"strconv"
@@ -1296,6 +1297,135 @@ func TestReceiveTrapV3(t *testing.T) {
 
 			// Verify plugin output
 			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+		})
+	}
+}
+
+func TestReceiveInformV3(t *testing.T) {
+	const port = 12399
+
+	plugin := &SnmpTrap{
+		ServiceAddress: "udp://:" + strconv.Itoa(port),
+		Version:        "3",
+		SecName:        config.NewSecret([]byte("franz")),
+		SecLevel:       "authPriv",
+		AuthProtocol:   "sha",
+		AuthPassword:   config.NewSecret([]byte("what a nice day")),
+		PrivProtocol:   "aes",
+		PrivPassword:   config.NewSecret([]byte("for my privacy")),
+		Log:            testutil.Logger{},
+		transl: &testTranslator{entries: []entry{
+			{
+				oid: ".1.3.6.1.6.3.1.1.4.1.0",
+				e:   snmp.MibEntry{MibName: "SNMPv2-MIB", OidText: "snmpTrapOID.0"},
+			},
+			{
+				oid: ".1.3.6.1.6.3.1.1.5.1",
+				e:   snmp.MibEntry{MibName: "SNMPv2-MIB", OidText: "coldStart"},
+			},
+			{
+				oid: ".1.3.6.1.2.1.1.3.0",
+				e:   snmp.MibEntry{MibName: "UNUSED_MIB_NAME", OidText: "sysUpTimeInstance"},
+			},
+		}},
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	// Leave the engine ID empty so the client has to discover it
+	security := createSecurityParameters("sha", "aes", "franz", "for my privacy", "what a nice day")
+	security.AuthoritativeEngineID = ""
+
+	client := &gosnmp.GoSNMP{
+		Port:               port,
+		Version:            gosnmp.Version3,
+		Timeout:            2 * time.Second,
+		Retries:            1,
+		MaxOids:            gosnmp.MaxOids,
+		Target:             "127.0.0.1",
+		SecurityParameters: security,
+		SecurityModel:      gosnmp.UserSecurityModel,
+		MsgFlags:           gosnmp.AuthPriv,
+	}
+	require.NoError(t, client.Connect(), "connecting failed")
+	defer client.Conn.Close()
+	now := uint32(123123123)
+	_, err := client.SendTrap(gosnmp.SnmpTrap{
+		Variables: []gosnmp.SnmpPDU{
+			{
+				Name:  ".1.3.6.1.2.1.1.3.0",
+				Type:  gosnmp.TimeTicks,
+				Value: now,
+			},
+			{
+				Name:  ".1.3.6.1.6.3.1.1.4.1.0", // SNMPv2-MIB::snmpTrapOID.0
+				Type:  gosnmp.ObjectIdentifier,
+				Value: ".1.3.6.1.6.3.1.1.5.1", // coldStart
+			},
+		},
+		IsInform: true,
+	})
+	require.NoError(t, err, "sending inform failed")
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"snmp_trap",
+			map[string]string{
+				"oid":       ".1.3.6.1.6.3.1.1.5.1",
+				"name":      "coldStart",
+				"mib":       "SNMPv2-MIB",
+				"version":   "3",
+				"source":    "127.0.0.1",
+				"engine_id": hex.EncodeToString([]byte(plugin.listener.Params.SecurityParameters.(*gosnmp.UsmSecurityParameters).AuthoritativeEngineID)),
+			},
+			map[string]any{
+				"sysUpTimeInstance": now,
+			},
+			time.Unix(0, 0),
+		),
+	}
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+}
+
+func TestConfiguredEngineID(t *testing.T) {
+	for _, engineID := range []string{"80001f888001020304", "0x80001f888001020304", "0X80001F888001020304"} {
+		t.Run(engineID, func(t *testing.T) {
+			plugin := &SnmpTrap{
+				EngineID: engineID,
+			}
+			id, err := plugin.localEngineID()
+			require.NoError(t, err)
+			require.Equal(t, "\x80\x00\x1f\x88\x80\x01\x02\x03\x04", id)
+		})
+	}
+}
+
+func TestGeneratedEngineID(t *testing.T) {
+	plugin := &SnmpTrap{}
+	first, err := plugin.localEngineID()
+	require.NoError(t, err)
+	second, err := plugin.localEngineID()
+	require.NoError(t, err)
+
+	require.Len(t, first, 13)
+	require.True(t, strings.HasPrefix(first, "\x80\x00\x00\x00\x05"))
+	require.NotEqual(t, first, second)
+}
+
+func TestInvalidEngineID(t *testing.T) {
+	for _, engineID := range []string{"0xdeadbeefxx", "0x80001f88"} {
+		t.Run(engineID, func(t *testing.T) {
+			plugin := &SnmpTrap{
+				Version:  "3",
+				SecLevel: "noAuthNoPriv",
+				EngineID: engineID,
+				Log:      testutil.Logger{},
+				transl:   &testTranslator{},
+			}
+			require.ErrorContains(t, plugin.Init(), "engine_id")
 		})
 	}
 }
