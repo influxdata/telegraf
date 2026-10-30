@@ -1,0 +1,22 @@
+[
+  {
+    "path": "/org/freedesktop/UPower/devices/battery_X",
+    "props": [
+      {
+        "name": "NativePath",
+        "type": "string",
+        "value": "X"
+      },
+      {
+        "name": "Type",
+        "type": "uint32",
+        "value": "99"
+      },
+      {
+        "name": "State",
+        "type": "uint32",
+        "value": "42"
+      }
+    ]
+  }
+]
