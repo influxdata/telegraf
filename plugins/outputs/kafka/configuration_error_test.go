@@ -48,18 +48,9 @@ func TestWriteConfigurationErrorsWithBroker(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			broker := sarama.NewMockBroker(t, 0)
-			defer broker.Close()
-			broker.SetHandlerByMap(map[string]sarama.MockResponse{
-				"MetadataRequest": sarama.NewMockMetadataResponse(t).
-					SetBroker(broker.Addr(), broker.BrokerID()).
-					SetLeader("existing", 0, broker.BrokerID()),
-				"ProduceRequest": sarama.NewMockProduceResponse(t),
-			})
 			serializer := &influx.Serializer{}
 			require.NoError(t, serializer.Init())
 			plugin := &Kafka{
-				Brokers:      []string{broker.Addr()},
 				Topic:        "existing",
 				Headers:      tt.headers,
 				Log:          testutil.Logger{},
@@ -69,7 +60,17 @@ func TestWriteConfigurationErrorsWithBroker(t *testing.T) {
 			plugin.Version = tt.version
 			plugin.MaxMessageBytes = 256
 			plugin.RequiredAcks = 1
+			// Configure Sarama's global logger before the broker starts goroutines.
 			require.NoError(t, plugin.Init())
+			broker := sarama.NewMockBroker(t, 0)
+			defer broker.Close()
+			broker.SetHandlerByMap(map[string]sarama.MockResponse{
+				"MetadataRequest": sarama.NewMockMetadataResponse(t).
+					SetBroker(broker.Addr(), broker.BrokerID()).
+					SetLeader("existing", 0, broker.BrokerID()),
+				"ProduceRequest": sarama.NewMockProduceResponse(t),
+			})
+			plugin.Brokers = []string{broker.Addr()}
 			plugin.saramaConfig.ApiVersionsRequest = false
 			plugin.saramaConfig.Metadata.Retry.Max = 0
 			plugin.saramaConfig.Net.DialTimeout = 2 * time.Second
