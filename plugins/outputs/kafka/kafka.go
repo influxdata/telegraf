@@ -29,18 +29,17 @@ var sampleConfig string
 var zeroTime = time.Unix(0, 0)
 
 type Kafka struct {
-	Brokers            []string          `toml:"brokers"`
-	Topic              string            `toml:"topic"`
-	TopicTag           string            `toml:"topic_tag"`
-	ExcludeTopicTag    bool              `toml:"exclude_topic_tag"`
-	TopicErrorBehavior string            `toml:"topic_error_behavior"`
-	TopicSuffix        TopicSuffix       `toml:"topic_suffix"`
-	RoutingTag         string            `toml:"routing_tag"`
-	RoutingKey         string            `toml:"routing_key"`
-	ProducerTimestamp  string            `toml:"producer_timestamp"`
-	MetricNameHeader   string            `toml:"metric_name_header" deprecated:"1.39.0;1.45.0;please use 'headers' instead"`
-	Headers            map[string]string `toml:"headers"`
-	Log                telegraf.Logger   `toml:"-"`
+	Brokers           []string          `toml:"brokers"`
+	Topic             string            `toml:"topic"`
+	TopicTag          string            `toml:"topic_tag"`
+	ExcludeTopicTag   bool              `toml:"exclude_topic_tag"`
+	TopicSuffix       TopicSuffix       `toml:"topic_suffix"`
+	RoutingTag        string            `toml:"routing_tag"`
+	RoutingKey        string            `toml:"routing_key"`
+	ProducerTimestamp string            `toml:"producer_timestamp"`
+	MetricNameHeader  string            `toml:"metric_name_header" deprecated:"1.39.0;1.45.0;please use 'headers' instead"`
+	Headers           map[string]string `toml:"headers"`
+	Log               telegraf.Logger   `toml:"-"`
 	common_proxy.Socks5ProxyConfig
 	kafka.WriteConfig
 
@@ -68,13 +67,6 @@ func (k *Kafka) SetSerializer(serializer telegraf.Serializer) {
 
 func (k *Kafka) Init() error {
 	kafka.SetLogger(k.Log.Level())
-
-	switch k.TopicErrorBehavior {
-	case "", "retry", "drop":
-		// An unset option retains the existing retry behavior.
-	default:
-		return fmt.Errorf("invalid topic_error_behavior %q", k.TopicErrorBehavior)
-	}
 
 	// Validate the topic-suffix method
 	switch k.TopicSuffix.Method {
@@ -239,15 +231,16 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 			writeErr.MetricsAccept = append(writeErr.MetricsAccept, index)
 			continue
 		}
+		var configErr sarama.ConfigurationError
 		switch {
+		case errors.As(failure, &configErr):
+			// Per-message configuration errors are permanent: Sarama rejects
+			// oversized messages and headers unsupported by the broker version.
+			k.Log.Errorf("Invalid message configuration: %v; dropping metric", configErr)
 		case errors.Is(failure, sarama.ErrMessageSizeTooLarge):
 			k.Log.Error("Message too large, consider increasing `max_message_bytes`; dropping metric")
 		case errors.Is(failure, sarama.ErrInvalidTimestamp):
 			k.Log.Error("Message timestamp out of range, check broker `message.timestamp.difference.max.ms`; dropping metric")
-		case k.TopicErrorBehavior == "drop" && errors.Is(failure, sarama.ErrUnknownTopicOrPartition):
-			// This error also covers temporary partition unavailability,
-			// so discarding the metric requires an explicit opt-in.
-			k.Log.Errorf("Unknown topic or partition for topic %q; dropping metric", msg.Topic)
 		default:
 			// Indices absent from both lists stay buffered for the next flush.
 			continue
