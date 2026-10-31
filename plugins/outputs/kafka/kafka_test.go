@@ -1,6 +1,9 @@
 package kafka
 
 import (
+	"errors"
+	"fmt"
+	"slices"
 	"sync"
 	"testing"
 	"time"
@@ -10,7 +13,9 @@ import (
 	kafkacontainer "github.com/testcontainers/testcontainers-go/modules/kafka"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -367,8 +372,310 @@ func TestHeaders(t *testing.T) {
 	}
 }
 
+func TestWritePartialFailure(t *testing.T) {
+	producer := &mockProducer{
+		sendError: func(msgs []*sarama.ProducerMessage) error {
+			return sarama.ProducerErrors{{Msg: msgs[1], Err: sarama.ErrUnknownTopicOrPartition}}
+		},
+	}
+	serializer := &influx.Serializer{}
+	require.NoError(t, serializer.Init())
+	plugin := &Kafka{
+		TopicTag:   "topic",
+		Log:        testutil.Logger{},
+		producer:   producer,
+		serializer: serializer,
+	}
+	metrics := []telegraf.Metric{
+		metric.New("cpu", map[string]string{"topic": "existing"}, map[string]any{"value": 1}, time.Unix(1, 0)),
+		metric.New("cpu", map[string]string{"topic": "missing"}, map[string]any{"value": 2}, time.Unix(1, 0)),
+		metric.New("cpu", map[string]string{"topic": "existing"}, map[string]any{"value": 3}, time.Unix(1, 0)),
+	}
+	err := plugin.Write(metrics)
+	var partial *internal.PartialWriteError
+	require.ErrorAs(t, err, &partial)
+	require.Equal(t, []int{0, 2}, partial.MetricsAccept)
+	require.Empty(t, partial.MetricsReject)
+}
+
+func TestWriteDeliveryResults(t *testing.T) {
+	tests := []struct {
+		name           string
+		failures       map[int]error
+		batchError     error
+		invalidMetrics []int
+		wrap           bool
+		accept         []int
+		reject         []int
+	}{
+		{
+			name: "success",
+		},
+		{
+			name:     "unknown topic retry",
+			failures: map[int]error{1: sarama.ErrUnknownTopicOrPartition},
+			accept:   []int{0, 2},
+		},
+		{
+			name:     "wrapped errors",
+			failures: map[int]error{1: fmt.Errorf("wrapped: %w", sarama.ErrUnknownTopicOrPartition)},
+			wrap:     true,
+			accept:   []int{0, 2},
+		},
+		{
+			name:     "configuration then transient",
+			failures: map[int]error{0: sarama.ConfigurationError("oversized message"), 1: sarama.ErrNotEnoughReplicas},
+			accept:   []int{2},
+			reject:   []int{0},
+		},
+		{
+			name:     "transient then configuration",
+			failures: map[int]error{0: sarama.ErrNotEnoughReplicas, 1: sarama.ConfigurationError("unsupported headers")},
+			accept:   []int{2},
+			reject:   []int{1},
+		},
+		{
+			name:     "wrapped configuration error",
+			failures: map[int]error{1: fmt.Errorf("wrapped: %w", sarama.ConfigurationError("oversized message"))},
+			wrap:     true,
+			accept:   []int{0, 2},
+			reject:   []int{1},
+		},
+		{
+			name:       "unclassified batch configuration error",
+			batchError: sarama.ConfigurationError("batch delivery status unknown"),
+		},
+		{
+			name:           "serialization gap before configuration error",
+			invalidMetrics: []int{1},
+			failures:       map[int]error{1: sarama.ConfigurationError("oversized message")},
+			accept:         []int{0},
+			reject:         []int{1, 2},
+		},
+		{
+			name:     "size then transient",
+			failures: map[int]error{0: sarama.ErrMessageSizeTooLarge, 1: sarama.ErrNotEnoughReplicas},
+			accept:   []int{2},
+			reject:   []int{0},
+		},
+		{
+			name:     "transient then size",
+			failures: map[int]error{0: sarama.ErrNotEnoughReplicas, 1: sarama.ErrMessageSizeTooLarge},
+			accept:   []int{2},
+			reject:   []int{1},
+		},
+		{
+			name:     "timestamp then transient",
+			failures: map[int]error{0: sarama.ErrInvalidTimestamp, 1: sarama.ErrNotEnoughReplicas},
+			accept:   []int{2},
+			reject:   []int{0},
+		},
+		{
+			name:     "all transient",
+			failures: map[int]error{0: sarama.ErrNotEnoughReplicas, 1: sarama.ErrNotEnoughReplicas, 2: sarama.ErrNotEnoughReplicas},
+		},
+		{
+			name:       "unclassified error",
+			batchError: errors.New("connection lost"),
+		},
+		{
+			name:       "empty producer errors",
+			batchError: sarama.ProducerErrors{},
+		},
+		{
+			name:           "serialization then success",
+			invalidMetrics: []int{0},
+			accept:         []int{1, 2},
+			reject:         []int{0},
+		},
+		{
+			name:           "serialization then partial",
+			invalidMetrics: []int{0},
+			failures:       map[int]error{0: sarama.ErrUnknownTopicOrPartition},
+			accept:         []int{2},
+			reject:         []int{0},
+		},
+		{
+			name:           "serialization then unclassified",
+			invalidMetrics: []int{0},
+			batchError:     errors.New("connection lost"),
+			reject:         []int{0},
+		},
+		{
+			name:           "serialization gap before retry",
+			invalidMetrics: []int{1},
+			failures:       map[int]error{1: sarama.ErrUnknownTopicOrPartition},
+			accept:         []int{0},
+			reject:         []int{1},
+		},
+		{
+			name:           "serialization gap before rejection",
+			invalidMetrics: []int{1},
+			failures:       map[int]error{1: sarama.ErrMessageSizeTooLarge},
+			accept:         []int{0},
+			reject:         []int{1, 2},
+		},
+		{
+			name:           "serialization gaps around delivery",
+			invalidMetrics: []int{0, 2},
+			accept:         []int{1},
+			reject:         []int{0, 2},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			producer := &mockProducer{sendError: func(msgs []*sarama.ProducerMessage) error {
+				if tt.batchError != nil {
+					return tt.batchError
+				}
+				var failures sarama.ProducerErrors
+				// Deliberately return failures out of message order.
+				for i, msg := range slices.Backward(msgs) {
+					if err, failed := tt.failures[i]; failed {
+						failures = append(failures, &sarama.ProducerError{Msg: msg, Err: err})
+					}
+				}
+				if len(failures) == 0 {
+					return nil
+				}
+				if tt.wrap {
+					return fmt.Errorf("send failed: %w", failures)
+				}
+				return failures
+			}}
+			serializer := &influx.Serializer{}
+			require.NoError(t, serializer.Init())
+			plugin := &Kafka{
+				Topic:      "test",
+				Log:        testutil.Logger{},
+				producer:   producer,
+				serializer: serializer,
+			}
+			require.NoError(t, plugin.Init())
+			metrics := []telegraf.Metric{testutil.TestMetric(1), testutil.TestMetric(2), testutil.TestMetric(3)}
+			for _, index := range tt.invalidMetrics {
+				metrics[index].SetName("")
+			}
+			err := plugin.Write(metrics)
+			if len(tt.failures) == 0 && tt.batchError == nil && len(tt.invalidMetrics) == 0 {
+				require.NoError(t, err)
+				return
+			}
+			var partial *internal.PartialWriteError
+			require.ErrorAs(t, err, &partial)
+			require.Equal(t, tt.accept, partial.MetricsAccept)
+			require.Equal(t, tt.reject, partial.MetricsReject)
+			require.Len(t, partial.MetricsRejectErrors, len(tt.reject))
+			require.NotEmpty(t, partial.Error())
+		})
+	}
+}
+
+func TestWriteNoMessages(t *testing.T) {
+	serializer := &influx.Serializer{}
+	require.NoError(t, serializer.Init())
+	plugin := &Kafka{Log: testutil.Logger{}, serializer: serializer}
+	// No producer is needed when the batch has no serializable metrics.
+	require.NoError(t, plugin.Write(nil))
+	m := testutil.TestMetric(1)
+	m.SetName("")
+	err := plugin.Write([]telegraf.Metric{m})
+	var partial *internal.PartialWriteError
+	require.ErrorAs(t, err, &partial)
+	require.Equal(t, []int{0}, partial.MetricsReject)
+	require.Empty(t, partial.MetricsAccept)
+}
+
+func TestWriteUnknownTopicWithBroker(t *testing.T) {
+	broker := sarama.NewMockBroker(t, 0)
+	defer broker.Close()
+	broker.SetHandlerByMap(map[string]sarama.MockResponse{
+		"MetadataRequest": sarama.NewMockMetadataResponse(t).
+			SetBroker(broker.Addr(), broker.BrokerID()).
+			SetLeader("existing", 0, broker.BrokerID()),
+		"ProduceRequest": sarama.NewMockProduceResponse(t),
+	})
+	cfg := sarama.NewConfig()
+	cfg.Version = sarama.V0_11_0_0
+	cfg.ApiVersionsRequest = false
+	cfg.Producer.Return.Successes = true
+	cfg.Producer.Retry.Max = 0
+	cfg.Metadata.Retry.Max = 0
+	cfg.Net.DialTimeout = 2 * time.Second
+	cfg.Net.ReadTimeout = 2 * time.Second
+	cfg.Net.WriteTimeout = 2 * time.Second
+	producer, err := sarama.NewSyncProducer([]string{broker.Addr()}, cfg)
+	require.NoError(t, err)
+	defer func() { require.NoError(t, producer.Close()) }()
+
+	serializer := &influx.Serializer{}
+	require.NoError(t, serializer.Init())
+	plugin := &Kafka{
+		TopicTag:        "topic",
+		ExcludeTopicTag: true,
+		Log:             testutil.Logger{},
+		producer:        producer,
+		serializer:      serializer,
+	}
+	buffer, err := models.NewBuffer("kafka", t.Name(), "", 10, "memory", "", false)
+	require.NoError(t, err)
+	defer func() { require.NoError(t, buffer.Close()) }()
+	var delivered []telegraf.DeliveryInfo
+	for _, topic := range []string{"missing", "existing", "existing"} {
+		m, _ := metric.WithTracking(
+			metric.New("cpu", map[string]string{"topic": topic}, map[string]any{"value": 1}, time.Unix(1, 0)),
+			func(info telegraf.DeliveryInfo) { delivered = append(delivered, info) },
+		)
+		require.Zero(t, buffer.Add(m))
+	}
+
+	// A mixed batch removes successful metrics without changing the
+	// buffered topic tags, even when serialization excludes that tag.
+	tx := buffer.BeginTransaction(2)
+	var partial *internal.PartialWriteError
+	require.ErrorAs(t, plugin.Write(tx.Batch), &partial)
+	require.Equal(t, []int{1}, partial.MetricsAccept, "delivery result: %v", partial)
+	for _, m := range tx.Batch {
+		require.True(t, m.HasTag("topic"))
+	}
+	tx.Accept, tx.Reject = partial.MetricsAccept, partial.MetricsReject
+	buffer.EndTransaction(tx)
+
+	// The following flush must reach the newer valid metric too.
+	tx = buffer.BeginTransaction(2)
+	err = plugin.Write(tx.Batch)
+	require.ErrorAs(t, err, &partial)
+	require.Equal(t, []int{1}, partial.MetricsAccept)
+	require.Empty(t, partial.MetricsReject)
+	tx.Accept, tx.Reject = partial.MetricsAccept, partial.MetricsReject
+	buffer.EndTransaction(tx)
+	require.Equal(t, 1, buffer.Len())
+	require.Len(t, delivered, 2)
+	for _, info := range delivered {
+		require.True(t, info.Delivered())
+	}
+
+	// A temporarily missing topic can recover without losing the
+	// retained metric or acknowledging it before delivery.
+	broker.SetHandlerByMap(map[string]sarama.MockResponse{
+		"MetadataRequest": sarama.NewMockMetadataResponse(t).
+			SetBroker(broker.Addr(), broker.BrokerID()).
+			SetLeader("existing", 0, broker.BrokerID()).
+			SetLeader("missing", 0, broker.BrokerID()),
+		"ProduceRequest": sarama.NewMockProduceResponse(t),
+	})
+	tx = buffer.BeginTransaction(2)
+	require.NoError(t, plugin.Write(tx.Batch))
+	tx.AcceptAll()
+	buffer.EndTransaction(tx)
+	require.Zero(t, buffer.Len())
+	require.Len(t, delivered, 3)
+	require.True(t, delivered[2].Delivered())
+}
+
 type mockProducer struct {
-	sent []*sarama.ProducerMessage
+	sent      []*sarama.ProducerMessage
+	sendError func([]*sarama.ProducerMessage) error
 	sarama.SyncProducer
 	sync.Mutex
 }
@@ -388,6 +695,9 @@ func (p *mockProducer) SendMessages(msgs []*sarama.ProducerMessage) error {
 	p.Lock()
 	defer p.Unlock()
 	p.sent = append(p.sent, msgs...)
+	if p.sendError != nil {
+		return p.sendError(msgs)
+	}
 	return nil
 }
 

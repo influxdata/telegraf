@@ -139,20 +139,29 @@ func (k *Kafka) Close() error {
 }
 
 func (k *Kafka) Write(metrics []telegraf.Metric) error {
+	var writeErr internal.PartialWriteError
 	msgs := make([]*sarama.ProducerMessage, 0, len(metrics))
-	for _, metric := range metrics {
+	for i, metric := range metrics {
 		metric, topic := k.getTopicName(metric)
 
 		buf, err := k.serializer.Serialize(metric)
 		if err != nil {
 			k.Log.Debugf("Could not serialize metric: %v", err)
+			// Reject only this metric, including when sending the remaining
+			// messages fails, so it cannot keep re-entering the buffer.
+			writeErr.Err = internal.ErrSerialization
+			writeErr.MetricsReject = append(writeErr.MetricsReject, i)
+			writeErr.MetricsRejectErrors = append(writeErr.MetricsRejectErrors, err)
 			continue
 		}
 
+		// PartialWriteError uses batch indices, not positions in msgs: a
+		// serialization failure can leave gaps between submitted messages.
 		m := &sarama.ProducerMessage{
-			Topic:   topic,
-			Value:   sarama.ByteEncoder(buf),
-			Headers: make([]sarama.RecordHeader, 0, len(k.headerTmpl)),
+			Topic:    topic,
+			Value:    sarama.ByteEncoder(buf),
+			Headers:  make([]sarama.RecordHeader, 0, len(k.headerTmpl)),
+			Metadata: i,
 		}
 
 		// Set the message headers
@@ -186,29 +195,60 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 		msgs = append(msgs, m)
 	}
 
-	if err := k.producer.SendMessages(msgs); err != nil {
-		// We could have many errors, return only the first encountered.
-		var errs sarama.ProducerErrors
-		if errors.As(err, &errs) && len(errs) > 0 {
-			// Just return the first error encountered
-			firstErr := errs[0]
-			if errors.Is(firstErr.Err, sarama.ErrMessageSizeTooLarge) {
-				k.Log.Error("Message too large, consider increasing `max_message_bytes`; dropping batch")
-				return nil
-			}
-			if errors.Is(firstErr.Err, sarama.ErrInvalidTimestamp) {
-				k.Log.Error(
-					"The timestamp of the message is out of acceptable range, consider increasing broker `message.timestamp.difference.max.ms`; " +
-						"dropping batch",
-				)
-				return nil
-			}
-			return firstErr
+	if len(msgs) == 0 {
+		if writeErr.Err != nil {
+			return &writeErr
 		}
-		return err
+		return nil
 	}
 
-	return nil
+	err := k.producer.SendMessages(msgs)
+	if err == nil && writeErr.Err == nil {
+		return nil
+	}
+
+	// Sarama reports only failed messages. Acknowledge the others so that
+	// one unavailable topic does not cause successful deliveries to be retried.
+	var failures map[*sarama.ProducerMessage]error
+	if err != nil {
+		writeErr.Err = err
+		var errs sarama.ProducerErrors
+		if !errors.As(err, &errs) || len(errs) == 0 {
+			// Without per-message results no delivery can be acknowledged.
+			return &writeErr
+		}
+		writeErr.Err = errs[0]
+		failures = make(map[*sarama.ProducerMessage]error, len(errs))
+		for _, failure := range errs {
+			failures[failure.Msg] = failure.Err
+		}
+	}
+
+	for _, msg := range msgs {
+		index := msg.Metadata.(int)
+		failure, failed := failures[msg]
+		if !failed {
+			writeErr.MetricsAccept = append(writeErr.MetricsAccept, index)
+			continue
+		}
+		var configErr sarama.ConfigurationError
+		switch {
+		case errors.As(failure, &configErr):
+			// Per-message configuration errors are permanent: Sarama rejects
+			// oversized messages and headers unsupported by the broker version.
+			k.Log.Errorf("Invalid message configuration: %v; dropping metric", configErr)
+		case errors.Is(failure, sarama.ErrMessageSizeTooLarge):
+			k.Log.Error("Message too large, consider increasing `max_message_bytes`; dropping metric")
+		case errors.Is(failure, sarama.ErrInvalidTimestamp):
+			k.Log.Error("Message timestamp out of range, check broker `message.timestamp.difference.max.ms`; dropping metric")
+		default:
+			// Indices absent from both lists stay buffered for the next flush.
+			continue
+		}
+		writeErr.MetricsReject = append(writeErr.MetricsReject, index)
+		writeErr.MetricsRejectErrors = append(writeErr.MetricsRejectErrors, failure)
+	}
+	return &writeErr
 }
 
 func (k *Kafka) getTopicName(metric telegraf.Metric) (telegraf.Metric, string) {
