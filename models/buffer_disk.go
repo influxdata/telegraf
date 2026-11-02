@@ -230,19 +230,14 @@ func (b *DiskBuffer) EndTransaction(tx *Transaction) {
 		return
 	}
 
-	// Determine up to which index we can remove the entries from the WAL file
-	var correction int
+	// Determine how many entries we can remove from the front of the WAL file
+	var removeIdx int
 	for i, offset := range b.mask {
 		if offset != i {
 			break
 		}
-		correction = offset
+		removeIdx = i + 1
 	}
-	// The 'correction' denotes the offset to subtract from the remaining mask
-	// (if any) and the 'removalIdx' denotes the index to use when truncating
-	// the file and mask. Keep them separate to be able to handle the special
-	// "the file cannot be empty" property of the WAL file.
-	removeIdx := correction + 1
 
 	// Remove the metrics in front from the WAL file
 	if err := b.file.TruncateFront(b.batchFirst + uint64(removeIdx)); err != nil {
@@ -253,7 +248,7 @@ func (b *DiskBuffer) EndTransaction(tx *Transaction) {
 	// Truncate the mask and update the relative offsets
 	b.mask = b.mask[removeIdx:]
 	for i := range b.mask {
-		b.mask[i] -= correction
+		b.mask[i] -= removeIdx
 	}
 
 	// check if the original end index is still valid, clear if not
