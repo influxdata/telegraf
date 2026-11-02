@@ -278,11 +278,13 @@ func (p *Postgresql) writeSequential(tableSources map[string]*TableSource) error
 	defer tx.Rollback(p.dbContext) //nolint:errcheck // In case of failure during commit, "err" from commit will be returned
 
 	// Schema changes and tag inserts run inside this transaction, so when it or a savepoint is rolled back, the cache
-	// entries of the rolled back tables no longer match the database and have to be reloaded.
+	// entries of the rolled back tables no longer match the database and have to be reloaded. Only the sources written
+	// so far can have touched the cache.
+	written := make([]*TableSource, 0, len(tableSources))
 	committed := false
 	defer func() {
 		if !committed {
-			for _, tableSource := range tableSources {
+			for _, tableSource := range written {
 				p.tableManager.ClearTableSourceCache(tableSource)
 			}
 		}
@@ -298,6 +300,7 @@ func (p *Postgresql) writeSequential(tableSources map[string]*TableSource) error
 			}
 		}
 
+		written = append(written, tableSource)
 		err := p.writeMetricsFromMeasure(p.dbContext, sp, tableSource)
 		if err != nil {
 			if isTempError(err) {
