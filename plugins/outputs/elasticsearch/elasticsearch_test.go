@@ -46,6 +46,14 @@ func TestConnect(t *testing.T) {
 			expectedOverwrite: true,
 		},
 		{
+			name:              "Elasticsearch v7 template management",
+			version:           "7.17.29",
+			index:             "test-%Y.%m.%d",
+			template:          "telegraf",
+			manageTemplate:    true,
+			expectedOverwrite: true,
+		},
+		{
 			name:              "template management",
 			index:             "test-%Y.%m.%d",
 			template:          "telegraf",
@@ -281,6 +289,15 @@ func TestWrite(t *testing.T) {
 			version:  "5.6.16",
 			value:    1,
 			expected: msgBulk,
+		},
+		{
+			name:    "Elasticsearch v7",
+			version: "7.17.29",
+			value:   1,
+			expected: []string{
+				`{"index":{"_index":"test-2009.11.10"}}`,
+				msgBulk[1],
+			},
 		},
 		{
 			name:          "float handling drop NaN",
@@ -1139,16 +1156,18 @@ func TestWriteIntegration(t *testing.T) {
 	}
 
 	tests := []struct {
-		name    string
-		image   string
-		env     map[string]string
-		waitFor wait.Strategy
+		name         string
+		image        string
+		env          map[string]string
+		waitFor      wait.Strategy
+		expectedType string
 	}{
 		{
-			name:    "v5",
-			image:   "elasticsearch:5.6.16",
-			env:     map[string]string{"ES_JAVA_OPTS": "-Xms512m -Xmx512m"},
-			waitFor: wait.ForHTTP("/").WithPort(servicePort).WithStartupTimeout(5 * time.Minute),
+			name:         "v5",
+			image:        "elasticsearch:5.6.16",
+			env:          map[string]string{"ES_JAVA_OPTS": "-Xms512m -Xmx512m"},
+			waitFor:      wait.ForHTTP("/").WithPort(servicePort).WithStartupTimeout(5 * time.Minute),
+			expectedType: "metrics",
 		},
 		{
 			name:  "v6",
@@ -1158,6 +1177,17 @@ func TestWriteIntegration(t *testing.T) {
 				wait.ForLog("] mode [basic] - valid"),
 				wait.ForListeningPort(servicePort),
 			),
+			expectedType: "metrics",
+		},
+		{
+			name:  "v7",
+			image: "docker.elastic.co/elasticsearch/elasticsearch:7.17.29",
+			env: map[string]string{
+				"discovery.type": "single-node",
+				"ES_JAVA_OPTS":   "-Xms1g -Xmx1g",
+			},
+			waitFor:      wait.ForHTTP("/").WithPort(servicePort).WithStartupTimeout(120 * time.Second),
+			expectedType: "_doc",
 		},
 	}
 
@@ -1192,7 +1222,7 @@ func TestWriteIntegration(t *testing.T) {
 			// Verify that we can successfully write data to Elasticsearch
 			require.NoError(t, plugin.Write(testutil.MockMetrics()))
 
-			// Use a separate v5 client for the refresh/search APIs shared by both versions.
+			// Use a separate v5 client for the refresh/search APIs shared by all versions.
 			client, err := elasticsearch5.NewClient(elasticsearch5.Config{
 				Addresses: plugin.URLs,
 			})
@@ -1221,12 +1251,12 @@ func TestWriteIntegration(t *testing.T) {
 
 			actual, err := io.ReadAll(result.Body)
 			require.NoError(t, err)
-			require.JSONEq(t, `{
+			require.JSONEq(t, fmt.Sprintf(`{
 				"hits": {
 					"hits": [
 						{
 							"_index": "test-2009.11.10",
-							"_type": "metrics",
+							"_type": %q,
 							"_source": {
 								"@timestamp": "2009-11-10T23:00:00Z",
 								"measurement_name": "test1",
@@ -1240,62 +1270,74 @@ func TestWriteIntegration(t *testing.T) {
 						}
 					]
 				}
-			}`, string(actual))
+			}`, tt.expectedType), string(actual))
 		})
 	}
 }
 
 func TestClientDiscovery(t *testing.T) {
-	var discoveredWrites, seedWrites, discoveries atomic.Int32
-	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/_bulk" {
-			discoveredWrites.Add(1)
-		}
-		if _, err := io.WriteString(w, "{}"); err != nil {
-			t.Error(err)
-		}
-	}))
-	defer target.Close()
-	seed := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case "/_nodes/http":
-			discoveries.Add(1)
-			_, err := fmt.Fprintf(w, `{"nodes":{"node":{"roles":["data","ingest"],"http":{"publish_address":%q}}}}`, strings.TrimPrefix(target.URL, "http://"))
-			if err != nil {
-				t.Error(err)
+	for _, tt := range []struct {
+		name    string
+		version string
+	}{
+		{name: "v6", version: "6.8.23"},
+		{name: "v7", version: "7.17.29"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			var discoveredWrites, seedWrites, discoveries atomic.Int32
+			target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("X-Elastic-Product", "Elasticsearch")
+				if r.URL.Path == "/_bulk" {
+					discoveredWrites.Add(1)
+				}
+				if _, err := io.WriteString(w, "{}"); err != nil {
+					t.Error(err)
+				}
+			}))
+			defer target.Close()
+			seed := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("X-Elastic-Product", "Elasticsearch")
+				switch r.URL.Path {
+				case "/_nodes/http":
+					discoveries.Add(1)
+					_, err := fmt.Fprintf(w, `{"nodes":{"node":{"roles":["data","ingest"],"http":{"publish_address":%q}}}}`, strings.TrimPrefix(target.URL, "http://"))
+					if err != nil {
+						t.Error(err)
+					}
+				case "/_bulk":
+					seedWrites.Add(1)
+					if _, err := io.WriteString(w, "{}"); err != nil {
+						t.Error(err)
+					}
+				default:
+					if _, err := fmt.Fprintf(w, `{"version":{"number":%q}}`, tt.version); err != nil {
+						t.Error(err)
+					}
+				}
+			}))
+			defer seed.Close()
+			plugin := &Elasticsearch{
+				URLs:                []string{seed.URL},
+				IndexName:           "test-%Y.%m.%d",
+				EnableSniffer:       true,
+				HealthCheckInterval: config.Duration(time.Hour),
+				Timeout:             config.Duration(time.Second),
+				Log:                 testutil.Logger{},
 			}
-		case "/_bulk":
-			seedWrites.Add(1)
-			if _, err := io.WriteString(w, "{}"); err != nil {
-				t.Error(err)
-			}
-		default:
-			if _, err := io.WriteString(w, `{"version":{"number":"6.8.23"}}`); err != nil {
-				t.Error(err)
-			}
-		}
-	}))
-	defer seed.Close()
-	plugin := &Elasticsearch{
-		URLs:                []string{seed.URL},
-		IndexName:           "test-%Y.%m.%d",
-		EnableSniffer:       true,
-		HealthCheckInterval: config.Duration(time.Hour),
-		Timeout:             config.Duration(time.Second),
-		Log:                 testutil.Logger{},
-	}
-	require.NoError(t, plugin.Init())
-	require.NoError(t, plugin.Connect())
-	defer plugin.Close()
+			require.NoError(t, plugin.Init())
+			require.NoError(t, plugin.Connect())
+			defer plugin.Close()
 
-	require.Eventually(t, func() bool {
-		return plugin.Write(testutil.MockMetrics()) == nil && discoveredWrites.Load() > 0
-	}, 5*time.Second, 10*time.Millisecond)
-	before := seedWrites.Load()
-	require.NoError(t, plugin.Write(testutil.MockMetrics()))
-	require.EqualValues(t, 1, discoveries.Load())
-	require.EqualValues(t, 2, discoveredWrites.Load())
-	require.Equal(t, before, seedWrites.Load())
+			require.Eventually(t, func() bool {
+				return plugin.Write(testutil.MockMetrics()) == nil && discoveredWrites.Load() > 0
+			}, 5*time.Second, 10*time.Millisecond)
+			before := seedWrites.Load()
+			require.NoError(t, plugin.Write(testutil.MockMetrics()))
+			require.EqualValues(t, 1, discoveries.Load())
+			require.EqualValues(t, 2, discoveredWrites.Load())
+			require.Equal(t, before, seedWrites.Load())
+		})
+	}
 }
 
 func TestClientDiscoveryDisabled(t *testing.T) {
@@ -1308,10 +1350,13 @@ func TestClientDiscoveryDisabled(t *testing.T) {
 		{name: "v5 ignores discovery", version: "5.6.16", enableSniffer: true, interval: time.Hour},
 		{name: "v6 sniffer disabled", version: "6.8.23", interval: time.Hour},
 		{name: "v6 zero interval", version: "6.8.23", enableSniffer: true},
+		{name: "v7 sniffer disabled", version: "7.17.29", interval: time.Hour},
+		{name: "v7 zero interval", version: "7.17.29", enableSniffer: true},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			var writes, discoveries atomic.Int32
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("X-Elastic-Product", "Elasticsearch")
 				switch r.URL.Path {
 				case "/_nodes/http":
 					discoveries.Add(1)
@@ -1444,6 +1489,7 @@ func startMockServer(t *testing.T) *mockServer {
 	}
 
 	s.server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Elastic-Product", "Elasticsearch")
 		if name, found := strings.CutPrefix(r.URL.Path, "/_template/"); found {
 			switch r.Method {
 			case http.MethodHead:

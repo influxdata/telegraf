@@ -34,7 +34,7 @@ func (c *clientV5) close() {
 }
 
 func (c *clientV5) bulk(ctx context.Context, documents []document) error {
-	body, err := encodeBulk(documents)
+	body, err := encodeBulk(documents, "metrics")
 	if err != nil {
 		return fmt.Errorf("error sending bulk request to Elasticsearch: %w", err)
 	}
