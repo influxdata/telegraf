@@ -18,8 +18,9 @@ import (
 var sampleConfig string
 
 type PuppetAgent struct {
-	Location         string   `toml:"location"`
-	IncludeResources []string `toml:"include_resources"`
+	Location         string          `toml:"location"`
+	IncludeResources []string        `toml:"include_resources"`
+	Log              telegraf.Logger `toml:"-"`
 }
 
 type state struct {
@@ -90,6 +91,27 @@ func (*PuppetAgent) SampleConfig() string {
 	return sampleConfig
 }
 
+func (pa *PuppetAgent) Init() error {
+	// Drop resources the time struct already collects so they are not
+	// emitted a second time under their YAML key.
+	builtin := make(map[string]bool)
+	for field := range reflect.TypeFor[time]().Fields() {
+		builtin[field.Tag.Get("yaml")] = true
+	}
+
+	resources := make([]string, 0, len(pa.IncludeResources))
+	for _, resource := range pa.IncludeResources {
+		if builtin[resource] {
+			pa.Log.Warnf("Resource %q is collected by default, ignoring it", resource)
+			continue
+		}
+		resources = append(resources, resource)
+	}
+	pa.IncludeResources = resources
+
+	return nil
+}
+
 func (pa *PuppetAgent) Gather(acc telegraf.Accumulator) error {
 	if len(pa.Location) == 0 {
 		pa.Location = "/var/lib/puppet/state/last_run_summary.yaml"
@@ -114,20 +136,14 @@ func (pa *PuppetAgent) Gather(acc telegraf.Accumulator) error {
 	fields := structFields(&puppetState)
 
 	if len(pa.IncludeResources) > 0 {
-		var additionalState additionalState
-		if err := yaml.Unmarshal(contents, &additionalState); err != nil {
+		var additional additionalState
+		if err := yaml.Unmarshal(contents, &additional); err != nil {
 			return err
 		}
 
 		for _, resource := range pa.IncludeResources {
-			fieldName := "time_" + strings.ToLower(resource)
-			// Never overwrite a field already collected from the built-in structs.
-			if _, exists := fields[fieldName]; exists {
-				continue
-			}
-
-			if value, exists := additionalState.Time[resource]; exists {
-				fields[fieldName] = value
+			if value, exists := additional.Time[resource]; exists {
+				fields["time_"+strings.ToLower(resource)] = value
 			}
 		}
 	}
