@@ -1,0 +1,9 @@
+kafka_consumer_group_partition,group=order-svc,partition=0,topic=orders committed_offset=50i,lag=50i,log_end_offset=100i
+kafka_consumer_group_partition,group=order-svc,partition=1,topic=orders committed_offset=80i,lag=20i,log_end_offset=100i
+kafka_consumer_group_partition,group=order-svc,partition=1,topic=events committed_offset=20i,lag=10i,log_end_offset=30i
+kafka_consumer_group_partition,group=analytics,partition=0,topic=orders committed_offset=10i,lag=90i,log_end_offset=100i
+kafka_consumer_group_topic,group=order-svc,topic=orders lag_max=50i,lag_sum=70i,partitions=2i
+kafka_consumer_group_topic,group=order-svc,topic=events lag_max=10i,lag_sum=10i,partitions=1i
+kafka_consumer_group_topic,group=analytics,topic=orders lag_max=90i,lag_sum=90i,partitions=1i
+kafka_consumer_group,group=order-svc lag_max=50i,lag_sum=80i,members=2i,partitions=3i,topics=2i
+kafka_consumer_group,group=analytics lag_max=90i,lag_sum=90i,members=0i,partitions=1i,topics=1i

@@ -1,0 +1,10 @@
+sensors,device=softraid0,sensor=drive0,type=drive state="empty",value=1
+sensors,device=softraid0,sensor=drive1,type=drive state="ready",value=2
+sensors,device=softraid0,sensor=drive2,type=drive state="powering up",value=3
+sensors,device=softraid0,sensor=drive3,type=drive state="online",value=4
+sensors,device=softraid0,sensor=drive4,type=drive state="idle",value=5
+sensors,device=softraid0,sensor=drive5,type=drive state="active",value=6
+sensors,device=softraid0,sensor=drive6,type=drive state="rebuilding",value=7
+sensors,device=softraid0,sensor=drive7,type=drive state="powering down",value=8
+sensors,device=softraid0,sensor=drive8,type=drive state="failed",value=9
+sensors,device=softraid0,sensor=drive9,type=drive state="degraded",value=10

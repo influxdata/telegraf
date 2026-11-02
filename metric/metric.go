@@ -195,13 +195,18 @@ func (m *metric) RemoveTag(key string) {
 }
 
 func (m *metric) AddField(key string, value any) {
+	converted := convertField(value)
+	if converted == nil {
+		return
+	}
+
 	for i, field := range m.MetricFields {
 		if key == field.Key {
-			m.MetricFields[i] = &telegraf.Field{Key: key, Value: convertField(value)}
+			m.MetricFields[i] = &telegraf.Field{Key: key, Value: converted}
 			return
 		}
 	}
-	m.MetricFields = append(m.MetricFields, &telegraf.Field{Key: key, Value: convertField(value)})
+	m.MetricFields = append(m.MetricFields, &telegraf.Field{Key: key, Value: converted})
 }
 
 func (m *metric) HasField(key string) bool {

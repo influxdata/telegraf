@@ -1,0 +1,1 @@
+hw.othertree.cpu0.temp0=36.00 degC

@@ -35,6 +35,13 @@ The given examples are just that, so please check the driver documentation for
 the exact format and available options and parameters. Please note that the
 format of a DSN might also change between driver version.
 
+### Platform support
+
+The SQLite driver is only included on the platforms listed in its
+[support matrix][sqlite_matrix], currently darwin, freebsd, linux, openbsd and
+windows on the architectures given there. On any other platform, e.g. mips,
+`driver = "sqlite"` fails on startup with `driver "sqlite" not supported`.
+
 ### Type conversions
 
 Telegraf relies on type conversion of the database driver and/or the golang sql
@@ -61,3 +68,4 @@ such a driver, please let us know by opening an issue or even better by sending
 a pull-request!
 
 [go_sql]: https://golang.org/pkg/database/sql/
+[sqlite_matrix]: https://pkg.go.dev/modernc.org/sqlite#hdr-Supported_platforms_and_architectures

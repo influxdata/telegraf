@@ -1,0 +1,2 @@
+kafka_consumer_group,group=order-svc lag_max=50i,lag_sum=80i,members=2i,partitions=3i,topics=2i
+kafka_consumer_group,group=analytics lag_max=90i,lag_sum=90i,members=0i,partitions=1i,topics=1i

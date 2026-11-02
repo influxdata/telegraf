@@ -1,0 +1,2 @@
+kafka_consumer_group_partition,group=order-svc,partition=0,topic=orders committed_offset=50i,lag=50i,log_end_offset=100i
+kafka_consumer_group_partition,group=order-svc,partition=1,topic=orders committed_offset=80i,lag=20i,log_end_offset=100i

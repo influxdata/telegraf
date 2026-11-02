@@ -1,0 +1,6 @@
+sensors,device=cpu0,sensor=temp0,type=temp,unit=degC value=36
+sensors,device=cpu0,sensor=frequency0,type=frequency,unit=Hz value=1000000000
+sensors,device=cpu1,sensor=frequency0,type=frequency,unit=Hz value=1000000000
+sensors,device=cpu2,sensor=frequency0,type=frequency,unit=Hz value=1000000000
+sensors,device=cpu3,sensor=frequency0,type=frequency,unit=Hz value=1000000000
+sensors,description=zone\ temperature,device=acpitz0,sensor=temp0,type=temp,unit=degC value=27.8

@@ -1,0 +1,1 @@
+kafka_consumer_group_partition,group=analytics,partition=0,topic=orders committed_offset=10i,lag=90i,log_end_offset=100i

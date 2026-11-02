@@ -409,12 +409,18 @@ func (p *SQL) sendIndividual(sql string, values []any) error {
 		}
 		stmt, err := tx.Prepare(sql)
 		if err != nil {
+			if errRollback := tx.Rollback(); errRollback != nil {
+				return fmt.Errorf("prepare failed: %w, unable to rollback: %w", err, errRollback)
+			}
 			return fmt.Errorf("prepare failed: %w", err)
 		}
 		defer stmt.Close()
 
 		_, err = stmt.Exec(values...)
 		if err != nil {
+			if errRollback := tx.Rollback(); errRollback != nil {
+				return fmt.Errorf("execution failed: %w, unable to rollback: %w", err, errRollback)
+			}
 			return fmt.Errorf("execution failed: %w", err)
 		}
 		err = tx.Commit()
@@ -439,6 +445,9 @@ func (p *SQL) sendBatch(sql string, values [][]any) error {
 
 	batch, err := tx.Prepare(sql)
 	if err != nil {
+		if errRollback := tx.Rollback(); errRollback != nil {
+			return fmt.Errorf("prepare failed: %w, unable to rollback: %w", err, errRollback)
+		}
 		return fmt.Errorf("prepare failed: %w", err)
 	}
 	defer batch.Close()
@@ -484,7 +493,6 @@ func (p *SQL) Write(metrics []telegraf.Metric) error {
 				}
 			}
 		}
-		// Using BatchTx is opt-in
 		if p.BatchTx {
 			batchedQueries[sql] = append(batchedQueries[sql], values)
 		} else {
@@ -576,6 +584,8 @@ func init() {
 			// except max idle connections which is 2. See
 			// https://pkg.go.dev/database/sql#DB.SetMaxIdleConns
 			ConnectionMaxIdle: 2,
+
+			BatchTx: true,
 		}
 	})
 }

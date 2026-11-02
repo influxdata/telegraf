@@ -152,9 +152,10 @@ func Parse(acc telegraf.Accumulator, buf []byte) error {
 		}
 
 		for _, process := range gpu.Processes.ProcessInfo {
-			tags := make(map[string]string, 2)
+			tags := make(map[string]string, 3)
 			common.SetTagIfUsed(tags, "name", process.ProcessName)
 			common.SetTagIfUsed(tags, "type", process.Type)
+			common.SetTagIfUsed(tags, "uuid", gpu.UUID)
 
 			fields := make(map[string]any, 2)
 			common.SetIfUsed("int", fields, "pid", process.Pid)

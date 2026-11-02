@@ -4,7 +4,7 @@
 When distributed in a binary form, Telegraf may contain portions of the
 following works:
 
-- cel.dev/expr [Apache License 2.0](https://github.com/google/cel-spec/blob/master/LICENSE)
+- cel.dev/expr [Apache License 2.0](https://github.com/cel-expr/cel-spec/blob/master/LICENSE)
 - cloud.google.com/go [Apache License 2.0](https://github.com/googleapis/google-cloud-go/blob/master/LICENSE)
 - code.cloudfoundry.org/clock [Apache License 2.0](https://github.com/cloudfoundry/clock/blob/master/LICENSE)
 - collectd.org [ISC License](https://github.com/collectd/go-collectd/blob/master/LICENSE)
@@ -416,7 +416,7 @@ following works:
 - github.com/srebhan/cborquery [MIT License](https://github.com/srebhan/cborquery/blob/main/LICENSE)
 - github.com/srebhan/protobufquery [MIT License](https://github.com/srebhan/protobufquery/blob/master/LICENSE)
 - github.com/tdrn-org/go-fritzsmarthome [Apache License 2.0](https://github.com/tdrn-org/go-fritzsmarthome/blob/main/LICENSE)
-- github.com/tdrn-org/go-hue [MIT License](https://github.com/tdrn-org/go-hue/blob/main/LICENSE)
+- github.com/tdrn-org/go-hue [Apache License 2.0](https://github.com/tdrn-org/go-hue/blob/main/LICENSE)
 - github.com/tdrn-org/go-nsdp [MIT License](https://github.com/tdrn-org/go-nsdp/blob/main/LICENSE)
 - github.com/tdrn-org/go-tr064 [Apache License 2.0](https://github.com/tdrn-org/go-tr064/blob/main/LICENSE)
 - github.com/thomasklein94/packer-plugin-libvirt [Mozilla Public License 2.0](https://github.com/thomasklein94/packer-plugin-libvirt/blob/main/LICENSE)

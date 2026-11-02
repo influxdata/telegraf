@@ -1,0 +1,4 @@
+sensors,description=+1.5V\ (Vccp),device=lm0,sensor=volt0,type=volt,unit=VDC value=1.5
+sensors,description=+3.3V\ (VCC),device=lm0,sensor=volt1,type=volt,unit=VDC value=3.34
+sensors,description=+3.3V\ (VTR),device=lm0,sensor=volt2,type=volt,unit=VDC value=3.34
+sensors,description=+3V\ (Vbat),device=lm0,sensor=volt3,type=volt,unit=VDC value=3.3

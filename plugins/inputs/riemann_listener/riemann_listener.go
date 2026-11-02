@@ -34,6 +34,7 @@ type RiemannSocketListener struct {
 	ServiceAddress  string           `toml:"service_address"`
 	MaxConnections  int              `toml:"max_connections"`
 	ReadBufferSize  config.Size      `toml:"read_buffer_size"`
+	MaxMessageSize  config.Size      `toml:"max_message_size"`
 	ReadTimeout     *config.Duration `toml:"read_timeout"`
 	KeepAlivePeriod *config.Duration `toml:"keep_alive_period"`
 	SocketMode      string           `toml:"socket_mode"`
@@ -70,6 +71,9 @@ func (rsl *RiemannSocketListener) Start(acc telegraf.Accumulator) error {
 	if rsl.ServiceAddress == "" {
 		rsl.Log.Warnf("Using default service_address tcp://:5555")
 		rsl.ServiceAddress = "tcp://:5555"
+	}
+	if rsl.MaxMessageSize == 0 {
+		rsl.MaxMessageSize = 4 * 1024 * 1024
 	}
 	spl := strings.SplitN(rsl.ServiceAddress, "://", 2)
 	if len(spl) != 2 {
@@ -248,6 +252,13 @@ func (rsl *riemannListener) read(conn net.Conn) {
 				rsl.riemannReturnErrorResponse(conn, err.Error())
 				return
 			}
+			return
+		}
+		// Check the announced size before allocating for it as the header
+		// is attacker controlled.
+		if int64(header) > int64(rsl.MaxMessageSize) {
+			rsl.Log.Debugf("Message size %d exceeds the maximum of %d", header, rsl.MaxMessageSize)
+			rsl.riemannReturnErrorResponse(conn, "Message too large")
 			return
 		}
 		data := make([]byte, header)

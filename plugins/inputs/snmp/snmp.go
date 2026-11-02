@@ -117,6 +117,9 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 			topTags := make(map[string]string)
 			if err := s.gatherTable(acc, gs, t, topTags, false); err != nil {
 				acc.AddError(fmt.Errorf("agent %s: %w", agent, err))
+				// Close the connection so the next request reconnects and, for
+				// SNMPv3, rediscovers the engine ID of a restarted agent.
+				gs.Close()
 				if s.StopOnError {
 					return
 				}
@@ -126,6 +129,7 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 			for _, t := range s.Tables {
 				if err := s.gatherTable(acc, gs, t, topTags, true); err != nil {
 					acc.AddError(fmt.Errorf("agent %s: gathering table %s: %w", agent, t.Name, err))
+					gs.Close()
 					if s.StopOnError {
 						return
 					}

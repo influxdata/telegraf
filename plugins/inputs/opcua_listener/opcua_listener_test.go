@@ -4,12 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
+	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	gopcua "github.com/gopcua/opcua"
+	"github.com/gopcua/opcua/id"
+	"github.com/gopcua/opcua/server"
 	"github.com/gopcua/opcua/ua"
+	"github.com/gopcua/opcua/uasc"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
@@ -504,6 +510,126 @@ func TestMonitoredItemsBatchSizeIntegration(t *testing.T) {
 		case <-ctx.Done():
 			t.Fatalf("Timed out waiting for metrics, only received %v", received)
 		}
+	}
+}
+
+func TestMonitoredItemsServerLimit(t *testing.T) {
+	tests := []struct {
+		name      string
+		batchSize int
+		expected  []int
+	}{
+		{
+			name:     "server limit",
+			expected: []int{16, 16, 8},
+		},
+		{
+			name:      "smaller batch size",
+			batchSize: 10,
+			expected:  []int{10, 10, 10, 10},
+		},
+		{
+			name:      "larger batch size",
+			batchSize: 32,
+			expected:  []int{16, 16, 8},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Bind a free port up front; close the listener so the server can
+			// claim it.
+			l, err := net.Listen("tcp", "127.0.0.1:0")
+			require.NoError(t, err)
+			port := l.Addr().(*net.TCPAddr).Port
+			require.NoError(t, l.Close())
+
+			srv := server.New(
+				server.EnableSecurity("None", ua.MessageSecurityModeNone),
+				server.EnableAuthMode(ua.UserTokenTypeAnonymous),
+				server.EndPoint("127.0.0.1", port),
+			)
+			ns := server.NewNodeNameSpace(srv, "telegraf-test")
+			srv.AddNamespace(ns)
+
+			// The server neither reports nor enforces a MaxMonitoredItemsPerCall
+			// limit on its own, so add the property and a handler rejecting
+			// requests exceeding it to make sure the client splits them.
+			const maxMonitoredItemsPerCall = 16
+			ns0, err := srv.Namespace(0)
+			require.NoError(t, err)
+			ns0.AddNode(server.NewVariableNode(
+				ua.NewNumericNodeID(0, id.Server_ServerCapabilities_OperationLimits_MaxMonitoredItemsPerCall),
+				"MaxMonitoredItemsPerCall",
+				uint32(maxMonitoredItemsPerCall),
+			))
+			var mu sync.Mutex
+			var batches []int
+			handler := func(sc *uasc.SecureChannel, r ua.Request, reqID uint32) (ua.Response, error) {
+				req := r.(*ua.CreateMonitoredItemsRequest)
+				if len(req.ItemsToCreate) > maxMonitoredItemsPerCall {
+					return nil, ua.StatusBadTooManyOperations
+				}
+				mu.Lock()
+				batches = append(batches, len(req.ItemsToCreate))
+				mu.Unlock()
+				return srv.MonitoredItemService.CreateMonitoredItems(sc, r, reqID)
+			}
+			srv.RegisterHandler(id.CreateMonitoredItemsRequest_Encoding_DefaultBinary, handler)
+
+			const nodes = 40
+			rootNodes := make([]input.NodeSettings, 0, nodes)
+			for i := range int32(nodes) {
+				name := "node" + strconv.Itoa(int(i))
+				ns.AddNode(server.NewVariableNode(ua.NewStringNodeID(ns.ID(), name), name, i))
+				rootNodes = append(rootNodes, input.NodeSettings{
+					FieldName:      name,
+					Namespace:      strconv.Itoa(int(ns.ID())),
+					IdentifierType: "s",
+					Identifier:     name,
+				})
+			}
+
+			require.NoError(t, srv.Start(t.Context()))
+			defer srv.Close()
+			require.Eventually(t, func() bool {
+				c, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", port), 100*time.Millisecond)
+				if err != nil {
+					return false
+				}
+				_ = c.Close()
+				return true
+			}, 5*time.Second, 50*time.Millisecond)
+
+			subscribeConfig := subscribeClientConfig{
+				Endpoint:       fmt.Sprintf("opc.tcp://127.0.0.1:%d", port),
+				SecurityPolicy: "None",
+				SecurityMode:   "None",
+				AuthMethod:     "Anonymous",
+				ConnectTimeout: config.Duration(10 * time.Second),
+				RequestTimeout: config.Duration(1 * time.Second),
+				Workarounds:    opcua.OpcUAWorkarounds{MonitoredItemsBatchSize: tt.batchSize},
+				MetricName:     "testing",
+				RootNodes:      rootNodes,
+			}
+			o, err := subscribeConfig.createSubscribeClient(testutil.Logger{})
+			require.NoError(t, err)
+			require.NoError(t, o.SetupOptions())
+			require.NoError(t, o.connect())
+			defer o.stop(t.Context())
+			require.Equal(t, maxMonitoredItemsPerCall, o.maxMonitoredItemsPerCall)
+
+			results, err := o.monitor(t.Context(), o.monitoredItemsReqs)
+			require.NoError(t, err)
+			require.Len(t, results, nodes)
+			for _, res := range results {
+				require.Equal(t, ua.StatusOK, res.StatusCode)
+			}
+
+			mu.Lock()
+			defer mu.Unlock()
+			require.Equal(t, tt.expected, batches)
+		})
 	}
 }
 

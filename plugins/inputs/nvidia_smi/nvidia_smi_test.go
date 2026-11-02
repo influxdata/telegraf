@@ -628,6 +628,7 @@ func TestGatherValidXML(t *testing.T) {
 					map[string]string{
 						"name": "/usr/lib/Xorg",
 						"type": "G",
+						"uuid": "GPU-19d6d965-2acc-f646-00f8-4c76979aabb4",
 					},
 					map[string]any{
 						"pid":         int64(835),
@@ -639,6 +640,7 @@ func TestGatherValidXML(t *testing.T) {
 					map[string]string{
 						"name": "/usr/bin/gnome-shell",
 						"type": "G",
+						"uuid": "GPU-19d6d965-2acc-f646-00f8-4c76979aabb4",
 					},
 					map[string]any{
 						"pid":         int64(1481),
@@ -657,6 +659,7 @@ func TestGatherValidXML(t *testing.T) {
 							"--field-trial-handle=0,i,3110290512380155730," +
 							"7457693378709978105,262144 --variations-seed-version",
 						"type": "G",
+						"uuid": "GPU-19d6d965-2acc-f646-00f8-4c76979aabb4",
 					},
 					map[string]any{
 						"pid":         int64(2214),
@@ -668,6 +671,7 @@ func TestGatherValidXML(t *testing.T) {
 					map[string]string{
 						"name": "/usr/lib/firefox/firefox",
 						"type": "G",
+						"uuid": "GPU-19d6d965-2acc-f646-00f8-4c76979aabb4",
 					},
 					map[string]any{
 						"pid":         int64(4044),
@@ -687,6 +691,7 @@ func TestGatherValidXML(t *testing.T) {
 							"4769839452661094675,262144 --disable-features=" +
 							"CalculateNativeWinOcclusion,SpareRendererForSitePerProcess",
 						"type": "G",
+						"uuid": "GPU-19d6d965-2acc-f646-00f8-4c76979aabb4",
 					},
 					map[string]any{
 						"pid":         int64(42416),
@@ -1088,6 +1093,7 @@ func TestGatherValidXML(t *testing.T) {
 					map[string]string{
 						"name": "cosmic-comp",
 						"type": "G",
+						"uuid": "GPU-37037c3f-65c8-ec4d-24a9-420204ad8026",
 					},
 					map[string]any{
 						"pid":         1842,
@@ -1099,6 +1105,7 @@ func TestGatherValidXML(t *testing.T) {
 					map[string]string{
 						"name": "/usr/bin/code",
 						"type": "G",
+						"uuid": "GPU-37037c3f-65c8-ec4d-24a9-420204ad8026",
 					},
 					map[string]any{
 						"pid":         3190,
@@ -1110,6 +1117,7 @@ func TestGatherValidXML(t *testing.T) {
 					map[string]string{
 						"name": "python",
 						"type": "C",
+						"uuid": "GPU-37037c3f-65c8-ec4d-24a9-420204ad8026",
 					},
 					map[string]any{
 						"pid":         4937,
@@ -1121,6 +1129,7 @@ func TestGatherValidXML(t *testing.T) {
 					map[string]string{
 						"name": "/usr/lib/chromium/chromium",
 						"type": "C+G",
+						"uuid": "GPU-37037c3f-65c8-ec4d-24a9-420204ad8026",
 					},
 					map[string]any{
 						"pid":         34626,

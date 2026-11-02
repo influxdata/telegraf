@@ -83,6 +83,8 @@ func TestCases(t *testing.T) {
 			plugin.Binary = exe
 			require.NoError(t, plugin.Init())
 			plugin.args = append([]string{"--mock", "--testcase", testcasePath}, plugin.args...)
+			require.NoError(t, plugin.Start(nil))
+			defer plugin.Stop()
 
 			// Gather the metrics and compare the output
 			var acc testutil.Accumulator
@@ -101,11 +103,13 @@ func TestCases(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	// Mimic the nft command line arguments
-	var mock, jsonMode bool
+	var mock, jsonMode, terse, version bool
 	var testcase string
 	flag.BoolVar(&mock, "mock", false, "run test as mock")
 	flag.StringVar(&testcase, "testcase", "", "path to the test directory")
+	flag.BoolVar(&version, "version", false, "output the version")
 	flag.BoolVar(&jsonMode, "json", false, "output as JSON")
+	flag.BoolVar(&terse, "terse", false, "omit set elements")
 	flag.Parse()
 
 	if !mock {
@@ -114,32 +118,59 @@ func TestMain(m *testing.M) {
 	}
 
 	// Run as a mock program
+	if version {
+		if nargs := len(flag.Args()); nargs != 0 {
+			fmt.Fprintf(os.Stderr, "expected no extra arguments for --version, got %d\n", nargs)
+			os.Exit(1)
+		}
+		buf, err := os.ReadFile(filepath.Join(testcase, "version.txt"))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "reading version failed: %v", err)
+			os.Exit(1)
+		}
+		fmt.Print(string(buf))
+		os.Exit(0)
+	}
+
 	if !jsonMode {
 		fmt.Fprintln(os.Stderr, "JSON mode not set")
 		os.Exit(1)
 	}
 
 	args := flag.Args()
-	if nargs := len(args); nargs != 3 {
-		fmt.Fprintf(os.Stderr, "invalid number of arguments, expected 3 got %d\n", nargs)
-		os.Exit(1)
-	}
-	if args[0] != "list" {
-		fmt.Fprintf(os.Stderr, "expected \"list\" command got %q\n", args[0])
-		os.Exit(1)
-	}
-	if args[1] != "table" {
-		fmt.Fprintf(os.Stderr, "expected \"list\" command got %q\n", args[0])
+	if len(args) == 0 || args[0] != "list" {
+		fmt.Fprintf(os.Stderr, "expected \"list\" command got %q\n", args)
 		os.Exit(1)
 	}
 
-	filename := filepath.Join(testcase, "table_"+args[2]+".json")
+	// Tables are served from "table_<name>.json" or "table_<name>.terse.json"
+	// depending on the --terse flag, sets from "set_<family>_<table>_<name>.json"
+	var filename string
+	switch {
+	case len(args) == 3 && args[1] == "table":
+		suffix := ".json"
+		if terse {
+			suffix = ".terse.json"
+		}
+		filename = filepath.Join(testcase, "table_"+args[2]+suffix)
+	case len(args) == 5 && args[1] == "set":
+		if terse {
+			fmt.Fprintln(os.Stderr, "expected set listing without --terse")
+			os.Exit(1)
+		}
+		filename = filepath.Join(testcase, "set_"+args[2]+"_"+args[3]+"_"+args[4]+".json")
+	default:
+		fmt.Fprintf(os.Stderr, "unexpected arguments %q\n", args)
+		os.Exit(1)
+	}
+
 	buf, err := os.ReadFile(filename)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
+			cmd := strings.Join(args, " ")
 			fmt.Fprintln(os.Stderr, "Error: No such file or directory")
-			fmt.Fprintln(os.Stderr, "list table", args[1])
-			fmt.Fprintln(os.Stderr, "          ", strings.Repeat("^", len(args[1])))
+			fmt.Fprintln(os.Stderr, cmd)
+			fmt.Fprintln(os.Stderr, strings.Repeat("^", len(cmd)))
 		} else {
 			fmt.Fprintf(os.Stderr, "reading file %q failed: %v", filename, err)
 		}

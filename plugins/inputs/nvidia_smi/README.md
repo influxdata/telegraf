@@ -218,6 +218,7 @@ Please include the output of this command if opening an GitHub issue.
   - tags
     - `name` (Name of the process e.g. `python`)
     - `type` (Context type, `C` for compute, `G` for graphics, or `C+G`)
+    - `uuid` (UUID of the GPU the process runs on)
   - fields
     - `pid` (integer)
     - `used_memory` (integer, MiB)

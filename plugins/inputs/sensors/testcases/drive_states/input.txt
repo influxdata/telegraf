@@ -1,0 +1,10 @@
+hw.sensors.softraid0.drive0=empty
+hw.sensors.softraid0.drive1=ready
+hw.sensors.softraid0.drive2=powering up
+hw.sensors.softraid0.drive3=online
+hw.sensors.softraid0.drive4=idle
+hw.sensors.softraid0.drive5=active
+hw.sensors.softraid0.drive6=rebuilding
+hw.sensors.softraid0.drive7=powering down
+hw.sensors.softraid0.drive8=failed
+hw.sensors.softraid0.drive9=degraded

@@ -177,9 +177,7 @@ func parseEventsWithQualifiers(events []string) []*eventWithQuals {
 func parseIDs(allIDsStrings []string) ([]int, error) {
 	var result []int
 	for _, idsString := range allIDsStrings {
-		ids := strings.Split(idsString, ",")
-
-		for _, id := range ids {
+		for id := range strings.SplitSeq(idsString, ",") {
 			id := strings.TrimSpace(id)
 			// a-b support
 			var start, end uint

@@ -3,7 +3,6 @@ package socket
 import (
 	"bufio"
 	"crypto/tls"
-	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -62,7 +61,11 @@ func interfaceNameFromServiceAddress(address string) (string, error) {
 	// name, the trailing name itself might contain brackets
 	var host string
 	rest := address
-	if _, after, found := strings.Cut(address, "://"); found {
+	if scheme, after, found := strings.Cut(address, "://"); found {
+		// Unix socket paths are URL encoded, so a '%' starts an escape sequence
+		if strings.HasPrefix(scheme, "unix") {
+			return "", nil
+		}
 		rest = after
 	}
 	if strings.HasPrefix(rest, "[") {
@@ -73,7 +76,7 @@ func interfaceNameFromServiceAddress(address string) (string, error) {
 
 	switch {
 	case hasZone && hasIfName:
-		return "", errors.New("ipv6 zone id and interface name are mutually exclusive")
+		return "", fmt.Errorf("ipv6 zone id and interface name are mutually exclusive in address %q", address)
 	case hasZone:
 		ifName = zone
 	case !hasIfName:
@@ -81,7 +84,7 @@ func interfaceNameFromServiceAddress(address string) (string, error) {
 	}
 
 	if ifName == "" {
-		return "", fmt.Errorf("address %q is not valid", address)
+		return "", fmt.Errorf("empty interface name in address %q", address)
 	}
 
 	return ifName, nil

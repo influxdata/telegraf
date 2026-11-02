@@ -1,0 +1,2 @@
+hw.sensors.asmc0.fan0=1234 RPM (Exhaust, right side)
+hw.sensors.asmc0.fan1=1400 RPM (Intake, left side), OK
