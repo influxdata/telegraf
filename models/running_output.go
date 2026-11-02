@@ -51,9 +51,9 @@ type OutputConfig struct {
 // RunningOutput contains the output configuration
 type RunningOutput struct {
 	// Must be 64-bit aligned
-	droppedMetrics  atomic.Int64
-	writeInFlight   atomic.Bool
-	lastWriteFailed atomic.Bool
+	droppedMetrics   atomic.Int64
+	writeInFlight    atomic.Bool
+	continueFlushing atomic.Bool
 
 	Output            telegraf.Output
 	Config            *OutputConfig
@@ -143,6 +143,7 @@ func NewRunningOutput(output telegraf.Output, config *OutputConfig, batchSize, b
 		),
 		log: logger,
 	}
+	ro.continueFlushing.Store(true)
 
 	return ro, nil
 }
@@ -284,7 +285,7 @@ func (r *RunningOutput) triggerBatchCheck() {
 	// metrics than the batch-size in the buffer. We guard this trigger to not
 	// be issued if a write is already ongoing to avoid event storms when adding
 	// new metrics during write.
-	if r.buffer.Len() >= r.MetricBatchSize && !r.lastWriteFailed.Load() {
+	if r.buffer.Len() >= r.MetricBatchSize && r.continueFlushing.Load() {
 		// Please note: We cannot merge this if into the one above because then
 		// the compare-and-swap condition would always be evaluated and the
 		// swap happens unconditionally from the buffer fullness.
@@ -407,24 +408,26 @@ func (r *RunningOutput) writeMetrics(metrics []telegraf.Metric) error {
 func (r *RunningOutput) updateTransaction(tx *Transaction, err error) {
 	// No error indicates all metrics were written successfully
 	if err == nil {
-		r.lastWriteFailed.Store(false)
+		r.continueFlushing.Store(true)
 		tx.AcceptAll()
 		return
 	}
 
 	// A non-partial-write-error indicated none of the metrics were written
 	// successfully and we should keep them for the next write cycle
-	var writeErr *internal.PartialWriteError
-	if !errors.As(err, &writeErr) {
-		r.lastWriteFailed.Store(true)
+	writeErr, ok := errors.AsType[*internal.PartialWriteError](err)
+	if !ok {
+		r.continueFlushing.Store(false)
 		tx.KeepAll()
 		return
 	}
 
 	// Transfer the accepted and rejected indices based on the write error
-	// values. Only allow to retrigger before the flush interval if at least
-	// one metric was accepted in order to avoid
-	r.lastWriteFailed.Store(len(writeErr.MetricsAccept) == 0)
+	// values. Only allow to retrigger before the flush interval if either the
+	// plugin explicitly said so or at least one metric was accepted in order to
+	// avoid flush storms hammering the plugin's endpoint with requests while it
+	// potentially cannot accept any.
+	r.continueFlushing.Store(writeErr.ContinueFlushing || len(writeErr.MetricsAccept) > 0)
 	tx.Accept = writeErr.MetricsAccept
 	tx.Reject = writeErr.MetricsReject
 }

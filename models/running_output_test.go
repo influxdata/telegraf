@@ -773,6 +773,153 @@ func TestRunningOutputNoRetriggerOnUnsuccessfulPartialWriteError(t *testing.T) {
 	require.Equal(t, 1, int(triggerCount.Load()))
 }
 
+func TestRunningOutputRetriggerOnContinueFlushingPartialWriteError(t *testing.T) {
+	// Setup output failing the first write without accepting any metric but
+	// requesting to continue flushing. All subsequent writes will succeed.
+	conf := &OutputConfig{
+		Filter: Filter{},
+	}
+
+	var failed atomic.Bool
+	plugin := &mockOutput{
+		batchAcceptSize: 0,
+		preWriteHook: func([]telegraf.Metric) error {
+			if failed.CompareAndSwap(false, true) {
+				return &internal.PartialWriteError{
+					Err:              errors.New("writing failed"),
+					ContinueFlushing: true,
+				}
+			}
+			return nil
+		},
+	}
+	const batchSize = 5
+	ro, err := NewRunningOutput(plugin, conf, batchSize, 100)
+	require.NoError(t, err)
+
+	// Create a multiple of batch size many metrics beyond the batch size
+	const batchCount = 10
+	const totalMetrics = batchCount * batchSize
+	inputs := make([]telegraf.Metric, 0, totalMetrics)
+	for i := range totalMetrics {
+		inputs = append(inputs, testutil.TestMetric(i, "test"))
+	}
+
+	// Add the metrics
+	for _, m := range inputs {
+		ro.AddMetric(m)
+	}
+
+	// Setup a event based writing loop similar to what the agent code does.
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	var triggerCount atomic.Uint32
+	var errCount atomic.Uint32
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func(cctx context.Context) {
+		defer wg.Done()
+		for {
+			select {
+			case <-cctx.Done():
+				return
+			case <-ro.BatchReady:
+				triggerCount.Add(1)
+				if err := ro.Write(); err != nil {
+					errCount.Add(1)
+				}
+			}
+		}
+	}(ctx)
+
+	// The buffer can only be drained if the failed write triggered another
+	// flush as nothing else is issuing a write in this test.
+	require.Eventually(t, func() bool { return ro.buffer.Len() == 0 }, 3*time.Second, 100*time.Millisecond)
+	cancel()
+	wg.Wait()
+
+	// Check that the failed write caused exactly one additional flush writing
+	// all metrics kept in the buffer
+	require.Equal(t, 2, int(triggerCount.Load()))
+	require.Equal(t, 1, int(errCount.Load()))
+	require.Equal(t, batchCount+1, int(plugin.writes.Load()))
+	require.Len(t, plugin.Metrics(), totalMetrics)
+}
+
+func TestRunningOutputNoRetriggerOnStopFlushingPartialWriteError(t *testing.T) {
+	// Setup output failing the first write without accepting any metric and
+	// requesting to stop flushing. All subsequent writes would succeed.
+	conf := &OutputConfig{
+		Filter: Filter{},
+	}
+
+	var failed atomic.Bool
+	plugin := &mockOutput{
+		batchAcceptSize: 0,
+		preWriteHook: func([]telegraf.Metric) error {
+			if failed.CompareAndSwap(false, true) {
+				return &internal.PartialWriteError{
+					Err:              errors.New("writing failed"),
+					ContinueFlushing: false,
+				}
+			}
+			return nil
+		},
+	}
+	const batchSize = 5
+	ro, err := NewRunningOutput(plugin, conf, batchSize, 100)
+	require.NoError(t, err)
+
+	// Create a multiple of batch size many metrics beyond the batch size
+	const batchCount = 10
+	const totalMetrics = batchCount * batchSize
+	inputs := make([]telegraf.Metric, 0, totalMetrics)
+	for i := range totalMetrics {
+		inputs = append(inputs, testutil.TestMetric(i, "test"))
+	}
+
+	// Add the metrics
+	for _, m := range inputs {
+		ro.AddMetric(m)
+	}
+
+	// Setup a event based writing loop similar to what the agent code does.
+	ctx, cancel := context.WithTimeout(t.Context(), time.Second)
+	defer cancel()
+
+	var triggerCount atomic.Uint32
+	var errCount atomic.Uint32
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func(cctx context.Context) {
+		defer wg.Done()
+		for {
+			select {
+			case <-cctx.Done():
+				return
+			case <-ro.BatchReady:
+				triggerCount.Add(1)
+				if err := ro.Write(); err != nil {
+					errCount.Add(1)
+				}
+			}
+		}
+	}(ctx)
+
+	// Wait for the trigger loop to exit. This should happen latest after the
+	// defined timeout.
+	wg.Wait()
+
+	// Check that the failed write did not cause another flush and that all
+	// metrics are kept in the buffer
+	require.Equal(t, 1, int(triggerCount.Load()))
+	require.Equal(t, 1, int(errCount.Load()))
+	require.Equal(t, 1, int(plugin.writes.Load()))
+	require.Empty(t, plugin.Metrics())
+	require.Equal(t, totalMetrics, ro.buffer.Len())
+}
+
 func TestRunningOutputInternalMetrics(t *testing.T) {
 	_, err := NewRunningOutput(
 		&mockOutput{},

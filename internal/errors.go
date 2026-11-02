@@ -52,6 +52,7 @@ type PartialWriteError struct {
 	MetricsAccept       []int
 	MetricsReject       []int
 	MetricsRejectErrors []error
+	ContinueFlushing    bool
 }
 
 func (e *PartialWriteError) Error() string {
