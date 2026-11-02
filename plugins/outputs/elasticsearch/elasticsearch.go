@@ -10,18 +10,22 @@ import (
 	"fmt"
 	"math"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/olivere/elastic"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
+
+type client interface {
+	close()
+	bulk(context.Context, []document) error
+	templateExists(context.Context, string) (bool, error)
+	putTemplate(context.Context, string, string) error
+}
 
 //go:embed sample.conf
 var sampleConfig string
@@ -39,7 +43,7 @@ type Elasticsearch struct {
 	FloatReplacement    float64         `toml:"float_replacement_value"`
 	ForceDocumentID     bool            `toml:"force_document_id"`
 	HealthCheckInterval config.Duration `toml:"health_check_interval"`
-	HealthCheckTimeout  config.Duration `toml:"health_check_timeout"`
+	HealthCheckTimeout  config.Duration `toml:"health_check_timeout" deprecated:"1.41.0;option is ignored, use 'timeout' instead"`
 	IndexName           string          `toml:"index_name"`
 	IndexTemplate       map[string]any  `toml:"template_index_settings"`
 	ManageTemplate      bool            `toml:"manage_template"`
@@ -52,7 +56,7 @@ type Elasticsearch struct {
 	Log                 telegraf.Logger `toml:"-"`
 	tls.ClientConfig
 
-	client             *elastic.Client
+	client             client
 	httpHeaders        http.Header
 	majorReleaseNumber int
 	pipelineName       string
@@ -134,83 +138,67 @@ func (a *Elasticsearch) Connect() error {
 	if err != nil {
 		return fmt.Errorf("creating TLS configuration failed: %w", err)
 	}
-	transport := &http.Transport{
-		TLSClientConfig: tlsCfg,
-	}
-
-	httpclient := &http.Client{
-		Transport: transport,
+	httpClient := &http.Client{
+		Transport: &http.Transport{TLSClientConfig: tlsCfg},
 		Timeout:   time.Duration(a.Timeout),
 	}
-
-	// Parse the initial URL to determine scheme
-	elasticURL, err := url.Parse(a.URLs[0])
-	if err != nil {
-		return fmt.Errorf("parsing URL %q failed: %w", a.URLs[0], err)
+	cfg := clientConfig{
+		urls:              a.URLs,
+		headers:           a.httpHeaders,
+		enableGzip:        a.EnableGzip,
+		enableSniffer:     a.EnableSniffer,
+		discoveryInterval: time.Duration(a.HealthCheckInterval),
+		httpClient:        httpClient,
+		log:               a.Log,
 	}
-
-	// Setup the client options
-	options := []elastic.ClientOptionFunc{
-		elastic.SetHttpClient(httpclient),
-		elastic.SetSniff(a.EnableSniffer),
-		elastic.SetScheme(elasticURL.Scheme),
-		elastic.SetURL(a.URLs...),
-		elastic.SetHealthcheckInterval(time.Duration(a.HealthCheckInterval)),
-		elastic.SetHealthcheckTimeout(time.Duration(a.HealthCheckTimeout)),
-		elastic.SetGzip(a.EnableGzip),
-	}
-
-	if len(a.httpHeaders) > 0 {
-		options = append(options, elastic.SetHeaders(a.httpHeaders))
-	}
-
-	authOptions, err := a.getAuthOptions()
-	if err != nil {
+	if err := cfg.setAuth(a.Username, a.Password, a.AuthBearerToken); err != nil {
+		httpClient.CloseIdleConnections()
 		return fmt.Errorf("getting authentication options failed: %w", err)
 	}
-	options = append(options, authOptions...)
 
-	if time.Duration(a.HealthCheckInterval) == 0 {
-		a.Log.Debugf("Disabling health check")
-		options = append(options, elastic.SetHealthcheck(false))
+	version, major, err := cfg.probeVersion(context.Background())
+	if err != nil {
+		httpClient.CloseIdleConnections()
+		return err
 	}
 
-	client, err := elastic.NewClient(options...)
+	var c client
+	switch major {
+	case 5:
+		if cfg.enableSniffer {
+			a.Log.Warn("'enable_sniffer' is not supported for Elasticsearch 5.x and will be ignored")
+		}
+		c, err = newClientV5(cfg)
+	case 6:
+		c, err = newClientV6(cfg)
+	default:
+		httpClient.CloseIdleConnections()
+		return fmt.Errorf("elasticsearch version not supported: %s", version)
+	}
 	if err != nil {
+		httpClient.CloseIdleConnections()
 		return fmt.Errorf("creating ES client failed: %w", err)
 	}
-
-	// Check for ES version on first node
-	esVersion, err := client.ElasticsearchVersion(a.URLs[0])
-	if err != nil {
-		return fmt.Errorf("checking ES version failed: %w", err)
-	}
-
-	// quit if ES version is not supported
-	majorReleaseNumber, err := strconv.Atoi(strings.Split(esVersion, ".")[0])
-	if err != nil || majorReleaseNumber < 5 {
-		return fmt.Errorf("elasticsearch version not supported: %s", esVersion)
-	}
-
-	a.Log.Infof("Elasticsearch version: %q", esVersion)
-
-	a.client = client
-	a.majorReleaseNumber = majorReleaseNumber
+	a.client = c
+	a.majorReleaseNumber = major
+	a.Log.Infof("Elasticsearch version: %q", version)
 
 	if a.ManageTemplate {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(a.Timeout))
 		defer cancel()
-
 		if err := a.manageTemplate(ctx); err != nil {
+			a.Close()
 			return fmt.Errorf("managing templates failed: %w", err)
 		}
 	}
-
 	return nil
 }
 
 func (a *Elasticsearch) Close() error {
-	a.client = nil
+	if a.client != nil {
+		a.client.close()
+		a.client = nil
+	}
 	return nil
 }
 
@@ -219,88 +207,67 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
-	bulkRequest := a.client.Bulk()
+	documents := make([]document, 0, len(metrics))
 	for _, metric := range metrics {
-		name := metric.Name()
-
-		// Determine the name of the index based on the given template and the
-		// actual metric data
-		tags := metric.Tags()
-		indexName := a.getIndexName(a.IndexName, metric.Time(), a.tagKeys, tags)
-
-		// Handle NaN and inf field-values
-		fields := make(map[string]any, len(metric.FieldList()))
-		for _, f := range metric.FieldList() {
-			v, ok := f.Value.(float64)
-			if !ok || a.FloatHandling == "none" || !(math.IsNaN(v) || math.IsInf(v, 0)) {
-				fields[f.Key] = f.Value
-				continue
-			}
-			if a.FloatHandling == "drop" {
-				continue
-			}
-
-			if math.IsNaN(v) || math.IsInf(v, 1) {
-				fields[f.Key] = a.FloatReplacement
-			} else {
-				fields[f.Key] = -a.FloatReplacement
-			}
-		}
-
-		doc := map[string]any{
-			"@timestamp":       metric.Time(),
-			"measurement_name": name,
-			"tag":              tags,
-			name:               fields,
-		}
-
-		req := elastic.NewBulkIndexRequest().Index(indexName).Doc(doc)
-		if a.UseOpTypeCreate {
-			req.OpType("create")
-		}
-		if a.ForceDocumentID {
-			id := getPointID(metric)
-			req.Id(id)
-		}
-		if a.majorReleaseNumber <= 6 {
-			req.Type("metrics")
-		}
-		if a.UsePipeline != "" {
-			if pipelineName := a.getPipelineName(a.pipelineName, a.pipelineTagKeys, tags); pipelineName != "" {
-				req.Pipeline(pipelineName)
-			}
-		}
-		bulkRequest.Add(req)
+		documents = append(documents, a.buildDocument(metric))
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(a.Timeout))
 	defer cancel()
+	return a.client.bulk(ctx, documents)
+}
 
-	res, err := bulkRequest.Do(ctx)
-	if err != nil {
-		return fmt.Errorf("error sending bulk request to Elasticsearch: %w", err)
-	}
+func (a *Elasticsearch) buildDocument(metric telegraf.Metric) document {
+	name := metric.Name()
 
-	if res.Errors {
-		for id, err := range res.Failed() {
-			a.Log.Errorf(
-				"Elasticsearch indexing failure, id: %d, status: %d, error: %s, caused by: %s, %s",
-				id,
-				err.Status,
-				err.Error.Reason,
-				err.Error.CausedBy["reason"],
-				err.Error.CausedBy["type"],
-			)
-			break
+	// Determine the name of the index based on the given template and the
+	// actual metric data
+	tags := metric.Tags()
+	indexName := a.getIndexName(a.IndexName, metric.Time(), a.tagKeys, tags)
+
+	// Handle NaN and inf field-values
+	fields := make(map[string]any, len(metric.FieldList()))
+	for _, f := range metric.FieldList() {
+		v, ok := f.Value.(float64)
+		if !ok || a.FloatHandling == "none" || !(math.IsNaN(v) || math.IsInf(v, 0)) {
+			fields[f.Key] = f.Value
+			continue
 		}
-		return fmt.Errorf("elasticsearch failed to index %d metrics", len(res.Failed()))
+		if a.FloatHandling == "drop" {
+			continue
+		}
+
+		if math.IsNaN(v) || math.IsInf(v, 1) {
+			fields[f.Key] = a.FloatReplacement
+		} else {
+			fields[f.Key] = -a.FloatReplacement
+		}
 	}
 
-	return nil
+	doc := document{
+		index:  indexName,
+		opType: "index",
+		body: map[string]any{
+			"@timestamp":       metric.Time(),
+			"measurement_name": name,
+			"tag":              tags,
+			name:               fields,
+		},
+	}
+	if a.UseOpTypeCreate {
+		doc.opType = "create"
+	}
+	if a.ForceDocumentID {
+		doc.id = getPointID(metric)
+	}
+	if a.UsePipeline != "" {
+		doc.pipeline = a.getPipelineName(a.pipelineName, a.pipelineTagKeys, tags)
+	}
+	return doc
 }
 
 func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
-	templateExists, err := a.client.IndexTemplateExists(a.TemplateName).Do(ctx)
+	templateExists, err := a.client.templateExists(ctx, a.TemplateName)
 	if err != nil {
 		return fmt.Errorf("checking existence of template %q failed: %w", a.TemplateName, err)
 	}
@@ -312,7 +279,7 @@ func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
 			return fmt.Errorf("creating index template %q failed: %w", a.TemplateName, err)
 		}
 
-		if _, err := a.client.IndexPutTemplate(a.TemplateName).BodyString(tmpl).Do(ctx); err != nil {
+		if err := a.client.putTemplate(ctx, a.TemplateName, tmpl); err != nil {
 			return fmt.Errorf("sending index template %q failed: %w", a.TemplateName, err)
 		}
 		a.Log.Debugf("Template %s created or updated", a.TemplateName)
@@ -366,36 +333,6 @@ func (a *Elasticsearch) getPipelineName(pipelineInput string, tagKeys []string, 
 	return fmt.Sprintf(pipelineInput, tagValues...)
 }
 
-func (a *Elasticsearch) getAuthOptions() ([]elastic.ClientOptionFunc, error) {
-	var fns []elastic.ClientOptionFunc
-
-	if !a.Username.Empty() && !a.Password.Empty() {
-		username, err := a.Username.Get()
-		if err != nil {
-			return nil, fmt.Errorf("getting username failed: %w", err)
-		}
-		password, err := a.Password.Get()
-		if err != nil {
-			username.Destroy()
-			return nil, fmt.Errorf("getting password failed: %w", err)
-		}
-		fns = append(fns, elastic.SetBasicAuth(username.String(), password.String()))
-		username.Destroy()
-		password.Destroy()
-	}
-
-	if !a.AuthBearerToken.Empty() {
-		token, err := a.AuthBearerToken.Get()
-		if err != nil {
-			return nil, fmt.Errorf("getting token failed: %w", err)
-		}
-		auth := []string{"Bearer " + token.String()}
-		fns = append(fns, elastic.SetHeaders(http.Header{"Authorization": auth}))
-		token.Destroy()
-	}
-	return fns, nil
-}
-
 func getPointID(m telegraf.Metric) string {
 	var buffer bytes.Buffer
 	// Timestamp(ns),measurement name and Series Hash for compute the final SHA256 based hash ID
@@ -442,8 +379,7 @@ func init() {
 	outputs.Add("elasticsearch", func() telegraf.Output {
 		return &Elasticsearch{
 			Timeout:             config.Duration(time.Second * 5),
-			HealthCheckInterval: config.Duration(time.Second * 10),
-			HealthCheckTimeout:  config.Duration(time.Second * 1),
+			HealthCheckInterval: config.Duration(15 * time.Minute),
 		}
 	})
 }

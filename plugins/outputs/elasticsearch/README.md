@@ -1,15 +1,15 @@
 # Elasticsearch Output Plugin
 
 This plugin writes metrics to [Elasticsearch][elasticsearch] via HTTP using the
-[Elastic client library][client_lib]. The plugin supports Elasticsearch
-releases from v5.x up to v7.x.
+[official Elasticsearch client library][client_lib]. The plugin supports Elasticsearch
+releases v5.x and v6.x.
 
 ⭐ Telegraf v0.1.5
 🏷️ datastore, logging
 💻 all
 
 [elasticsearch]: https://www.elastic.co
-[client_lib]: http://olivere.github.io/elastic/
+[client_lib]: https://github.com/elastic/go-elasticsearch
 
 ## Elasticsearch indexes and templates
 
@@ -190,45 +190,6 @@ following way on Linux:
 echo TZ="UTC" | sudo tee -a /etc/default/telegraf
 ```
 
-## OpenSearch Support
-
-OpenSearch is a fork of Elasticsearch hosted by AWS. The OpenSearch server will
-report itself to clients with an AWS specific-version (e.g. v1.0). In reality,
-the actual underlying Elasticsearch version is v7.1. This breaks Telegraf and
-other Elasticsearch clients that need to know what major version they are
-interfacing with.
-
-Amazon has created a [compatibility mode][3] to allow existing Elasticsearch
-clients to properly work when the version needs to be checked. To enable
-compatibility mode users need to set the `override_main_response_version` to
-`true`.
-
-On existing clusters run `PUT /_cluster/settings` with
-
-```json
-{
-  "persistent" : {
-    "compatibility.override_main_response_version" : true
-  }
-}
-```
-
-And on new clusters execute
-`POST https://es.us-east-1.amazonaws.com/2021-01-01/opensearch/upgradeDomain`and
-set the option to `true` under advanced options
-
-```json
-{
-  "DomainName": "domain-name",
-  "TargetVersion": "OpenSearch_1.0",
-  "AdvancedOptions": {
-    "override_main_response_version": "true"
-   }
-}
-```
-
-[3]: https://docs.aws.amazon.com/opensearch-service/latest/developerguide/rename.html#rename-upgrade
-
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
 Plugins support additional global and plugin configuration settings for tasks
@@ -262,11 +223,9 @@ to use them.
   enable_sniffer = false
   ## Set to true to enable gzip compression
   enable_gzip = false
-  ## Set the interval to check if the Elasticsearch nodes are available
-  ## Setting to "0s" will disable the health check (not recommended in production)
-  health_check_interval = "10s"
-  ## Set the timeout for periodic health checks.
-  # health_check_timeout = "1s"
+  ## Node discovery interval when enable_sniffer is true (Elasticsearch 6.x).
+  ## Setting to "0s" will disable node discovery.
+  health_check_interval = "15m"
   ## HTTP basic authentication details.
   ## HTTP basic authentication details
   # username = "telegraf"
@@ -380,11 +339,16 @@ the `default_tag_value` will be used instead.
 ### Optional parameters
 
 * `timeout`: Elasticsearch client timeout, defaults to "5s" if not set.
-* `enable_sniffer`: Set to true to ask Elasticsearch a list of all cluster
-  nodes, thus it is not necessary to list all nodes in the urls config option.
-* `health_check_interval`: Set the interval to check if the nodes are available,
-  in seconds. Setting to 0 will disable the health check (not recommended in
-  production).
+* `enable_sniffer`: Set to true to let the official client discover cluster
+  nodes at the configured `health_check_interval`. The official v5 client does
+  not support discovery; the plugin logs a warning and ignores this option.
+  The v6 client selects nodes with both the `data` and `ingest` roles.
+* `health_check_interval`: Node discovery interval when `enable_sniffer` is true,
+  defaulting to "15m". Setting to "0s" disables discovery. Separate periodic
+  health checks are no longer performed; connection management uses the official
+  client.
+* `health_check_timeout`: Deprecated since Telegraf 1.41.0 and ignored.
+  Use `timeout` to configure HTTP request timeouts.
 * `username`: The username for HTTP basic authentication details (eg. when using
   Shield).
 * `password`: The password for HTTP basic authentication details (eg. when using

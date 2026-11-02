@@ -1,0 +1,114 @@
+package elasticsearch
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"strings"
+	"sync"
+	"time"
+
+	elasticsearch6 "github.com/elastic/go-elasticsearch/v6"
+
+	"github.com/influxdata/telegraf"
+)
+
+type clientV6 struct {
+	client          *elasticsearch6.Client
+	httpClient      *http.Client
+	log             telegraf.Logger
+	cancelDiscovery context.CancelFunc
+	discoveryWG     sync.WaitGroup
+}
+
+func newClientV6(cfg clientConfig) (client, error) {
+	c, err := elasticsearch6.NewClient(elasticsearch6.Config{
+		Addresses: cfg.urls,
+		Transport: roundTripper{cfg: cfg},
+		// Telegraf owns write retries; replaying a bulk request can duplicate documents.
+		DisableRetry: true,
+	})
+	if err != nil {
+		return nil, err
+	}
+	client := &clientV6{client: c, httpClient: cfg.httpClient, log: cfg.log}
+	if cfg.enableSniffer && cfg.discoveryInterval > 0 {
+		// The v6 client exposes only DiscoverNodes(), so in-flight calls cannot be canceled.
+		ctx, cancel := context.WithCancel(context.Background())
+		client.cancelDiscovery = cancel
+		client.discoveryWG.Go(func() { client.discoverNodes(ctx, cfg.discoveryInterval) })
+	}
+	return client, nil
+}
+
+func (c *clientV6) close() {
+	if c.cancelDiscovery != nil {
+		c.cancelDiscovery()
+		c.discoveryWG.Wait()
+	}
+	c.httpClient.CloseIdleConnections()
+}
+
+func (c *clientV6) discoverNodes(ctx context.Context, interval time.Duration) {
+	if err := c.client.DiscoverNodes(); err != nil && ctx.Err() == nil {
+		c.log.Errorf("Discovering Elasticsearch nodes failed: %v", err)
+	}
+
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			if err := c.client.DiscoverNodes(); err != nil && ctx.Err() == nil {
+				c.log.Errorf("Discovering Elasticsearch nodes failed: %v", err)
+			}
+		}
+	}
+}
+
+func (c *clientV6) bulk(ctx context.Context, documents []document) error {
+	body, err := encodeBulk(documents)
+	if err != nil {
+		return fmt.Errorf("error sending bulk request to Elasticsearch: %w", err)
+	}
+	res, err := c.client.Bulk(body, c.client.Bulk.WithContext(ctx))
+	if err != nil {
+		return fmt.Errorf("error sending bulk request to Elasticsearch: %w", err)
+	}
+	defer res.Body.Close()
+	return checkBulkResponse(res.StatusCode, res.Body, c.log)
+}
+
+func (c *clientV6) templateExists(ctx context.Context, name string) (bool, error) {
+	res, err := c.client.Indices.ExistsTemplate([]string{name}, c.client.Indices.ExistsTemplate.WithContext(ctx))
+	if err != nil {
+		return false, err
+	}
+	defer res.Body.Close()
+	if res.StatusCode == http.StatusNotFound {
+		return false, nil
+	}
+	if err := checkForError(res.StatusCode, res.Body); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func (c *clientV6) putTemplate(ctx context.Context, name, body string) error {
+	res, err := c.client.Indices.PutTemplate(name, strings.NewReader(body), c.client.Indices.PutTemplate.WithContext(ctx))
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	if err := checkForError(res.StatusCode, res.Body); err != nil {
+		return err
+	}
+	var response templateResponse
+	if err := json.NewDecoder(res.Body).Decode(&response); err != nil {
+		return fmt.Errorf("decoding message body failed: %w", err)
+	}
+	return nil
+}
