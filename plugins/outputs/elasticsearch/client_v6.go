@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"strings"
 	"sync"
-	"time"
 
 	elasticsearch6 "github.com/elastic/go-elasticsearch/v6"
 
@@ -37,7 +36,9 @@ func newClientV6(cfg clientConfig) (client, error) {
 		// The v6 client exposes only DiscoverNodes(), so in-flight calls cannot be canceled.
 		ctx, cancel := context.WithCancel(context.Background())
 		client.cancelDiscovery = cancel
-		client.discoveryWG.Go(func() { client.discoverNodes(ctx, cfg.discoveryInterval) })
+		client.discoveryWG.Go(func() {
+			startDiscovery(ctx, cfg.discoveryInterval, c.DiscoverNodes, cfg.log)
+		})
 	}
 	return client, nil
 }
@@ -50,27 +51,8 @@ func (c *clientV6) close() {
 	c.httpClient.CloseIdleConnections()
 }
 
-func (c *clientV6) discoverNodes(ctx context.Context, interval time.Duration) {
-	if err := c.client.DiscoverNodes(); err != nil && ctx.Err() == nil {
-		c.log.Errorf("Discovering Elasticsearch nodes failed: %v", err)
-	}
-
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			if err := c.client.DiscoverNodes(); err != nil && ctx.Err() == nil {
-				c.log.Errorf("Discovering Elasticsearch nodes failed: %v", err)
-			}
-		}
-	}
-}
-
 func (c *clientV6) bulk(ctx context.Context, documents []document) error {
-	body, err := encodeBulk(documents)
+	body, err := encodeBulk(documents, "metrics")
 	if err != nil {
 		return fmt.Errorf("error sending bulk request to Elasticsearch: %w", err)
 	}

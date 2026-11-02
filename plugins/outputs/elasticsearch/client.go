@@ -102,11 +102,11 @@ func (cfg clientConfig) probeVersion(ctx context.Context) (string, int, error) {
 	return info.Version.Number, major, nil
 }
 
-func encodeBulk(documents []document) (*bytes.Buffer, error) {
+func encodeBulk(documents []document, docType string) (*bytes.Buffer, error) {
 	var body bytes.Buffer
 	encoder := json.NewEncoder(&body)
 	for _, doc := range documents {
-		metadata := bulkMetadata{Index: doc.index, ID: doc.id, Type: "metrics", Pipeline: doc.pipeline}
+		metadata := bulkMetadata{Index: doc.index, ID: doc.id, Type: docType, Pipeline: doc.pipeline}
 		if err := encoder.Encode(map[string]bulkMetadata{doc.opType: metadata}); err != nil {
 			return nil, err
 		}
@@ -182,7 +182,7 @@ func (t roundTripper) RoundTrip(original *http.Request) (*http.Response, error) 
 		req.Header.Set("Accept", "application/json")
 	}
 	if strings.HasSuffix(req.URL.Path, "/_bulk") {
-		// The v5/v6 APIs default to JSON even for newline-delimited bulk bodies.
+		// The v5/v6/v7 APIs default to JSON even for newline-delimited bulk bodies.
 		req.Header.Set("Content-Type", "application/x-ndjson")
 	} else if req.Header.Get("Content-Type") == "" {
 		req.Header.Set("Content-Type", "application/json")
@@ -214,4 +214,24 @@ func (t roundTripper) RoundTrip(original *http.Request) (*http.Response, error) 
 		req.Header.Add("Vary", "Accept-Encoding")
 	}
 	return t.cfg.httpClient.Do(req)
+}
+
+// startDiscovery runs node discovery immediately and then at the configured interval.
+func startDiscovery(ctx context.Context, interval time.Duration, discover func() error, log telegraf.Logger) {
+	if err := discover(); err != nil && ctx.Err() == nil {
+		log.Errorf("Discovering Elasticsearch nodes failed: %v", err)
+	}
+
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			if err := discover(); err != nil && ctx.Err() == nil {
+				log.Errorf("Discovering Elasticsearch nodes failed: %v", err)
+			}
+		}
+	}
 }

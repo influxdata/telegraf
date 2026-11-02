@@ -186,6 +186,8 @@ func (a *Elasticsearch) Connect() error {
 		c, err = newClientV5(cfg)
 	case 6:
 		c, err = newClientV6(cfg)
+	case 7:
+		c, err = newClientV7(cfg)
 	default:
 		httpClient.CloseIdleConnections()
 		return fmt.Errorf("elasticsearch version not supported: %s", version)

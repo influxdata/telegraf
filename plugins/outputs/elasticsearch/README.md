@@ -2,7 +2,7 @@
 
 This plugin writes metrics to [Elasticsearch][elasticsearch] via HTTP using the
 [official Elasticsearch client library][client_lib]. The plugin supports Elasticsearch
-releases v5.x and v6.x.
+releases from v5.x up to v7.x.
 
 ⭐ Telegraf v0.1.5
 🏷️ datastore, logging
@@ -226,7 +226,7 @@ to use them.
   enable_sniffer = false
   ## Set to true to enable gzip compression
   enable_gzip = false
-  ## Node discovery interval when enable_sniffer is true (Elasticsearch 6.x).
+  ## Node discovery interval when enable_sniffer is true (Elasticsearch 6.x and 7.x).
   ## Setting to "0s" will disable node discovery.
   health_check_interval = "15m"
   ## HTTP basic authentication details.
@@ -345,7 +345,8 @@ the `default_tag_value` will be used instead.
 * `enable_sniffer`: Set to true to let the official client discover cluster
   nodes at the configured `health_check_interval`. The official v5 client does
   not support discovery; the plugin logs a warning and ignores this option.
-  The v6 client selects nodes with both the `data` and `ingest` roles.
+  The v6 client selects nodes with both the `data` and `ingest` roles. The v7
+  client excludes dedicated master nodes.
 * `health_check_interval`: Node discovery interval when `enable_sniffer` is true,
   defaulting to "15m". Setting to "0s" disables discovery. Separate periodic
   health checks are no longer performed; connection management uses the official
