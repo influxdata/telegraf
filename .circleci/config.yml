@@ -237,7 +237,7 @@ jobs:
           shell: powershell.exe
           command: |
             reg add "HKLM\SYSTEM\CurrentControlSet\Services\hns\State" /v EnableExcludedPortRange /d 0 /f
-            Restart-Service hns -Force
+            if (Get-Service hns -ErrorAction SilentlyContinue) { Restart-Service hns -Force }
       - run: 'sh ./scripts/installgo_windows.sh'
       - run: choco install mingw
       - run: echo 'export PATH="$PATH:/c/ProgramData/mingw64/mingw64/bin"' >> $BASH_ENV
