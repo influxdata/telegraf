@@ -162,7 +162,7 @@ require (
 	github.com/moby/ipvs v1.1.0
 	github.com/moby/moby/api v1.56.1
 	github.com/moby/moby/client v0.6.2
-	github.com/multiplay/go-ts3 v1.2.0
+	github.com/multiplay/go-ts3 v1.3.0
 	github.com/nats-io/nats-server/v2 v2.15.2
 	github.com/nats-io/nats.go v1.55.0
 	github.com/netsampler/goflow2/v2 v2.2.7
