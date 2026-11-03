@@ -254,14 +254,13 @@ func (s *Stackdriver) sendBatch(batch []telegraf.Metric) error {
 			continue
 		}
 
-		// Convert any declared tag to a resource label and remove it from
-		// the metric
+		// Convert any declared tag to a resource label without mutating the
+		// metric so replayed batches retain their original tags.
 		resourceLabels := make(map[string]string, len(s.ResourceLabels)+len(s.TagsAsResourceLabels))
 		maps.Copy(resourceLabels, s.ResourceLabels)
 		for _, tag := range s.TagsAsResourceLabels {
 			if val, ok := m.GetTag(tag); ok {
 				resourceLabels[tag] = val
-				m.RemoveTag(tag)
 			}
 		}
 
@@ -586,7 +585,6 @@ func buildHistogram(m telegraf.Metric) (*monitoringpb.TypedValue, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to convert sum value to float64: %w", err)
 	}
-	m.RemoveField("sum")
 
 	countInter, ok := m.GetField("count")
 	if !ok {
@@ -596,13 +594,16 @@ func buildHistogram(m telegraf.Metric) (*monitoringpb.TypedValue, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to convert count value to float64: %w", err)
 	}
-	m.RemoveField("count")
 
 	// Build map of the buckets and their values
 	fields := m.FieldList()
 	buckets := make([]float64, 0, len(fields))
 	bucketCounts := make([]int64, 0, len(fields))
 	for _, field := range fields {
+		if field.Key == "sum" || field.Key == "count" {
+			continue
+		}
+
 		// Add the +inf value to bucket counts, no need to define a bound
 		if strings.Contains(strings.ToLower(field.Key), "+inf") {
 			count, err := internal.ToInt64(field.Value)
@@ -658,8 +659,11 @@ func buildHistogram(m telegraf.Metric) (*monitoringpb.TypedValue, error) {
 }
 
 func (s *Stackdriver) getStackdriverLabels(tags []*telegraf.Tag) map[string]string {
-	labels := make(map[string]string)
+	labels := make(map[string]string, len(tags))
 	for _, t := range tags {
+		if slices.Contains(s.TagsAsResourceLabels, t.Key) {
+			continue
+		}
 		labels[t.Key] = t.Value
 	}
 	for k, v := range labels {
