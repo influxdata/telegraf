@@ -57,7 +57,6 @@ type Elasticsearch struct {
 
 	client             *elastic.Client
 	httpHeaders        http.Header
-	localAddr          *net.TCPAddr
 	majorReleaseNumber int
 	pipelineName       string
 	pipelineTagKeys    []string
@@ -95,15 +94,6 @@ func (a *Elasticsearch) Init() error {
 		if strings.HasPrefix(a.IndexName, "%") || strings.HasPrefix(a.IndexName, "{{") {
 			return errors.New("dynamic 'index_name' must have a static prefix")
 		}
-	}
-
-	// Resolve the local address to bind to
-	if a.LocalAddress != "" {
-		localAddr, err := internal.ResolveLocalTCPAddress(a.LocalAddress)
-		if err != nil {
-			return err
-		}
-		a.localAddr = localAddr
 	}
 
 	// Setup index, tags and pipelines
@@ -150,8 +140,12 @@ func (a *Elasticsearch) Connect() error {
 	transport := &http.Transport{
 		TLSClientConfig: tlsCfg,
 	}
-	if a.localAddr != nil {
-		dialer := &net.Dialer{LocalAddr: a.localAddr}
+	if a.LocalAddress != "" {
+		localAddr, err := internal.ResolveLocalTCPAddress(a.LocalAddress)
+		if err != nil {
+			return err
+		}
+		dialer := &net.Dialer{LocalAddr: localAddr}
 		transport.DialContext = dialer.DialContext
 	}
 

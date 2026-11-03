@@ -148,6 +148,17 @@ func TestLocalAddress(t *testing.T) {
 	require.Equal(t, "127.0.0.2", host)
 }
 
+func TestInvalidLocalAddress(t *testing.T) {
+	plugin := &Elasticsearch{
+		URLs:         []string{"http://localhost:9200"},
+		IndexName:    "test-%Y.%m.%d",
+		LocalAddress: "::1",
+		Log:          testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+	require.ErrorContains(t, plugin.Connect(), "invalid local address")
+}
+
 func TestInitFail(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -246,15 +257,6 @@ func TestInitFail(t *testing.T) {
 				Headers:   map[string]any{"X-Invalid": []any{"string-value", 123, "another-string"}},
 			},
 			expected: `header "X-Invalid" contains non-string value in array: 123 with type int`,
-		},
-		{
-			name: "invalid local address",
-			plugin: &Elasticsearch{
-				URLs:         []string{"http://localhost:9200"},
-				IndexName:    "test-%Y.%m.%d",
-				LocalAddress: "::1",
-			},
-			expected: "invalid local address",
 		},
 	}
 
