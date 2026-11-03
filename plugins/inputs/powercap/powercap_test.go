@@ -11,65 +11,69 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 )
 
-type zoneFiles struct {
-	zone        string
-	name        string
-	energy      string
-	energyRange string
-}
+func TestCases(t *testing.T) {
+	folders, err := os.ReadDir("testcases")
+	require.NoError(t, err)
 
-func TestGatherReportsEnergyOfEveryZone(t *testing.T) {
-	sysPath := t.TempDir()
-	t.Setenv("HOST_SYS", sysPath)
-	writeControlType(t, sysPath, "intel-rapl")
-	writeZones(t, sysPath,
-		zoneFiles{zone: "intel-rapl:0", name: "package-0", energy: "172380552916", energyRange: "262143328850"},
-		zoneFiles{zone: "intel-rapl:0:0", name: "dram", energy: "21843017463", energyRange: "65712999613"},
-		zoneFiles{zone: "intel-rapl:1", name: "package-1", energy: "160121449030", energyRange: "262143328850"},
-		zoneFiles{zone: "intel-rapl-mmio:0", name: "package-0", energy: "3184012553", energyRange: "262143328850"},
-	)
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
 
-	plugin := &Powercap{Log: testutil.Logger{}}
-	require.NoError(t, plugin.Init())
+	for _, f := range folders {
+		if !f.IsDir() {
+			continue
+		}
+		testcasePath := filepath.Join("testcases", f.Name())
+		configFilename := filepath.Join(testcasePath, "telegraf.conf")
+		expectedFilename := filepath.Join(testcasePath, "expected.out")
+		expectedErrorFilename := filepath.Join(testcasePath, "expected.err")
 
-	var acc testutil.Accumulator
-	require.NoError(t, plugin.Gather(&acc))
+		t.Run(f.Name(), func(t *testing.T) {
+			var expected []telegraf.Metric
+			if _, err := os.Stat(expectedFilename); err == nil {
+				expected, err = testutil.ParseMetricsFromFile(expectedFilename, parser)
+				require.NoError(t, err)
+			}
 
-	expected := []telegraf.Metric{
-		energyMetric("intel-rapl:0", "package-0", 172380552916),
-		energyMetric("intel-rapl:0:0", "dram", 21843017463),
-		energyMetric("intel-rapl:1", "package-1", 160121449030),
-		energyMetric("intel-rapl-mmio:0", "package-0", 3184012553),
+			var expectedErrors []string
+			if _, err := os.Stat(expectedErrorFilename); err == nil {
+				expectedErrors, err = testutil.ParseLinesFromFile(expectedErrorFilename)
+				require.NoError(t, err)
+				require.NotEmpty(t, expectedErrors)
+			}
+
+			t.Setenv("HOST_SYS", filepath.Join(testcasePath, "sys"))
+
+			cfg := config.NewConfig()
+			require.NoError(t, cfg.LoadConfig(configFilename))
+			require.Len(t, cfg.Inputs, 1)
+			plugin := cfg.Inputs[0].Input.(*Powercap)
+			require.NoError(t, plugin.Init())
+
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Gather(&acc))
+
+			actualErrors := make([]string, 0, len(acc.Errors))
+			for _, err := range acc.Errors {
+				actualErrors = append(actualErrors, err.Error())
+			}
+			require.ElementsMatch(t, expectedErrors, actualErrors)
+			testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime(), testutil.SortMetrics())
+		})
 	}
-	require.Empty(t, acc.Errors)
-	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime(), testutil.SortMetrics())
-}
-
-func TestGatherSkipsZonesWithoutEnergyCounter(t *testing.T) {
-	sysPath := t.TempDir()
-	t.Setenv("HOST_SYS", sysPath)
-	writeControlType(t, sysPath, "dtpm")
-	writeFile(t, filepath.Join(sysPath, "class", "powercap", "dtpm:0", "name"), "soc")
-
-	plugin := &Powercap{Log: testutil.Logger{}}
-	require.NoError(t, plugin.Init())
-
-	var acc testutil.Accumulator
-	require.NoError(t, plugin.Gather(&acc))
-
-	require.Empty(t, acc.Errors)
-	require.Empty(t, acc.GetTelegrafMetrics())
 }
 
 func TestGatherReportsPowerFromTheSecondReading(t *testing.T) {
 	sysPath := t.TempDir()
 	t.Setenv("HOST_SYS", sysPath)
-	package0 := zoneFiles{zone: "intel-rapl:0", name: "package-0", energy: "1000000", energyRange: "65532610987"}
-	writeZones(t, sysPath, package0)
+	zonePath := filepath.Join(sysPath, "class", "powercap", "intel-rapl:0")
+	writeFile(t, filepath.Join(zonePath, "name"), "package-0")
+	writeFile(t, filepath.Join(zonePath, "max_energy_range_uj"), "65532610987")
+	writeFile(t, filepath.Join(zonePath, "energy_uj"), "1000000")
 
 	plugin := &Powercap{Log: testutil.Logger{}}
 	require.NoError(t, plugin.Init())
@@ -78,8 +82,7 @@ func TestGatherReportsPowerFromTheSecondReading(t *testing.T) {
 	require.NoError(t, plugin.Gather(&acc))
 	require.False(t, acc.HasField("powercap", "power_watts"))
 
-	package0.energy = "2000000"
-	writeZones(t, sysPath, package0)
+	writeFile(t, filepath.Join(zonePath, "energy_uj"), "2000000")
 	acc.ClearMetrics()
 	require.NoError(t, plugin.Gather(&acc))
 
@@ -87,26 +90,6 @@ func TestGatherReportsPowerFromTheSecondReading(t *testing.T) {
 	watts, found := acc.FloatField("powercap", "power_watts")
 	require.True(t, found)
 	require.Positive(t, watts)
-}
-
-func TestGatherReportsUnreadableZoneAndContinues(t *testing.T) {
-	sysPath := t.TempDir()
-	t.Setenv("HOST_SYS", sysPath)
-	writeZones(t, sysPath,
-		zoneFiles{zone: "intel-rapl:0", name: "package-0", energy: "not a number", energyRange: "65532610987"},
-		zoneFiles{zone: "intel-rapl:0:0", name: "core", energy: "13382443108", energyRange: "65532610987"},
-	)
-
-	plugin := &Powercap{Log: testutil.Logger{}}
-	require.NoError(t, plugin.Init())
-
-	var acc testutil.Accumulator
-	require.NoError(t, plugin.Gather(&acc))
-
-	require.Len(t, acc.Errors, 1)
-	require.ErrorContains(t, acc.Errors[0], `reading energy of zone "intel-rapl:0" failed`)
-	expected := []telegraf.Metric{energyMetric("intel-rapl:0:0", "core", 13382443108)}
-	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
 
 func TestAverageWatts(t *testing.T) {
@@ -137,28 +120,6 @@ func TestAverageWatts(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			require.InDelta(t, tt.expected, averageWatts(tt.earlier, tt.later, tt.wrapsAt), 1e-9)
 		})
-	}
-}
-
-func energyMetric(zone, name string, microjoules uint64) telegraf.Metric {
-	return metric.New(
-		"powercap",
-		map[string]string{"zone": zone, "name": name},
-		map[string]any{"energy_uj": microjoules},
-		time.Unix(0, 0),
-	)
-}
-
-func writeControlType(t *testing.T, sysPath, controlType string) {
-	writeFile(t, filepath.Join(sysPath, "class", "powercap", controlType, "enabled"), "1")
-}
-
-func writeZones(t *testing.T, sysPath string, zones ...zoneFiles) {
-	for _, zone := range zones {
-		zonePath := filepath.Join(sysPath, "class", "powercap", zone.zone)
-		writeFile(t, filepath.Join(zonePath, "name"), zone.name)
-		writeFile(t, filepath.Join(zonePath, "energy_uj"), zone.energy)
-		writeFile(t, filepath.Join(zonePath, "max_energy_range_uj"), zone.energyRange)
 	}
 }
 

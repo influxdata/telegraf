@@ -1,0 +1,2 @@
+powercap,zone=intel-rapl-0,name=package-0 energy_uj=11415820996u
+powercap,zone=intel-rapl-0-0,name=core energy_uj=234586196u
