@@ -763,8 +763,11 @@ func TestWriteBulkFail(t *testing.T) {
 			name:        "partial bulk failure",
 			metricCount: 2,
 			status:      http.StatusOK,
-			response:    `{"errors":true,"items":[{"index":{"status":201}},{"index":{"status":429,"error":{"type":"es_rejected_execution_exception","reason":"queue full"}}}]}`,
-			expected:    "elasticsearch failed to index 1 metrics",
+			response: `{"errors":true,"items":[
+				{"index":{"status":201}},
+				{"index":{"status":429,"error":{"type":"es_rejected_execution_exception","reason":"queue full"}}}
+			]}`,
+			expected: "elasticsearch failed to index 1 metrics",
 		},
 	}
 
@@ -1357,7 +1360,10 @@ func TestClientDiscovery(t *testing.T) {
 				switch r.URL.Path {
 				case "/_nodes/http":
 					discoveries.Add(1)
-					_, err := fmt.Fprintf(w, `{"nodes":{"node":{"roles":["data","ingest"],"http":{"publish_address":%q}}}}`, strings.TrimPrefix(target.URL, "http://"))
+					_, err := fmt.Fprintf(w,
+						`{"nodes":{"node":{"roles":["data","ingest"],"http":{"publish_address":%q}}}}`,
+						strings.TrimPrefix(target.URL, "http://"),
+					)
 					if err != nil {
 						t.Error(err)
 					}
