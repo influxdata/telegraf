@@ -19,6 +19,7 @@ import (
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -864,6 +865,26 @@ func TestMultiInstance(t *testing.T) {
 			testutil.RequireMetricsEqual(t, tt.expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
 		})
 	}
+}
+
+func TestErrorBehaviorRetry(t *testing.T) {
+	// Point the system bus at a socket that does not exist so connecting fails
+	t.Setenv("DBUS_SYSTEM_BUS_ADDRESS", "unix:path=/nonexistent/system_bus_socket")
+	plugin := &SystemdUnits{
+		Timeout: config.Duration(time.Second),
+	}
+	model := models.NewRunningInput(plugin, &models.InputConfig{
+		Name:                 "systemd_units",
+		StartupErrorBehavior: "retry",
+	})
+	require.NoError(t, model.Init())
+
+	// With "retry" the model swallows a retry-able startup error and
+	// tries again on the next gather
+	var acc testutil.Accumulator
+	require.NoError(t, model.Start(&acc))
+	require.ErrorIs(t, model.Gather(&acc), internal.ErrNotConnected)
+	model.Stop()
 }
 
 func BenchmarkAllUnitsIntegration(b *testing.B) {
