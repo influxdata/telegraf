@@ -148,8 +148,11 @@ func TestLocalAddress(t *testing.T) {
 	plugin := &Kafka{
 		LocalAddress: "127.0.0.2",
 		Log:          testutil.Logger{},
+		producerFunc: newMockProducer,
 	}
 	require.NoError(t, plugin.Init())
+	require.Nil(t, plugin.saramaConfig.Net.LocalAddr)
+	require.NoError(t, plugin.Connect())
 	require.Equal(t, "127.0.0.2:0", plugin.saramaConfig.Net.LocalAddr.String())
 }
 
