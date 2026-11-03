@@ -1,7 +1,7 @@
 # Elasticsearch Output Plugin
 
 This plugin writes metrics to [Elasticsearch][elasticsearch] via HTTP using the
-[official Elasticsearch client library][client_lib]. The plugin supports Elasticsearch
+[Elastic client library][client_lib]. The plugin supports Elasticsearch
 releases from v5.x up to v7.x.
 
 ⭐ Telegraf v0.1.5
@@ -381,15 +381,14 @@ the `default_tag_value` will be used instead.
 ### Optional parameters
 
 * `timeout`: Elasticsearch client timeout, defaults to "5s" if not set.
-* `enable_sniffer`: Set to true to let the official client discover cluster
-  nodes at the configured `health_check_interval`. The official v5 client does
+* `enable_sniffer`: Set to true to let the client discover cluster
+  nodes at the configured `health_check_interval`. The v5 client does
   not support discovery; the plugin logs a warning and ignores this option.
   The v6 client selects nodes with both the `data` and `ingest` roles. The v7
   client excludes dedicated master nodes.
 * `health_check_interval`: Node discovery interval when `enable_sniffer` is true,
   defaulting to "15m". Setting to "0s" disables discovery. Separate periodic
-  health checks are no longer performed; connection management uses the official
-  client.
+  health checks are no longer performed; connection management uses the client.
 * `health_check_timeout`: Deprecated since Telegraf 1.41.0 and ignored.
   Use `timeout` to configure HTTP request timeouts.
 * `username`: The username for HTTP basic authentication details (eg. when using
