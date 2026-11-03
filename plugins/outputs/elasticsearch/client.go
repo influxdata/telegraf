@@ -170,7 +170,8 @@ func checkForError(status int, body io.Reader) error {
 // roundTripper preserves the configured HTTP client's timeout, headers, and
 // compression for official clients that do not provide these options.
 type roundTripper struct {
-	cfg clientConfig
+	cfg                clientConfig
+	bypassProductCheck bool
 }
 
 func (t roundTripper) RoundTrip(original *http.Request) (*http.Response, error) {
@@ -213,7 +214,13 @@ func (t roundTripper) RoundTrip(original *http.Request) (*http.Response, error) 
 		req.Header.Set("Content-Encoding", "gzip")
 		req.Header.Add("Vary", "Accept-Encoding")
 	}
-	return t.cfg.httpClient.Do(req)
+	res, err := t.cfg.httpClient.Do(req)
+	if err == nil && t.bypassProductCheck {
+		// Preserve support for OpenSearch in compatibility mode. The official client's
+		// product check validates identity, not API compatibility.
+		res.Header.Set("X-Elastic-Product", "Elasticsearch")
+	}
+	return res, err
 }
 
 // startDiscovery runs node discovery immediately and then at the configured interval.

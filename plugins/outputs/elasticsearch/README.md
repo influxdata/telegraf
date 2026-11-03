@@ -190,6 +190,45 @@ following way on Linux:
 echo TZ="UTC" | sudo tee -a /etc/default/telegraf
 ```
 
+## OpenSearch Support
+
+OpenSearch is a fork of Elasticsearch hosted by AWS. The OpenSearch server will
+report itself to clients with an AWS specific-version (e.g. v1.0). In reality,
+the actual underlying Elasticsearch version is v7.1. This breaks Telegraf and
+other Elasticsearch clients that need to know what major version they are
+interfacing with.
+
+Amazon has created a [compatibility mode][3] to allow existing Elasticsearch
+clients to properly work when the version needs to be checked. To enable
+compatibility mode users need to set the `override_main_response_version` to
+`true`.
+
+On existing clusters run `PUT /_cluster/settings` with
+
+```json
+{
+  "persistent" : {
+    "compatibility.override_main_response_version" : true
+  }
+}
+```
+
+And on new clusters execute
+`POST https://es.us-east-1.amazonaws.com/2021-01-01/opensearch/upgradeDomain`and
+set the option to `true` under advanced options
+
+```json
+{
+  "DomainName": "domain-name",
+  "TargetVersion": "OpenSearch_1.0",
+  "AdvancedOptions": {
+    "override_main_response_version": "true"
+   }
+}
+```
+
+[3]: https://docs.aws.amazon.com/opensearch-service/latest/developerguide/rename.html#rename-upgrade
+
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
 Plugins support additional global and plugin configuration settings for tasks

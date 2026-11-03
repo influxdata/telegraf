@@ -1189,6 +1189,22 @@ func TestWriteIntegration(t *testing.T) {
 			waitFor:      wait.ForHTTP("/").WithPort(servicePort).WithStartupTimeout(120 * time.Second),
 			expectedType: "_doc",
 		},
+		{
+			name:  "OpenSearch v1 compatibility mode",
+			image: "opensearchproject/opensearch:1.1.0",
+			env: map[string]string{
+				"discovery.type":                               "single-node",
+				"DISABLE_INSTALL_DEMO_CONFIG":                  "true",
+				"DISABLE_SECURITY_PLUGIN":                      "true",
+				"DISABLE_PERFORMANCE_ANALYZER_AGENT_CLI":       "true",
+				"compatibility.override_main_response_version": "true",
+			},
+			waitFor: wait.ForAll(
+				wait.ForListeningPort(servicePort),
+				wait.ForLog("Init AD version hash ring successfully"),
+			),
+			expectedType: "_doc",
+		},
 	}
 
 	for _, tt := range tests {
@@ -1286,7 +1302,6 @@ func TestClientDiscovery(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var discoveredWrites, seedWrites, discoveries atomic.Int32
 			target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.Header().Set("X-Elastic-Product", "Elasticsearch")
 				if r.URL.Path == "/_bulk" {
 					discoveredWrites.Add(1)
 				}
@@ -1296,7 +1311,6 @@ func TestClientDiscovery(t *testing.T) {
 			}))
 			defer target.Close()
 			seed := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.Header().Set("X-Elastic-Product", "Elasticsearch")
 				switch r.URL.Path {
 				case "/_nodes/http":
 					discoveries.Add(1)
@@ -1356,7 +1370,6 @@ func TestClientDiscoveryDisabled(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var writes, discoveries atomic.Int32
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.Header().Set("X-Elastic-Product", "Elasticsearch")
 				switch r.URL.Path {
 				case "/_nodes/http":
 					discoveries.Add(1)
@@ -1489,7 +1502,6 @@ func startMockServer(t *testing.T) *mockServer {
 	}
 
 	s.server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("X-Elastic-Product", "Elasticsearch")
 		if name, found := strings.CutPrefix(r.URL.Path, "/_template/"); found {
 			switch r.Method {
 			case http.MethodHead:

@@ -24,7 +24,7 @@ type clientV7 struct {
 func newClientV7(cfg clientConfig) (client, error) {
 	c, err := elasticsearch7.NewClient(elasticsearch7.Config{
 		Addresses: cfg.urls,
-		Transport: roundTripper{cfg: cfg},
+		Transport: roundTripper{cfg: cfg, bypassProductCheck: true},
 		// Telegraf owns write retries; replaying a bulk request can duplicate documents.
 		DisableRetry: true,
 	})
