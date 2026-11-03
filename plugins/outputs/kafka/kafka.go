@@ -91,15 +91,8 @@ func (k *Kafka) Init() error {
 		return err
 	}
 
-	if k.LocalAddress != "" {
-		if k.Socks5ProxyEnabled {
-			return errors.New("local_address cannot be used with socks5_enabled")
-		}
-		localAddr, err := internal.ResolveLocalTCPAddress(k.LocalAddress)
-		if err != nil {
-			return err
-		}
-		cfg.Net.LocalAddr = localAddr
+	if k.LocalAddress != "" && k.Socks5ProxyEnabled {
+		return errors.New("local_address cannot be used with socks5_enabled")
 	}
 
 	if k.Socks5ProxyEnabled {
@@ -135,6 +128,14 @@ func (k *Kafka) Init() error {
 }
 
 func (k *Kafka) Connect() error {
+	if k.LocalAddress != "" {
+		localAddr, err := internal.ResolveLocalTCPAddress(k.LocalAddress)
+		if err != nil {
+			return err
+		}
+		k.saramaConfig.Net.LocalAddr = localAddr
+	}
+
 	producer, err := k.producerFunc(k.Brokers, k.saramaConfig)
 	if err != nil {
 		return &internal.StartupError{Err: err, Retry: true}
