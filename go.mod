@@ -104,7 +104,7 @@ require (
 	github.com/go-sql-driver/mysql v1.10.1
 	github.com/go-stomp/stomp v2.1.4+incompatible
 	github.com/gobwas/glob v1.1.0
-	github.com/godbus/dbus/v5 v5.2.2
+	github.com/godbus/dbus/v5 v5.2.4
 	github.com/gofrs/uuid/v5 v5.5.1
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang-jwt/jwt/v5 v5.3.1
