@@ -61,7 +61,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ## Example Output
 
 ```text
-hddtemp,source=server1,unit=C,status=,device=sdb,model=WDC\ WD740GD-00FLA1 temperature=43i 1481655647000000000
-hddtemp,device=sdc,model=SAMSUNG\ HD103UI,unit=C,source=server1,status= temperature=38i 148165564700000000
-hddtemp,device=sdd,model=SAMSUNG\ HD103UI,unit=C,source=server1,status= temperature=36i 1481655647000000000
+hddtemp,source=server1,unit=C,device=sdb,model=WDC\ WD740GD-00FLA1 temperature=43i 1481655647000000000
+hddtemp,device=sdc,model=SAMSUNG\ HD103UI,unit=C,source=server1 temperature=38i 1481655647000000000
+hddtemp,device=sdd,model=SAMSUNG\ HD103UI,unit=C,source=server1 temperature=36i 1481655647000000000
 ```

@@ -359,6 +359,6 @@ mongodb,hostname=127.0.0.1:27017,node_type=PRI,rs_name=rs0 active_reads=1i,activ
 mongodb_db_stats,db_name=admin,hostname=127.0.0.1:27017 avg_obj_size=241,collections=2i,data_size=723i,index_size=49152i,indexes=3i,num_extents=0i,objects=3i,ok=1i,storage_size=53248i,type="db_stat" 1547159491000000000
 mongodb_db_stats,db_name=local,hostname=127.0.0.1:27017 avg_obj_size=813.9705882352941,collections=6i,data_size=55350i,index_size=102400i,indexes=5i,num_extents=0i,objects=68i,ok=1i,storage_size=204800i,type="db_stat" 1547159491000000000
 mongodb_col_stats,collection=foo,db_name=local,hostname=127.0.0.1:27017 size=375005928i,avg_obj_size=5494,type="col_stat",storage_size=249307136i,total_index_size=2138112i,ok=1i,count=68251i 1547159491000000000
-mongodb_shard_stats,hostname=127.0.0.1:27017,in_use=3i,available=3i,created=4i,refreshing=0i 1522799074000000000
-mongodb_top_stats,collection=foo,total_time=1471,total_count=158,read_lock_time=49614,read_lock_count=657,write_lock_time=49125456,write_lock_count=9841,queries_time=174,queries_count=495,get_more_time=498,get_more_count=46,insert_time=2651,insert_count=1265,update_time=0,update_count=0,remove_time=0,remove_count=0,commands_time=498611,commands_count=4615
+mongodb_shard_stats,hostname=127.0.0.1:27017 in_use=3i,available=3i,created=4i,refreshing=0i 1522799074000000000
+mongodb_top_stats,collection=foo total_time=1471i,total_count=158i,read_lock_time=49614i,read_lock_count=657i,write_lock_time=49125456i,write_lock_count=9841i,queries_time=174i,queries_count=495i,get_more_time=498i,get_more_count=46i,insert_time=2651i,insert_count=1265i,update_time=0i,update_count=0i,remove_time=0i,remove_count=0i,commands_time=498611i,commands_count=4615i
 ```
