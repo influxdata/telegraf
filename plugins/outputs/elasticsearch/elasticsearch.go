@@ -203,11 +203,13 @@ func (a *Elasticsearch) Connect() error {
 	if a.ManageTemplate {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(a.Timeout))
 		defer cancel()
+
 		if err := a.manageTemplate(ctx); err != nil {
 			a.Close()
 			return fmt.Errorf("managing templates failed: %w", err)
 		}
 	}
+
 	return nil
 }
 
