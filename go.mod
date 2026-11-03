@@ -210,7 +210,7 @@ require (
 	github.com/stretchr/testify v1.12.1
 	github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62
 	github.com/tdrn-org/go-fritzsmarthome v0.1.1
-	github.com/tdrn-org/go-hue v1.2.3
+	github.com/tdrn-org/go-hue v1.2.4
 	github.com/tdrn-org/go-nsdp v0.5.3
 	github.com/tdrn-org/go-tr064 v0.4.0
 	github.com/testcontainers/testcontainers-go v0.44.0
@@ -508,7 +508,7 @@ require (
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/ncruces/go-strftime v1.1.0 // indirect
 	github.com/ncw/swift/v2 v2.0.5 // indirect
-	github.com/oapi-codegen/runtime v1.7.0 // indirect
+	github.com/oapi-codegen/runtime v1.8.0 // indirect
 	github.com/oklog/ulid/v2 v2.1.2 // indirect
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/pdatautil v0.160.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
