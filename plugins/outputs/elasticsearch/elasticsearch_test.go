@@ -1520,35 +1520,45 @@ func TestConnectRetry(t *testing.T) {
 }
 
 func TestClientClose(t *testing.T) {
-	started := make(chan struct{})
-	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
-		close(started)
-		<-r.Context().Done()
-	}))
-	defer server.Close()
-	connection, err := newClientV6(clientConfig{
-		urls:              []string{server.URL},
-		enableSniffer:     true,
-		discoveryInterval: time.Hour,
-		httpClient:        &http.Client{Timeout: time.Second},
-		log:               testutil.Logger{},
-	})
-	require.NoError(t, err)
-	defer connection.close()
-	select {
-	case <-started:
-	case <-time.After(5 * time.Second):
-		t.Fatal("discovery did not start")
-	}
-	closed := make(chan struct{})
-	go func() {
-		connection.close()
-		close(closed)
-	}()
-	select {
-	case <-closed:
-	case <-time.After(5 * time.Second):
-		t.Fatal("client did not stop discovery after the HTTP timeout")
+	for _, tt := range []struct {
+		name      string
+		newClient func(clientConfig) (client, error)
+	}{
+		{name: "v6", newClient: newClientV6},
+		{name: "v7", newClient: newClientV7},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			started := make(chan struct{})
+			server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+				close(started)
+				<-r.Context().Done()
+			}))
+			defer server.Close()
+			connection, err := tt.newClient(clientConfig{
+				urls:              []string{server.URL},
+				enableSniffer:     true,
+				discoveryInterval: time.Hour,
+				httpClient:        &http.Client{Timeout: time.Second},
+				log:               testutil.Logger{},
+			})
+			require.NoError(t, err)
+			defer connection.close()
+			select {
+			case <-started:
+			case <-time.After(5 * time.Second):
+				t.Fatal("discovery did not start")
+			}
+			closed := make(chan struct{})
+			go func() {
+				connection.close()
+				close(closed)
+			}()
+			select {
+			case <-closed:
+			case <-time.After(5 * time.Second):
+				t.Fatal("client did not stop discovery after the HTTP timeout")
+			}
+		})
 	}
 }
 
