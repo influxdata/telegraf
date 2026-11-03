@@ -568,6 +568,110 @@ func TestWriteIntegration_sequentialSinglePermError(t *testing.T) {
 	require.NoError(t, p.Write(metrics))
 }
 
+// Test that a column added in a dropped sub-batch is added again by the next write.
+func TestWriteIntegration_sequentialPermErrorAddColumn(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
+	require.NoError(t, p.Connect())
+
+	metrics := []telegraf.Metric{
+		newMetric(t, "_a", MSS{}, MSI{"v": 1}),
+		newMetric(t, "_b", MSS{}, MSI{"v": 1}),
+	}
+	require.NoError(t, p.Write(metrics))
+
+	// The ALTER TABLE adding "g" is rolled back together with the sub-batch.
+	metrics = []telegraf.Metric{
+		newMetric(t, "_a", MSS{}, MSI{"v": "a", "g": 1}),
+		newMetric(t, "_b", MSS{}, MSI{"v": 2}),
+	}
+	require.NoError(t, p.Write(metrics))
+
+	metrics = []telegraf.Metric{
+		newMetric(t, "_a", MSS{}, MSI{"v": 3, "g": 1}),
+		newMetric(t, "_b", MSS{}, MSI{"v": 3}),
+	}
+	require.NoError(t, p.Write(metrics))
+
+	dumpA := dbTableDump(t, p.db, "_a")
+	require.Len(t, dumpA, 2)
+	require.EqualValues(t, 3, dumpA[1]["v"])
+	require.EqualValues(t, 1, dumpA[1]["g"])
+	require.Len(t, dbTableDump(t, p.db, "_b"), 3)
+}
+
+// Test that a column added in a rolled back transaction is added again by the next write.
+func TestWriteIntegration_sequentialSinglePermErrorAddColumn(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
+	require.NoError(t, p.Connect())
+
+	metrics := []telegraf.Metric{
+		newMetric(t, "", MSS{}, MSI{"v": 1}),
+	}
+	require.NoError(t, p.Write(metrics))
+
+	metrics = []telegraf.Metric{
+		newMetric(t, "", MSS{}, MSI{"v": "a", "g": 1}),
+	}
+	require.NoError(t, p.Write(metrics))
+
+	metrics = []telegraf.Metric{
+		newMetric(t, "", MSS{}, MSI{"v": 3, "g": 1}),
+	}
+	require.NoError(t, p.Write(metrics))
+
+	dump := dbTableDump(t, p.db, "")
+	require.Len(t, dump, 2)
+	require.EqualValues(t, 3, dump[1]["v"])
+	require.EqualValues(t, 1, dump[1]["g"])
+}
+
+// Test that a tag inserted in a dropped sub-batch is inserted again by the next write.
+func TestWriteIntegration_sequentialPermErrorTagCache(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
+	p.TagsAsForeignKeys = true
+	p.ForeignTagConstraint = true
+	require.NoError(t, p.Connect())
+
+	metrics := []telegraf.Metric{
+		newMetric(t, "_a", MSS{"tag": "foo"}, MSI{"v": 1}),
+		newMetric(t, "_b", MSS{"tag": "foo"}, MSI{"v": 1}),
+	}
+	require.NoError(t, p.Write(metrics))
+
+	// The tag row for "bar" is rolled back together with the sub-batch.
+	metrics = []telegraf.Metric{
+		newMetric(t, "_a", MSS{"tag": "bar"}, MSI{"v": "a"}),
+		newMetric(t, "_b", MSS{"tag": "foo"}, MSI{"v": 2}),
+	}
+	require.NoError(t, p.Write(metrics))
+
+	metrics = []telegraf.Metric{
+		newMetric(t, "_a", MSS{"tag": "bar"}, MSI{"v": 3}),
+		newMetric(t, "_b", MSS{"tag": "foo"}, MSI{"v": 3}),
+	}
+	require.NoError(t, p.Write(metrics))
+
+	dumpA := dbTableDump(t, p.db, "_a")
+	require.Len(t, dumpA, 2)
+	require.EqualValues(t, 3, dumpA[1]["v"])
+	require.Len(t, dbTableDump(t, p.db, "_a_tag"), 2)
+}
+
 // Test that the bad metric is dropped, and the rest of the batch succeeds.
 func TestWriteIntegration_concurrentPermError(t *testing.T) {
 	if testing.Short() {

@@ -59,6 +59,30 @@ func (tm *TableManager) ClearTableCache() {
 	}
 }
 
+// ClearTableSourceCache clears the cached structure of the tables written by the source, and its tag sets in the tag
+// cache.
+func (tm *TableManager) ClearTableSourceCache(tsrc *TableSource) {
+	names := []string{tsrc.Name()}
+	if tm.TagsAsForeignKeys {
+		names = append(names, tsrc.Name()+tm.TagTableSuffix)
+	}
+	tm.tablesMutex.Lock()
+	for _, name := range names {
+		if tbl := tm.tables[name]; tbl != nil {
+			tbl.Lock()
+			tbl.columns = nil
+			tbl.Unlock()
+		}
+	}
+	tm.tablesMutex.Unlock()
+
+	if tm.tagsCache != nil {
+		for tagID := range tsrc.tagSets {
+			tm.tagsCache.DelInt(tsrc.tagHashSalt + tagID)
+		}
+	}
+}
+
 func (tm *TableManager) table(name string) *tableState {
 	tm.tablesMutex.Lock()
 	tbl := tm.tables[name]
