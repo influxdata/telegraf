@@ -229,7 +229,7 @@ func preserveConnectionPool[Connection, Selector, Pool any](newPool func([]Conne
 	var pool Pool
 	return func(conns []Connection, selector Selector) Pool {
 		if len(conns) > 0 {
-			// The v6/v7 SDK pool constructors always return a nil error.
+			//nolint:errcheck // The v6/v7 SDK pool constructors always return a nil error.
 			pool, _ = newPool(conns, selector)
 		}
 		return pool
