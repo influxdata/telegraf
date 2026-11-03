@@ -135,6 +135,7 @@ func checkBulkResponse(status int, body io.Reader, log telegraf.Logger) error {
 				continue
 			}
 			if failed == 0 && result.Error != nil {
+				// Preserve the legacy failure-list index: only the first failure was logged, at index 0.
 				log.Errorf(
 					"Elasticsearch indexing failure, id: %d, status: %d, error: %s, caused by: %s, %s",
 					0, result.Status, result.Error.Reason, result.Error.CausedBy["reason"], result.Error.CausedBy["type"],
