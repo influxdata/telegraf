@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	elasticsearch7 "github.com/elastic/go-elasticsearch/v7"
+	estransport7 "github.com/elastic/go-elasticsearch/v7/estransport"
 
 	"github.com/influxdata/telegraf"
 )
@@ -26,7 +27,8 @@ func newClientV7(cfg clientConfig) (client, error) {
 		Addresses: cfg.urls,
 		Transport: roundTripper{cfg: cfg, bypassProductCheck: true},
 		// Telegraf owns write retries; replaying a bulk request can duplicate documents.
-		DisableRetry: true,
+		DisableRetry:       true,
+		ConnectionPoolFunc: preserveConnectionPool(estransport7.NewConnectionPool),
 	})
 	if err != nil {
 		return nil, err

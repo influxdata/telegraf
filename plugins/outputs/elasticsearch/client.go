@@ -224,6 +224,18 @@ func (t roundTripper) RoundTrip(original *http.Request) (*http.Response, error) 
 	return res, err
 }
 
+// preserveConnectionPool keeps the previous v6/v7 SDK pool when discovery finds no eligible nodes.
+func preserveConnectionPool[Connection, Selector, Pool any](newPool func([]Connection, Selector) (Pool, error)) func([]Connection, Selector) Pool {
+	var pool Pool
+	return func(conns []Connection, selector Selector) Pool {
+		if len(conns) > 0 {
+			// The v6/v7 SDK pool constructors always return a nil error.
+			pool, _ = newPool(conns, selector)
+		}
+		return pool
+	}
+}
+
 // startDiscovery runs node discovery immediately and then at the configured interval.
 func startDiscovery(ctx context.Context, interval time.Duration, discover func() error, log telegraf.Logger) {
 	if err := discover(); err != nil && ctx.Err() == nil {

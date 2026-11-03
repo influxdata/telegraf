@@ -1360,6 +1360,72 @@ func TestClientDiscovery(t *testing.T) {
 	}
 }
 
+func TestClientDiscoveryEmpty(t *testing.T) {
+	for _, tt := range []struct {
+		name     string
+		version  string
+		response string
+	}{
+		{name: "v6 no nodes", version: "6.8.23", response: `{"nodes":{}}`},
+		{name: "v7 no nodes", version: "7.17.29", response: `{"nodes":{}}`},
+		{
+			name:    "v6 separate data and ingest nodes",
+			version: "6.8.23",
+			response: `{"nodes":{
+				"data":{"roles":["data"],"http":{"publish_address":"127.0.0.1:9200"}},
+				"ingest":{"roles":["ingest"],"http":{"publish_address":"127.0.0.1:9201"}}
+			}}`,
+		},
+		{
+			name:     "v7 master-only nodes",
+			version:  "7.17.29",
+			response: `{"nodes":{"master":{"roles":["master"],"http":{"publish_address":"127.0.0.1:9200"}}}}`,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				var response string
+				switch r.URL.Path {
+				case "/_nodes/http":
+					response = tt.response
+				case "/_bulk":
+					response = "{}"
+				default:
+					response = fmt.Sprintf(`{"version":{"number":%q}}`, tt.version)
+				}
+				if _, err := io.WriteString(w, response); err != nil {
+					t.Error(err)
+				}
+			}))
+			defer server.Close()
+			plugin := &Elasticsearch{
+				URLs:      []string{server.URL},
+				IndexName: "test-%Y.%m.%d",
+				Timeout:   config.Duration(time.Second),
+				Log:       testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+			require.NoError(t, plugin.Connect())
+			defer plugin.Close()
+
+			var discover func() error
+			switch connection := plugin.client.(type) {
+			case *clientV6:
+				discover = connection.client.DiscoverNodes
+			case *clientV7:
+				discover = connection.client.DiscoverNodes
+			default:
+				t.Fatalf("unexpected client type %T", plugin.client)
+			}
+			// Repeat discovery to verify the retained pool remains usable for discovery and writes.
+			for range 2 {
+				require.NoError(t, discover())
+				require.NoError(t, plugin.Write(testutil.MockMetrics()))
+			}
+		})
+	}
+}
+
 func TestClientDiscoveryDisabled(t *testing.T) {
 	for _, tt := range []struct {
 		name          string
@@ -1627,10 +1693,6 @@ func (s *mockServer) setVersion(version string) {
 func (s *mockServer) setBulkResponse(status int, response string) {
 	s.Lock()
 	defer s.Unlock()
-	if status != 0 {
-		s.bulkStatus = status
-	}
-	if response != "" {
-		s.bulkResponse = response
-	}
+	s.bulkStatus = status
+	s.bulkResponse = response
 }
