@@ -1,0 +1,1 @@
+reading energy of zone "intel-rapl-0" failed: strconv.ParseUint: parsing "not a number": invalid syntax
