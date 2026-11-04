@@ -385,8 +385,6 @@ the `default_tag_value` will be used instead.
   client excludes dedicated master nodes.
 * `sniffer_interval`: Node discovery interval when `enable_sniffer` is true,
   defaulting to "15m". Must be positive when sniffing is enabled.
-* `health_check_timeout`: Deprecated since Telegraf 1.41.0 and ignored.
-  Use `timeout` to configure HTTP request timeouts.
 * `username`: The username for HTTP basic authentication details (eg. when using
   Shield).
 * `password`: The password for HTTP basic authentication details (eg. when using
