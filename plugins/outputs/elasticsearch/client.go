@@ -10,10 +10,10 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	elasticsearch5 "github.com/elastic/go-elasticsearch/v5"
 
 	"github.com/influxdata/telegraf"
@@ -58,7 +58,7 @@ func (t *roundTripper) configureAuth(username, password, bearerToken config.Secr
 	return nil
 }
 
-func (t roundTripper) probeVersion(ctx context.Context) (string, int, error) {
+func (t roundTripper) probeVersion(ctx context.Context) (string, uint64, error) {
 	probe, err := elasticsearch5.NewClient(elasticsearch5.Config{
 		Addresses: t.urls,
 		Transport: t,
@@ -78,11 +78,11 @@ func (t roundTripper) probeVersion(ctx context.Context) (string, int, error) {
 	if err := json.NewDecoder(res.Body).Decode(&info); err != nil {
 		return "", 0, fmt.Errorf("checking ES version failed: %w", err)
 	}
-	major, err := strconv.Atoi(strings.Split(info.Version.Number, ".")[0])
+	version, err := semver.NewVersion(info.Version.Number)
 	if err != nil {
 		return "", 0, fmt.Errorf("parsing server version %q failed: %w", info.Version.Number, err)
 	}
-	return info.Version.Number, major, nil
+	return info.Version.Number, version.Major(), nil
 }
 
 func encodeBulk(documents []document, docType string) (*bytes.Buffer, error) {

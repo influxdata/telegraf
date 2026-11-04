@@ -58,7 +58,7 @@ type Elasticsearch struct {
 
 	client             client
 	httpHeaders        http.Header
-	majorReleaseNumber int
+	majorReleaseNumber uint64
 	pipelineName       string
 	pipelineTagKeys    []string
 	tagKeys            []string
