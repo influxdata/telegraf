@@ -91,10 +91,10 @@ func encodeBulk(documents []document, docType string) (*bytes.Buffer, error) {
 	for _, doc := range documents {
 		metadata := bulkMetadata{Index: doc.index, ID: doc.id, Type: docType, Pipeline: doc.pipeline}
 		if err := encoder.Encode(map[string]bulkMetadata{doc.opType: metadata}); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("encoding bulk metadata failed: %w", err)
 		}
 		if err := encoder.Encode(doc.body); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("encoding document body failed: %w", err)
 		}
 	}
 	return &body, nil
