@@ -151,7 +151,7 @@ func (a *Elasticsearch) Connect() error {
 		httpClient:        httpClient,
 		log:               a.Log,
 	}
-	if err := cfg.setAuth(a.Username, a.Password, a.AuthBearerToken); err != nil {
+	if err := cfg.configureAuth(a.Username, a.Password, a.AuthBearerToken); err != nil {
 		httpClient.CloseIdleConnections()
 		return fmt.Errorf("getting authentication options failed: %w", err)
 	}

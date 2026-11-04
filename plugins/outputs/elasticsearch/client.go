@@ -23,8 +23,10 @@ import (
 type clientConfig struct {
 	urls              []string
 	basicAuth         bool
-	username          string
-	password          string
+	userinfo          *url.Userinfo
+	username          config.Secret
+	password          config.Secret
+	bearerToken       config.Secret
 	headers           http.Header
 	enableGzip        bool
 	enableSniffer     bool
@@ -33,21 +35,10 @@ type clientConfig struct {
 	log               telegraf.Logger
 }
 
-func (cfg *clientConfig) setAuth(username, password, bearerToken config.Secret) error {
+func (cfg *clientConfig) configureAuth(username, password, bearerToken config.Secret) error {
 	if !username.Empty() && !password.Empty() {
-		u, err := username.Get()
-		if err != nil {
-			return fmt.Errorf("getting username failed: %w", err)
-		}
-		p, err := password.Get()
-		if err != nil {
-			u.Destroy()
-			return fmt.Errorf("getting password failed: %w", err)
-		}
 		cfg.basicAuth = true
-		cfg.username, cfg.password = u.String(), p.String()
-		u.Destroy()
-		p.Destroy()
+		cfg.username, cfg.password = username, password
 	}
 	if !cfg.basicAuth {
 		for _, address := range cfg.urls {
@@ -56,22 +47,12 @@ func (cfg *clientConfig) setAuth(username, password, bearerToken config.Secret) 
 				return fmt.Errorf("parsing URL %q failed: %w", address, err)
 			}
 			if u.User != nil {
-				cfg.basicAuth = true
-				cfg.username = u.User.Username()
-				cfg.password, _ = u.User.Password()
+				cfg.userinfo = u.User
 				break
 			}
 		}
 	}
-	if !bearerToken.Empty() {
-		token, err := bearerToken.Get()
-		if err != nil {
-			return fmt.Errorf("getting token failed: %w", err)
-		}
-		// Preserve the existing bearer-token override of configured headers.
-		cfg.headers = http.Header{"Authorization": {"Bearer " + token.String()}}
-		token.Destroy()
-	}
+	cfg.bearerToken = bearerToken
 	return nil
 }
 
@@ -177,8 +158,11 @@ type roundTripper struct {
 
 func (t roundTripper) RoundTrip(original *http.Request) (*http.Response, error) {
 	req := original.Clone(original.Context())
-	if t.cfg.basicAuth {
-		req.SetBasicAuth(t.cfg.username, t.cfg.password)
+	if err := t.setAuth(req); err != nil {
+		if req.Body != nil {
+			req.Body.Close()
+		}
+		return nil, err
 	}
 	if req.Header.Get("Accept") == "" {
 		req.Header.Set("Accept", "application/json")
@@ -189,9 +173,12 @@ func (t roundTripper) RoundTrip(original *http.Request) (*http.Response, error) 
 	} else if req.Header.Get("Content-Type") == "" {
 		req.Header.Set("Content-Type", "application/json")
 	}
-	for name, values := range t.cfg.headers {
-		for _, value := range values {
-			req.Header.Add(name, value)
+	// Preserve the existing bearer-token override of configured headers.
+	if t.cfg.bearerToken.Empty() {
+		for name, values := range t.cfg.headers {
+			for _, value := range values {
+				req.Header.Add(name, value)
+			}
 		}
 	}
 	if t.cfg.enableGzip && req.Body != nil && req.Body != http.NoBody {
@@ -222,6 +209,35 @@ func (t roundTripper) RoundTrip(original *http.Request) (*http.Response, error) 
 		res.Header.Set("X-Elastic-Product", "Elasticsearch")
 	}
 	return res, err
+}
+
+func (t roundTripper) setAuth(req *http.Request) error {
+	if t.cfg.basicAuth {
+		username, err := t.cfg.username.Get()
+		if err != nil {
+			return fmt.Errorf("getting username failed: %w", err)
+		}
+		password, err := t.cfg.password.Get()
+		if err != nil {
+			username.Destroy()
+			return fmt.Errorf("getting password failed: %w", err)
+		}
+		req.SetBasicAuth(username.String(), password.String())
+		username.Destroy()
+		password.Destroy()
+	} else if t.cfg.userinfo != nil {
+		password, _ := t.cfg.userinfo.Password()
+		req.SetBasicAuth(t.cfg.userinfo.Username(), password)
+	}
+	if !t.cfg.bearerToken.Empty() {
+		token, err := t.cfg.bearerToken.Get()
+		if err != nil {
+			return fmt.Errorf("getting token failed: %w", err)
+		}
+		req.Header.Add("Authorization", "Bearer "+token.String())
+		token.Destroy()
+	}
+	return nil
 }
 
 // preserveConnectionPool keeps the previous v6/v7 SDK pool when discovery finds no eligible nodes.
