@@ -48,5 +48,5 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ```text
 filestat,file=/tmp/foo/bar,host=tyrion exists=0i 1507218518192154351
-filestat,file=/Users/sparrc/ws/telegraf.conf,host=tyrion exists=1i,size=47894i,modification_time=1507152973123456789i  1507218518192154351
+filestat,file=/Users/sparrc/ws/telegraf.conf,host=tyrion exists=1i,size_bytes=47894i,modification_time=1507152973123456789i  1507218518192154351
 ```
