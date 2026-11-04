@@ -751,17 +751,17 @@ func TestWriteFail(t *testing.T) {
 		{
 			name:     "value NaN",
 			value:    math.NaN(),
-			expected: "error sending bulk request to Elasticsearch: json: unsupported value: NaN",
+			expected: "error sending bulk request to Elasticsearch: encoding document body failed: json: unsupported value: NaN",
 		},
 		{
 			name:     "value +Inf",
 			value:    math.Inf(1),
-			expected: "error sending bulk request to Elasticsearch: json: unsupported value: +Inf",
+			expected: "error sending bulk request to Elasticsearch: encoding document body failed: json: unsupported value: +Inf",
 		},
 		{
 			name:     "value -Inf",
 			value:    math.Inf(-1),
-			expected: "error sending bulk request to Elasticsearch: json: unsupported value: -Inf",
+			expected: "error sending bulk request to Elasticsearch: encoding document body failed: json: unsupported value: -Inf",
 		},
 	}
 
@@ -1293,6 +1293,7 @@ func TestWriteIntegration(t *testing.T) {
 			image: "opensearchproject/opensearch:1.1.0",
 			env: map[string]string{
 				"discovery.type":                               "single-node",
+				"OPENSEARCH_JAVA_OPTS":                         "-Xms512m -Xmx512m",
 				"DISABLE_INSTALL_DEMO_CONFIG":                  "true",
 				"DISABLE_SECURITY_PLUGIN":                      "true",
 				"DISABLE_PERFORMANCE_ANALYZER_AGENT_CLI":       "true",
