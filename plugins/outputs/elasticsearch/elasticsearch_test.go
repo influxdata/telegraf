@@ -1106,7 +1106,7 @@ func TestGetPipelineName(t *testing.T) {
 func TestIndexSettings(t *testing.T) {
 	tests := []struct {
 		name     string
-		version  int
+		version  uint64
 		template map[string]any
 		expected string
 	}{

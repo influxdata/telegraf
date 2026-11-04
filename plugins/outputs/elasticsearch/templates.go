@@ -83,11 +83,11 @@ const defaultTemplateIndexSettings = `
 
 type templateData struct {
 	TemplatePattern string
-	Version         int
+	Version         uint64
 	IndexTemplate   string
 }
 
-func createNewTemplate(name string, pattern map[string]any, major int) (string, error) {
+func createNewTemplate(name string, pattern map[string]any, major uint64) (string, error) {
 	// Create the template-pattern value by extracting the static prefix of the
 	// template name
 	if strings.Contains(name, "%") {
