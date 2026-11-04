@@ -263,11 +263,11 @@ to use them.
   ## Set to true to ask Elasticsearch a list of all cluster nodes,
   ## thus it is not necessary to list all nodes in the urls config option
   enable_sniffer = false
+  ## Interval for discovering cluster nodes; only used if sniffer is enabled
+  ## Must be positive when sniffer is enabled
+  # sniffer_interval = "15m"
   ## Set to true to enable gzip compression
   enable_gzip = false
-  ## Node discovery interval when enable_sniffer is true (Elasticsearch 6.x and 7.x).
-  ## Setting to "0s" will disable node discovery.
-  health_check_interval = "15m"
   ## HTTP basic authentication details.
   ## HTTP basic authentication details
   # username = "telegraf"
@@ -382,13 +382,12 @@ the `default_tag_value` will be used instead.
 
 * `timeout`: Elasticsearch client timeout, defaults to "5s" if not set.
 * `enable_sniffer`: Set to true to let the client discover cluster
-  nodes at the configured `health_check_interval`. The v5 client does
-  not support discovery; the plugin logs a warning and ignores this option.
+  nodes at the configured `sniffer_interval`. The v5 client does not support
+  discovery; the plugin logs a warning and ignores this option.
   The v6 client selects nodes with both the `data` and `ingest` roles. The v7
   client excludes dedicated master nodes.
-* `health_check_interval`: Node discovery interval when `enable_sniffer` is true,
-  defaulting to "15m". Setting to "0s" disables discovery. Separate periodic
-  health checks are no longer performed; connection management uses the client.
+* `sniffer_interval`: Node discovery interval when `enable_sniffer` is true,
+  defaulting to "15m". Must be positive when sniffing is enabled.
 * `health_check_timeout`: Deprecated since Telegraf 1.41.0 and ignored.
   Use `timeout` to configure HTTP request timeouts.
 * `username`: The username for HTTP basic authentication details (eg. when using

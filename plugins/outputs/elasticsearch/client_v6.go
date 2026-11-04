@@ -34,7 +34,7 @@ func newClientV6(transport roundTripper) (client, error) {
 		return nil, err
 	}
 	client := &clientV6{client: c, httpClient: transport.httpClient, log: transport.log}
-	if transport.enableSniffer && transport.discoveryInterval > 0 {
+	if transport.enableSniffer {
 		// The v6 client exposes only DiscoverNodes(), so in-flight calls cannot be canceled.
 		ctx, cancel := context.WithCancel(context.Background())
 		client.cancelDiscovery = cancel

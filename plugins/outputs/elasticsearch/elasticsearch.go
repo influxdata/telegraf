@@ -41,10 +41,11 @@ type Elasticsearch struct {
 	DefaultTagValue     string          `toml:"default_tag_value"`
 	EnableGzip          bool            `toml:"enable_gzip"`
 	EnableSniffer       bool            `toml:"enable_sniffer"`
+	SnifferInterval     config.Duration `toml:"sniffer_interval"`
 	FloatHandling       string          `toml:"float_handling"`
 	FloatReplacement    float64         `toml:"float_replacement_value"`
 	ForceDocumentID     bool            `toml:"force_document_id"`
-	HealthCheckInterval config.Duration `toml:"health_check_interval"`
+	HealthCheckInterval config.Duration `toml:"health_check_interval" deprecated:"1.41.0;option is ignored"`
 	HealthCheckTimeout  config.Duration `toml:"health_check_timeout" deprecated:"1.41.0;option is ignored, use 'timeout' instead"`
 	IndexName           string          `toml:"index_name"`
 	IndexTemplate       map[string]any  `toml:"template_index_settings"`
@@ -78,6 +79,9 @@ func (a *Elasticsearch) Init() error {
 	}
 	if a.IndexName == "" {
 		return errors.New("no 'index_name' defined")
+	}
+	if a.EnableSniffer && a.SnifferInterval <= 0 {
+		return errors.New("'sniffer_interval' must be positive")
 	}
 
 	// Determine if we should process NaN and inf values
@@ -162,7 +166,7 @@ func (a *Elasticsearch) Connect() error {
 		headers:           a.httpHeaders,
 		enableGzip:        a.EnableGzip,
 		enableSniffer:     a.EnableSniffer,
-		discoveryInterval: time.Duration(a.HealthCheckInterval),
+		discoveryInterval: time.Duration(a.SnifferInterval),
 		httpClient:        httpClient,
 		log:               a.Log,
 	}
@@ -397,8 +401,8 @@ func getISOWeek(eventTime time.Time) string {
 func init() {
 	outputs.Add("elasticsearch", func() telegraf.Output {
 		return &Elasticsearch{
-			Timeout:             config.Duration(time.Second * 5),
-			HealthCheckInterval: config.Duration(15 * time.Minute),
+			Timeout:         config.Duration(time.Second * 5),
+			SnifferInterval: config.Duration(15 * time.Minute),
 		}
 	})
 }

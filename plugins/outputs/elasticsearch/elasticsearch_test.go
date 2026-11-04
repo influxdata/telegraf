@@ -197,6 +197,26 @@ func TestInitFail(t *testing.T) {
 			expected: "no 'index_name' defined",
 		},
 		{
+			name: "zero sniffer interval",
+			plugin: &Elasticsearch{
+				URLs:            []string{"http://localhost:9200"},
+				IndexName:       "test-%Y.%m.%d",
+				EnableSniffer:   true,
+				SnifferInterval: 0,
+			},
+			expected: "'sniffer_interval' must be positive",
+		},
+		{
+			name: "negative sniffer interval",
+			plugin: &Elasticsearch{
+				URLs:            []string{"http://localhost:9200"},
+				IndexName:       "test-%Y.%m.%d",
+				EnableSniffer:   true,
+				SnifferInterval: config.Duration(-time.Second),
+			},
+			expected: "'sniffer_interval' must be positive",
+		},
+		{
 			name: "invalid float handling",
 			plugin: &Elasticsearch{
 				URLs:          []string{"http://localhost:9200"},
@@ -1462,12 +1482,12 @@ func TestClientDiscovery(t *testing.T) {
 			}))
 			defer seed.Close()
 			plugin := &Elasticsearch{
-				URLs:                []string{seed.URL},
-				IndexName:           "test-%Y.%m.%d",
-				EnableSniffer:       true,
-				HealthCheckInterval: config.Duration(time.Hour),
-				Timeout:             config.Duration(time.Second),
-				Log:                 testutil.Logger{},
+				URLs:            []string{seed.URL},
+				IndexName:       "test-%Y.%m.%d",
+				EnableSniffer:   true,
+				SnifferInterval: config.Duration(time.Hour),
+				Timeout:         config.Duration(time.Second),
+				Log:             testutil.Logger{},
 			}
 			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Connect())
@@ -1556,13 +1576,10 @@ func TestClientDiscoveryDisabled(t *testing.T) {
 		name          string
 		version       string
 		enableSniffer bool
-		interval      time.Duration
 	}{
-		{name: "v5 ignores discovery", version: "5.6.16", enableSniffer: true, interval: time.Hour},
-		{name: "v6 sniffer disabled", version: "6.8.23", interval: time.Hour},
-		{name: "v6 zero interval", version: "6.8.23", enableSniffer: true},
-		{name: "v7 sniffer disabled", version: "7.17.29", interval: time.Hour},
-		{name: "v7 zero interval", version: "7.17.29", enableSniffer: true},
+		{name: "v5 ignores discovery", version: "5.6.16", enableSniffer: true},
+		{name: "v6 sniffer disabled", version: "6.8.23"},
+		{name: "v7 sniffer disabled", version: "7.17.29"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			var writes, discoveries atomic.Int32
@@ -1586,12 +1603,12 @@ func TestClientDiscoveryDisabled(t *testing.T) {
 			}))
 			defer server.Close()
 			plugin := &Elasticsearch{
-				URLs:                []string{server.URL},
-				IndexName:           "test-%Y.%m.%d",
-				EnableSniffer:       tt.enableSniffer,
-				HealthCheckInterval: config.Duration(tt.interval),
-				Timeout:             config.Duration(time.Second),
-				Log:                 testutil.Logger{},
+				URLs:            []string{server.URL},
+				IndexName:       "test-%Y.%m.%d",
+				EnableSniffer:   tt.enableSniffer,
+				SnifferInterval: config.Duration(time.Hour),
+				Timeout:         config.Duration(time.Second),
+				Log:             testutil.Logger{},
 			}
 			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Connect())
@@ -1628,13 +1645,12 @@ func TestConnectRetry(t *testing.T) {
 	}))
 	defer server.Close()
 	plugin := &Elasticsearch{
-		URLs:                []string{server.URL},
-		IndexName:           "test-%Y.%m.%d",
-		TemplateName:        "telegraf",
-		ManageTemplate:      true,
-		Timeout:             config.Duration(time.Second),
-		HealthCheckInterval: config.Duration(time.Second),
-		Log:                 testutil.Logger{},
+		URLs:           []string{server.URL},
+		IndexName:      "test-%Y.%m.%d",
+		TemplateName:   "telegraf",
+		ManageTemplate: true,
+		Timeout:        config.Duration(time.Second),
+		Log:            testutil.Logger{},
 	}
 	require.NoError(t, plugin.Init())
 	defer plugin.Close()

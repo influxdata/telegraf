@@ -35,7 +35,7 @@ func newClientV7(transport roundTripper) (client, error) {
 		return nil, err
 	}
 	client := &clientV7{client: c, httpClient: transport.httpClient, log: transport.log}
-	if transport.enableSniffer && transport.discoveryInterval > 0 {
+	if transport.enableSniffer {
 		// The v7 connection-pool discovery API accepts no context, so in-flight calls cannot be canceled.
 		ctx, cancel := context.WithCancel(context.Background())
 		client.cancelDiscovery = cancel
