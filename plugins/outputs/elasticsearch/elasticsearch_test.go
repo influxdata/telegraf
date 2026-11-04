@@ -689,6 +689,88 @@ func TestWrite(t *testing.T) {
 	}
 }
 
+func TestWriteAuthentication(t *testing.T) {
+	tests := []struct {
+		name        string
+		userinfo    string
+		username    string
+		password    string
+		bearerToken string
+		expected    []string
+	}{
+		{
+			name:     "rotating basic credentials",
+			username: "@{test:credential}",
+			password: "@{test:credential}",
+			expected: []string{"Basic Zmlyc3Q6Zmlyc3Q=", "Basic c2Vjb25kOnNlY29uZA=="},
+		},
+		{
+			name:        "rotating bearer token",
+			bearerToken: "@{test:credential}",
+			expected:    []string{"Bearer first", "Bearer second"},
+		},
+		{
+			name:     "literal URL password",
+			userinfo: "user:%40%7Ba%3Ab%7D",
+			expected: []string{"Basic dXNlcjpAe2E6Yn0=", "Basic dXNlcjpAe2E6Yn0="},
+		},
+		{
+			name:     "configured credentials override URL credentials",
+			userinfo: "urluser:urlpassword",
+			username: "@{test:credential}",
+			password: "@{test:credential}",
+			expected: []string{"Basic Zmlyc3Q6Zmlyc3Q=", "Basic c2Vjb25kOnNlY29uZA=="},
+		},
+	}
+	for _, version := range []string{"5.6.16", "6.8.23", "7.17.29"} {
+		t.Run(version, func(t *testing.T) {
+			for _, tt := range tests {
+				t.Run(tt.name, func(t *testing.T) {
+					server := startMockServer(t)
+					server.setVersion(version)
+					defer server.close()
+
+					address := "http://" + server.addr()
+					if tt.userinfo != "" {
+						address = "http://" + tt.userinfo + "@" + server.addr()
+					}
+					plugin := &Elasticsearch{
+						URLs:            []string{address},
+						IndexName:       "test-%Y.%m.%d",
+						Username:        config.NewSecret([]byte(tt.username)),
+						Password:        config.NewSecret([]byte(tt.password)),
+						AuthBearerToken: config.NewSecret([]byte(tt.bearerToken)),
+						Timeout:         config.Duration(5 * time.Second),
+						Log:             testutil.Logger{},
+					}
+					credential := "first"
+					resolvers := map[string]telegraf.ResolveFunc{
+						"@{test:credential}": func() ([]byte, bool, error) {
+							return []byte(credential), true, nil
+						},
+					}
+					for _, secret := range []*config.Secret{&plugin.Username, &plugin.Password, &plugin.AuthBearerToken} {
+						require.NoError(t, secret.Link(resolvers))
+					}
+					require.NoError(t, plugin.Init())
+					require.NoError(t, plugin.Connect())
+					defer plugin.Close()
+
+					require.NoError(t, plugin.Write([]telegraf.Metric{testutil.TestMetric(1)}))
+					credential = "second"
+					require.NoError(t, plugin.Write([]telegraf.Metric{testutil.TestMetric(1)}))
+
+					headers := server.headers()
+					require.Len(t, headers, len(tt.expected))
+					for i, expected := range tt.expected {
+						require.Equal(t, []string{expected}, headers[i].Values("Authorization"))
+					}
+				})
+			}
+		})
+	}
+}
+
 func TestWriteFail(t *testing.T) {
 	tests := []struct {
 		name     string
