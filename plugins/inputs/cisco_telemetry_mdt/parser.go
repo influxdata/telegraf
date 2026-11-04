@@ -366,29 +366,37 @@ func (s *state) parseDME(fields []*telemetry.TelemetryField, prefix string, pare
 }
 
 func (s *state) parseEvents(events []*telemetry.TelemetryField, prefix string, parentTags map[string]string, timestamp time.Time) []error {
-	var attrs *telemetry.TelemetryField
+	var attrFields []*telemetry.TelemetryField
 	if events[0] != nil && len(events[0].Fields) >= 2 {
-		var attrFields []*telemetry.TelemetryField
 		if events[0].Fields[0].Name == "subscriptionId" && len(events[0].Fields[1].Fields) > 0 {
 			attrFields = events[0].Fields[1].Fields
 		} else if events[0].Fields[1].Name == "subscriptionId" {
 			attrFields = events[0].Fields[0].Fields
 		}
-		valid := len(attrFields) > 0 && len(attrFields[0].Fields) > 0 && len(attrFields[0].Fields[0].Fields) > 0
-		valid = valid && len(attrFields[0].Fields[0].Fields[0].Fields) > 0
-		valid = valid && len(attrFields[0].Fields[0].Fields[0].Fields[0].Fields) > 0
-		if valid {
-			attrs = attrFields[0].Fields[0].Fields[0].Fields[0].Fields[0]
+	}
+
+	// Parse the attribute subfields of all events, the events share the same
+	// timestamp so add the event number as tag to keep them apart
+	var errs []error //nolint:prealloc // We expect errors to be empty by default
+	var found bool
+	for i, event := range attrFields {
+		valid := len(event.Fields) > 0 && len(event.Fields[0].Fields) > 0
+		valid = valid && len(event.Fields[0].Fields[0].Fields) > 0
+		valid = valid && len(event.Fields[0].Fields[0].Fields[0].Fields) > 0
+		if !valid {
+			continue
 		}
+		found = true
+
+		tags := maps.Clone(parentTags)
+		tags["row_number"] = strconv.FormatInt(int64(i), 10)
+		attrs := event.Fields[0].Fields[0].Fields[0].Fields[0]
+		errs = append(errs, s.parseDME(attrs.Fields, prefix, tags, timestamp)...)
+	}
+	if found {
+		return errs
 	}
 
-	// Parse the attribute subfields according to their class
-	if attrs != nil {
-		return s.parseDME(attrs.Fields, prefix, parentTags, timestamp)
-	}
-
-	//nolint:prealloc // We expect errors to be empty by default
-	var errs []error
 	for _, sub := range events {
 		errs = append(errs, s.parseClassAttributeField(sub, parentTags, timestamp)...)
 	}

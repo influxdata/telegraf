@@ -49,7 +49,8 @@ to use them.
   ## Default display name for the host with services(metrics).
   # default_host = "telegraf"
 
-  ## Default service state.
+  ## Service state used when the status is neither given by a "status" tag or
+  ## field, nor computed from thresholds.
   # default_service_state = "SERVICE_OK"
 
   ## The name of the tag that contains the hostname.

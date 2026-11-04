@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gwos/tcg/sdk/clients"
 	"github.com/gwos/tcg/sdk/transit"
@@ -16,6 +17,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/logger"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -161,11 +163,12 @@ func TestWriteWithDefaults(t *testing.T) {
 	}))
 
 	i := Groundwork{
-		Log:            testutil.Logger{},
-		Server:         server.URL,
-		AgentID:        defaultTestAgentID,
-		DefaultHost:    defaultHost,
-		DefaultAppType: customAppType,
+		Log:                 testutil.Logger{},
+		Server:              server.URL,
+		AgentID:             defaultTestAgentID,
+		DefaultHost:         defaultHost,
+		DefaultAppType:      customAppType,
+		DefaultServiceState: string(transit.ServiceOk),
 		client: clients.GWClient{
 			AppName: "telegraf",
 			AppType: customAppType,
@@ -398,4 +401,60 @@ func TestWriteWithTags(t *testing.T) {
 	require.NoError(t, err)
 
 	server.Close()
+}
+
+func TestDefaultServiceState(t *testing.T) {
+	i := Groundwork{
+		Log:                 testutil.Logger{},
+		DefaultHost:         defaultHost,
+		DefaultServiceState: string(transit.ServicePending),
+		ResourceTag:         "host",
+	}
+	now := time.Now()
+	tests := []struct {
+		name     string
+		tags     map[string]string
+		fields   map[string]any
+		expected transit.MonitorStatus
+	}{
+		{
+			name:     "no values",
+			fields:   map[string]any{"message": "text only"},
+			expected: transit.ServicePending,
+		},
+		{
+			name:     "no thresholds",
+			fields:   map[string]any{"value": 95.0},
+			expected: transit.ServicePending,
+		},
+		{
+			name:     "invalid status",
+			tags:     map[string]string{"status": "bogus"},
+			fields:   map[string]any{"value": 95.0},
+			expected: transit.ServicePending,
+		},
+		{
+			name:     "thresholds",
+			fields:   map[string]any{"value": 95.0, "value_wn": 80.0, "value_cr": 90.0},
+			expected: transit.ServiceUnscheduledCritical,
+		},
+		{
+			name:     "threshold tags",
+			tags:     map[string]string{"warning": "80", "critical": "90"},
+			fields:   map[string]any{"value": 50.0},
+			expected: transit.ServiceOk,
+		},
+		{
+			name:     "status tag",
+			tags:     map[string]string{"status": "SERVICE_WARNING"},
+			fields:   map[string]any{"value": 95.0},
+			expected: transit.ServiceWarning,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, service := i.parseMetric(metric.New("test", tt.tags, tt.fields, now))
+			require.Equal(t, tt.expected, service.Status)
+		})
+	}
 }

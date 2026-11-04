@@ -411,3 +411,32 @@ func TestSqliteSendBatch(t *testing.T) {
 	require.Equal(t, "string2", k)
 	require.False(t, rows4.Next())
 }
+
+func TestSqliteSendBatchPrepareFailureReleasesConnection(t *testing.T) {
+	dbfile := filepath.Join(t.TempDir(), "db")
+	defer os.Remove(dbfile)
+
+	p := &SQL{
+		Driver:            "sqlite",
+		DataSourceName:    config.NewSecret([]byte(dbfile)),
+		Convert:           defaultConvert,
+		TimestampColumn:   "timestamp",
+		ConnectionMaxIdle: 1,
+		ConnectionMaxOpen: 1,
+		Log:               testutil.Logger{},
+		BatchTx:           true,
+	}
+	require.NoError(t, p.Init())
+
+	require.NoError(t, p.Connect())
+	defer p.Close()
+	require.NoError(t, p.Write(testMetrics))
+
+	// Without a table update template, metrics with new fields fail to prepare.
+	// Each failed write must release its connection, otherwise the next write
+	// blocks forever on the exhausted pool.
+	for range 3 {
+		require.ErrorContains(t, p.Write(postCreateMetrics), "prepare failed")
+	}
+	require.NoError(t, p.Write(testMetrics))
+}

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
 	"slices"
 	"time"
 
@@ -120,8 +119,8 @@ func (o *readClient) connect() error {
 	case len(limits.Results) != 2:
 		o.Log.Debugf("Server returned %d results for 2 requested operation limits", len(limits.Results))
 	default:
-		o.maxNodesPerRead = operationLimit(limits.Results[0])
-		o.maxNodesPerRegisterNodes = operationLimit(limits.Results[1])
+		o.maxNodesPerRead = opcua.OperationLimit(limits.Results[0])
+		o.maxNodesPerRegisterNodes = opcua.OperationLimit(limits.Results[1])
 		o.Log.Debugf("Server limits requests to %d nodes per read and %d nodes per register (0 = unlimited)",
 			o.maxNodesPerRead, o.maxNodesPerRegisterNodes)
 	}
@@ -314,20 +313,6 @@ func (o *readClient) read() error {
 				nodeTypeLabel(o.Workarounds.UseUnregisteredReads), err)
 		}
 	}
-}
-
-// operationLimit extracts a server operation limit from the read result of
-// the corresponding capability property. Zero means "no limit".
-func operationLimit(result *ua.DataValue) int {
-	if result.Status != ua.StatusOK || result.Value == nil {
-		return 0
-	}
-	limit, ok := result.Value.Value().(uint32)
-	if !ok {
-		return 0
-	}
-	// Clamp to avoid overflowing int on 32-bit platforms
-	return int(min(limit, math.MaxInt32))
 }
 
 // Helper function to provide more accurate error messages

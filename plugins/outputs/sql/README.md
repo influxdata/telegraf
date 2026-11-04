@@ -67,8 +67,10 @@ DEFAULT CURRENT\_TIMESTAMP, {COLUMNS})".
 The mapping of metric types to sql column types can be customized through the
 convert settings.
 
-If your database server supports Prepared Statements / Batch / Bulk Inserts,
-you could improve the ingestion rate, by enabling `batch_transactions`
+By default, metrics with the same columns and the same table are written as a
+batch within one transaction using prepared statements (`batch_transactions`).
+If your database server does not support transactions or prepared statements,
+set `batch_transactions = false` to insert each metric individually.
 
 ## Global configuration options <!-- @/docs/includes/plugin_config.md -->
 
@@ -134,7 +136,7 @@ how to use them.
   # init_sql = ""
 
   ## Send metrics with the same columns and the same table as batches using prepared statements
-  # batch_transactions = false
+  # batch_transactions = true
 
   ## Maximum amount of time a connection may be idle. "0s" means connections are
   ## never closed due to idle time.

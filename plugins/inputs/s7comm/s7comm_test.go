@@ -957,6 +957,55 @@ func TestStartupErrorBehaviorRetry(t *testing.T) {
 	require.NoError(t, model.Gather(&acc))
 }
 
+func TestStartupErrorBehaviorRetryHandshakeFailure(t *testing.T) {
+	// Create fake S7 comm server that accepts TCP connections but closes them
+	// right away so the S7 handshake fails. This mimics a PLC whose port is
+	// already open while it is still booting.
+	server, err := newMockServer()
+	require.NoError(t, err)
+	defer server.close()
+	server.startRejecting()
+
+	plugin := &S7comm{
+		Server:          server.addr(),
+		Rack:            0,
+		Slot:            2,
+		DebugConnection: true,
+		Timeout:         config.Duration(100 * time.Millisecond),
+		Configs: []metricDefinition{
+			{
+				Fields: []metricFieldDefinition{
+					{
+						Name:    "foo",
+						Address: "DB1.W2",
+					},
+				},
+			},
+		},
+		Log: &testutil.Logger{},
+	}
+	model := models.NewRunningInput(
+		plugin,
+		&models.InputConfig{
+			Name:                 "s7comm",
+			Alias:                "retry-handshake-test", // required to get a unique error stats instance
+			StartupErrorBehavior: "retry",
+		},
+	)
+	model.StartupErrors.Set(0)
+	require.NoError(t, model.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, model.Start(&acc))
+
+	// Every gather retries the connection and must open a new TCP connection
+	// each time instead of reusing the dead one from the failed handshake.
+	require.ErrorIs(t, model.Gather(&acc), internal.ErrNotConnected)
+	require.ErrorIs(t, model.Gather(&acc), internal.ErrNotConnected)
+	defer model.Stop()
+	require.GreaterOrEqual(t, server.connectionAttempts.Load(), uint32(3))
+}
+
 type mockServer struct {
 	connectionAttempts atomic.Uint32
 	listener           net.Listener
@@ -981,6 +1030,20 @@ func (s *mockServer) close() error {
 	return nil
 }
 
+func (s *mockServer) startRejecting() {
+	go func() {
+		defer s.listener.Close()
+		for {
+			conn, err := s.listener.Accept()
+			if err != nil {
+				return
+			}
+			s.connectionAttempts.Add(1)
+			conn.Close()
+		}
+	}()
+}
+
 func (s *mockServer) start() {
 	go func() {
 		defer s.listener.Close()
@@ -991,7 +1054,7 @@ func (s *mockServer) start() {
 			}
 			if err := conn.SetDeadline(time.Now().Add(time.Second)); err != nil {
 				conn.Close()
-				return
+				continue
 			}
 
 			// Count the number of connection attempts
@@ -1002,7 +1065,7 @@ func (s *mockServer) start() {
 			// Wait for ISO connection telegram
 			if _, err := io.ReadAtLeast(conn, buf, 22); err != nil {
 				conn.Close()
-				return
+				continue
 			}
 
 			// Send fake response
@@ -1011,13 +1074,13 @@ func (s *mockServer) start() {
 			binary.BigEndian.PutUint16(response[2:4], uint16(len(response)))
 			if _, err := conn.Write(response); err != nil {
 				conn.Close()
-				return
+				continue
 			}
 
 			// Wait for PDU negotiation telegram
 			if _, err := io.ReadAtLeast(conn, buf, 25); err != nil {
 				conn.Close()
-				return
+				continue
 			}
 
 			// Send fake response
@@ -1025,7 +1088,8 @@ func (s *mockServer) start() {
 			binary.BigEndian.PutUint16(response[2:4], uint16(len(response)))
 			binary.BigEndian.PutUint16(response[25:27], uint16(480))
 			if _, err := conn.Write(response); err != nil {
-				return
+				conn.Close()
+				continue
 			}
 
 			// Always close after connection is established

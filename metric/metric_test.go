@@ -128,6 +128,24 @@ func TestAddFieldChangesType(t *testing.T) {
 	require.Equal(t, "xyzzy", value)
 }
 
+func TestAddFieldIgnoresUnsupportedValue(t *testing.T) {
+	m := baseMetric()
+
+	m.AddField("list", []any{1, 2})
+
+	require.False(t, m.HasField("list"))
+}
+
+func TestAddFieldKeepsCurrentValueOverUnsupportedValue(t *testing.T) {
+	m := baseMetric()
+
+	m.AddField("value", map[string]any{"nested": int64(1)})
+
+	value, ok := m.GetField("value")
+	require.True(t, ok)
+	require.EqualValues(t, 1, value)
+}
+
 func TestRemoveFieldNoEffectOnMissingFields(t *testing.T) {
 	m := baseMetric()
 
