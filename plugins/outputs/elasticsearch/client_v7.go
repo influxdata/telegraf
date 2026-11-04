@@ -40,7 +40,7 @@ func newClientV7(transport roundTripper) (client, error) {
 		ctx, cancel := context.WithCancel(context.Background())
 		client.cancelDiscovery = cancel
 		client.discoveryWG.Go(func() {
-			startDiscovery(ctx, transport.discoveryInterval, c.DiscoverNodes, transport.log)
+			startDiscovery(ctx, c.DiscoverNodes, transport.log)
 		})
 	}
 	return client, nil
