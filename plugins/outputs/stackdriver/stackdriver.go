@@ -600,7 +600,8 @@ func buildHistogram(m telegraf.Metric) (*monitoringpb.TypedValue, error) {
 	buckets := make([]float64, 0, len(fields))
 	bucketCounts := make([]int64, 0, len(fields))
 	for _, field := range fields {
-		if field.Key == "sum" || field.Key == "count" {
+		switch field.Key {
+		case "count", "sum":
 			continue
 		}
 
@@ -661,10 +662,10 @@ func buildHistogram(m telegraf.Metric) (*monitoringpb.TypedValue, error) {
 func (s *Stackdriver) getStackdriverLabels(tags []*telegraf.Tag) map[string]string {
 	labels := make(map[string]string, len(tags))
 	for _, t := range tags {
-		if slices.Contains(s.TagsAsResourceLabels, t.Key) {
-			continue
-		}
 		labels[t.Key] = t.Value
+	}
+	for _, key := range s.TagsAsResourceLabels {
+		delete(labels, key)
 	}
 	for k, v := range labels {
 		if len(k) > QuotaStringLengthForLabelKey {
