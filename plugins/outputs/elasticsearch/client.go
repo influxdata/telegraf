@@ -58,7 +58,7 @@ func (cfg *clientConfig) configureAuth(username, password, bearerToken config.Se
 
 func (cfg clientConfig) probeVersion(ctx context.Context) (string, int, error) {
 	probe, err := elasticsearch5.NewClient(elasticsearch5.Config{
-		Addresses: cfg.urls[:1],
+		Addresses: cfg.urls,
 		Transport: roundTripper{cfg: cfg},
 	})
 	if err != nil {
