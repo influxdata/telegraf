@@ -22,10 +22,10 @@ type clientV6 struct {
 	discoveryWG     sync.WaitGroup
 }
 
-func newClientV6(cfg clientConfig) (client, error) {
+func newClientV6(transport roundTripper) (client, error) {
 	c, err := elasticsearch6.NewClient(elasticsearch6.Config{
-		Addresses: cfg.urls,
-		Transport: roundTripper{cfg: cfg},
+		Addresses: transport.urls,
+		Transport: transport,
 		// Telegraf owns write retries; replaying a bulk request can duplicate documents.
 		DisableRetry:       true,
 		ConnectionPoolFunc: preserveConnectionPool(estransport6.NewConnectionPool),
@@ -33,13 +33,13 @@ func newClientV6(cfg clientConfig) (client, error) {
 	if err != nil {
 		return nil, err
 	}
-	client := &clientV6{client: c, httpClient: cfg.httpClient, log: cfg.log}
-	if cfg.enableSniffer && cfg.discoveryInterval > 0 {
+	client := &clientV6{client: c, httpClient: transport.httpClient, log: transport.log}
+	if transport.enableSniffer && transport.discoveryInterval > 0 {
 		// The v6 client exposes only DiscoverNodes(), so in-flight calls cannot be canceled.
 		ctx, cancel := context.WithCancel(context.Background())
 		client.cancelDiscovery = cancel
 		client.discoveryWG.Go(func() {
-			startDiscovery(ctx, cfg.discoveryInterval, c.DiscoverNodes, cfg.log)
+			startDiscovery(ctx, transport.discoveryInterval, c.DiscoverNodes, transport.log)
 		})
 	}
 	return client, nil

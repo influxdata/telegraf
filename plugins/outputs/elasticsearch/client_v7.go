@@ -22,10 +22,11 @@ type clientV7 struct {
 	discoveryWG     sync.WaitGroup
 }
 
-func newClientV7(cfg clientConfig) (client, error) {
+func newClientV7(transport roundTripper) (client, error) {
+	transport.bypassProductCheck = true
 	c, err := elasticsearch7.NewClient(elasticsearch7.Config{
-		Addresses: cfg.urls,
-		Transport: roundTripper{cfg: cfg, bypassProductCheck: true},
+		Addresses: transport.urls,
+		Transport: transport,
 		// Telegraf owns write retries; replaying a bulk request can duplicate documents.
 		DisableRetry:       true,
 		ConnectionPoolFunc: preserveConnectionPool(estransport7.NewConnectionPool),
@@ -33,13 +34,13 @@ func newClientV7(cfg clientConfig) (client, error) {
 	if err != nil {
 		return nil, err
 	}
-	client := &clientV7{client: c, httpClient: cfg.httpClient, log: cfg.log}
-	if cfg.enableSniffer && cfg.discoveryInterval > 0 {
+	client := &clientV7{client: c, httpClient: transport.httpClient, log: transport.log}
+	if transport.enableSniffer && transport.discoveryInterval > 0 {
 		// The v7 connection-pool discovery API accepts no context, so in-flight calls cannot be canceled.
 		ctx, cancel := context.WithCancel(context.Background())
 		client.cancelDiscovery = cancel
 		client.discoveryWG.Go(func() {
-			startDiscovery(ctx, cfg.discoveryInterval, c.DiscoverNodes, cfg.log)
+			startDiscovery(ctx, transport.discoveryInterval, c.DiscoverNodes, transport.log)
 		})
 	}
 	return client, nil

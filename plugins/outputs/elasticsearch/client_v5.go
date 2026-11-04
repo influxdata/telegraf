@@ -18,15 +18,15 @@ type clientV5 struct {
 	log        telegraf.Logger
 }
 
-func newClientV5(cfg clientConfig) (client, error) {
+func newClientV5(transport roundTripper) (client, error) {
 	c, err := elasticsearch5.NewClient(elasticsearch5.Config{
-		Addresses: cfg.urls,
-		Transport: roundTripper{cfg: cfg},
+		Addresses: transport.urls,
+		Transport: transport,
 	})
 	if err != nil {
 		return nil, err
 	}
-	return &clientV5{client: c, httpClient: cfg.httpClient, log: cfg.log}, nil
+	return &clientV5{client: c, httpClient: transport.httpClient, log: transport.log}, nil
 }
 
 func (c *clientV5) close() {

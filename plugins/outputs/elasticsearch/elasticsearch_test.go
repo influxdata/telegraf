@@ -1604,7 +1604,7 @@ func TestConnectRetry(t *testing.T) {
 func TestClientClose(t *testing.T) {
 	for _, tt := range []struct {
 		name      string
-		newClient func(clientConfig) (client, error)
+		newClient func(roundTripper) (client, error)
 	}{
 		{name: "v6", newClient: newClientV6},
 		{name: "v7", newClient: newClientV7},
@@ -1616,7 +1616,7 @@ func TestClientClose(t *testing.T) {
 				<-r.Context().Done()
 			}))
 			defer server.Close()
-			connection, err := tt.newClient(clientConfig{
+			connection, err := tt.newClient(roundTripper{
 				urls:              []string{server.URL},
 				enableSniffer:     true,
 				discoveryInterval: time.Hour,
