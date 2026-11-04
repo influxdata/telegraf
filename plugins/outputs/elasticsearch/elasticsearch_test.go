@@ -205,26 +205,6 @@ func TestInitFail(t *testing.T) {
 			expected: "no 'index_name' defined",
 		},
 		{
-			name: "zero sniffer interval",
-			plugin: &Elasticsearch{
-				URLs:            []string{"http://localhost:9200"},
-				IndexName:       "test-%Y.%m.%d",
-				EnableSniffer:   true,
-				SnifferInterval: 0,
-			},
-			expected: "'sniffer_interval' must be positive",
-		},
-		{
-			name: "negative sniffer interval",
-			plugin: &Elasticsearch{
-				URLs:            []string{"http://localhost:9200"},
-				IndexName:       "test-%Y.%m.%d",
-				EnableSniffer:   true,
-				SnifferInterval: config.Duration(-time.Second),
-			},
-			expected: "'sniffer_interval' must be positive",
-		},
-		{
 			name: "invalid float handling",
 			plugin: &Elasticsearch{
 				URLs:          []string{"http://localhost:9200"},
@@ -1496,12 +1476,11 @@ func TestClientDiscovery(t *testing.T) {
 			}))
 			defer seed.Close()
 			plugin := &Elasticsearch{
-				URLs:            []string{seed.URL},
-				IndexName:       "test-%Y.%m.%d",
-				EnableSniffer:   true,
-				SnifferInterval: config.Duration(time.Hour),
-				Timeout:         config.Duration(time.Second),
-				Log:             testutil.Logger{},
+				URLs:          []string{seed.URL},
+				IndexName:     "test-%Y.%m.%d",
+				EnableSniffer: true,
+				Timeout:       config.Duration(time.Second),
+				Log:           testutil.Logger{},
 			}
 			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Connect())
@@ -1617,12 +1596,11 @@ func TestClientDiscoveryDisabled(t *testing.T) {
 			}))
 			defer server.Close()
 			plugin := &Elasticsearch{
-				URLs:            []string{server.URL},
-				IndexName:       "test-%Y.%m.%d",
-				EnableSniffer:   tt.enableSniffer,
-				SnifferInterval: config.Duration(time.Hour),
-				Timeout:         config.Duration(time.Second),
-				Log:             testutil.Logger{},
+				URLs:          []string{server.URL},
+				IndexName:     "test-%Y.%m.%d",
+				EnableSniffer: tt.enableSniffer,
+				Timeout:       config.Duration(time.Second),
+				Log:           testutil.Logger{},
 			}
 			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Connect())
@@ -1690,11 +1668,10 @@ func TestClientClose(t *testing.T) {
 			}))
 			defer server.Close()
 			connection, err := tt.newClient(roundTripper{
-				urls:              []string{server.URL},
-				enableSniffer:     true,
-				discoveryInterval: time.Hour,
-				httpClient:        &http.Client{Timeout: time.Second},
-				log:               testutil.Logger{},
+				urls:          []string{server.URL},
+				enableSniffer: true,
+				httpClient:    &http.Client{Timeout: time.Second},
+				log:           testutil.Logger{},
 			})
 			require.NoError(t, err)
 			defer connection.close()

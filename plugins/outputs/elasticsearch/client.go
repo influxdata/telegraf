@@ -31,7 +31,6 @@ type roundTripper struct {
 	headers            http.Header
 	enableGzip         bool
 	enableSniffer      bool
-	discoveryInterval  time.Duration
 	httpClient         *http.Client
 	log                telegraf.Logger
 	bypassProductCheck bool
@@ -247,13 +246,13 @@ func preserveConnectionPool[Connection, Selector, Pool any](newPool func([]Conne
 	}
 }
 
-// startDiscovery runs node discovery immediately and then at the configured interval.
-func startDiscovery(ctx context.Context, interval time.Duration, discover func() error, log telegraf.Logger) {
+// startDiscovery runs node discovery immediately and then every 15 minutes, matching olivere's default.
+func startDiscovery(ctx context.Context, discover func() error, log telegraf.Logger) {
 	if err := discover(); err != nil && ctx.Err() == nil {
 		log.Errorf("Discovering Elasticsearch nodes failed: %v", err)
 	}
 
-	ticker := time.NewTicker(interval)
+	ticker := time.NewTicker(15 * time.Minute)
 	defer ticker.Stop()
 	for {
 		select {
