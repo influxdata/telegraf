@@ -46,6 +46,14 @@ func TestConnect(t *testing.T) {
 			expectedOverwrite: true,
 		},
 		{
+			name:              "Elasticsearch v6 template management",
+			version:           "6.8.23",
+			index:             "test-%Y.%m.%d",
+			template:          "telegraf",
+			manageTemplate:    true,
+			expectedOverwrite: true,
+		},
+		{
 			name:              "Elasticsearch v7 template management",
 			version:           "7.17.29",
 			index:             "test-%Y.%m.%d",
@@ -307,6 +315,12 @@ func TestWrite(t *testing.T) {
 		{
 			name:     "Elasticsearch v5",
 			version:  "5.6.16",
+			value:    1,
+			expected: msgBulk,
+		},
+		{
+			name:     "Elasticsearch v6",
+			version:  "6.8.23",
 			value:    1,
 			expected: msgBulk,
 		},
