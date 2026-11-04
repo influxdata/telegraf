@@ -20,46 +20,48 @@ import (
 	"github.com/influxdata/telegraf/config"
 )
 
-type clientConfig struct {
-	urls              []string
-	basicAuth         bool
-	userinfo          *url.Userinfo
-	username          config.Secret
-	password          config.Secret
-	bearerToken       config.Secret
-	headers           http.Header
-	enableGzip        bool
-	enableSniffer     bool
-	discoveryInterval time.Duration
-	httpClient        *http.Client
-	log               telegraf.Logger
+// roundTripper holds client settings and applies per-request authentication, headers, and compression through the configured HTTP client.
+type roundTripper struct {
+	urls               []string
+	basicAuth          bool
+	userinfo           *url.Userinfo
+	username           config.Secret
+	password           config.Secret
+	bearerToken        config.Secret
+	headers            http.Header
+	enableGzip         bool
+	enableSniffer      bool
+	discoveryInterval  time.Duration
+	httpClient         *http.Client
+	log                telegraf.Logger
+	bypassProductCheck bool
 }
 
-func (cfg *clientConfig) configureAuth(username, password, bearerToken config.Secret) error {
+func (t *roundTripper) configureAuth(username, password, bearerToken config.Secret) error {
 	if !username.Empty() && !password.Empty() {
-		cfg.basicAuth = true
-		cfg.username, cfg.password = username, password
+		t.basicAuth = true
+		t.username, t.password = username, password
 	}
-	if !cfg.basicAuth {
-		for _, address := range cfg.urls {
+	if !t.basicAuth {
+		for _, address := range t.urls {
 			u, err := url.Parse(address)
 			if err != nil {
 				return fmt.Errorf("parsing URL %q failed: %w", address, err)
 			}
 			if u.User != nil {
-				cfg.userinfo = u.User
+				t.userinfo = u.User
 				break
 			}
 		}
 	}
-	cfg.bearerToken = bearerToken
+	t.bearerToken = bearerToken
 	return nil
 }
 
-func (cfg clientConfig) probeVersion(ctx context.Context) (string, int, error) {
+func (t roundTripper) probeVersion(ctx context.Context) (string, int, error) {
 	probe, err := elasticsearch5.NewClient(elasticsearch5.Config{
-		Addresses: cfg.urls,
-		Transport: roundTripper{cfg: cfg},
+		Addresses: t.urls,
+		Transport: t,
 	})
 	if err != nil {
 		return "", 0, fmt.Errorf("creating ES client failed: %w", err)
@@ -149,13 +151,6 @@ func checkForError(status int, body io.Reader) error {
 	return errors.New(message)
 }
 
-// roundTripper preserves the configured HTTP client's timeout, headers, and
-// compression for official clients that do not provide these options.
-type roundTripper struct {
-	cfg                clientConfig
-	bypassProductCheck bool
-}
-
 func (t roundTripper) RoundTrip(original *http.Request) (*http.Response, error) {
 	req := original.Clone(original.Context())
 	if err := t.setAuth(req); err != nil {
@@ -174,14 +169,14 @@ func (t roundTripper) RoundTrip(original *http.Request) (*http.Response, error) 
 		req.Header.Set("Content-Type", "application/json")
 	}
 	// Preserve the existing bearer-token override of configured headers.
-	if t.cfg.bearerToken.Empty() {
-		for name, values := range t.cfg.headers {
+	if t.bearerToken.Empty() {
+		for name, values := range t.headers {
 			for _, value := range values {
 				req.Header.Add(name, value)
 			}
 		}
 	}
-	if t.cfg.enableGzip && req.Body != nil && req.Body != http.NoBody {
+	if t.enableGzip && req.Body != nil && req.Body != http.NoBody {
 		var compressed bytes.Buffer
 		writer := gzip.NewWriter(&compressed)
 		_, err := io.Copy(writer, req.Body)
@@ -202,7 +197,7 @@ func (t roundTripper) RoundTrip(original *http.Request) (*http.Response, error) 
 		req.Header.Set("Content-Encoding", "gzip")
 		req.Header.Add("Vary", "Accept-Encoding")
 	}
-	res, err := t.cfg.httpClient.Do(req)
+	res, err := t.httpClient.Do(req)
 	if err == nil && t.bypassProductCheck {
 		// Preserve support for OpenSearch in compatibility mode. The official client's
 		// product check validates identity, not API compatibility.
@@ -212,12 +207,12 @@ func (t roundTripper) RoundTrip(original *http.Request) (*http.Response, error) 
 }
 
 func (t roundTripper) setAuth(req *http.Request) error {
-	if t.cfg.basicAuth {
-		username, err := t.cfg.username.Get()
+	if t.basicAuth {
+		username, err := t.username.Get()
 		if err != nil {
 			return fmt.Errorf("getting username failed: %w", err)
 		}
-		password, err := t.cfg.password.Get()
+		password, err := t.password.Get()
 		if err != nil {
 			username.Destroy()
 			return fmt.Errorf("getting password failed: %w", err)
@@ -225,12 +220,12 @@ func (t roundTripper) setAuth(req *http.Request) error {
 		req.SetBasicAuth(username.String(), password.String())
 		username.Destroy()
 		password.Destroy()
-	} else if t.cfg.userinfo != nil {
-		password, _ := t.cfg.userinfo.Password()
-		req.SetBasicAuth(t.cfg.userinfo.Username(), password)
+	} else if t.userinfo != nil {
+		password, _ := t.userinfo.Password()
+		req.SetBasicAuth(t.userinfo.Username(), password)
 	}
-	if !t.cfg.bearerToken.Empty() {
-		token, err := t.cfg.bearerToken.Get()
+	if !t.bearerToken.Empty() {
+		token, err := t.bearerToken.Get()
 		if err != nil {
 			return fmt.Errorf("getting token failed: %w", err)
 		}

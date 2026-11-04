@@ -157,7 +157,7 @@ func (a *Elasticsearch) Connect() error {
 		Transport: httpTransport,
 		Timeout:   time.Duration(a.Timeout),
 	}
-	cfg := clientConfig{
+	transport := roundTripper{
 		urls:              a.URLs,
 		headers:           a.httpHeaders,
 		enableGzip:        a.EnableGzip,
@@ -166,12 +166,12 @@ func (a *Elasticsearch) Connect() error {
 		httpClient:        httpClient,
 		log:               a.Log,
 	}
-	if err := cfg.configureAuth(a.Username, a.Password, a.AuthBearerToken); err != nil {
+	if err := transport.configureAuth(a.Username, a.Password, a.AuthBearerToken); err != nil {
 		httpClient.CloseIdleConnections()
 		return fmt.Errorf("getting authentication options failed: %w", err)
 	}
 
-	version, major, err := cfg.probeVersion(context.Background())
+	version, major, err := transport.probeVersion(context.Background())
 	if err != nil {
 		httpClient.CloseIdleConnections()
 		return err
@@ -180,14 +180,14 @@ func (a *Elasticsearch) Connect() error {
 	var c client
 	switch major {
 	case 5:
-		if cfg.enableSniffer {
+		if transport.enableSniffer {
 			a.Log.Warn("'enable_sniffer' is not supported for Elasticsearch 5.x and will be ignored")
 		}
-		c, err = newClientV5(cfg)
+		c, err = newClientV5(transport)
 	case 6:
-		c, err = newClientV6(cfg)
+		c, err = newClientV6(transport)
 	case 7:
-		c, err = newClientV7(cfg)
+		c, err = newClientV7(transport)
 	default:
 		httpClient.CloseIdleConnections()
 		return fmt.Errorf("elasticsearch version not supported: %s", version)
