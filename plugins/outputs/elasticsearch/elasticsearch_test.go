@@ -11,10 +11,11 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
-	elasticsearch6 "github.com/elastic/go-elasticsearch/v6"
+	elasticsearch5 "github.com/elastic/go-elasticsearch/v5"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
@@ -27,6 +28,7 @@ const servicePort = "9200"
 
 func TestConnect(t *testing.T) {
 	tests := []struct {
+		version           string
 		name              string
 		index             string
 		template          string
@@ -35,6 +37,30 @@ func TestConnect(t *testing.T) {
 		existingTemplate  bool
 		expectedOverwrite bool
 	}{
+		{
+			name:              "Elasticsearch v5 template management",
+			version:           "5.6.16",
+			index:             "test-%Y.%m.%d",
+			template:          "telegraf",
+			manageTemplate:    true,
+			expectedOverwrite: true,
+		},
+		{
+			name:              "Elasticsearch v6 template management",
+			version:           "6.8.23",
+			index:             "test-%Y.%m.%d",
+			template:          "telegraf",
+			manageTemplate:    true,
+			expectedOverwrite: true,
+		},
+		{
+			name:              "Elasticsearch v7 template management",
+			version:           "7.17.29",
+			index:             "test-%Y.%m.%d",
+			template:          "telegraf",
+			manageTemplate:    true,
+			expectedOverwrite: true,
+		},
 		{
 			name:              "template management",
 			index:             "test-%Y.%m.%d",
@@ -78,6 +104,9 @@ func TestConnect(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup a mock Elasticsearch endpoint
 			server := startMockServer(t)
+			if tt.version != "" {
+				server.setVersion(tt.version)
+			}
 			defer server.close()
 
 			// Pre-populate the template if requested
@@ -250,6 +279,7 @@ func TestWrite(t *testing.T) {
 	}
 
 	tests := []struct {
+		version         string
 		name            string
 		value           any
 		floatHandling   string
@@ -262,6 +292,27 @@ func TestWrite(t *testing.T) {
 		expected        []string
 		expectedHeaders map[string][]string
 	}{
+		{
+			name:     "Elasticsearch v5",
+			version:  "5.6.16",
+			value:    1,
+			expected: msgBulk,
+		},
+		{
+			name:     "Elasticsearch v6",
+			version:  "6.8.23",
+			value:    1,
+			expected: msgBulk,
+		},
+		{
+			name:    "Elasticsearch v7",
+			version: "7.17.29",
+			value:   1,
+			expected: []string{
+				`{"index":{"_index":"test-2009.11.10"}}`,
+				msgBulk[1],
+			},
+		},
 		{
 			name:          "float handling drop NaN",
 			value:         math.NaN(),
@@ -560,6 +611,9 @@ func TestWrite(t *testing.T) {
 
 			// Setup a mock Elasticsearch endpoint
 			server := startMockServer(t)
+			if tt.version != "" {
+				server.setVersion(tt.version)
+			}
 			defer server.close()
 
 			// Setup plugin
@@ -606,6 +660,88 @@ func TestWrite(t *testing.T) {
 	}
 }
 
+func TestWriteAuthentication(t *testing.T) {
+	tests := []struct {
+		name        string
+		userinfo    string
+		username    string
+		password    string
+		bearerToken string
+		expected    []string
+	}{
+		{
+			name:     "rotating basic credentials",
+			username: "@{test:credential}",
+			password: "@{test:credential}",
+			expected: []string{"Basic Zmlyc3Q6Zmlyc3Q=", "Basic c2Vjb25kOnNlY29uZA=="},
+		},
+		{
+			name:        "rotating bearer token",
+			bearerToken: "@{test:credential}",
+			expected:    []string{"Bearer first", "Bearer second"},
+		},
+		{
+			name:     "literal URL password",
+			userinfo: "user:%40%7Ba%3Ab%7D",
+			expected: []string{"Basic dXNlcjpAe2E6Yn0=", "Basic dXNlcjpAe2E6Yn0="},
+		},
+		{
+			name:     "configured credentials override URL credentials",
+			userinfo: "urluser:urlpassword",
+			username: "@{test:credential}",
+			password: "@{test:credential}",
+			expected: []string{"Basic Zmlyc3Q6Zmlyc3Q=", "Basic c2Vjb25kOnNlY29uZA=="},
+		},
+	}
+	for _, version := range []string{"5.6.16", "6.8.23", "7.17.29"} {
+		t.Run(version, func(t *testing.T) {
+			for _, tt := range tests {
+				t.Run(tt.name, func(t *testing.T) {
+					server := startMockServer(t)
+					server.setVersion(version)
+					defer server.close()
+
+					address := "http://" + server.addr()
+					if tt.userinfo != "" {
+						address = "http://" + tt.userinfo + "@" + server.addr()
+					}
+					plugin := &Elasticsearch{
+						URLs:            []string{address},
+						IndexName:       "test-%Y.%m.%d",
+						Username:        config.NewSecret([]byte(tt.username)),
+						Password:        config.NewSecret([]byte(tt.password)),
+						AuthBearerToken: config.NewSecret([]byte(tt.bearerToken)),
+						Timeout:         config.Duration(5 * time.Second),
+						Log:             testutil.Logger{},
+					}
+					credential := "first"
+					resolvers := map[string]telegraf.ResolveFunc{
+						"@{test:credential}": func() ([]byte, bool, error) {
+							return []byte(credential), true, nil
+						},
+					}
+					for _, secret := range []*config.Secret{&plugin.Username, &plugin.Password, &plugin.AuthBearerToken} {
+						require.NoError(t, secret.Link(resolvers))
+					}
+					require.NoError(t, plugin.Init())
+					require.NoError(t, plugin.Connect())
+					defer plugin.Close()
+
+					require.NoError(t, plugin.Write([]telegraf.Metric{testutil.TestMetric(1)}))
+					credential = "second"
+					require.NoError(t, plugin.Write([]telegraf.Metric{testutil.TestMetric(1)}))
+
+					headers := server.headers()
+					require.Len(t, headers, len(tt.expected))
+					for i, expected := range tt.expected {
+						require.Equal(t, []string{expected}, headers[i].Values("Authorization"))
+					}
+				})
+			}
+		})
+	}
+}
+
 func TestWriteFail(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -615,17 +751,17 @@ func TestWriteFail(t *testing.T) {
 		{
 			name:     "value NaN",
 			value:    math.NaN(),
-			expected: "error sending bulk request to Elasticsearch: json: unsupported value: NaN",
+			expected: "error sending bulk request to Elasticsearch: encoding document body failed: json: unsupported value: NaN",
 		},
 		{
 			name:     "value +Inf",
 			value:    math.Inf(1),
-			expected: "error sending bulk request to Elasticsearch: json: unsupported value: +Inf",
+			expected: "error sending bulk request to Elasticsearch: encoding document body failed: json: unsupported value: +Inf",
 		},
 		{
 			name:     "value -Inf",
 			value:    math.Inf(-1),
-			expected: "error sending bulk request to Elasticsearch: json: unsupported value: -Inf",
+			expected: "error sending bulk request to Elasticsearch: encoding document body failed: json: unsupported value: -Inf",
 		},
 	}
 
@@ -650,6 +786,66 @@ func TestWriteFail(t *testing.T) {
 			defer plugin.Close()
 
 			require.ErrorContains(t, plugin.Write([]telegraf.Metric{m}), tt.expected)
+		})
+	}
+}
+
+func TestWriteBulkFail(t *testing.T) {
+	tests := []struct {
+		name        string
+		metricCount int
+		status      int
+		response    string
+		expected    string
+	}{
+		{
+			name:        "HTTP failure",
+			metricCount: 1,
+			status:      http.StatusServiceUnavailable,
+			response:    `{"error":{"type":"unavailable_shards_exception","reason":"no available shard"}}`,
+			expected:    "no available shard",
+		},
+		{
+			name:        "invalid bulk response",
+			metricCount: 1,
+			status:      http.StatusOK,
+			response:    `{`,
+			expected:    "decoding message body failed: unexpected EOF",
+		},
+		{
+			name:        "partial bulk failure",
+			metricCount: 2,
+			status:      http.StatusOK,
+			response: `{"errors":true,"items":[
+				{"index":{"status":201}},
+				{"index":{"status":429,"error":{"type":"es_rejected_execution_exception","reason":"queue full"}}}
+			]}`,
+			expected: "elasticsearch failed to index 1 metrics",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := startMockServer(t)
+			server.setBulkResponse(tt.status, tt.response)
+			defer server.close()
+
+			plugin := &Elasticsearch{
+				URLs:      []string{"http://" + server.addr()},
+				IndexName: "test-%Y.%m.%d",
+				Timeout:   config.Duration(time.Second * 5),
+				Log:       testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+			require.NoError(t, plugin.Connect())
+			defer plugin.Close()
+
+			metrics := make([]telegraf.Metric, tt.metricCount)
+			for i := range metrics {
+				metrics[i] = testutil.TestMetric(1)
+			}
+			require.ErrorContains(t, plugin.Write(metrics), tt.expected)
+			require.Len(t, server.messages(), 1, "failed bulk requests must not be retried")
 		})
 	}
 }
@@ -881,7 +1077,7 @@ func TestGetPipelineName(t *testing.T) {
 func TestIndexSettings(t *testing.T) {
 	tests := []struct {
 		name     string
-		version  int
+		version  uint64
 		template map[string]any
 		expected string
 	}{
@@ -1058,104 +1254,423 @@ func TestWriteIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	// Setup container
-	container := &testutil.Container{
-		Image:        "elasticsearch:6.8.23",
-		ExposedPorts: []string{servicePort},
-		Env: map[string]string{
-			"discovery.type": "single-node",
+	tests := []struct {
+		name         string
+		image        string
+		env          map[string]string
+		waitFor      wait.Strategy
+		expectedType string
+	}{
+		{
+			name:         "v5",
+			image:        "elasticsearch:5.6.16",
+			env:          map[string]string{"ES_JAVA_OPTS": "-Xms512m -Xmx512m"},
+			waitFor:      wait.ForHTTP("/").WithPort(servicePort).WithStartupTimeout(5 * time.Minute),
+			expectedType: "metrics",
 		},
-		WaitingFor: wait.ForAll(
-			wait.ForLog("] mode [basic] - valid"),
-			wait.ForListeningPort(servicePort),
-		),
+		{
+			name:  "v6",
+			image: "elasticsearch:6.8.23",
+			env:   map[string]string{"discovery.type": "single-node"},
+			waitFor: wait.ForAll(
+				wait.ForLog("] mode [basic] - valid"),
+				wait.ForListeningPort(servicePort),
+			),
+			expectedType: "metrics",
+		},
+		{
+			name:  "v7",
+			image: "docker.elastic.co/elasticsearch/elasticsearch:7.17.29",
+			env: map[string]string{
+				"discovery.type": "single-node",
+				"ES_JAVA_OPTS":   "-Xms1g -Xmx1g",
+			},
+			waitFor:      wait.ForHTTP("/").WithPort(servicePort).WithStartupTimeout(120 * time.Second),
+			expectedType: "_doc",
+		},
+		{
+			name:  "OpenSearch v1 compatibility mode",
+			image: "opensearchproject/opensearch:1.1.0",
+			env: map[string]string{
+				"discovery.type":                               "single-node",
+				"OPENSEARCH_JAVA_OPTS":                         "-Xms512m -Xmx512m",
+				"DISABLE_INSTALL_DEMO_CONFIG":                  "true",
+				"DISABLE_SECURITY_PLUGIN":                      "true",
+				"DISABLE_PERFORMANCE_ANALYZER_AGENT_CLI":       "true",
+				"compatibility.override_main_response_version": "true",
+			},
+			waitFor: wait.ForAll(
+				wait.ForListeningPort(servicePort),
+				wait.ForLog("Init AD version hash ring successfully"),
+			),
+			expectedType: "_doc",
+		},
 	}
-	require.NoError(t, container.Start(), "failed to start container")
-	defer container.Terminate()
 
-	// Setup plugin
-	plugin := &Elasticsearch{
-		URLs:                []string{"http://" + container.Address + ":" + container.Ports[servicePort]},
-		IndexName:           "test-%Y.%m.%d",
-		TemplateName:        "telegraf",
-		ManageTemplate:      true,
-		EnableGzip:          true,
-		Timeout:             config.Duration(time.Second * 5),
-		HealthCheckInterval: config.Duration(time.Second * 10),
-		HealthCheckTimeout:  config.Duration(time.Second * 1),
-		Log:                 testutil.Logger{},
-	}
-	require.NoError(t, plugin.Init())
-	require.NoError(t, plugin.Connect())
-	defer plugin.Close()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup container
+			container := &testutil.Container{
+				Image:        tt.image,
+				ExposedPorts: []string{servicePort},
+				Env:          tt.env,
+				WaitingFor:   tt.waitFor,
+			}
+			require.NoError(t, container.Start(), "failed to start container")
+			defer container.Terminate()
 
-	// Verify that we can successfully write data to Elasticsearch
-	require.NoError(t, plugin.Write(testutil.MockMetrics()))
+			// Setup plugin
+			plugin := &Elasticsearch{
+				URLs:                []string{"http://" + container.Address + ":" + container.Ports[servicePort]},
+				IndexName:           "test-%Y.%m.%d",
+				TemplateName:        "telegraf",
+				ManageTemplate:      true,
+				EnableGzip:          true,
+				Timeout:             config.Duration(time.Second * 5),
+				HealthCheckInterval: config.Duration(time.Second * 10),
+				HealthCheckTimeout:  config.Duration(time.Second * 1),
+				Log:                 testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+			require.NoError(t, plugin.Connect())
+			defer plugin.Close()
 
-	// Create a separate client for document verification.
-	client, err := elasticsearch6.NewClient(elasticsearch6.Config{
-		Addresses: plugin.URLs,
-	})
-	require.NoError(t, err)
+			// Verify that we can successfully write data to Elasticsearch
+			require.NoError(t, plugin.Write(testutil.MockMetrics()))
 
-	// Refresh the index so the written documents are visible to searches.
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(plugin.Timeout))
-	defer cancel()
-	refresh, err := client.Indices.Refresh(
-		client.Indices.Refresh.WithContext(ctx),
-		client.Indices.Refresh.WithIndex("test-*"),
-	)
-	require.NoError(t, err)
-	defer refresh.Body.Close()
-	require.Equal(t, http.StatusOK, refresh.StatusCode)
+			// Use a separate v5 client for the refresh/search APIs shared by all versions.
+			client, err := elasticsearch5.NewClient(elasticsearch5.Config{
+				Addresses: plugin.URLs,
+			})
+			require.NoError(t, err)
 
-	// Verify the stored document independently of the bulk request.
-	result, err := client.Search(
-		client.Search.WithContext(ctx),
-		client.Search.WithIndex("test-*"),
-		client.Search.WithFilterPath("hits.hits._index", "hits.hits._type", "hits.hits._source"),
-	)
-	require.NoError(t, err)
-	defer result.Body.Close()
-	require.Equal(t, http.StatusOK, result.StatusCode)
+			// Refresh the index so the written documents are visible to searches.
+			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(plugin.Timeout))
+			defer cancel()
+			refresh, err := client.Indices.Refresh(
+				client.Indices.Refresh.WithContext(ctx),
+				client.Indices.Refresh.WithIndex("test-*"),
+			)
+			require.NoError(t, err)
+			defer refresh.Body.Close()
+			require.Equal(t, http.StatusOK, refresh.StatusCode)
 
-	actual, err := io.ReadAll(result.Body)
-	require.NoError(t, err)
-	require.JSONEq(t, `{
-		"hits": {
-			"hits": [
-				{
-					"_index": "test-2009.11.10",
-					"_type": "metrics",
-					"_source": {
-						"@timestamp": "2009-11-10T23:00:00Z",
-						"measurement_name": "test1",
-						"tag": {
-							"tag1": "value1"
-						},
-						"test1": {
-							"value": 1
+			// Verify the stored document independently of the bulk request.
+			result, err := client.Search(
+				client.Search.WithContext(ctx),
+				client.Search.WithIndex("test-*"),
+				client.Search.WithFilterPath("hits.hits._index", "hits.hits._type", "hits.hits._source"),
+			)
+			require.NoError(t, err)
+			defer result.Body.Close()
+			require.Equal(t, http.StatusOK, result.StatusCode)
+
+			actual, err := io.ReadAll(result.Body)
+			require.NoError(t, err)
+			require.JSONEq(t, fmt.Sprintf(`{
+				"hits": {
+					"hits": [
+						{
+							"_index": "test-2009.11.10",
+							"_type": %q,
+							"_source": {
+								"@timestamp": "2009-11-10T23:00:00Z",
+								"measurement_name": "test1",
+								"tag": {
+									"tag1": "value1"
+								},
+								"test1": {
+									"value": 1
+								}
+							}
 						}
+					]
+				}
+			}`, tt.expectedType), string(actual))
+		})
+	}
+}
+
+func TestClientDiscovery(t *testing.T) {
+	for _, tt := range []struct {
+		name    string
+		version string
+	}{
+		{name: "v6", version: "6.8.23"},
+		{name: "v7", version: "7.17.29"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			var discoveredWrites, seedWrites, discoveries atomic.Int32
+			target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/_bulk" {
+					discoveredWrites.Add(1)
+				}
+				if _, err := io.WriteString(w, "{}"); err != nil {
+					t.Error(err)
+				}
+			}))
+			defer target.Close()
+			seed := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				switch r.URL.Path {
+				case "/_nodes/http":
+					discoveries.Add(1)
+					_, err := fmt.Fprintf(w,
+						`{"nodes":{"node":{"roles":["data","ingest"],"http":{"publish_address":%q}}}}`,
+						strings.TrimPrefix(target.URL, "http://"),
+					)
+					if err != nil {
+						t.Error(err)
+					}
+				case "/_bulk":
+					seedWrites.Add(1)
+					if _, err := io.WriteString(w, "{}"); err != nil {
+						t.Error(err)
+					}
+				default:
+					if _, err := fmt.Fprintf(w, `{"version":{"number":%q}}`, tt.version); err != nil {
+						t.Error(err)
 					}
 				}
-			]
+			}))
+			defer seed.Close()
+			plugin := &Elasticsearch{
+				URLs:          []string{seed.URL},
+				IndexName:     "test-%Y.%m.%d",
+				EnableSniffer: true,
+				Timeout:       config.Duration(time.Second),
+				Log:           testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+			require.NoError(t, plugin.Connect())
+			defer plugin.Close()
+
+			require.Eventually(t, func() bool {
+				return plugin.Write(testutil.MockMetrics()) == nil && discoveredWrites.Load() > 0
+			}, 5*time.Second, 10*time.Millisecond)
+			before := seedWrites.Load()
+			require.NoError(t, plugin.Write(testutil.MockMetrics()))
+			require.EqualValues(t, 1, discoveries.Load())
+			require.EqualValues(t, 2, discoveredWrites.Load())
+			require.Equal(t, before, seedWrites.Load())
+		})
+	}
+}
+
+func TestClientDiscoveryEmpty(t *testing.T) {
+	for _, tt := range []struct {
+		name     string
+		version  string
+		response string
+	}{
+		{name: "v6 no nodes", version: "6.8.23", response: `{"nodes":{}}`},
+		{name: "v7 no nodes", version: "7.17.29", response: `{"nodes":{}}`},
+		{
+			name:    "v6 separate data and ingest nodes",
+			version: "6.8.23",
+			response: `{"nodes":{
+				"data":{"roles":["data"],"http":{"publish_address":"127.0.0.1:9200"}},
+				"ingest":{"roles":["ingest"],"http":{"publish_address":"127.0.0.1:9201"}}
+			}}`,
+		},
+		{
+			name:     "v7 master-only nodes",
+			version:  "7.17.29",
+			response: `{"nodes":{"master":{"roles":["master"],"http":{"publish_address":"127.0.0.1:9200"}}}}`,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				var response string
+				switch r.URL.Path {
+				case "/_nodes/http":
+					response = tt.response
+				case "/_bulk":
+					response = "{}"
+				default:
+					response = fmt.Sprintf(`{"version":{"number":%q}}`, tt.version)
+				}
+				if _, err := io.WriteString(w, response); err != nil {
+					t.Error(err)
+				}
+			}))
+			defer server.Close()
+			plugin := &Elasticsearch{
+				URLs:      []string{server.URL},
+				IndexName: "test-%Y.%m.%d",
+				Timeout:   config.Duration(time.Second),
+				Log:       testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+			require.NoError(t, plugin.Connect())
+			defer plugin.Close()
+
+			var discover func() error
+			switch connection := plugin.client.(type) {
+			case *clientV6:
+				discover = connection.client.DiscoverNodes
+			case *clientV7:
+				discover = connection.client.DiscoverNodes
+			default:
+				t.Fatalf("unexpected client type %T", plugin.client)
+			}
+			// Repeat discovery to verify the retained pool remains usable for discovery and writes.
+			for range 2 {
+				require.NoError(t, discover())
+				require.NoError(t, plugin.Write(testutil.MockMetrics()))
+			}
+		})
+	}
+}
+
+func TestClientDiscoveryDisabled(t *testing.T) {
+	for _, tt := range []struct {
+		name          string
+		version       string
+		enableSniffer bool
+	}{
+		{name: "v5 ignores discovery", version: "5.6.16", enableSniffer: true},
+		{name: "v6 sniffer disabled", version: "6.8.23"},
+		{name: "v7 sniffer disabled", version: "7.17.29"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			var writes, discoveries atomic.Int32
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				switch r.URL.Path {
+				case "/_nodes/http":
+					discoveries.Add(1)
+					if _, err := io.WriteString(w, "{}"); err != nil {
+						t.Error(err)
+					}
+				case "/_bulk":
+					writes.Add(1)
+					if _, err := io.WriteString(w, "{}"); err != nil {
+						t.Error(err)
+					}
+				default:
+					if _, err := fmt.Fprintf(w, `{"version":{"number":%q}}`, tt.version); err != nil {
+						t.Error(err)
+					}
+				}
+			}))
+			defer server.Close()
+			plugin := &Elasticsearch{
+				URLs:          []string{server.URL},
+				IndexName:     "test-%Y.%m.%d",
+				EnableSniffer: tt.enableSniffer,
+				Timeout:       config.Duration(time.Second),
+				Log:           testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+			require.NoError(t, plugin.Connect())
+			defer plugin.Close()
+
+			require.NoError(t, plugin.Write(testutil.MockMetrics()))
+			require.NoError(t, plugin.Close())
+			require.Zero(t, discoveries.Load())
+			require.EqualValues(t, 1, writes.Load())
+		})
+	}
+}
+
+func TestConnectRetry(t *testing.T) {
+	var rejectTemplate atomic.Bool
+	rejectTemplate.Store(true)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodHead && r.URL.Path == "/_template/telegraf":
+			w.WriteHeader(http.StatusNotFound)
+		case r.Method == http.MethodPut:
+			if rejectTemplate.Load() {
+				w.WriteHeader(http.StatusForbidden)
+				return
+			}
+			if _, err := io.WriteString(w, `{"acknowledged":true}`); err != nil {
+				t.Error(err)
+			}
+		default:
+			if _, err := io.WriteString(w, `{"version":{"number":"6.8.23"}}`); err != nil {
+				t.Error(err)
+			}
 		}
-	}`, string(actual))
+	}))
+	defer server.Close()
+	plugin := &Elasticsearch{
+		URLs:           []string{server.URL},
+		IndexName:      "test-%Y.%m.%d",
+		TemplateName:   "telegraf",
+		ManageTemplate: true,
+		Timeout:        config.Duration(time.Second),
+		Log:            testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+	defer plugin.Close()
+	require.ErrorContains(t, plugin.Connect(), "managing templates failed:")
+	require.Nil(t, plugin.client)
+	rejectTemplate.Store(false)
+	require.NoError(t, plugin.Connect())
+}
+
+func TestClientClose(t *testing.T) {
+	for _, tt := range []struct {
+		name      string
+		newClient func(roundTripper) (client, error)
+	}{
+		{name: "v6", newClient: newClientV6},
+		{name: "v7", newClient: newClientV7},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			started := make(chan struct{})
+			server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+				close(started)
+				<-r.Context().Done()
+			}))
+			defer server.Close()
+			connection, err := tt.newClient(roundTripper{
+				urls:          []string{server.URL},
+				enableSniffer: true,
+				httpClient:    &http.Client{Timeout: time.Second},
+				log:           testutil.Logger{},
+			})
+			require.NoError(t, err)
+			defer connection.close()
+			select {
+			case <-started:
+			case <-time.After(5 * time.Second):
+				t.Fatal("discovery did not start")
+			}
+			closed := make(chan struct{})
+			go func() {
+				connection.close()
+				close(closed)
+			}()
+			select {
+			case <-closed:
+			case <-time.After(5 * time.Second):
+				t.Fatal("client did not stop discovery after the HTTP timeout")
+			}
+		})
+	}
 }
 
 type mockServer struct {
-	server    *httptest.Server
-	msgs      []string
-	hdrs      []http.Header
-	templates map[string]string
+	version      string
+	bulkStatus   int
+	bulkResponse string
+	server       *httptest.Server
+	msgs         []string
+	hdrs         []http.Header
+	templates    map[string]string
 	sync.Mutex
 }
 
 func startMockServer(t *testing.T) *mockServer {
 	s := &mockServer{
-		msgs:      make([]string, 0),
-		hdrs:      make([]http.Header, 0),
-		templates: make(map[string]string),
+		version:      "6.8.23",
+		bulkStatus:   http.StatusOK,
+		bulkResponse: "{}",
+		msgs:         make([]string, 0),
+		hdrs:         make([]http.Header, 0),
+		templates:    make(map[string]string),
 	}
 
 	s.server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -1214,14 +1729,19 @@ func startMockServer(t *testing.T) *mockServer {
 			s.Lock()
 			s.msgs = append(s.msgs, string(body))
 			s.hdrs = append(s.hdrs, r.Header.Clone())
+			status, response := s.bulkStatus, s.bulkResponse
 			s.Unlock()
 
-			if _, err := w.Write([]byte("{}")); err != nil {
+			w.WriteHeader(status)
+			if _, err := w.Write([]byte(response)); err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				t.Error(err)
 			}
 		default:
-			if _, err := w.Write([]byte(`{"version": {"number": "6.8.23"}}`)); err != nil {
+			s.Lock()
+			version := s.version
+			s.Unlock()
+			if _, err := fmt.Fprintf(w, `{"version": {"number": %q}}`, version); err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				t.Error(err)
 			}
@@ -1262,4 +1782,17 @@ func (s *mockServer) template(name string) (string, bool) {
 	defer s.Unlock()
 	body, found := s.templates[name]
 	return body, found
+}
+
+func (s *mockServer) setVersion(version string) {
+	s.Lock()
+	defer s.Unlock()
+	s.version = version
+}
+
+func (s *mockServer) setBulkResponse(status int, response string) {
+	s.Lock()
+	defer s.Unlock()
+	s.bulkStatus = status
+	s.bulkResponse = response
 }
