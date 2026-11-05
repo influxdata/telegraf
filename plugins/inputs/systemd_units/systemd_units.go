@@ -18,6 +18,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -229,7 +230,10 @@ func (s *SystemdUnits) Start(telegraf.Accumulator) error {
 		client, err = dbus.NewSystemConnectionContext(ctx)
 	}
 	if err != nil {
-		return err
+		return &internal.StartupError{
+			Err:   fmt.Errorf("connecting to the %s bus failed: %w", s.scope, err),
+			Retry: true,
+		}
 	}
 
 	s.client = client
