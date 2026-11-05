@@ -1,0 +1,9 @@
+27 1 0x01 7 1904 25101222058 94789746222780
+name                            type data
+rotating_linear                 4    0
+rotating_offset                 4    0
+rotating_seek                   4    0
+non_rotating_linear             4    21965
+non_rotating_seek               4    502739
+preferred_found                 4    153661
+preferred_not_found             4    371043
