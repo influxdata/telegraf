@@ -3,6 +3,7 @@ package kafka
 
 import (
 	"bytes"
+	"context"
 	_ "embed"
 	"errors"
 	"fmt"
@@ -39,6 +40,7 @@ type Kafka struct {
 	ProducerTimestamp string            `toml:"producer_timestamp"`
 	MetricNameHeader  string            `toml:"metric_name_header" deprecated:"1.39.0;1.45.0;please use 'headers' instead"`
 	Headers           map[string]string `toml:"headers"`
+	DeliveryTimeout   config.Duration   `toml:"delivery_timeout"`
 	Log               telegraf.Logger   `toml:"-"`
 	common_proxy.Socks5ProxyConfig
 	kafka.WriteConfig
@@ -101,6 +103,10 @@ func (k *Kafka) Init() error {
 	}
 	k.saramaConfig = cfg
 
+	if k.DeliveryTimeout < 0 {
+		return errors.New("delivery_timeout must not be negative")
+	}
+
 	switch k.ProducerTimestamp {
 	case "":
 		k.ProducerTimestamp = "metric"
@@ -139,6 +145,14 @@ func (k *Kafka) Close() error {
 }
 
 func (k *Kafka) Write(metrics []telegraf.Metric) error {
+	if k.producer == nil {
+		producer, err := k.producerFunc(k.Brokers, k.saramaConfig)
+		if err != nil {
+			return fmt.Errorf("creating producer failed: %w", err)
+		}
+		k.producer = producer
+	}
+
 	msgs := make([]*sarama.ProducerMessage, 0, len(metrics))
 	for _, metric := range metrics {
 		metric, topic := k.getTopicName(metric)
@@ -186,7 +200,19 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 		msgs = append(msgs, m)
 	}
 
-	if err := k.producer.SendMessages(msgs); err != nil {
+	ctx := context.Background()
+	if k.DeliveryTimeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, time.Duration(k.DeliveryTimeout))
+		defer cancel()
+	}
+
+	if err := k.producer.SendMessagesContext(ctx, msgs); err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			k.abandonProducer()
+			return fmt.Errorf("delivery timed out after %s, replacing producer", time.Duration(k.DeliveryTimeout))
+		}
+
 		// We could have many errors, return only the first encountered.
 		var errs sarama.ProducerErrors
 		if errors.As(err, &errs) && len(errs) > 0 {
@@ -209,6 +235,19 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 	}
 
 	return nil
+}
+
+// abandonProducer drops a producer with a stuck delivery so the next write
+// creates a new one. Close waits for the stuck delivery, which might never
+// finish, so it runs in the background
+func (k *Kafka) abandonProducer() {
+	producer := k.producer
+	k.producer = nil
+	go func() {
+		if err := producer.Close(); err != nil {
+			k.Log.Errorf("Closing abandoned producer failed: %v", err)
+		}
+	}()
 }
 
 func (k *Kafka) getTopicName(metric telegraf.Metric) (telegraf.Metric, string) {
@@ -274,6 +313,7 @@ func init() {
 			NetReadTimeout:  config.Duration(30 * time.Second),
 			NetWriteTimeout: config.Duration(30 * time.Second),
 			ProducerTimeout: config.Duration(10 * time.Second),
+			DeliveryTimeout: config.Duration(5 * time.Minute),
 			producerFunc:    sarama.NewSyncProducer,
 		}
 	})
