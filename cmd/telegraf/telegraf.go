@@ -344,7 +344,12 @@ func (*Telegraf) watchRemoteConfigs(ctx context.Context, signals chan os.Signal,
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
+	// Start from the revision that was actually loaded, so a change made
+	// between loading the config and the first check is not missed.
 	lastModified := make(map[string]string, len(remoteConfigs))
+	for _, configURL := range remoteConfigs {
+		lastModified[configURL] = config.RemoteConfigLastModified(configURL)
+	}
 	for {
 		select {
 		case <-ctx.Done():
@@ -373,10 +378,17 @@ func (*Telegraf) watchRemoteConfigs(ctx context.Context, signals chan os.Signal,
 				}
 				resp.Body.Close()
 
+				// Keep the known revision on failed checks, otherwise a change
+				// made while the server was unavailable would never be noticed.
+				if resp.StatusCode != http.StatusOK {
+					log.Printf("W! Checking config %q for changes failed: %s\n", configURL, resp.Status)
+					continue
+				}
+
 				modified := resp.Header.Get("Last-Modified")
 				if modified == "" {
-					log.Printf("E! Last-Modified header not found, stopping the watcher for %s\n", configURL)
-					delete(lastModified, configURL)
+					log.Printf("E! Last-Modified header not found, cannot detect changes for %s\n", configURL)
+					continue
 				}
 
 				if lastModified[configURL] == "" {
