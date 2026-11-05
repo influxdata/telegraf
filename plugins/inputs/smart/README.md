@@ -43,6 +43,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
     ## On most platforms used cli utilities requires root access.
     ## Setting 'use_sudo' to true will make use of sudo to run smartctl or nvme-cli.
+    ## On OpenBSD, doas is used instead of sudo.
     ## Sudo must be configured to allow the telegraf user to run smartctl or nvme-cli
     ## without a password.
     # use_sudo = false
