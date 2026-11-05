@@ -70,6 +70,8 @@ Since parquet column schemas are set at file creation, a metric that brings a
 new field or tag rotates to a new file with the extra column. Rotation events
 are logged.
 
+If the new file cannot be created, the plugin keeps the current file open.
+
 While Telegraf runs, columns are only added and never dropped, so a metric
 missing a column writes `null` there. Column types are fixed, so a metric with
 a value that does not fit its column type is rejected.

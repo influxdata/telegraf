@@ -145,9 +145,11 @@ func (p *Parquet) Write(metrics []telegraf.Metric) error {
 				schema:   schema,
 				writer:   writer,
 			}
-		} else if added := p.addColumns(group, columns); len(added) > 0 {
+		} else if added := p.unknownColumns(group, columns); len(added) > 0 {
 			p.Log.Infof("Starting a new file for %q to add column(s) %s", name, strings.Join(added, ", "))
-			if err := p.rotate(name, now); err != nil {
+			merged := maps.Clone(columns)
+			maps.Copy(merged, group.columns)
+			if err := p.rotate(name, merged, now); err != nil {
 				perr.MetricsReject = append(perr.MetricsReject, metricIndices[name]...)
 				perr.MetricsRejectErrors = append(perr.MetricsRejectErrors, fmt.Errorf("failed to rotate file %q: %w", group.filename, err))
 				perr.Err = fmt.Errorf("failed to rotate file %q: %w", group.filename, err)
@@ -205,37 +207,39 @@ func (p *Parquet) rotateIfNeeded(name string, now time.Time) error {
 		return nil
 	}
 
-	return p.rotate(name, now)
+	return p.rotate(name, group.columns, now)
 }
 
-func (p *Parquet) rotate(name string, now time.Time) error {
+func (p *Parquet) rotate(name string, columns map[string]arrow.DataType, now time.Time) error {
 	group := p.metricGroups[name]
-	if err := group.writer.Close(); err != nil {
-		return fmt.Errorf("failed to close file for rotation %q: %w", group.filename, err)
-	}
-
-	schema := p.createSchema(group.columns)
+	schema := p.createSchema(columns)
 	writer, filename, err := p.createWriter(name, schema, now)
 	if err != nil {
 		return fmt.Errorf("failed to create new writer for file %q: %w", group.filename, err)
 	}
+
+	previousWriter, previousFilename := group.writer, group.filename
 	group.builder.Release()
 	group.builder = array.NewRecordBuilder(memory.DefaultAllocator, schema)
+	group.columns = columns
 	group.schema = schema
 	group.writer = writer
 	group.filename = filename
 	group.created = now
 
+	if err := previousWriter.Close(); err != nil {
+		return fmt.Errorf("failed to close file for rotation %q: %w", previousFilename, err)
+	}
+
 	return nil
 }
 
-func (p *Parquet) addColumns(group *metricGroup, columns map[string]arrow.DataType) []string {
+func (p *Parquet) unknownColumns(group *metricGroup, columns map[string]arrow.DataType) []string {
 	added := make([]string, 0, len(columns))
-	for column, datatype := range columns {
+	for column := range columns {
 		if _, known := group.columns[column]; known {
 			continue
 		}
-		group.columns[column] = datatype
 		if column != p.TimestampFieldName {
 			added = append(added, column)
 		}
