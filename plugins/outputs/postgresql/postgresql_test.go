@@ -21,6 +21,7 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/models"
+	"github.com/influxdata/telegraf/plugins/outputs/postgresql/sqltemplate"
 	"github.com/influxdata/telegraf/plugins/outputs/postgresql/utils"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -395,7 +396,11 @@ type MSS = map[string]string
 type MSI = map[string]any
 
 func dbTableDump(t *testing.T, db *pgxpool.Pool, suffix string) []MSI {
-	rows, err := db.Query(ctx, "SELECT * FROM "+pgx.Identifier{t.Name() + suffix}.Sanitize())
+	return dbIdentifierDump(t, db, pgx.Identifier{t.Name() + suffix})
+}
+
+func dbIdentifierDump(t *testing.T, db *pgxpool.Pool, ident pgx.Identifier) []MSI {
+	rows, err := db.Query(ctx, "SELECT * FROM "+ident.Sanitize())
 	require.NoError(t, err)
 	defer rows.Close()
 
@@ -892,6 +897,125 @@ func TestWriteTagTableIntegration(t *testing.T) {
 	require.Equal(t, 3, stmtCount) // BEGIN, COPY metrics table, COMMIT
 }
 
+func TestWriteIntegration_schemaTag(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	tests := []struct {
+		name              string
+		tagsAsForeignKeys bool
+		maxConns          int
+	}{
+		{name: "sequential"},
+		{name: "sequential with tag tables", tagsAsForeignKeys: true},
+		{name: "concurrent", maxConns: 2},
+		{name: "concurrent with tag tables", tagsAsForeignKeys: true, maxConns: 2},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p, err := newPostgresqlTest(t)
+			require.NoError(t, err)
+			p.SchemaTag = "schema"
+			p.ExcludeSchemaTag = true
+			p.TagsAsForeignKeys = tt.tagsAsForeignKeys
+			if tt.maxConns > 0 {
+				p.dbConfig.MaxConns = int32(tt.maxConns)
+			}
+			require.NoError(t, p.Connect())
+			defer p.Close()
+
+			for _, schema := range []string{"schema_a", "schema_b"} {
+				_, err := p.db.Exec(ctx, "CREATE SCHEMA "+pgx.Identifier{schema}.Sanitize())
+				require.NoError(t, err)
+			}
+
+			// Use a fixed name as the subtest names exceed the table name length limit
+			const name = "schema_tag_metric"
+			now := time.Now()
+			metrics := []telegraf.Metric{
+				metric.New(name, MSS{"schema": "schema_a", "host": "h1"}, MSI{"v": 1}, now),
+				metric.New(name, MSS{"schema": "schema_b", "host": "h1"}, MSI{"v": 2}, now),
+				metric.New(name, MSS{"host": "h1"}, MSI{"v": 3}, now),
+				metric.New(name, MSS{"schema": "schema_a", "host": "h1"}, MSI{"v": 4}, now),
+			}
+			require.NoError(t, p.Write(metrics))
+
+			// The original metrics must not be modified
+			require.True(t, metrics[0].HasTag("schema"))
+
+			expected := map[string][]int64{
+				"schema_a": {1, 4},
+				"schema_b": {2},
+				"public":   {3},
+			}
+			for schema, values := range expected {
+				ident := pgx.Identifier{schema, name}
+				// Writes in concurrent mode are asynchronous, so wait for the rows to arrive
+				require.Eventually(t, func() bool {
+					var count int
+					err := p.db.QueryRow(ctx, "SELECT count(*) FROM "+ident.Sanitize()).Scan(&count)
+					return err == nil && count == len(values)
+				}, 5*time.Second, 50*time.Millisecond, "schema %q", schema)
+				dump := dbIdentifierDump(t, p.db, ident)
+
+				actual := make([]int64, 0, len(dump))
+				for _, row := range dump {
+					require.NotContains(t, row, "schema")
+					actual = append(actual, row["v"].(int64))
+				}
+				require.ElementsMatch(t, values, actual, "schema %q", schema)
+
+				if tt.tagsAsForeignKeys {
+					// Each schema has its own tag table, so the tag cache must not prevent writing the same
+					// tag set into the tag table of another schema.
+					dumpTags := dbIdentifierDump(t, p.db, pgx.Identifier{schema, name + p.TagTableSuffix})
+					require.Len(t, dumpTags, 1, "schema %q", schema)
+					require.Equal(t, "h1", dumpTags[0]["host"])
+					require.NotContains(t, dumpTags[0], "schema")
+					require.Equal(t, dumpTags[0]["tag_id"], dump[0]["tag_id"])
+				} else {
+					require.Equal(t, "h1", dump[0]["host"])
+				}
+			}
+		})
+	}
+}
+
+// Verify that the schema can be created from the templates as documented in the README.
+func TestWriteIntegration_schemaTagCreateSchema(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
+	p.SchemaTag = "schema"
+	p.TagsAsForeignKeys = true
+
+	createSchema := &sqltemplate.Template{}
+	require.NoError(t, createSchema.UnmarshalText([]byte(`CREATE SCHEMA IF NOT EXISTS {{ .table.Schema|quoteIdentifier }}`)))
+	p.CreateTemplates = append([]*sqltemplate.Template{createSchema}, p.CreateTemplates...)
+	p.TagTableCreateTemplates = append([]*sqltemplate.Template{createSchema}, p.TagTableCreateTemplates...)
+	require.NoError(t, p.Connect())
+	defer p.Close()
+
+	metrics := []telegraf.Metric{
+		newMetric(t, "", MSS{"schema": "new schema", "host": "h1"}, MSI{"v": 1}),
+	}
+	require.NoError(t, p.Write(metrics))
+
+	dump := dbIdentifierDump(t, p.db, pgx.Identifier{"new schema", t.Name()})
+	require.Len(t, dump, 1)
+	require.EqualValues(t, 1, dump[0]["v"])
+
+	dumpTags := dbIdentifierDump(t, p.db, pgx.Identifier{"new schema", t.Name() + p.TagTableSuffix})
+	require.Len(t, dumpTags, 1)
+	require.Equal(t, "new schema", dumpTags[0]["schema"])
+	require.Equal(t, "h1", dumpTags[0]["host"])
+}
+
 // Verify that when using TagsAsForeignKeys and a tag can't be written, that we still add the metrics.
 func TestWriteIntegration_tagError(t *testing.T) {
 	if testing.Short() {
@@ -1322,7 +1446,7 @@ func TestWriteMetricsFromMeasureRejectsEmptyName(t *testing.T) {
 	p := newPostgresql()
 	m := metric.New("cpu", map[string]string{}, map[string]any{"value": int64(1)}, time.Unix(0, 0))
 	m.SetName("")
-	src := NewTableSource(p, "")
+	src := NewTableSource(p, p.Schema, "")
 	src.AddMetric(m)
 	require.Empty(t, src.Name())
 
