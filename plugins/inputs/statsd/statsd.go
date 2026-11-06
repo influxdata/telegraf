@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"maps"
 	"net"
+	"os"
 	"regexp"
 	"sort"
 	"strconv"
@@ -41,7 +42,7 @@ const (
 )
 
 type Statsd struct {
-	// Protocol used on listener - udp or tcp
+	// Protocol used on listener - udp, tcp or unixgram
 	Protocol string `toml:"protocol"`
 
 	// Address & Port to serve from
@@ -122,8 +123,9 @@ type Statsd struct {
 	distributions []cacheddistributions
 
 	// Protocol listeners
-	UDPlistener *net.UDPConn
-	TCPlistener *net.TCPListener
+	UDPlistener  *net.UDPConn
+	TCPlistener  *net.TCPListener
+	unixgramConn *net.UnixConn
 
 	// track current connections so we can close them in Stop()
 	conns   map[string]*net.TCPConn
@@ -275,7 +277,28 @@ func (s *Statsd) Start(ac telegraf.Accumulator) error {
 		s.MetricSeparator = defaultSeparator
 	}
 
-	if s.isUDP() {
+	if s.isUnixgram() {
+		if s.ServiceAddress == "" {
+			return errors.New("service_address must be set to a socket path when protocol is unixgram")
+		}
+		if err := removeStaleSocket(s.ServiceAddress); err != nil {
+			return err
+		}
+
+		conn, err := net.ListenUnixgram("unixgram", &net.UnixAddr{Name: s.ServiceAddress, Net: "unixgram"})
+		if err != nil {
+			return err
+		}
+
+		s.Log.Infof("Unixgram listening on %q", s.ServiceAddress)
+		s.unixgramConn = conn
+
+		s.wg.Go(func() {
+			if err := s.udpListen(conn); err != nil {
+				ac.AddError(err)
+			}
+		})
+	} else if s.isUDP() {
 		address, err := net.ResolveUDPAddr(s.Protocol, s.ServiceAddress)
 		if err != nil {
 			return err
@@ -434,7 +457,14 @@ func (s *Statsd) Stop() {
 	s.Lock()
 	s.Log.Infof("Stopping the statsd service")
 	close(s.done)
-	if s.isUDP() {
+	if s.isUnixgram() {
+		if s.unixgramConn != nil {
+			s.unixgramConn.Close()
+			if err := os.Remove(s.ServiceAddress); err != nil && !errors.Is(err, os.ErrNotExist) {
+				s.Log.Warnf("Removing socket %q failed: %v", s.ServiceAddress, err)
+			}
+		}
+	} else if s.isUDP() {
 		if s.UDPlistener != nil {
 			s.UDPlistener.Close()
 		}
@@ -512,11 +542,13 @@ func (s *Statsd) tcpListen(listener *net.TCPListener) error {
 	}
 }
 
-// udpListen starts listening for UDP packets on the configured port.
-func (s *Statsd) udpListen(conn *net.UDPConn) error {
+// udpListen reads datagrams from the given UDP or unixgram socket.
+func (s *Statsd) udpListen(conn net.PacketConn) error {
 	if s.ReadBufferSize > 0 {
-		if err := s.UDPlistener.SetReadBuffer(s.ReadBufferSize); err != nil {
-			return err
+		if c, ok := conn.(interface{ SetReadBuffer(int) error }); ok {
+			if err := c.SetReadBuffer(s.ReadBufferSize); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -526,7 +558,7 @@ func (s *Statsd) udpListen(conn *net.UDPConn) error {
 		case <-s.done:
 			return nil
 		default:
-			n, addr, err := conn.ReadFromUDP(buf)
+			n, addr, err := conn.ReadFrom(buf)
 			if err != nil {
 				if !strings.Contains(err.Error(), "closed network") {
 					s.Log.Errorf("Error reading: %s", err.Error())
@@ -542,11 +574,15 @@ func (s *Statsd) udpListen(conn *net.UDPConn) error {
 			}
 			b.Reset()
 			b.Write(buf[:n])
+			var src string
+			if ua, ok := addr.(*net.UDPAddr); ok {
+				src = ua.IP.String()
+			}
 			select {
 			case s.in <- input{
 				Buffer: b,
 				Time:   time.Now(),
-				Addr:   addr.IP.String()}:
+				Addr:   src}:
 				s.Stats.PendingMessages.Set(int64(len(s.in)))
 			default:
 				s.Stats.UDPPacketsDrop.Incr(1)
@@ -1019,6 +1055,35 @@ func (s *Statsd) remember(id string, conn *net.TCPConn) {
 // IsUDP returns true if the protocol is UDP, false otherwise.
 func (s *Statsd) isUDP() bool {
 	return strings.HasPrefix(s.Protocol, "udp")
+}
+
+// removeStaleSocket removes a unix socket left behind at path by a previous
+// run. It refuses to remove anything that is not a socket, or a socket that
+// another process is still listening on.
+func removeStaleSocket(path string) error {
+	fi, err := os.Lstat(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if fi.Mode()&os.ModeSocket == 0 {
+		return fmt.Errorf("refusing to remove %q: not a socket", path)
+	}
+	if c, err := net.Dial("unixgram", path); err == nil {
+		c.Close()
+		return fmt.Errorf("socket %q is in use by another process", path)
+	}
+	if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("removing stale socket failed: %w", err)
+	}
+	return nil
+}
+
+// isUnixgram returns true if the protocol is a unix datagram socket.
+func (s *Statsd) isUnixgram() bool {
+	return s.Protocol == "unixgram"
 }
 
 func (s *Statsd) expireCachedMetrics() {

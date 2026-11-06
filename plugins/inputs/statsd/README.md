@@ -32,7 +32,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```toml @sample.conf
 # Statsd Server
 [[inputs.statsd]]
-  ## Protocol, must be "tcp", "udp4", "udp6" or "udp" (default=udp)
+  ## Protocol, must be "tcp", "udp4", "udp6", "udp" or "unixgram" (default=udp)
   protocol = "udp"
 
   ## MaxTCPConnection - applicable when protocol is set to tcp (default=250)
@@ -46,7 +46,8 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Defaults to the OS configuration.
   # tcp_keep_alive_period = "2h"
 
-  ## Address and port to host UDP listener on
+  ## Address and port to host UDP/TCP listener on, or the socket path when
+  ## protocol is "unixgram" (e.g. "/tmp/telegraf-statsd.sock")
   service_address = ":8125"
 
   ## The following configuration options control when telegraf clears it's cache
@@ -288,13 +289,21 @@ Service checks produce a metric with measurement name `statsd_service_check`:
 
 ## Plugin arguments
 
-- **protocol** string: Protocol used in listener - tcp or udp options
+- **protocol** string: Protocol used in listener - tcp, udp, udp4, udp6 or
+unixgram (unixgram is not supported on Windows)
 - **max_tcp_connections** []int: Maximum number of concurrent TCP connections
 to allow. Used when protocol is set to tcp.
 - **tcp_keep_alive** boolean: Enable TCP keep alive probes
 - **tcp_keep_alive_period** duration: Specifies the keep-alive period for an
                                       active network connection
-- **service_address** string: Address to listen for statsd UDP packets on
+- **service_address** string: Address to listen for statsd UDP packets on.
+When protocol is unixgram, this is the path of the unix datagram socket. A
+stale socket left at that path is removed when the plugin starts, but any other
+file, or a socket another process is listening on, makes the plugin fail to
+start. The socket is removed again when the plugin stops. Its permissions
+follow the umask of the Telegraf process. Datagrams received over unixgram are counted
+in the `udp_packets_received`, `udp_bytes_received` and `udp_packets_dropped`
+internal statistics.
 - **delete_gauges** boolean: Delete gauges on every collection interval
 - **delete_counters** boolean: Delete counters on every collection interval
 - **delete_sets** boolean: Delete set counters on every collection interval
