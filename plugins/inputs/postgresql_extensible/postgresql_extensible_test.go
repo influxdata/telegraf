@@ -44,6 +44,7 @@ func TestInitDefaults(t *testing.T) {
 	require.Equal(t, 1, p.MaxConnectionsPerDatabase)
 	require.Equal(t, 1, p.MaxParallelDatabases)
 	require.Equal(t, "any", p.Role)
+	require.True(t, p.keepIdle)
 
 	q := p.Queries[0]
 	require.Equal(t, "postgresql", q.Measurement)
@@ -95,7 +96,7 @@ func TestRegisteredDefaults(t *testing.T) {
 	require.Empty(t, p.Role)
 	require.Empty(t, p.NumericType)
 	require.False(t, p.StringColumnsAsTags)
-	require.True(t, p.KeepIdleConnections)
+	require.Nil(t, p.KeepIdleConnections)
 	require.True(t, p.PreparedStatements)
 	require.Equal(t, 1, p.MaxIdle)
 	require.Equal(t, 1, p.MaxOpen)
@@ -757,7 +758,7 @@ func TestKeepConnectionsIntegration(t *testing.T) {
 				NumericType:               "float",
 				MaxConnectionsPerDatabase: tt.perDB,
 				MaxParallelDatabases:      2,
-				KeepIdleConnections:       tt.keep,
+				KeepIdleConnections:       new(tt.keep),
 				DatnameInclude:            tt.include,
 				Role:                      tt.role,
 				Queries: []query{
@@ -1240,7 +1241,7 @@ func TestConnectionLimitsIntegration(t *testing.T) {
 				// afterwards, so the measured collection shows the query
 				// connections alone
 				MetadataRefreshInterval:   metadataInterval,
-				KeepIdleConnections:       false,
+				KeepIdleConnections:       new(false),
 				NumericType:               "float",
 				DatnameInclude:            tt.datnameInclude,
 				DatnameExclude:            tt.datnameExclude,

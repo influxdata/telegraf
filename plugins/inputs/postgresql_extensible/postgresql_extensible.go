@@ -51,7 +51,7 @@ type Postgresql struct {
 	MetadataRefreshInterval   config.Duration `toml:"metadata_refresh_interval"`
 	MaxConnectionsPerDatabase int             `toml:"max_connections_per_database"`
 	MaxParallelDatabases      int             `toml:"max_parallel_databases"`
-	KeepIdleConnections       bool            `toml:"keep_idle_connections"`
+	KeepIdleConnections       *bool           `toml:"keep_idle_connections"`
 	StringColumnsAsTags       bool            `toml:"string_columns_as_tags"`
 	NumericType               string          `toml:"numeric_type"`
 	Log                       telegraf.Logger `toml:"-"`
@@ -64,6 +64,8 @@ type Postgresql struct {
 	// read by the goroutines processing the databases, hence the lock.
 	pools   map[string]*postgresql.Service
 	poolsMu sync.Mutex
+
+	keepIdle bool
 
 	includeRegex []*regexp.Regexp
 	excludeRegex []*regexp.Regexp
@@ -140,6 +142,12 @@ func (p *Postgresql) Init() error {
 	}
 	if p.MaxParallelDatabases <= 0 {
 		p.MaxParallelDatabases = 1
+	}
+	// Without keep_idle_connections follow max_idle, as setting it to zero was
+	// the way to not keep the connection open in previous versions
+	p.keepIdle = p.MaxIdle > 0
+	if p.KeepIdleConnections != nil {
+		p.keepIdle = *p.KeepIdleConnections
 	}
 	if p.Role == "" {
 		p.Role = "any"
@@ -262,7 +270,7 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	}
 	defer cancel()
 
-	if !p.KeepIdleConnections {
+	if !p.keepIdle {
 		defer p.closeIdleConnections()
 	}
 
@@ -337,7 +345,7 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	if coll.debug {
 		used := coll.closed.Load() + p.openConnections()
 		var kept int64
-		if p.KeepIdleConnections {
+		if p.keepIdle {
 			kept = used
 		}
 		p.Log.Debugf("Collection used %d connections, %d kept open", used, kept)
@@ -428,7 +436,7 @@ func (p *Postgresql) gatherInDatabase(ctx context.Context, acc telegraf.Accumula
 		return nil
 	}
 
-	if p.KeepIdleConnections {
+	if p.keepIdle {
 		service, err := p.poolFor(datname, coll.connectionsPerDatabase)
 		if err != nil {
 			return err
@@ -728,10 +736,9 @@ func matchesRole(role string, inRecovery bool) bool {
 func init() {
 	inputs.Add("postgresql_extensible", func() telegraf.Input {
 		return &Postgresql{
-			MaxIdle:             1,
-			MaxOpen:             1,
-			PreparedStatements:  true,
-			KeepIdleConnections: true,
+			MaxIdle:            1,
+			MaxOpen:            1,
+			PreparedStatements: true,
 		}
 	})
 }
