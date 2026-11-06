@@ -30,8 +30,15 @@ func SetIfUsed(t string, m map[string]any, k, v string) {
 			m[k] = f
 		}
 	case "int":
-		if i, err := strconv.ParseInt(number(v), 10, 64); err == nil {
+		n := number(v)
+		if i, err := strconv.ParseInt(n, 10, 64); err == nil {
 			m[k] = i
+		} else if f, err := strconv.ParseFloat(n, 64); err == nil {
+			// Newer nvidia-smi reports some integer fields with a decimal
+			// (e.g. a temperature of "30.72 C"). Keep the field as an int
+			// so its type stays stable for downstream stores, rather than
+			// dropping it when the integer parse fails.
+			m[k] = int64(f)
 		}
 	case "str":
 		m[k] = v
