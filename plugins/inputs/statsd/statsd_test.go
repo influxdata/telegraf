@@ -2399,7 +2399,12 @@ func TestUnixgramRefusesToRemove(t *testing.T) {
 	require.NoError(t, err)
 	defer conn.Close()
 
-	for _, path := range []string{file, live} {
+	stream := filepath.Join(dir, "stream.sock")
+	ln, err := net.Listen("unix", stream)
+	require.NoError(t, err)
+	defer ln.Close()
+
+	for _, path := range []string{file, live, stream} {
 		statsd := Statsd{
 			Log:                    testutil.Logger{},
 			Protocol:               "unixgram",

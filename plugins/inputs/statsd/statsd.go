@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -1071,9 +1072,15 @@ func removeStaleSocket(path string) error {
 	if fi.Mode()&os.ModeSocket == 0 {
 		return fmt.Errorf("refusing to remove %q: not a socket", path)
 	}
-	if c, err := net.Dial("unixgram", path); err == nil {
+	// Only a refused connection proves nobody is listening; any other result
+	// (e.g. a stream socket answering a datagram dial) means it may be in use.
+	c, err := net.Dial("unixgram", path)
+	if err == nil {
 		c.Close()
 		return fmt.Errorf("socket %q is in use by another process", path)
+	}
+	if !errors.Is(err, syscall.ECONNREFUSED) {
+		return fmt.Errorf("refusing to remove socket %q: %w", path, err)
 	}
 	if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("removing stale socket failed: %w", err)
