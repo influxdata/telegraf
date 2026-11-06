@@ -63,6 +63,7 @@
   If you set `default_service_state`, it now also applies to metrics with
   numeric fields but without thresholds, which used to get `SERVICE_OK`.
   Please check alerts relying on these states.
+
 ## v1.40.3 [2026-11-02]
 
 ### Bugfixes
@@ -296,6 +297,12 @@
   a duration (e.g. `182h+39m+24.879s`). The value was previously reported in
   seconds and is now reported in hours. Please check your queries and
   dashboards for the mentioned field.
+- PR [#19549](https://github.com/influxdata/telegraf/pull/19549) updates Go to v1.27.0
+  introducing `SSL_CERT_FILE` and `SSL_CERT_DIR` environment variables allowing to
+  override the system default locations for the SSL certificates. If you have set these
+  and see error messages like `tls: failed to verify certificate: x509: certificate signed by unknown authority`,
+  please consider correcting the environment variables or unset them for Telegraf to
+  use the system's default certificate location.
 - Removal of deprecated plugins:
   - [#19123](https://github.com/influxdata/telegraf/pull/19123) `outputs.amon` Remove deprecated plugin
   - [#19124](https://github.com/influxdata/telegraf/pull/19124) `inputs.sflow` Remove deprecated plugin
