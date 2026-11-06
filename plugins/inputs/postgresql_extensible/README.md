@@ -69,10 +69,9 @@ to use them.
   ## pg_is_in_recovery() and cached for metadata_refresh_interval.
   # role = "any"
 
-  ## Run the queries in all databases matching the filters instead of the
-  ## database of the connection only. Each entry is a regular expression
-  ## matching the complete database name. Template databases and databases
-  ## not allowing connections are never included.
+  ## Databases to run the queries in instead of the database of the
+  ## connection only. Globs accepted. Template databases and databases not
+  ## allowing connections are never included.
   # datname_include = []
   # datname_exclude = []
 
@@ -349,10 +348,9 @@ filters is set, the list of databases is read from `pg_database` and the
 queries are run in every database matching the filters. Template databases
 and databases not accepting connections are never included.
 
-Every filter entry is a regular expression matching the complete database
-name, so `app` only matches the database `app` while `app_.*` matches
-`app_prod` and `app_test`. A database is used if it matches any of the
-`datname_include` entries (or the list is empty) and none of the
+Globs are accepted, so `app_*` matches `app_prod` and `app_test` while
+`app` only matches the database `app`. A database is used if it matches any
+of the `datname_include` entries (or the list is empty) and none of the
 `datname_exclude` entries.
 
 The database list is refreshed on the first collection after each

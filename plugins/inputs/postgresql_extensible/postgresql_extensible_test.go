@@ -180,22 +180,13 @@ func TestInitErrors(t *testing.T) {
 			expected: "query 0: config option 'role': unknown choice standby",
 		},
 		{
-			name: "invalid include regex",
-			plugin: func() *Postgresql {
-				p := newPlugin()
-				p.DatnameInclude = []string{"app_("}
-				return p
-			}(),
-			expected: `compiling datname_include "app_(" failed`,
-		},
-		{
-			name: "invalid exclude regex",
+			name: "invalid database filter",
 			plugin: func() *Postgresql {
 				p := newPlugin()
 				p.DatnameExclude = []string{"[a-"}
 				return p
 			}(),
-			expected: `compiling datname_exclude "[a-" failed`,
+			expected: "creating database filter failed",
 		},
 		{
 			name: "invalid numeric type",
@@ -236,7 +227,7 @@ func TestInitErrors(t *testing.T) {
 	}
 }
 
-func TestMatchesDatname(t *testing.T) {
+func TestDatnameFilter(t *testing.T) {
 	tests := []struct {
 		name     string
 		include  []string
@@ -244,17 +235,16 @@ func TestMatchesDatname(t *testing.T) {
 		datname  string
 		expected bool
 	}{
-		{name: "no filters", datname: "app", expected: true},
 		{name: "include exact", include: []string{"app"}, datname: "app", expected: true},
-		{name: "include anchored", include: []string{"app"}, datname: "myapp", expected: false},
-		{name: "include anchored suffix", include: []string{"app"}, datname: "app2", expected: false},
-		{name: "include regex", include: []string{"app_.*"}, datname: "app_prod", expected: true},
-		{name: "include regex no match", include: []string{"app_.*"}, datname: "billing", expected: false},
-		{name: "include multiple", include: []string{"app_.*", "billing"}, datname: "billing", expected: true},
-		{name: "exclude only", exclude: []string{".*_test"}, datname: "app_test", expected: false},
-		{name: "exclude only no match", exclude: []string{".*_test"}, datname: "app_prod", expected: true},
-		{name: "include and exclude", include: []string{"app_.*"}, exclude: []string{".*_test"}, datname: "app_test", expected: false},
-		{name: "include and exclude pass", include: []string{"app_.*"}, exclude: []string{".*_test"}, datname: "app_prod", expected: true},
+		{name: "include exact no prefix", include: []string{"app"}, datname: "myapp", expected: false},
+		{name: "include exact no suffix", include: []string{"app"}, datname: "app2", expected: false},
+		{name: "include glob", include: []string{"app_*"}, datname: "app_prod", expected: true},
+		{name: "include glob no match", include: []string{"app_*"}, datname: "billing", expected: false},
+		{name: "include multiple", include: []string{"app_*", "billing"}, datname: "billing", expected: true},
+		{name: "exclude only", exclude: []string{"*_test"}, datname: "app_test", expected: false},
+		{name: "exclude only no match", exclude: []string{"*_test"}, datname: "app_prod", expected: true},
+		{name: "include and exclude", include: []string{"app_*"}, exclude: []string{"*_test"}, datname: "app_test", expected: false},
+		{name: "include and exclude pass", include: []string{"app_*"}, exclude: []string{"*_test"}, datname: "app_prod", expected: true},
 	}
 
 	for _, tt := range tests {
@@ -263,7 +253,7 @@ func TestMatchesDatname(t *testing.T) {
 			p.DatnameInclude = tt.include
 			p.DatnameExclude = tt.exclude
 			require.NoError(t, p.Init())
-			require.Equal(t, tt.expected, p.matchesDatname(tt.datname))
+			require.Equal(t, tt.expected, p.datnameFilter.Match(tt.datname))
 		})
 	}
 }
@@ -680,7 +670,7 @@ func TestMultipleDatabasesIntegration(t *testing.T) {
 
 	acc := server.run(t, &Postgresql{
 		NumericType:    "float",
-		DatnameInclude: []string{"app_.*", "postgres"},
+		DatnameInclude: []string{"app_*", "postgres"},
 		DatnameExclude: []string{"app_2"},
 		Queries: []query{{
 			Measurement: "current",
@@ -742,10 +732,10 @@ func TestKeepConnectionsIntegration(t *testing.T) {
 		{name: "no query run closed", keep: false, role: "replica", perDB: 3, expected: 0},
 		// The three queries run at the same time on the pool of the address
 		{name: "single database kept", keep: true, perDB: 3, expected: 3},
-		{name: "multiple databases closed", keep: false, include: []string{"app_.*"}, perDB: 3, expected: 0},
+		{name: "multiple databases closed", keep: false, include: []string{"app_*"}, perDB: 3, expected: 0},
 		// Two databases holding two connections each, plus the one reading
 		// the server version, the role and the database list
-		{name: "multiple databases kept", keep: true, include: []string{"app_.*"}, perDB: 2, expected: 5},
+		{name: "multiple databases kept", keep: true, include: []string{"app_*"}, perDB: 2, expected: 5},
 	}
 
 	for _, tt := range tests {
@@ -1191,7 +1181,7 @@ func TestConnectionLimitsIntegration(t *testing.T) {
 			connsPerDB:  2,
 			// Match every database so the connection database is processed
 			// like any other one
-			datnameInclude: []string{".*"},
+			datnameInclude: []string{"*"},
 			queries: []query{
 				{Measurement: "pg_tables", Sqlquery: tableStats, Tagvalue: "relname"},
 				{Measurement: "pg_indexes", Sqlquery: indexStats, Tagvalue: "indexrelname"},

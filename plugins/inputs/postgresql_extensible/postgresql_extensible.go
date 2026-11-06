@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"math"
 	"os"
-	"regexp"
 	"slices"
 	"strings"
 	"sync"
@@ -19,6 +18,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/common/postgresql"
@@ -67,8 +67,7 @@ type Postgresql struct {
 
 	keepIdle bool
 
-	includeRegex []*regexp.Regexp
-	excludeRegex []*regexp.Regexp
+	datnameFilter filter.Filter
 
 	dbVersion       int
 	inRecovery      bool
@@ -162,20 +161,12 @@ func (p *Postgresql) Init() error {
 		return fmt.Errorf("config option 'numeric_type': %w", err)
 	}
 
-	// Compile the database name filters
-	for _, pattern := range p.DatnameInclude {
-		re, err := regexp.Compile("^(?:" + pattern + ")$")
+	if len(p.DatnameInclude) > 0 || len(p.DatnameExclude) > 0 {
+		f, err := filter.NewIncludeExcludeFilter(p.DatnameInclude, p.DatnameExclude)
 		if err != nil {
-			return fmt.Errorf("compiling datname_include %q failed: %w", pattern, err)
+			return fmt.Errorf("creating database filter failed: %w", err)
 		}
-		p.includeRegex = append(p.includeRegex, re)
-	}
-	for _, pattern := range p.DatnameExclude {
-		re, err := regexp.Compile("^(?:" + pattern + ")$")
-		if err != nil {
-			return fmt.Errorf("compiling datname_exclude %q failed: %w", pattern, err)
-		}
-		p.excludeRegex = append(p.excludeRegex, re)
+		p.datnameFilter = f
 	}
 
 	// Set defaults for the queries
@@ -302,7 +293,7 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	// Determine the databases to run the queries in
 	datnames := []string{p.service.ConnectionDatabase}
 	connDatname := p.service.ConnectionDatabase
-	if len(p.includeRegex) > 0 || len(p.excludeRegex) > 0 {
+	if p.datnameFilter != nil {
 		datnames = p.datnames
 		// Without a dbname in the address the server connects to the database
 		// named after the user, not to the ConnectionDatabase. The single
@@ -505,7 +496,7 @@ func (p *Postgresql) refreshMetadata(ctx context.Context) error {
 		return fmt.Errorf("querying server version and role failed: %w", err)
 	}
 
-	if len(p.includeRegex) > 0 || len(p.excludeRegex) > 0 {
+	if p.datnameFilter != nil {
 		if err := p.refreshDatnames(ctx); err != nil {
 			return err
 		}
@@ -530,7 +521,7 @@ func (p *Postgresql) refreshDatnames(ctx context.Context) error {
 		if err := rows.Scan(&datname); err != nil {
 			return fmt.Errorf("scanning database list failed: %w", err)
 		}
-		if p.matchesDatname(datname) {
+		if p.datnameFilter.Match(datname) {
 			datnames = append(datnames, datname)
 		}
 	}
@@ -548,27 +539,6 @@ func (p *Postgresql) refreshDatnames(ctx context.Context) error {
 	p.datnames = datnames
 
 	return nil
-}
-
-func (p *Postgresql) matchesDatname(datname string) bool {
-	if len(p.includeRegex) > 0 {
-		var included bool
-		for _, re := range p.includeRegex {
-			if re.MatchString(datname) {
-				included = true
-				break
-			}
-		}
-		if !included {
-			return false
-		}
-	}
-	for _, re := range p.excludeRegex {
-		if re.MatchString(datname) {
-			return false
-		}
-	}
-	return true
 }
 
 func (p *Postgresql) gatherMetricsFromQuery(
