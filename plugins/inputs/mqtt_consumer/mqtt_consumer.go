@@ -45,7 +45,7 @@ type MQTTConsumer struct {
 	KeepAliveInterval      config.Duration      `toml:"keepalive"`
 	PingTimeout            config.Duration      `toml:"ping_timeout"`
 	MaxUndeliveredMessages int                  `toml:"max_undelivered_messages"`
-	OmitRetained           bool                 `toml:"omit_retained""`
+	OmitRetained           bool                 `toml:"omit_retained"`
 	PersistentSession      bool                 `toml:"persistent_session"`
 	ClientTrace            bool                 `toml:"client_trace"`
 	ClientID               string               `toml:"client_id"`
