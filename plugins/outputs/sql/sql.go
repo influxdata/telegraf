@@ -7,6 +7,7 @@ import (
 	_ "embed"
 	"fmt"
 	"iter"
+	"maps"
 	"net/url"
 	"slices"
 	"strconv"
@@ -23,6 +24,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -469,14 +471,18 @@ func (p *SQL) sendBatch(sql string, values [][]any) error {
 }
 
 func (p *SQL) Write(metrics []telegraf.Metric) error {
+	// Metrics are committed as we go, so report the ones already written
+	// on failure to avoid resending them in the next write cycle
+	accepted := make([]int, 0, len(metrics))
 	batchedQueries := make(map[string][][]any)
+	batchedMetrics := make(map[string][]int)
 
-	for _, metric := range metrics {
+	for idx, metric := range metrics {
 		tablename := metric.Name()
 		// create table if needed
 		if _, found := p.tables[tablename]; !found && !p.tableExists(tablename) {
 			if err := p.createTable(metric); err != nil {
-				return err
+				return &internal.PartialWriteError{Err: err, MetricsAccept: accepted}
 			}
 		}
 		cacheKey, columns, values := p.processMetric(metric)
@@ -489,24 +495,30 @@ func (p *SQL) Write(metrics []telegraf.Metric) error {
 		if p.TableUpdateTemplate != "" {
 			for i := range len(columns) {
 				if err := p.createColumn(tablename, columns[i], p.deriveDatatype(values[i])); err != nil {
-					return err
+					return &internal.PartialWriteError{Err: err, MetricsAccept: accepted}
 				}
 			}
 		}
 		if p.BatchTx {
 			batchedQueries[sql] = append(batchedQueries[sql], values)
+			batchedMetrics[sql] = append(batchedMetrics[sql], idx)
 		} else {
 			if err := p.sendIndividual(sql, values); err != nil {
-				return err
+				return &internal.PartialWriteError{Err: err, MetricsAccept: accepted}
 			}
+			accepted = append(accepted, idx)
 		}
 	}
 
 	if p.BatchTx {
-		for query, queryParams := range batchedQueries {
-			if err := p.sendBatch(query, queryParams); err != nil {
-				return fmt.Errorf("failed to send a batched tx: %w", err)
+		for _, query := range slices.Sorted(maps.Keys(batchedQueries)) {
+			if err := p.sendBatch(query, batchedQueries[query]); err != nil {
+				return &internal.PartialWriteError{
+					Err:           fmt.Errorf("failed to send a batched tx: %w", err),
+					MetricsAccept: accepted,
+				}
 			}
+			accepted = append(accepted, batchedMetrics[query]...)
 		}
 	}
 
