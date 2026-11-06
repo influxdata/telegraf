@@ -359,6 +359,7 @@ following works:
 - github.com/opentracing/opentracing-go [Apache License 2.0](https://github.com/opentracing/opentracing-go/blob/master/LICENSE)
 - github.com/oxtoacart/bpool [Apache License 2.0](https://github.com/oxtoacart/bpool/blob/master/LICENSE)
 - github.com/p4lang/p4runtime [Apache License 2.0](https://github.com/p4lang/p4runtime/blob/main/LICENSES/Apache-2.0.txt)
+- github.com/pandatix/go-abnf [MIT License](https://github.com/pandatix/go-abnf/blob/main/LICENSE)
 - github.com/panjf2000/ants [MIT License](https://github.com/panjf2000/ants/blob/dev/LICENSE)
 - github.com/panjf2000/gnet [Apache License 2.0](https://github.com/panjf2000/gnet/blob/dev/LICENSE)
 - github.com/paulmach/orb [MIT License](https://github.com/paulmach/orb/blob/master/LICENSE.md)
