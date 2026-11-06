@@ -238,7 +238,11 @@ func (m *MQTTConsumer) onMessage(_ mqtt.Client, msg mqtt.Message) {
 	m.sem <- empty{}
 
 	if msg.Retained() && m.OmitRetained {
-		return nil
+		if m.PersistentSession {
+			msg.Ack()
+		}
+		<-m.sem
+		return
 	}
 
 	payloadBytes := len(msg.Payload())
