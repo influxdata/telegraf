@@ -127,8 +127,12 @@ func (m *MQTT) Connect() error {
 	}
 	m.client = client
 
-	_, err = m.client.Connect()
-	return err
+	if _, err := m.client.Connect(); err != nil {
+		// The broker might only be temporarily unreachable, so allow retrying
+		// via the 'startup_error_behavior' setting.
+		return &internal.StartupError{Err: err, Retry: true}
+	}
+	return nil
 }
 
 func (m *MQTT) SetSerializer(serializer telegraf.Serializer) {
