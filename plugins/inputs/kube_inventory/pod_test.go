@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -512,7 +513,7 @@ func TestPod(t *testing.T) {
 		acc := new(testutil.Accumulator)
 		items := ((v.handler.responseMap["/pods/"]).(*corev1.PodList)).Items
 		for i := range items {
-			ks.gatherPod(&items[i], acc)
+			ks.gatherPod(&items[i], nil, acc)
 		}
 
 		err := acc.FirstError()
@@ -737,7 +738,7 @@ func TestPodSelectorFilter(t *testing.T) {
 		acc := new(testutil.Accumulator)
 		items := ((v.handler.responseMap["/pods/"]).(*corev1.PodList)).Items
 		for i := range items {
-			ks.gatherPod(&items[i], acc)
+			ks.gatherPod(&items[i], nil, acc)
 		}
 
 		// Grab selector tags
@@ -1039,7 +1040,7 @@ func TestPodPendingContainers(t *testing.T) {
 		acc := new(testutil.Accumulator)
 		items := ((v.handler.responseMap["/pods/"]).(*corev1.PodList)).Items
 		for i := range items {
-			ks.gatherPod(&items[i], acc)
+			ks.gatherPod(&items[i], nil, acc)
 		}
 
 		err := acc.FirstError()
@@ -1053,5 +1054,92 @@ func TestPodPendingContainers(t *testing.T) {
 
 		require.Len(t, acc.Metrics, len(v.output))
 		testutil.RequireMetricsEqual(t, acc.GetTelegrafMetrics(), v.output, testutil.IgnoreTime())
+	}
+}
+
+func TestPodDeploymentTag(t *testing.T) {
+	controller := true
+	owner := func(kind, name string) []metav1.OwnerReference {
+		return []metav1.OwnerReference{{Kind: kind, Name: name, Controller: &controller}}
+	}
+	deployments := replicaSetDeployments(&appsv1.ReplicaSetList{
+		Items: []appsv1.ReplicaSet{
+			{ObjectMeta: metav1.ObjectMeta{Name: "web-5d8f7c9b4", Namespace: "ns1", OwnerReferences: owner("Deployment", "web")}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "canary-6c7d8e9f0", Namespace: "ns1", OwnerReferences: owner("Rollout", "canary")}},
+		},
+	})
+
+	tests := []struct {
+		name        string
+		namespace   string
+		owners      []metav1.OwnerReference
+		deployments map[string]string
+		expected    string
+	}{
+		{
+			name:        "replicaset owned by a deployment",
+			namespace:   "ns1",
+			owners:      owner("ReplicaSet", "web-5d8f7c9b4"),
+			deployments: deployments,
+			expected:    "web",
+		},
+		{
+			name:      "option disabled",
+			namespace: "ns1",
+			owners:    owner("ReplicaSet", "web-5d8f7c9b4"),
+		},
+		{
+			name:        "replicaset owned by another controller",
+			namespace:   "ns1",
+			owners:      owner("ReplicaSet", "canary-6c7d8e9f0"),
+			deployments: deployments,
+		},
+		{
+			name:        "replicaset in another namespace",
+			namespace:   "ns2",
+			owners:      owner("ReplicaSet", "web-5d8f7c9b4"),
+			deployments: deployments,
+		},
+		{
+			name:        "statefulset",
+			namespace:   "ns1",
+			owners:      owner("StatefulSet", "db"),
+			deployments: deployments,
+		},
+		{
+			name:        "no owner",
+			namespace:   "ns1",
+			deployments: deployments,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pod := &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              "pod1",
+					Namespace:         tt.namespace,
+					OwnerReferences:   tt.owners,
+					CreationTimestamp: metav1.Now(),
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{{Name: "app", Image: "image1"}},
+				},
+				Status: corev1.PodStatus{
+					Conditions: []corev1.PodCondition{{Type: "Ready", Status: "True"}},
+				},
+			}
+
+			ks := &KubernetesInventory{}
+			require.NoError(t, ks.createSelectorFilters())
+			acc := &testutil.Accumulator{}
+			ks.gatherPod(pod, tt.deployments, acc)
+
+			require.Len(t, acc.Metrics, 2)
+			for _, m := range acc.GetTelegrafMetrics() {
+				deployment, found := m.GetTag("deployment_name")
+				require.Equal(t, tt.expected != "", found)
+				require.Equal(t, tt.expected, deployment)
+			}
+		})
 	}
 }
