@@ -61,7 +61,8 @@ func (c *Config) newService(dbOverride string) (*Service, error) {
 	addr := addrSecret.String()
 	defer addrSecret.Destroy()
 
-	if c.Address.Empty() || addr == "localhost" {
+	// Services for other databases are created in parallel and must only read the address
+	if dbOverride == "" && (c.Address.Empty() || addr == "localhost") {
 		addr = "host=localhost sslmode=disable"
 		if err := c.Address.Set([]byte(addr)); err != nil {
 			return nil, err
