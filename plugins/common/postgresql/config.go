@@ -2,6 +2,7 @@ package postgresql
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"net/url"
@@ -36,7 +37,23 @@ type Config struct {
 	SimpleProtocol bool `toml:"-"`
 }
 
+// CreateService creates a service connecting to the database given in the
+// address (or the driver default if none is specified).
 func (c *Config) CreateService() (*Service, error) {
+	return c.newService("")
+}
+
+// CreateServiceForDatabase creates a service connecting to the given database
+// instead of the one specified in the address. All other connection
+// parameters are taken from the address.
+func (c *Config) CreateServiceForDatabase(dbname string) (*Service, error) {
+	if dbname == "" {
+		return nil, errors.New("database name must not be empty")
+	}
+	return c.newService(dbname)
+}
+
+func (c *Config) newService(dbOverride string) (*Service, error) {
 	addrSecret, err := c.Address.Get()
 	if err != nil {
 		return nil, fmt.Errorf("getting address failed: %w", err)
@@ -44,7 +61,8 @@ func (c *Config) CreateService() (*Service, error) {
 	addr := addrSecret.String()
 	defer addrSecret.Destroy()
 
-	if c.Address.Empty() || addr == "localhost" {
+	// Services for other databases are created in parallel and must only read the address
+	if dbOverride == "" && (c.Address.Empty() || addr == "localhost") {
 		addr = "host=localhost sslmode=disable"
 		if err := c.Address.Set([]byte(addr)); err != nil {
 			return nil, err
@@ -57,6 +75,11 @@ func (c *Config) CreateService() (*Service, error) {
 	}
 	// Remove the socket name from the path
 	connConfig.Host = socketRegexp.ReplaceAllLiteralString(connConfig.Host, "")
+
+	// Override the database to connect to if requested
+	if dbOverride != "" {
+		connConfig.Database = dbOverride
+	}
 
 	// Neither the PgBouncer admin console nor a server reached through a
 	// PgBouncer with pool_mode set to transaction supports prepared statements
@@ -86,9 +109,14 @@ func (c *Config) CreateService() (*Service, error) {
 		return nil, err
 	}
 
+	connDB := connectionDatabase(sanitizedAddr)
+	if dbOverride != "" {
+		connDB = dbOverride
+	}
+
 	return &Service{
 		SanitizedAddress:   sanitizedAddr,
-		ConnectionDatabase: connectionDatabase(sanitizedAddr),
+		ConnectionDatabase: connDB,
 		maxIdle:            c.MaxIdle,
 		maxOpen:            c.MaxOpen,
 		maxLifetime:        time.Duration(c.MaxLifetime),
