@@ -442,7 +442,10 @@ func (p *Postgresql) gatherInDatabase(ctx context.Context, acc telegraf.Accumula
 		return nil
 	}
 
+	// Create the pools one at a time as they all access the same address secret
+	p.poolsMu.Lock()
 	service, err := p.newPool(datname, coll.connectionsPerDatabase)
+	p.poolsMu.Unlock()
 	if err != nil {
 		return err
 	}
