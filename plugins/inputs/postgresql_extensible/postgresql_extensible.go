@@ -730,7 +730,7 @@ func (p *Postgresql) accRow(acc telegraf.Accumulator, rs *resultSet, j job, time
 }
 
 func refreshDue(updated, now time.Time, interval time.Duration) bool {
-	if updated.IsZero() {
+	if updated.IsZero() || interval <= 0 || now.Before(updated) {
 		return true
 	}
 	return !now.Before(updated.Truncate(interval).Add(interval))

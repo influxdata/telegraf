@@ -508,6 +508,7 @@ func TestRefreshDue(t *testing.T) {
 			expected: false,
 		},
 		{name: "long overdue", updated: updated, now: updated.Add(time.Hour), interval: interval, expected: true},
+		{name: "clock moved back", updated: updated, now: updated.Add(-time.Hour), interval: interval, expected: true},
 	}
 
 	for _, tt := range tests {
