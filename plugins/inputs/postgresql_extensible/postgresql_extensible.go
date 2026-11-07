@@ -266,9 +266,9 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if err := p.refreshMetadata(ctx); err != nil {
-		if p.metadataRequired() {
+		if p.metadataRequired() || ctx.Err() != nil {
 			acc.AddError(err)
-			if p.dbVersion == 0 {
+			if p.dbVersion == 0 || ctx.Err() != nil {
 				return nil
 			}
 		} else {
@@ -327,6 +327,10 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	semaphore := make(chan struct{}, p.MaxParallelDatabases)
 	for _, datname := range datnames {
 		semaphore <- struct{}{}
+		// Do not start anything once the collection timed out
+		if ctx.Err() != nil {
+			break
+		}
 		wg.Go(func() {
 			defer func() { <-semaphore }()
 
@@ -474,12 +478,16 @@ func (p *Postgresql) gatherDatabase(ctx context.Context, acc telegraf.Accumulato
 	semaphore := make(chan struct{}, coll.connectionsPerDatabase)
 	for _, q := range coll.queries {
 		semaphore <- struct{}{}
+		// Do not start anything once the collection timed out
+		if ctx.Err() != nil {
+			break
+		}
 		j := job{datname: datname, query: q}
 		wg.Go(func() {
 			defer func() { <-semaphore }()
 
 			if err := p.gatherMetricsFromQuery(ctx, acc, service, j, coll.timestamp); err != nil {
-				acc.AddError(fmt.Errorf("database %q: %w", j.datname, err))
+				acc.AddError(err)
 			}
 		})
 	}
@@ -502,7 +510,7 @@ func (p *Postgresql) refreshMetadata(ctx context.Context) error {
 	row := p.service.DB.QueryRowContext(ctx,
 		`SELECT setting::integer / 100, pg_is_in_recovery(), current_database() FROM pg_settings WHERE name = 'server_version_num'`)
 	if err := row.Scan(&p.dbVersion, &p.inRecovery, &p.currentDatabase); err != nil {
-		return fmt.Errorf("querying server version and role failed: %w", err)
+		return fmt.Errorf("querying metadata failed: %w", err)
 	}
 
 	if p.datnameFilter != nil {
@@ -564,15 +572,38 @@ func (p *Postgresql) gatherMetricsFromQuery(
 	j job,
 	timestamp time.Time,
 ) error {
+	queryCtx := ctx
 	if j.query.Timeout > 0 {
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, time.Duration(j.query.Timeout))
+		queryCtx, cancel = context.WithTimeout(ctx, time.Duration(j.query.Timeout))
 		defer cancel()
 	}
 
+	err := p.runQuery(queryCtx, acc, service, j, timestamp)
+	switch {
+	case err == nil:
+		return nil
+	case ctx.Err() != nil:
+		return fmt.Errorf("collection timeout %s exceeded in database %q: query %q",
+			time.Duration(p.Timeout), j.datname, j.query.Measurement)
+	case queryCtx.Err() != nil:
+		return fmt.Errorf("database %q: query %q: query timeout %s exceeded",
+			j.datname, j.query.Measurement, time.Duration(j.query.Timeout))
+	default:
+		return fmt.Errorf("database %q: query %q: %w", j.datname, j.query.Measurement, err)
+	}
+}
+
+func (p *Postgresql) runQuery(
+	ctx context.Context,
+	acc telegraf.Accumulator,
+	service *postgresql.Service,
+	j job,
+	timestamp time.Time,
+) error {
 	rows, err := service.DB.QueryContext(ctx, j.query.Sqlquery)
 	if err != nil {
-		return fmt.Errorf("query %q: %w", j.query.Measurement, err)
+		return err
 	}
 	defer rows.Close()
 

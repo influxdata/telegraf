@@ -812,7 +812,7 @@ func TestAddressWithoutDbnameIntegration(t *testing.T) {
 	}
 }
 
-func TestQueryTimeoutIntegration(t *testing.T) {
+func TestTimeoutsIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
@@ -820,18 +820,33 @@ func TestQueryTimeoutIntegration(t *testing.T) {
 	server := startServer(t)
 	defer server.stop()
 
-	acc := server.run(t, &Postgresql{
-		NumericType: "float",
-		Queries: []query{
-			{Measurement: "slow", Sqlquery: "SELECT pg_sleep(5), 1 AS value", Timeout: config.Duration(500 * time.Millisecond)},
-			{Measurement: "fast", Sqlquery: "SELECT 1 AS value"},
-		},
+	t.Run("query", func(t *testing.T) {
+		acc := server.run(t, &Postgresql{
+			Queries: []query{
+				{Measurement: "slow", Sqlquery: "SELECT pg_sleep(5), 1 AS value", Timeout: config.Duration(500 * time.Millisecond)},
+				{Measurement: "fast", Sqlquery: "SELECT 1 AS value"},
+			},
+		})
+
+		require.Len(t, acc.Errors, 1)
+		require.ErrorContains(t, acc.Errors[0], `query "slow": query timeout 500ms exceeded`)
+		require.False(t, acc.HasMeasurement("slow"))
+		require.True(t, acc.HasInt64Field("fast", "value"))
 	})
 
-	require.Len(t, acc.Errors, 1)
-	require.ErrorContains(t, acc.Errors[0], `query "slow"`)
-	require.False(t, acc.HasMeasurement("slow"))
-	require.True(t, acc.HasInt64Field("fast", "value"))
+	t.Run("collection", func(t *testing.T) {
+		acc := server.run(t, &Postgresql{
+			Timeout: config.Duration(500 * time.Millisecond),
+			Queries: []query{
+				{Measurement: "slow", Sqlquery: "SELECT pg_sleep(5), 1 AS value"},
+				{Measurement: "not_started", Sqlquery: "SELECT 1 AS value"},
+			},
+		})
+
+		require.Len(t, acc.Errors, 1)
+		require.ErrorContains(t, acc.Errors[0], `collection timeout 500ms exceeded in database "postgres": query "slow"`)
+		require.False(t, acc.HasMeasurement("not_started"))
+	})
 }
 
 func TestCachedRoleIntegration(t *testing.T) {
