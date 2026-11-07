@@ -891,3 +891,24 @@ func TestApplyTemplateMostSpecificTemplate(t *testing.T) {
 	require.Equal(t, "net", measurement)
 	require.Equal(t, map[string]string{"host": "server001", "metric": "a.b"}, tags)
 }
+
+func FuzzParserGraphite(f *testing.F) {
+	f.Add([]byte("servers.localhost.cpu.load 11 1435077219"))
+	f.Add([]byte("prod.host1.mem.free 1.5e3\na.b.c -1 0\n"))
+
+	parser := &Parser{
+		Separator: "_",
+		Templates: []string{
+			"servers.* .host.measurement*",
+			"*.*.cpu .host.measurement*",
+			"prod.*.mem .host.measurement*",
+			"measurement.measurement.field",
+		},
+	}
+	require.NoError(f, parser.Init())
+
+	f.Fuzz(func(_ *testing.T, input []byte) {
+		//nolint:errcheck // fuzz testing can give lots of errors, but we just want to test for crashes
+		parser.Parse(input)
+	})
+}
