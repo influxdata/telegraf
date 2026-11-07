@@ -266,10 +266,16 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if err := p.refreshMetadata(ctx); err != nil {
-		acc.AddError(err)
-	}
-	if p.dbVersion == 0 {
-		return nil
+		if p.metadataRequired() {
+			acc.AddError(err)
+			if p.dbVersion == 0 {
+				return nil
+			}
+		} else {
+			// Servers without pg_settings such as the PgBouncer admin console
+			// still run the queries not limited to a version
+			p.dbVersion = 0
+		}
 	}
 
 	queries := make([]*query, 0, len(p.Queries))
@@ -504,6 +510,13 @@ func (p *Postgresql) refreshMetadata(ctx context.Context) error {
 
 	p.metadataUpdated = time.Now()
 	return nil
+}
+
+// metadataRequired tells whether the queries depend on the server information
+func (p *Postgresql) metadataRequired() bool {
+	return p.datnameFilter != nil || slices.ContainsFunc(p.Queries, func(q query) bool {
+		return q.Role != "any"
+	})
 }
 
 // refreshDatnames updates the list of databases matching the filters

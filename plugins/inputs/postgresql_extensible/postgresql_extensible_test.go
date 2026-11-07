@@ -872,6 +872,47 @@ func TestCachedRoleIntegration(t *testing.T) {
 	require.False(t, acc.HasMeasurement("primary_only"))
 }
 
+// TestMetadataFailureIntegration checks that the queries not limited to a
+// version still run if the server information cannot be read
+func TestMetadataFailureIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	server := startServer(t)
+	defer server.stop()
+
+	admin, err := sql.Open("pgx", server.dsn("postgres", ""))
+	require.NoError(t, err)
+	defer admin.Close()
+	_, err = admin.Exec("CREATE ROLE monitor LOGIN")
+	require.NoError(t, err)
+	_, err = admin.Exec("REVOKE SELECT ON pg_settings FROM PUBLIC")
+	require.NoError(t, err)
+
+	address := fmt.Sprintf("host=%s port=%s user=monitor dbname=postgres sslmode=disable", server.host, server.port)
+	p := &Postgresql{
+		Log:     testutil.Logger{},
+		Address: config.NewSecret([]byte(address)),
+		MaxIdle: 1,
+		MaxOpen: 1,
+		Queries: []query{
+			{Measurement: "plain", Sqlquery: "SELECT 1 AS value"},
+			{Measurement: "versioned", Sqlquery: "SELECT 1 AS value", MinVersion: 900},
+		},
+	}
+	require.NoError(t, p.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, p.Start(&acc))
+	defer p.Stop()
+	require.NoError(t, p.Gather(&acc))
+
+	require.Empty(t, acc.Errors)
+	require.True(t, acc.HasMeasurement("plain"))
+	require.False(t, acc.HasMeasurement("versioned"))
+}
+
 func TestRoleFilterIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
