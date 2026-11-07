@@ -29,7 +29,9 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 # This plugin ONLY supports Linux
 [[inputs.lustre2]]
   ## An array of /proc globs to search for Lustre stats
-  ## If not specified, the default will work on Lustre 2.12.x
+  ## If not specified, the default will work on Lustre 2.12.x and newer
+  ## versions like 2.17.x, which moved many files to /sys/kernel/debug/lustre
+  ## (usually only readable by root)
   ##
   # mgs_procfiles = [
   #   "/sys/fs/lustre/mgs/*/eviction_count",
@@ -42,6 +44,11 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   #   "/proc/fs/lustre/osd-ldiskfs/*/brw_stats",
   #   "/proc/fs/lustre/osd-zfs/*/brw_stats",
   #   "/sys/fs/lustre/odbfilter/*/eviction_count",
+  #   "/sys/kernel/debug/lustre/obdfilter/*/stats",
+  #   "/sys/kernel/debug/lustre/osd-ldiskfs/*/stats",
+  #   "/sys/kernel/debug/lustre/osd-zfs/*/stats",
+  #   "/sys/kernel/debug/lustre/osd-ldiskfs/*/brw_stats",
+  #   "/sys/kernel/debug/lustre/osd-zfs/*/brw_stats",
   # ]
   # mds_procfiles = [
   #   "/proc/fs/lustre/mdt/*/md_stats",
@@ -52,6 +59,14 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   #   "/sys/fs/lustre/mdt/*/eviction_count",
   # ]
 ```
+
+Newer Lustre versions (e.g. 2.17) moved many statistics files to
+`/sys/kernel/debug/lustre`, e.g. `obdfilter/*/stats`, `osd-*/*/stats`,
+`osd-*/*/brw_stats`, `*/*/exports/*/stats` and the RPC service statistics in
+`ost/OSS/*/stats` or `mds/MDS/*/stats`. The defaults include the new
+locations of the `obdfilter` and `osd-*` statistics, all others have to be
+configured explicitly. Note that `/sys/kernel/debug` is usually only accessible
+by `root`, so Telegraf must be run with sufficient permissions to read them.
 
 ## Metrics
 
@@ -82,6 +97,25 @@ From `/proc/fs/lustre/obdfilter/*/stats` and
     - cache_access (samples, retained for backward compatibility)
     - cache_access_samples
     - cache_access_pages
+    - copy_pages (`osd-zfs` only)
+    - zerocopy_pages (`osd-zfs` only)
+    - tail_pages (`osd-zfs` only)
+
+From `/proc/fs/lustre/osd-ldiskfs/*/brw_stats` and
+`/proc/fs/lustre/osd-zfs/*/brw_stats`:
+
+- lustre2
+  - tags:
+    - name
+    - brw_section (one of `pages_per_bulk_rw`, `discontiguous_pages`,
+      `discontiguous_blocks`, `disk_fragmented_ios`, `disk_ios_in_flight`,
+      `io_time`, `disk_io_size` and `block_maps_msec`)
+    - bucket
+  - fields:
+    - read_ios
+    - read_percent
+    - write_ios
+    - write_percent
 
 From `/proc/fs/lustre/obdfilter/*/exports/*/stats`:
 
@@ -120,6 +154,13 @@ From `/proc/fs/lustre/obdfilter/*/job_stats`:
     - jobstats_write_calls
     - jobstats_write_max_size
     - jobstats_write_min_size
+    - jobstats_read_time (sum of read latencies in microseconds, newer versions)
+    - jobstats_read_min_time (in microseconds, newer versions)
+    - jobstats_read_max_time (in microseconds, newer versions)
+    - jobstats_write_time (sum of write latencies in microseconds, newer
+      versions)
+    - jobstats_write_min_time (in microseconds, newer versions)
+    - jobstats_write_max_time (in microseconds, newer versions)
 
 From `/proc/fs/lustre/mdt/*/md_stats`:
 
@@ -143,6 +184,14 @@ From `/proc/fs/lustre/mdt/*/md_stats`:
     - sync
     - samedir_rename
     - crossdir_rename
+    - parallel_rename_file
+    - parallel_rename_dir
+    - rename_trylocks
+    - punch
+    - read_bytes
+    - read_calls
+    - write_bytes
+    - write_calls
 
 From `/proc/fs/lustre/mdt/*/exports/*/stats`:
 
@@ -167,6 +216,14 @@ From `/proc/fs/lustre/mdt/*/exports/*/stats`:
     - sync
     - samedir_rename
     - crossdir_rename
+    - parallel_rename_file
+    - parallel_rename_dir
+    - rename_trylocks
+    - punch
+    - read_bytes
+    - read_calls
+    - write_bytes
+    - write_calls
 
 From `/proc/fs/lustre/mdt/*/job_stats`:
 
@@ -191,6 +248,39 @@ From `/proc/fs/lustre/mdt/*/job_stats`:
     - jobstats_statfs
     - jobstats_sync
     - jobstats_unlink
+    - jobstats_parallel_rename_file
+    - jobstats_parallel_rename_dir
+    - jobstats_rename_trylocks
+    - jobstats_migrate
+    - jobstats_fallocate
+    - jobstats_punch
+    - jobstats_read_bytes
+    - jobstats_read_calls
+    - jobstats_read_max_size
+    - jobstats_read_min_size
+    - jobstats_write_bytes
+    - jobstats_write_calls
+    - jobstats_write_max_size
+    - jobstats_write_min_size
+    - jobstats_read_time (sum of read latencies in microseconds)
+    - jobstats_read_min_time (in microseconds)
+    - jobstats_read_max_time (in microseconds)
+    - jobstats_write_time (sum of write latencies in microseconds)
+    - jobstats_write_min_time (in microseconds)
+    - jobstats_write_max_time (in microseconds)
+
+From RPC statistics files like `ost/OSS/*/stats`, `mds/MDS/*/stats`,
+`ldlm/services/*/stats`, `lwp/*/stats` or `osp/*/stats`, i.e. files containing
+a `req_waittime` counter, all counters are reported. The `name` tag contains the
+service or import, e.g. `ost_io` or `fs-OST0000-osc-MDT0000`.
+
+- lustre2
+  - tags:
+    - name
+  - fields:
+    - `<counter>_samples` (number of samples, e.g. `ost_read_samples`)
+    - `<counter>_sum` (sum of the sampled values in the unit stated in the file,
+      e.g. `ost_read_sum` in microseconds)
 
 From `/proc/fs/lustre/*/*/eviction_count`:
 

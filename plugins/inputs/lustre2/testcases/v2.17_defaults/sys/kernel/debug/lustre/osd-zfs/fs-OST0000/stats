@@ -1,0 +1,6 @@
+snapshot_time             1793348274.421638001 secs.nsecs
+start_time                1793283347.728806717 secs.nsecs
+elapsed_time              64926.692831284 secs.nsecs
+copy                      1525907 samples [pages] 1 1 1525907
+zerocopy                  69742019 samples [pages] 1 1 69742019
+tail                      68043 samples [pages] 1 1 68043
