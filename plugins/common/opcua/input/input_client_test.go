@@ -656,6 +656,32 @@ func TestUpdateNodeValue(t *testing.T) {
 				},
 			},
 		},
+		{
+			"localized text should be stored as plain text",
+			[]testStep{
+				{
+					0,
+					&ua.LocalizedText{
+						EncodingMask: ua.LocalizedTextText | ua.LocalizedTextLocale,
+						Text:         "Hello",
+						Locale:       "en-US",
+					},
+					ua.StatusOK,
+					"Hello",
+				},
+			},
+		},
+		{
+			"localized text array should be stored as plain text",
+			[]testStep{
+				{
+					0,
+					[]*ua.LocalizedText{{Text: "a"}, nil, {Text: "b"}},
+					ua.StatusOK,
+					[]string{"a", "", "b"},
+				},
+			},
+		},
 	}
 
 	conf := &opcua.OpcUAClientConfig{
@@ -899,6 +925,80 @@ func TestMetricForNode(t *testing.T) {
 			require.Equal(t, tt.expected.Tags(), actual.Tags())
 			require.Equal(t, tt.expected.Fields(), actual.Fields())
 			require.Equal(t, tt.expected.Time(), actual.Time())
+		})
+	}
+}
+
+func TestMetricForNodeLocalizedText(t *testing.T) {
+	conf := &opcua.OpcUAClientConfig{
+		Endpoint:       "opc.tcp://localhost:4930",
+		SecurityPolicy: "None",
+		SecurityMode:   "None",
+		AuthMethod:     "",
+		ConnectTimeout: config.Duration(2 * time.Second),
+		RequestTimeout: config.Duration(2 * time.Second),
+		Workarounds:    opcua.OpcUAWorkarounds{},
+	}
+	c, err := conf.CreateClient(testutil.Logger{})
+	require.NoError(t, err)
+
+	ts := time.Date(2022, 03, 17, 8, 55, 00, 00, &time.Location{})
+	tests := []struct {
+		testname string
+		value    any
+		expected map[string]any
+	}{
+		{
+			testname: "scalar",
+			value:    &ua.LocalizedText{EncodingMask: ua.LocalizedTextText, Text: "Hello"},
+			expected: map[string]any{
+				"Quality": "The operation succeeded. StatusGood (0x0)",
+				"fn":      "Hello",
+			},
+		},
+		{
+			testname: "array",
+			value:    []*ua.LocalizedText{{Text: "a"}, {Text: "b"}},
+			expected: map[string]any{
+				"Quality": "The operation succeeded. StatusGood (0x0)",
+				"fn[0]":   "a",
+				"fn[1]":   "b",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.testname, func(t *testing.T) {
+			o := OpcUAInputClient{
+				Config: InputClientConfig{
+					Timestamp:       TimestampSourceSource,
+					TimestampFormat: time.RFC3339Nano,
+				},
+				OpcUAClient: c,
+				Log:         testutil.Logger{},
+				NodeMetricMapping: []NodeMetricMapping{
+					{
+						Tag:        NodeSettings{FieldName: "fn"},
+						idStr:      "ns=3;s=hi",
+						metricName: "testingmetric",
+						MetricTags: map[string]string{"t1": "v1"},
+					},
+				},
+				LastReceivedData: make([]NodeValue, 1),
+			}
+
+			v, err := ua.NewVariant(tt.value)
+			require.NoError(t, err)
+			o.UpdateNodeValue(0, &ua.DataValue{
+				Value:           v,
+				Status:          ua.StatusOK,
+				SourceTimestamp: ts,
+			})
+
+			actual := o.MetricForNode(0)
+			require.Equal(t, map[string]string{"t1": "v1", "id": "ns=3;s=hi"}, actual.Tags())
+			require.Equal(t, tt.expected, actual.Fields())
+			require.Equal(t, ts, actual.Time())
 		})
 	}
 }
