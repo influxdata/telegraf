@@ -307,11 +307,12 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 		// configurations.
 		connDatname = p.currentDatabase
 	}
+
+	p.releasePools(datnames)
+
 	if len(datnames) == 0 {
 		return nil
 	}
-
-	p.releasePools(datnames)
 
 	coll := &collection{
 		queries:                queries,
