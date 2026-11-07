@@ -32,6 +32,9 @@ func NewMQTTv311Client(cfg *MqttConfig) (*mqttv311Client, error) {
 		opts.SetConnectionLostHandler(onConnectionLost)
 	}
 	opts.SetAutoReconnect(cfg.AutoReconnect)
+	if cfg.WillTopic != "" {
+		opts.SetBinaryWill(cfg.WillTopic, []byte(cfg.WillPayload), byte(cfg.WillQoS), cfg.WillRetain)
+	}
 
 	if cfg.ClientID != "" {
 		opts.SetClientID(cfg.ClientID)
