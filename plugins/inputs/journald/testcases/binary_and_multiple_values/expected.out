@@ -1,0 +1,3 @@
+journald,identifier=app,severity=crit,unit=app.service message="[31mdisk full[0m",severity_code=2i 1762265102000000000
+journald,identifier=app,unit=app.service message="" 1762265102000001000
+journald,identifier=app message="plain",severity_code=9i 1762265102000002000
