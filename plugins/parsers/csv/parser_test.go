@@ -1749,31 +1749,30 @@ func FuzzParserCSV(f *testing.F) {
 	f.Add([]byte(benchmarkData))
 	f.Add([]byte("a,b,c\n1,\"2,5\",x\n# comment\n3,4\n"))
 
-	f.Fuzz(func(_ *testing.T, input []byte) {
-		// The parser keeps the header between calls, so start fresh for every input.
-		parser := &Parser{
-			MetricName:      "fuzz",
-			HeaderRowCount:  1,
-			TimestampColumn: "timestamp",
-			TimestampFormat: "unix",
-			TagColumns:      []string{"tags_host"},
-			Comment:         "#",
-		}
-		if err := parser.Init(); err == nil {
-			//nolint:errcheck // fuzz testing can give lots of errors, but we just want to test for crashes
-			parser.Parse(input)
-		}
+	parser := &Parser{
+		MetricName:      "fuzz",
+		HeaderRowCount:  1,
+		TimestampColumn: "timestamp",
+		TimestampFormat: "unix",
+		TagColumns:      []string{"tags_host"},
+		Comment:         "#",
+		ResetMode:       "always",
+	}
+	require.NoError(f, parser.Init())
 
-		lineParser := &Parser{
-			MetricName:      "fuzz",
-			ColumnNames:     []string{"tags_host", "tags_platform", "tags_sdkver", "value", "timestamp"},
-			TimestampColumn: "timestamp",
-			TimestampFormat: "unix",
-			TagColumns:      []string{"tags_host"},
-		}
-		if err := lineParser.Init(); err == nil {
-			//nolint:errcheck // fuzz testing can give lots of errors, but we just want to test for crashes
-			lineParser.ParseLine(string(input))
-		}
+	lineParser := &Parser{
+		MetricName:      "fuzz",
+		ColumnNames:     []string{"tags_host", "tags_platform", "tags_sdkver", "value", "timestamp"},
+		TimestampColumn: "timestamp",
+		TimestampFormat: "unix",
+		TagColumns:      []string{"tags_host"},
+	}
+	require.NoError(f, lineParser.Init())
+
+	f.Fuzz(func(_ *testing.T, input []byte) {
+		//nolint:errcheck // fuzz testing can give lots of errors, but we just want to test for crashes
+		parser.Parse(input)
+		//nolint:errcheck // fuzz testing can give lots of errors, but we just want to test for crashes
+		lineParser.ParseLine(string(input))
 	})
 }
