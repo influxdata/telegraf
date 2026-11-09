@@ -1057,7 +1057,7 @@ func TestPodPendingContainers(t *testing.T) {
 	}
 }
 
-func TestPodDeploymentTag(t *testing.T) {
+func TestPodWorkloadTags(t *testing.T) {
 	controller := true
 	owner := func(kind, name string) []metav1.OwnerReference {
 		return []metav1.OwnerReference{{Kind: kind, Name: name, Controller: &controller}}
@@ -1070,23 +1070,37 @@ func TestPodDeploymentTag(t *testing.T) {
 	})
 
 	tests := []struct {
-		name        string
-		namespace   string
-		owners      []metav1.OwnerReference
-		deployments map[string]string
-		expected    string
+		name           string
+		optionDisabled bool
+		namespace      string
+		owners         []metav1.OwnerReference
+		deployments    map[string]string
+		expectedKey    string
+		expectedValue  string
 	}{
 		{
-			name:        "replicaset owned by a deployment",
-			namespace:   "ns1",
-			owners:      owner("ReplicaSet", "web-5d8f7c9b4"),
-			deployments: deployments,
-			expected:    "web",
+			name:          "replicaset owned by a deployment",
+			namespace:     "ns1",
+			owners:        owner("ReplicaSet", "web-5d8f7c9b4"),
+			deployments:   deployments,
+			expectedKey:   "deployment_name",
+			expectedValue: "web",
 		},
 		{
-			name:      "option disabled",
-			namespace: "ns1",
-			owners:    owner("ReplicaSet", "web-5d8f7c9b4"),
+			name:          "statefulset",
+			namespace:     "ns1",
+			owners:        owner("StatefulSet", "db"),
+			deployments:   deployments,
+			expectedKey:   "statefulset_name",
+			expectedValue: "db",
+		},
+		{
+			name:          "daemonset",
+			namespace:     "ns1",
+			owners:        owner("DaemonSet", "fluentd"),
+			deployments:   deployments,
+			expectedKey:   "daemonset_name",
+			expectedValue: "fluentd",
 		},
 		{
 			name:        "replicaset owned by another controller",
@@ -1095,21 +1109,16 @@ func TestPodDeploymentTag(t *testing.T) {
 			deployments: deployments,
 		},
 		{
-			name:        "replicaset in another namespace",
-			namespace:   "ns2",
-			owners:      owner("ReplicaSet", "web-5d8f7c9b4"),
-			deployments: deployments,
-		},
-		{
-			name:        "statefulset",
-			namespace:   "ns1",
-			owners:      owner("StatefulSet", "db"),
-			deployments: deployments,
-		},
-		{
 			name:        "no owner",
 			namespace:   "ns1",
 			deployments: deployments,
+		},
+		{
+			name:           "option disabled",
+			optionDisabled: true,
+			namespace:      "ns1",
+			owners:         owner("ReplicaSet", "web-5d8f7c9b4"),
+			deployments:    deployments,
 		},
 	}
 	for _, tt := range tests {
@@ -1129,16 +1138,22 @@ func TestPodDeploymentTag(t *testing.T) {
 				},
 			}
 
-			ks := &KubernetesInventory{}
+			ks := &KubernetesInventory{PodWorkloadTags: !tt.optionDisabled}
 			require.NoError(t, ks.createSelectorFilters())
 			acc := &testutil.Accumulator{}
 			ks.gatherPod(pod, tt.deployments, acc)
 
 			require.Len(t, acc.Metrics, 2)
 			for _, m := range acc.GetTelegrafMetrics() {
-				deployment, found := m.GetTag("deployment_name")
-				require.Equal(t, tt.expected != "", found)
-				require.Equal(t, tt.expected, deployment)
+				for _, key := range []string{"deployment_name", "statefulset_name", "daemonset_name"} {
+					value, found := m.GetTag(key)
+					if key == tt.expectedKey {
+						require.True(t, found)
+						require.Equal(t, tt.expectedValue, value)
+					} else {
+						require.False(t, found)
+					}
+				}
 			}
 		})
 	}
