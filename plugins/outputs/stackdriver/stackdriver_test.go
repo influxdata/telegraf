@@ -864,6 +864,101 @@ func TestWritePermanentThenRetryableReturnsError(t *testing.T) {
 	require.Len(t, server.reqs, 2)
 }
 
+func TestWriteReplayDoesNotMutateMetrics(t *testing.T) {
+	server := &mockServer{
+		errForCall: map[int]error{
+			1: status.New(codes.Unavailable, "backend down").Err(),
+		},
+	}
+	srv, client := startServer(t, server)
+	defer srv.GracefulStop()
+
+	plugin := &Stackdriver{
+		Project:              "projects/[PROJECT]",
+		Namespace:            "test",
+		ResourceType:         "prometheus_target",
+		TagsAsResourceLabels: []string{"instance", "cluster"},
+		ResourceLabels: map[string]string{
+			"location":  "us-east4-b",
+			"namespace": "store",
+			"job":       "Telegraf",
+			"instance":  "default",
+		},
+		Log:    testutil.Logger{},
+		client: client,
+	}
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+
+	makeInput := func() []telegraf.Metric {
+		return []telegraf.Metric{
+			metric.New(
+				"cpu_load",
+				map[string]string{
+					"instance": "st0429",
+					"cluster":  "st0429",
+					"host":     "probe",
+				},
+				map[string]any{
+					"value": 42,
+				},
+				time.Unix(10, 0),
+			),
+			metric.New(
+				"http_server_duration",
+				map[string]string{
+					"instance": "st0429",
+					"cluster":  "st0429",
+					"host":     "probe",
+				},
+				map[string]any{
+					"sum":   1,
+					"count": 2,
+					"5.0":   0.0,
+					"10.0":  2.0,
+					"+Inf":  2.0,
+				},
+				time.Unix(10, 0),
+				telegraf.Histogram,
+			),
+		}
+	}
+
+	input := makeInput()
+	require.ErrorContains(t, plugin.Write(input), "backend down")
+	require.NoError(t, plugin.Write(input))
+	testutil.RequireMetricsEqual(t, makeInput(), input)
+
+	require.Len(t, server.reqs, 2)
+	first, ok := server.reqs[0].(*monitoringpb.CreateTimeSeriesRequest)
+	require.Truef(t, ok, "Invalid request type %T for request 0", server.reqs[0])
+	second, ok := server.reqs[1].(*monitoringpb.CreateTimeSeriesRequest)
+	require.Truef(t, ok, "Invalid request type %T for request 1", server.reqs[1])
+
+	require.Len(t, first.TimeSeries, 2)
+	require.Len(t, second.TimeSeries, 2)
+
+	firstByType := make(map[string]*monitoringpb.TimeSeries, len(first.TimeSeries))
+	for _, ts := range first.TimeSeries {
+		require.Equal(t, map[string]string{"host": "probe"}, ts.Metric.Labels)
+		require.Equal(t, map[string]string{
+			"project_id": "projects/[PROJECT]",
+			"location":   "us-east4-b",
+			"namespace":  "store",
+			"job":        "Telegraf",
+			"instance":   "st0429",
+			"cluster":    "st0429",
+		}, ts.Resource.Labels)
+		firstByType[ts.Metric.Type] = ts
+	}
+
+	for _, ts := range second.TimeSeries {
+		expectedTS, exists := firstByType[ts.Metric.Type]
+		require.Truef(t, exists, "Unexpected metric type %q in replayed request", ts.Metric.Type)
+		require.Truef(t, proto.Equal(expectedTS, ts), "Replayed timeseries for %q differed from first attempt", ts.Metric.Type)
+	}
+}
+
 func TestWriteErrorClassification(t *testing.T) {
 	// Retryable codes are returned so Telegraf replays the batch; permanent ones
 	// are dropped so it drains.
