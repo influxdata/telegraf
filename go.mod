@@ -155,7 +155,7 @@ require (
 	github.com/linkedin/goavro/v2 v2.15.0
 	github.com/lxc/incus/v7 v7.6.0
 	github.com/mdlayher/apcupsd v0.0.0-20220319200143-473c7b5f3c6a
-	github.com/mdlayher/vsock v1.3.0
+	github.com/mdlayher/vsock v1.4.0
 	github.com/microsoft/ApplicationInsights-Go v0.4.4
 	github.com/microsoft/go-mssqldb v1.11.2
 	github.com/miekg/dns v1.1.73
