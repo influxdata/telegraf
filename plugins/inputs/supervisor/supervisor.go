@@ -39,7 +39,7 @@ type processInfo struct {
 	StdoutLogfile string `xmlrpc:"stdout_logfile"`
 	StderrLogfile string `xmlrpc:"stderr_logfile"`
 	SpawnErr      string `xmlrpc:"spawnerr"`
-	ExitStatus    int32  `xmlrpc:"exitstatus"`
+	ExitStatus    int8   `xmlrpc:"exitstatus"`
 	Pid           int32  `xmlrpc:"pid"`
 }
 

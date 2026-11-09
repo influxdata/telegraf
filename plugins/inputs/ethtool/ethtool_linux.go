@@ -287,8 +287,16 @@ func (c *commandEthtool) interfaces(includeNamespaces bool) ([]namespacedInterfa
 	var namespaceNames []string
 	// Handles are only used to create namespaced goroutines. We don't prefill
 	// with the handle for the initial namespace because we've already created
-	// its goroutine in Init().
+	// its goroutine in Init(). The goroutine's thread keeps its own reference to
+	// the namespace after setns(2), so the handles can be released once this
+	// gather is done; otherwise every gather would leak one descriptor per
+	// namespace and eventually fail with "too many open files".
 	handles := make(map[string]netns.NsHandle)
+	defer func() {
+		for _, handle := range handles {
+			handle.Close()
+		}
+	}()
 
 	if includeNamespaces {
 		namespaces, err := os.ReadDir(namespaceDirectory)

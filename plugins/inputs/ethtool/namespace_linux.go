@@ -67,21 +67,30 @@ func (n *namespaceGoroutine) interfaces() ([]namespacedInterface, error) {
 		return namespacedInterfaces, nil
 	})
 
-	return interfaces.([]namespacedInterface), err
+	if interfaces != nil {
+		return interfaces.([]namespacedInterface), err
+	}
+	return nil, err
 }
 
 func (n *namespaceGoroutine) driverName(intf namespacedInterface) (string, error) {
 	driver, err := n.do(func(n *namespaceGoroutine) (any, error) {
 		return n.ethtoolClient.DriverName(intf.Name)
 	})
-	return driver.(string), err
+	if driver != nil {
+		return driver.(string), err
+	}
+	return "", err
 }
 
 func (n *namespaceGoroutine) stats(intf namespacedInterface) (map[string]uint64, error) {
 	driver, err := n.do(func(n *namespaceGoroutine) (any, error) {
 		return n.ethtoolClient.Stats(intf.Name)
 	})
-	return driver.(map[string]uint64), err
+	if driver != nil {
+		return driver.(map[string]uint64), err
+	}
+	return nil, err
 }
 
 func (n *namespaceGoroutine) get(intf namespacedInterface) (map[string]uint64, error) {
