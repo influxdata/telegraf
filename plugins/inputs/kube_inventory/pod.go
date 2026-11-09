@@ -3,6 +3,7 @@ package kube_inventory
 import (
 	"context"
 	"fmt"
+	"maps"
 	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -147,9 +148,7 @@ func (ki *KubernetesInventory) gatherPodContainer(
 		tags["version"] = splitImage[1]
 	}
 	tags["image"] = splitImage[0]
-	for key, val := range workloadTags {
-		tags[key] = val
-	}
+	maps.Copy(tags, workloadTags)
 	for key, val := range p.Spec.NodeSelector {
 		if ki.selectorFilter.Match(key) {
 			tags["node_selector_"+key] = val
@@ -189,9 +188,7 @@ func (ki *KubernetesInventory) gatherPodContainer(
 		if len(splitImage) == 2 {
 			conditiontags["version"] = splitImage[1]
 		}
-		for key, val := range workloadTags {
-			conditiontags[key] = val
-		}
+		maps.Copy(conditiontags, workloadTags)
 		running := 0
 		podready := 0
 		if val.Status == "True" {
