@@ -2307,12 +2307,22 @@ func TestUdp(t *testing.T) {
 	)
 }
 
+// unixgramSocketPath returns a socket path short enough for every platform;
+// macOS limits unix socket paths to 104 bytes and t.TempDir() names are long.
+func unixgramSocketPath(t *testing.T, name string) string {
+	t.Helper()
+	dir, err := os.MkdirTemp("", "statsd")
+	require.NoError(t, err)
+	t.Cleanup(func() { os.RemoveAll(dir) })
+	return filepath.Join(dir, name)
+}
+
 func TestUnixgram(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Skipping on Windows, as unixgram sockets are not supported")
 	}
 
-	sock := filepath.Join(t.TempDir(), "statsd.sock")
+	sock := unixgramSocketPath(t, "statsd.sock")
 	statsd := Statsd{
 		Log:                    testutil.Logger{},
 		Protocol:               "unixgram",
@@ -2361,7 +2371,7 @@ func TestUnixgramSocketMode(t *testing.T) {
 		t.Skip("Skipping on Windows, as unixgram sockets are not supported")
 	}
 
-	sock := filepath.Join(t.TempDir(), "statsd.sock")
+	sock := unixgramSocketPath(t, "statsd.sock")
 	statsd := Statsd{
 		Log:                    testutil.Logger{},
 		Protocol:               "unixgram",
@@ -2384,7 +2394,7 @@ func TestUnixgramInvalidSocketMode(t *testing.T) {
 		t.Skip("Skipping on Windows, as unixgram sockets are not supported")
 	}
 
-	sock := filepath.Join(t.TempDir(), "statsd.sock")
+	sock := unixgramSocketPath(t, "statsd.sock")
 	statsd := Statsd{
 		Log:                    testutil.Logger{},
 		Protocol:               "unixgram",
@@ -2422,7 +2432,7 @@ func TestUnixgramRejectsHostPort(t *testing.T) {
 	}
 
 	// A path that happens to contain a colon is still a path.
-	sock := filepath.Join(t.TempDir(), "statsd:8125.sock")
+	sock := unixgramSocketPath(t, "statsd:8125.sock")
 	statsd := Statsd{
 		Log:                    testutil.Logger{},
 		Protocol:               "unixgram",
@@ -2442,7 +2452,7 @@ func TestUnixgramStaleSocket(t *testing.T) {
 
 	// Leave a socket behind the way a crashed process would: closing a
 	// unixgram conn does not unlink its path.
-	sock := filepath.Join(t.TempDir(), "statsd.sock")
+	sock := unixgramSocketPath(t, "statsd.sock")
 	stale, err := net.ListenUnixgram("unixgram", &net.UnixAddr{Name: sock, Net: "unixgram"})
 	require.NoError(t, err)
 	require.NoError(t, stale.Close())
@@ -2468,7 +2478,7 @@ func TestUnixgramRefusesToRemove(t *testing.T) {
 		t.Skip("Skipping on Windows, as unixgram sockets are not supported")
 	}
 
-	dir := t.TempDir()
+	dir := filepath.Dir(unixgramSocketPath(t, "unused"))
 
 	file := filepath.Join(dir, "regular")
 	require.NoError(t, os.WriteFile(file, []byte("keep"), 0o600))
