@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
 	"path/filepath"
 	"slices"
 	"sort"
@@ -270,6 +271,14 @@ func (b *DiskBuffer) Close() error {
 
 	if err := b.file.Close(); err != nil {
 		return fmt.Errorf("closing buffer failed: %w", err)
+	}
+
+	// Remove the directory of an empty buffer, its name depends on the output's
+	// ID so it would be left behind when the output's configuration changes
+	if *b.closedLength == 0 {
+		if err := os.RemoveAll(b.path); err != nil {
+			return fmt.Errorf("removing empty buffer directory failed: %w", err)
+		}
 	}
 
 	return nil
