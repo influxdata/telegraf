@@ -74,6 +74,15 @@
   `mongodb_top_stats` no longer carries `db_name` and now has the server
   address as `hostname` instead of a shard host. Please check queries and
   dashboards using these tags.
+- PR [#20127](https://github.com/influxdata/telegraf/pull/20127) makes
+  `outputs.stackdriver` send metrics matched by `metric_histogram` as a
+  distribution even when they are not typed as histogram. Such metrics used to
+  be sent as one cumulative series per field, e.g. `<name>_sum/histogram` and
+  `<name>_count/histogram`, and are now sent as a single `<name>/histogram`
+  distribution, so the per-field series stop receiving data. A matching metric
+  without `sum` and `count` fields is now dropped with an error. Metrics
+  already typed as histogram are not affected. Please check dashboards and
+  alerts using the per-field series.
 
 ## v1.40.3 [2026-11-02]
 
