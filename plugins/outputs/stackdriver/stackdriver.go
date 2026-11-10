@@ -264,7 +264,7 @@ func (s *Stackdriver) sendBatch(batch []telegraf.Metric) error {
 			}
 		}
 
-		if m.Type() == telegraf.Histogram {
+		if metricType == telegraf.Histogram {
 			value, err := buildHistogram(m)
 			if err != nil {
 				s.Log.Errorf("Unable to build distribution from metric %s: %s", m, err)
