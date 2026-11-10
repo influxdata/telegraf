@@ -5,6 +5,8 @@ Format][]. The metrics are parsed directly into Telegraf metrics. It is used
 internally in [prometheus input](/plugins/inputs/prometheus) or can be used in
 [http_listener_v2](/plugins/inputs/http_listener_v2) to simulate Pushgateway.
 
+Like Prometheus scraping, the parser accepts text data without a final newline.
+
 [Prometheus Text-Based Format]: https://prometheus.io/docs/instrumenting/exposition_formats/#text-based-format
 
 ## Configuration

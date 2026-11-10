@@ -1,6 +1,7 @@
 package prometheus
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -14,6 +15,50 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 	test "github.com/influxdata/telegraf/testutil/plugin_input"
 )
+
+func TestParseText(t *testing.T) {
+	const input = "# TYPE xtars_reachability_worker_utilization_ratio gauge\n" +
+		"xtars_reachability_worker_utilization_ratio 0"
+
+	tests := []struct {
+		name    string
+		input   string
+		header  http.Header
+		wantErr bool
+	}{
+		{name: "missing_final_newline", input: input},
+		{name: "with_final_newline", input: input + "\n"},
+		{name: "text_header", input: input, header: http.Header{"Content-Type": {"text/plain; version=0.0.4"}}},
+		{name: "unknown_header", input: input, header: http.Header{"Content-Type": {"application/octet-stream"}}},
+		{name: "invalid_value", input: "metric invalid", wantErr: true},
+		{name: "incomplete_label", input: "metric{label=\"unfinished", wantErr: true},
+	}
+
+	for _, version := range []int{0, 1, 2} {
+		for _, tt := range tests {
+			t.Run(fmt.Sprintf("%s_v%d", tt.name, version), func(t *testing.T) {
+				parser := &Parser{MetricVersion: version, Header: tt.header, Log: testutil.Logger{}}
+				require.NoError(t, parser.Init())
+
+				metrics, err := parser.Parse([]byte(tt.input))
+				if tt.wantErr {
+					require.Error(t, err)
+					require.Empty(t, metrics)
+					return
+				}
+				require.NoError(t, err)
+				require.Len(t, metrics, 1)
+				if version == 1 {
+					require.Equal(t, "xtars_reachability_worker_utilization_ratio", metrics[0].Name())
+					require.Equal(t, map[string]any{"gauge": float64(0)}, metrics[0].Fields())
+				} else {
+					require.Equal(t, "prometheus", metrics[0].Name())
+					require.Equal(t, map[string]any{"xtars_reachability_worker_utilization_ratio": float64(0)}, metrics[0].Fields())
+				}
+			})
+		}
+	}
+}
 
 func TestCases(t *testing.T) {
 	// Get all directories in testcases

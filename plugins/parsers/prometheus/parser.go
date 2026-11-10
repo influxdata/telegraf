@@ -53,11 +53,8 @@ func (p *Parser) Parse(data []byte) ([]telegraf.Metric, error) {
 		format = expfmt.ResponseFormat(p.Header)
 		switch format.FormatType() {
 		case expfmt.TypeProtoText:
-			// Make sure we have a finishing newline but no trailing one
+			// Remove a leading newline.
 			data = bytes.TrimPrefix(data, []byte("\n"))
-			if !bytes.HasSuffix(data, []byte("\n")) {
-				data = append(data, []byte("\n")...)
-			}
 			fallthrough
 		case expfmt.TypeProtoCompact:
 			// As of prometheus common 0.66.0, ProtoText and ProtoCompact are disallowed from the decoder. Before this
@@ -66,6 +63,11 @@ func (p *Parser) Parse(data []byte) ([]telegraf.Metric, error) {
 		case expfmt.TypeUnknown:
 			p.Log.Debugf("Unknown format %q... Trying to continue...", p.Header.Get("Content-Type"))
 		}
+	}
+	// Match Prometheus' text parser, which accepts a missing final newline.
+	// Delimited protobuf data must be passed to the decoder unchanged.
+	if format.FormatType() != expfmt.TypeProtoDelim && !bytes.HasSuffix(data, []byte("\n")) {
+		data = append(data, '\n')
 	}
 	buf := bytes.NewBuffer(data)
 	decoder := expfmt.NewDecoder(buf, format)

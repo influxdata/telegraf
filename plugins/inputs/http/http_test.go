@@ -24,9 +24,41 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
+	"github.com/influxdata/telegraf/plugins/parsers/prometheus"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
 	"github.com/influxdata/telegraf/testutil"
 )
+
+func TestHTTPWithPrometheusWithoutFinalNewline(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; version=0.0.4")
+		_, err := io.WriteString(w, "# TYPE xtars_dependency_state gauge\n"+
+			"xtars_dependency_state{dependency=\"postgresql\",state=\"up\"} 1\n"+
+			"# TYPE xtars_reachability_worker_utilization_ratio gauge\n"+
+			"xtars_reachability_worker_utilization_ratio 0")
+		if err != nil {
+			t.Error(err)
+		}
+	}))
+	defer server.Close()
+
+	plugin := &httpplugin.HTTP{URLs: []string{server.URL}, Log: testutil.Logger{}}
+	plugin.SetParserFunc(func() (telegraf.Parser, error) {
+		p := &prometheus.Parser{MetricVersion: 1}
+		err := p.Init()
+		return p, err
+	})
+	require.NoError(t, plugin.Init())
+	defer plugin.Stop()
+
+	var acc testutil.Accumulator
+	require.NoError(t, acc.GatherError(plugin.Gather))
+	require.Len(t, acc.Metrics, 2)
+	acc.AssertContainsTaggedFields(t, "xtars_dependency_state", map[string]any{"gauge": float64(1)},
+		map[string]string{"dependency": "postgresql", "state": "up", "url": server.URL})
+	acc.AssertContainsTaggedFields(t, "xtars_reachability_worker_utilization_ratio", map[string]any{"gauge": float64(0)},
+		map[string]string{"url": server.URL})
+}
 
 func TestHTTPWithJSONFormat(t *testing.T) {
 	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
