@@ -5,7 +5,7 @@ go 1.27.0
 godebug x509negativeserial=1
 
 require (
-	cloud.google.com/go/auth v0.24.2
+	cloud.google.com/go/auth v0.24.3
 	cloud.google.com/go/bigquery v1.86.2
 	cloud.google.com/go/monitoring v1.32.1
 	cloud.google.com/go/pubsub/v2 v2.8.0
