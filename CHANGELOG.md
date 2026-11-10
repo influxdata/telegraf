@@ -63,6 +63,16 @@
   If you set `default_service_state`, it now also applies to metrics with
   numeric fields but without thresholds, which used to get `SERVICE_OK`.
   Please check alerts relying on these states.
+- PR [#20127](https://github.com/influxdata/telegraf/pull/20127) makes
+  `outputs.stackdriver` send metrics matched by `metric_histogram` as a
+  distribution even when they are not typed as histogram. Such metrics used to
+  be sent as one cumulative series per field, e.g. `<name>_sum/histogram` and
+  `<name>_count/histogram`, and are now sent as a single `<name>/histogram`
+  distribution, so the per-field series stop receiving data. A matching metric
+  without `sum` and `count` fields is now dropped with an error. Metrics
+  already typed as histogram are not affected. Please check dashboards and
+  alerts using the per-field series.
+
 ## v1.40.3 [2026-11-02]
 
 ### Bugfixes
