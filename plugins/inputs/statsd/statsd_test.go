@@ -2311,7 +2311,7 @@ func TestUdp(t *testing.T) {
 // macOS limits unix socket paths to 104 bytes and t.TempDir() names are long.
 func unixgramSocketPath(t *testing.T, name string) string {
 	t.Helper()
-	dir, err := os.MkdirTemp("", "statsd")
+	dir, err := os.MkdirTemp("", "statsd") //nolint:usetesting // t.TempDir() paths exceed the macOS 104-byte socket path limit
 	require.NoError(t, err)
 	t.Cleanup(func() { os.RemoveAll(dir) })
 	return filepath.Join(dir, name)
