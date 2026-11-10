@@ -1563,8 +1563,8 @@ github.com/googleapis/gax-go/v2 v2.27.0 h1:qe2iQOUzxb3fd6x6ewpIEixPQhJ+0Ihc/RRZh
 github.com/googleapis/gax-go/v2 v2.27.0/go.mod h1:RofiqDw3ehcG4L0H1zO3D2Itpwd3/uS/7wdmbNDF1DE=
 github.com/googleapis/go-type-adapters v1.0.0/go.mod h1:zHW75FOG2aur7gAO2B+MLby+cLsWGBF62rFAi7WjWO4=
 github.com/googleapis/google-cloud-go-testing v0.0.0-20200911160855-bcd43fbb19e8/go.mod h1:dvDLG8qkwmyD9a/MJJN3XJcT3xFxOKAvTZGvuZmac9g=
-github.com/gopacket/gopacket v1.7.4 h1:3bi6ZOOyxZe5iGhPz2xkQg/qoEBa3ODsrxZ9LbnYuRw=
-github.com/gopacket/gopacket v1.7.4/go.mod h1:QKowPlTLrQU2rqV5C5I14Aoaid3l8da3kbddibc/Wgk=
+github.com/gopacket/gopacket v1.7.7 h1:9MaMKsjcFCnUVPI9CHp/ZDhu1SSV+rs0THQ2ztRAqmE=
+github.com/gopacket/gopacket v1.7.7/go.mod h1:QKowPlTLrQU2rqV5C5I14Aoaid3l8da3kbddibc/Wgk=
 github.com/gopcua/opcua v0.9.1 h1:Qp40I5JmiiKXYIWmk7xECYNrXs5unohH24jKWnSRyIE=
 github.com/gopcua/opcua v0.9.1/go.mod h1:Z6aellk0gIzznZd2UX+Syd/hUMBt65gRlTakpGo6se8=
 github.com/gophercloud/gophercloud/v2 v2.15.0 h1:4zLiLYTFraZMlJ77FH1Kzq7itjfVP+BIbWcCurCrgic=
