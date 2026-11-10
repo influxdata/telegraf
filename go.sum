@@ -101,8 +101,8 @@ cloud.google.com/go/assuredworkloads v1.7.0/go.mod h1:z/736/oNmtGAyU47reJgGN+KVo
 cloud.google.com/go/assuredworkloads v1.8.0/go.mod h1:AsX2cqyNCOvEQC8RMPnoc0yEarXQk6WEKkxYfL6kGIo=
 cloud.google.com/go/assuredworkloads v1.9.0/go.mod h1:kFuI1P78bplYtT77Tb1hi0FMxM0vVpRC7VVoJC3ZoT0=
 cloud.google.com/go/assuredworkloads v1.10.0/go.mod h1:kwdUQuXcedVdsIaKgKTp9t0UJkE5+PAVNhdQm4ZVq2E=
-cloud.google.com/go/auth v0.24.2 h1:B1/4OLie/oVowCTrVgFS3NpEtIrLsuudX0/BxKsEk6s=
-cloud.google.com/go/auth v0.24.2/go.mod h1:p4UXqfSXnMVUDutk9xePzI8lj8yyoJ3BLsKWv0NSvQk=
+cloud.google.com/go/auth v0.24.3 h1:oVmRvR/pGSCNXjviwXCisJjRSEdQ0BlcOpW0uhuHLm8=
+cloud.google.com/go/auth v0.24.3/go.mod h1:p4UXqfSXnMVUDutk9xePzI8lj8yyoJ3BLsKWv0NSvQk=
 cloud.google.com/go/auth/oauth2adapt v0.3.1 h1:BKLDdbWS7pafd820dsyFDF6fPEzIGqr7ny6hbTzCCgE=
 cloud.google.com/go/auth/oauth2adapt v0.3.1/go.mod h1:B1nM4FJDxoDqAt3PXFG4IflUoQ5kvWAOOM3R+5wAszg=
 cloud.google.com/go/automl v1.5.0/go.mod h1:34EjfoFGMZ5sgJ9EoLsRtdPSNZLcfflJR39VbVNS2M0=
