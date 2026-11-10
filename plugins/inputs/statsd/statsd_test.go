@@ -2356,6 +2356,85 @@ func TestUnixgram(t *testing.T) {
 	)
 }
 
+func TestUnixgramSocketMode(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping on Windows, as unixgram sockets are not supported")
+	}
+
+	sock := filepath.Join(t.TempDir(), "statsd.sock")
+	statsd := Statsd{
+		Log:                    testutil.Logger{},
+		Protocol:               "unixgram",
+		ServiceAddress:         sock,
+		SocketMode:             "777",
+		AllowedPendingMessages: 10000,
+		NumberWorkerThreads:    5,
+	}
+	var acc testutil.Accumulator
+	require.NoError(t, statsd.Start(&acc))
+	defer statsd.Stop()
+
+	fi, err := os.Stat(sock)
+	require.NoError(t, err)
+	require.Equal(t, os.FileMode(0o777), fi.Mode().Perm())
+}
+
+func TestUnixgramInvalidSocketMode(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping on Windows, as unixgram sockets are not supported")
+	}
+
+	sock := filepath.Join(t.TempDir(), "statsd.sock")
+	statsd := Statsd{
+		Log:                    testutil.Logger{},
+		Protocol:               "unixgram",
+		ServiceAddress:         sock,
+		SocketMode:             "rwx",
+		AllowedPendingMessages: 10000,
+		NumberWorkerThreads:    5,
+	}
+	var acc testutil.Accumulator
+	require.ErrorContains(t, statsd.Start(&acc), "socket mode")
+}
+
+func TestUnixgramRejectsHostPort(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping on Windows, as unixgram sockets are not supported")
+	}
+
+	// Run in a scratch directory so a wrongly accepted address cannot leave
+	// a socket file named ":8125" behind.
+	t.Chdir(t.TempDir())
+
+	for _, addr := range []string{"", ":8125", "localhost:8125", "127.0.0.1:8125"} {
+		statsd := Statsd{
+			Log:                    testutil.Logger{},
+			Protocol:               "unixgram",
+			ServiceAddress:         addr,
+			AllowedPendingMessages: 10000,
+			NumberWorkerThreads:    5,
+		}
+		var acc testutil.Accumulator
+		require.Error(t, statsd.Start(&acc), addr)
+		if addr != "" {
+			require.NoFileExists(t, addr)
+		}
+	}
+
+	// A path that happens to contain a colon is still a path.
+	sock := filepath.Join(t.TempDir(), "statsd:8125.sock")
+	statsd := Statsd{
+		Log:                    testutil.Logger{},
+		Protocol:               "unixgram",
+		ServiceAddress:         sock,
+		AllowedPendingMessages: 10000,
+		NumberWorkerThreads:    5,
+	}
+	var acc testutil.Accumulator
+	require.NoError(t, statsd.Start(&acc))
+	statsd.Stop()
+}
+
 func TestUnixgramStaleSocket(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("Skipping on Windows, as unixgram sockets are not supported")

@@ -50,6 +50,11 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## protocol is "unixgram" (e.g. "/tmp/telegraf-statsd.sock")
   service_address = ":8125"
 
+  ## Permissions of the unixgram socket as an octal string, e.g. "777".
+  ## Only used when protocol is "unixgram"; the socket follows the umask
+  ## of the Telegraf process when unset.
+  # socket_mode = ""
+
   ## The following configuration options control when telegraf clears it's cache
   ## of previous values. If set to false, then telegraf will only clear it's
   ## cache when the daemon is restarted.
@@ -300,10 +305,13 @@ to allow. Used when protocol is set to tcp.
 When protocol is unixgram, this is the path of the unix datagram socket. A
 stale socket left at that path is removed when the plugin starts, but any other
 file, or a socket another process is listening on, makes the plugin fail to
-start. The socket is removed again when the plugin stops. Its permissions
-follow the umask of the Telegraf process. Datagrams received over unixgram are counted
-in the `udp_packets_received`, `udp_bytes_received` and `udp_packets_dropped`
-internal statistics.
+start. The socket is removed again when the plugin stops. Datagrams received
+over unixgram are counted in the `udp_packets_received`, `udp_bytes_received`
+and `udp_packets_dropped` internal statistics.
+- **socket_mode** string: Permissions of the unixgram socket as an octal
+string, e.g. "777". Only used when protocol is unixgram. When unset the socket
+follows the umask of the Telegraf process, which usually means only the user
+running Telegraf can write to it.
 - **delete_gauges** boolean: Delete gauges on every collection interval
 - **delete_counters** boolean: Delete counters on every collection interval
 - **delete_sets** boolean: Delete set counters on every collection interval

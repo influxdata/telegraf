@@ -49,6 +49,9 @@ type Statsd struct {
 	// Address & Port to serve from
 	ServiceAddress string `toml:"service_address"`
 
+	// Permissions of the unixgram socket as an octal string
+	SocketMode string `toml:"socket_mode"`
+
 	// Number of messages allowed to queue up in between calls to Gather. If this
 	// fills up, packets will get dropped until the next Gather interval is ran.
 	AllowedPendingMessages int `toml:"allowed_pending_messages"`
@@ -279,8 +282,8 @@ func (s *Statsd) Start(ac telegraf.Accumulator) error {
 	}
 
 	if s.isUnixgram() {
-		if s.ServiceAddress == "" {
-			return errors.New("service_address must be set to a socket path when protocol is unixgram")
+		if err := checkUnixgramAddress(s.ServiceAddress); err != nil {
+			return err
 		}
 		if err := removeStaleSocket(s.ServiceAddress); err != nil {
 			return err
@@ -289,6 +292,18 @@ func (s *Statsd) Start(ac telegraf.Accumulator) error {
 		conn, err := net.ListenUnixgram("unixgram", &net.UnixAddr{Name: s.ServiceAddress, Net: "unixgram"})
 		if err != nil {
 			return err
+		}
+
+		if s.SocketMode != "" {
+			mode, err := strconv.ParseUint(s.SocketMode, 8, 32)
+			if err != nil {
+				conn.Close()
+				return fmt.Errorf("converting socket mode failed: %w", err)
+			}
+			if err := os.Chmod(s.ServiceAddress, os.FileMode(uint32(mode))); err != nil {
+				conn.Close()
+				return fmt.Errorf("changing socket permissions failed: %w", err)
+			}
 		}
 
 		s.Log.Infof("Unixgram listening on %q", s.ServiceAddress)
@@ -1056,6 +1071,19 @@ func (s *Statsd) remember(id string, conn *net.TCPConn) {
 // IsUDP returns true if the protocol is UDP, false otherwise.
 func (s *Statsd) isUDP() bool {
 	return strings.HasPrefix(s.Protocol, "udp")
+}
+
+// checkUnixgramAddress rejects a service_address that is not usable as a unix
+// socket path. The default ":8125" would otherwise silently create a socket
+// file literally named ":8125" in the working directory.
+func checkUnixgramAddress(addr string) error {
+	if addr == "" {
+		return errors.New("service_address must be set to a socket path when protocol is unixgram")
+	}
+	if _, _, err := net.SplitHostPort(addr); err == nil && !strings.ContainsAny(addr, `/\`) {
+		return fmt.Errorf("service_address %q looks like host:port; it must be a socket path when protocol is unixgram", addr)
+	}
+	return nil
 }
 
 // removeStaleSocket removes a unix socket left behind at path by a previous
