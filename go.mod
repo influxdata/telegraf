@@ -14,7 +14,7 @@ require (
 	github.com/99designs/keyring v1.2.2
 	github.com/Azure/azure-event-hubs-go/v3 v3.6.2
 	github.com/Azure/azure-kusto-go/azkustodata v1.2.3
-	github.com/Azure/azure-kusto-go/azkustoingest v1.2.2
+	github.com/Azure/azure-kusto-go/azkustoingest v1.2.3
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.23.3
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.15.0
 	github.com/Azure/azure-sdk-for-go/sdk/messaging/azeventhubs/v2 v2.0.2

@@ -645,8 +645,8 @@ github.com/Azure/azure-event-hubs-go/v3 v3.6.2 h1:7rNj1/iqS/i3mUKokA2n2eMYO72TB7
 github.com/Azure/azure-event-hubs-go/v3 v3.6.2/go.mod h1:n+ocYr9j2JCLYqUqz9eI+lx/TEAtL/g6rZzyTFSuIpc=
 github.com/Azure/azure-kusto-go/azkustodata v1.2.3 h1:ibMvbLBn4tTc1lwgjK7+HmJQnqjmE4ml9NocYNn6FJg=
 github.com/Azure/azure-kusto-go/azkustodata v1.2.3/go.mod h1:nVZRkSE5p7eT2k9jMWSo9Uosi/H6Lig2pxtETP+rX/U=
-github.com/Azure/azure-kusto-go/azkustoingest v1.2.2 h1:+wnhIqoQbEgyyGTWAGbQRkwuNwJFhiCE07CEg/p889s=
-github.com/Azure/azure-kusto-go/azkustoingest v1.2.2/go.mod h1:ttDjL9q6ldGul19cNa0NZf4zXjucNVSoWYrM8aTFQGo=
+github.com/Azure/azure-kusto-go/azkustoingest v1.2.3 h1:hZddNEkCTsOBrwXZPLKS/o8NVGspUQm+lJp48UFvRCQ=
+github.com/Azure/azure-kusto-go/azkustoingest v1.2.3/go.mod h1:CIZGnDgHJ46JNNE+Hk/w7KTv1roMd3modXrdmSNKpTI=
 github.com/Azure/azure-sdk-for-go v68.0.0+incompatible h1:fcYLmCpyNYRnvJbPerq7U0hS+6+I79yEDJBqVNcqUzU=
 github.com/Azure/azure-sdk-for-go v68.0.0+incompatible/go.mod h1:9XXNKU+eRnpl9moKnB4QOLf1HestfXbmab5FXxiDBjc=
 github.com/Azure/azure-sdk-for-go/sdk/azcore v1.23.3 h1:qgnWTiWs1G7AqcKZegFvkJD1bmXJcaDU3uC0ELSgZ5U=
