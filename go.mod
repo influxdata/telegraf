@@ -239,7 +239,7 @@ require (
 	go.opentelemetry.io/proto/otlp/collector/profiles/v1development v0.4.1
 	go.opentelemetry.io/proto/otlp/profiles/v1development v0.4.1
 	go.starlark.net v0.0.0-20261021141710-4f4267fb140d
-	go.step.sm/crypto v0.91.1
+	go.step.sm/crypto v0.92.0
 	go.yaml.in/yaml/v3 v3.0.6
 	golang.org/x/crypto v0.58.0
 	golang.org/x/exp v0.0.0-20261014143641-f0251eb4aa3e
@@ -379,7 +379,7 @@ require (
 	github.com/go-faster/city v1.0.1 // indirect
 	github.com/go-faster/errors v0.7.1 // indirect
 	github.com/go-git/go-billy/v5 v5.9.0 // indirect
-	github.com/go-jose/go-jose/v4 v4.1.6 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.9 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-openapi/errors v0.22.9 // indirect
