@@ -44,6 +44,10 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Use sudo to run the Turbostat executable
   # use_sudo = false
+
+  ## Columns to report as tags instead of fields.
+  ## For example "l3" for the Turbostat "L3" column.
+  # tag_columns = ["package", "node", "die", "core", "cpu", "apic", "x2apic"]
 ```
 
 Allow the Telegraf user to run `turbostat`. Assuming the Telegraf user is
@@ -83,6 +87,10 @@ Turbostat documentation.
 > [!NOTE]
 > Turbostat shows `-` when a column has no value for a row. For example the `L3`
 > column in the summary row on AMD EPYC and Threadripper processors.
+
+By default, the plugin reports the `package`, `node`, `die`, `core`, `cpu`,
+`apic`, and `x2apic` columns as tags, and all other columns as fields. To group
+metrics by L3 cache on AMD processors, add `l3` to the `tag_columns` option.
 
 ## Example Output
 
