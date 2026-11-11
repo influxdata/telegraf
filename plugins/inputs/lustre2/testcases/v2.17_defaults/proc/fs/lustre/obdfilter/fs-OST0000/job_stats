@@ -1,0 +1,39 @@
+job_stats:
+- job_id:          1234.cluster
+  snapshot_time:   1793284778.705180464 secs.nsecs
+  start_time:      1793284768.213445936 secs.nsecs
+  elapsed_time:    10.491734528 secs.nsecs
+  read_bytes:      { samples:           5, unit: bytes, min:     4096, max:  1048576, sum:          4194304, sumsq:      4389490130944, hist: { 4K: 1, 1M: 4 } }
+  write_bytes:     { samples:           2, unit: bytes, min:     1874, max:   659100, sum:           660974, sumsq:       434416321876, hist: { 2K: 1, 1M: 1 } }
+  read:            { samples:           5, unit: usecs, min:     1805, max:     2589, sum:            11492, sumsq:           26803422 }
+  write:           { samples:           2, unit: usecs, min:       10, max:      578, sum:              588, sumsq:             334184 }
+  getattr:         { samples:           0, unit: usecs, min:        0, max:        0, sum:                0, sumsq:                  0 }
+  setattr:         { samples:           1, unit: usecs, min:       40, max:       40, sum:               40, sumsq:               1600 }
+  punch:           { samples:           3, unit: usecs, min:       31, max:     1430, sum:             2226, sumsq:            2679948 }
+  sync:            { samples:           4, unit: usecs, min:        2, max:    91656, sum:           176085, sumsq:        15527052263 }
+  destroy:         { samples:           0, unit: usecs, min:        0, max:        0, sum:                0, sumsq:                  0 }
+  create:          { samples:           0, unit: usecs, min:        0, max:        0, sum:                0, sumsq:                  0 }
+  statfs:          { samples:           6, unit: usecs, min:        0, max:       23, sum:               65, sumsq:                879 }
+  get_info:        { samples:           0, unit: usecs, min:        0, max:        0, sum:                0, sumsq:                  0 }
+  set_info:        { samples:           0, unit: usecs, min:        0, max:        0, sum:                0, sumsq:                  0 }
+  quotactl:        { samples:           2, unit: usecs, min:       65, max:       85, sum:              150, sumsq:              11450 }
+  prealloc:        { samples:           0, unit: usecs, min:        0, max:        0, sum:                0, sumsq:                  0 }
+- job_id:          "1000:1000:dd"
+  snapshot_time:   1793289460.863191908 secs.nsecs
+  start_time:      1793284774.487200892 secs.nsecs
+  elapsed_time:    4686.375991016 secs.nsecs
+  read_bytes:      { samples:        2061, unit: bytes, min:     4096, max:  1048576, sum:       1097785344, sumsq:    930136673222656, hist: { 4K: 14, 8K: 3, 16K: 11, 32K: 289, 64K: 10, 128K: 32, 256K: 786, 512K: 93, 1M: 823 } }
+  write_bytes:     { samples:           0, unit: bytes, min:        0, max:        0, sum:                0, sumsq:                  0, hist: {  } }
+  read:            { samples:        2061, unit: usecs, min:       20, max:  1629697, sum:        153570055, sumsq:     62555940684125 }
+  write:           { samples:           0, unit: usecs, min:        0, max:        0, sum:                0, sumsq:                  0 }
+  getattr:         { samples:           0, unit: usecs, min:        0, max:        0, sum:                0, sumsq:                  0 }
+  setattr:         { samples:           0, unit: usecs, min:        0, max:        0, sum:                0, sumsq:                  0 }
+  punch:           { samples:           0, unit: usecs, min:        0, max:        0, sum:                0, sumsq:                  0 }
+  sync:            { samples:           0, unit: usecs, min:        0, max:        0, sum:                0, sumsq:                  0 }
+  destroy:         { samples:           0, unit: usecs, min:        0, max:        0, sum:                0, sumsq:                  0 }
+  create:          { samples:           0, unit: usecs, min:        0, max:        0, sum:                0, sumsq:                  0 }
+  statfs:          { samples:           0, unit: usecs, min:        0, max:        0, sum:                0, sumsq:                  0 }
+  get_info:        { samples:           0, unit: usecs, min:        0, max:        0, sum:                0, sumsq:                  0 }
+  set_info:        { samples:           0, unit: usecs, min:        0, max:        0, sum:                0, sumsq:                  0 }
+  quotactl:        { samples:           0, unit: usecs, min:        0, max:        0, sum:                0, sumsq:                  0 }
+  prealloc:        { samples:           0, unit: usecs, min:        0, max:        0, sum:                0, sumsq:                  0 }
