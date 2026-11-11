@@ -35,9 +35,29 @@ func TestCreateColumn(t *testing.T) {
 		{in: "UMHz1.0", out: column{name: "uncore_frequency_mhz_1_0"}},
 		{in: "Time_Of_Day_Seconds", out: column{name: "time_of_day_seconds", isTime: true}},
 	}
+	plugin := &Turbostat{}
+	require.NoError(t, plugin.Init())
 	for _, tt := range tests {
 		t.Run(tt.in, func(t *testing.T) {
-			require.Equal(t, tt.out, createColumn(tt.in))
+			require.Equal(t, tt.out, plugin.createColumn(tt.in))
+		})
+	}
+}
+
+func TestCreateColumnWithTagColumns(t *testing.T) {
+	tests := []struct {
+		in  string
+		out column
+	}{
+		{in: "L3", out: column{name: "l3", isTag: true}},
+		{in: "Core", out: column{name: "core"}},
+		{in: "Time_Of_Day_Seconds", out: column{name: "time_of_day_seconds", isTime: true}},
+	}
+	plugin := &Turbostat{TagColumns: []string{"l3", "time_of_day_seconds"}}
+	require.NoError(t, plugin.Init())
+	for _, tt := range tests {
+		t.Run(tt.in, func(t *testing.T) {
+			require.Equal(t, tt.out, plugin.createColumn(tt.in))
 		})
 	}
 }
