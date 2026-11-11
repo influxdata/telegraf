@@ -297,12 +297,14 @@
   a duration (e.g. `182h+39m+24.879s`). The value was previously reported in
   seconds and is now reported in hours. Please check your queries and
   dashboards for the mentioned field.
-- PR [#19549](https://github.com/influxdata/telegraf/pull/19549) updates Go to v1.27.0
-  introducing `SSL_CERT_FILE` and `SSL_CERT_DIR` environment variables allowing to
-  override the system default locations for the SSL certificates. If you have set these
-  and see error messages like `tls: failed to verify certificate: x509: certificate signed by unknown authority`,
-  please consider correcting the environment variables or unset them for Telegraf to
-  use the system's default certificate location.
+- PR [#19549](https://github.com/influxdata/telegraf/pull/19549) updates Go to
+  v1.27.0 which now also honors the `SSL_CERT_FILE` and `SSL_CERT_DIR`
+  environment variables on Windows and macOS. If set, Telegraf loads the
+  certificates from the given locations and verifies with Go's own verifier
+  instead of the platform certificate store. If you see errors like
+  `tls: failed to verify certificate: x509: certificate signed by unknown authority`,
+  please correct or unset those variables, or set
+  `GODEBUG=x509sslcertoverrideplatform=0` to restore the previous behavior.
 - Removal of deprecated plugins:
   - [#19123](https://github.com/influxdata/telegraf/pull/19123) `outputs.amon` Remove deprecated plugin
   - [#19124](https://github.com/influxdata/telegraf/pull/19124) `inputs.sflow` Remove deprecated plugin
