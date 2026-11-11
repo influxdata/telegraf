@@ -19,6 +19,9 @@ const (
 	unknown metricsVersion = iota
 	v1
 	v2
+	// Pool-wide statistics which are independent of the version of the other
+	// pool metrics
+	poolIOStats
 
 	// Procstat type-column values according to
 	// https://github.com/openzfs/zfs/blob/master/include/os/linux/spl/sys/kstat.h#L54
@@ -52,16 +55,22 @@ func (z *Zfs) Init() error {
 		// vdev_cache_stats is deprecated
 		// xuio_stats are ignored because as of Sep-2016, no known
 		// consumers of xuio exist on Linux
+		// Newer ZFS versions provide dbufstats instead of dbufcachestats
 		z.KstatMetrics = []string{
 			"abdstats",
 			"arcstats",
+			"brtstats",
 			"dnodestats",
 			"dbufcachestats",
+			"dbufstats",
 			"dmu_tx",
 			"fm",
+			"metaslab_stats",
 			"vdev_mirror_stats",
 			"zfetchstats",
 			"zil",
+			"zio_stats",
+			"zstd",
 		}
 	}
 
@@ -72,8 +81,9 @@ func (z *Zfs) Init() error {
 	z.KstatMetrics = slices.DeleteFunc(z.KstatMetrics, func(m string) bool { return m == "" })
 	for _, m := range z.KstatMetrics {
 		switch m {
-		case "abdstats", "arcstats", "dnodestats", "dbufcachestats", "dmu_tx",
-			"fm", "vdev_mirror_stats", "zfetchstats", "zil":
+		case "abdstats", "arcstats", "brtstats", "dnodestats", "dbufcachestats",
+			"dbufstats", "dmu_tx", "fm", "metaslab_stats", "vdev_mirror_stats",
+			"zfetchstats", "zil", "zio_stats", "zstd":
 			// Do nothing, those are valid
 		default:
 			return fmt.Errorf("invalid kstat metric %q", m)
@@ -128,12 +138,26 @@ func getPools(path string) ([]poolInfo, error) {
 		return nil, err
 	}
 
-	pools := make([]poolInfo, 0, len(poolsDirs))
+	// Those files also exist for pools without any dataset being available
+	ioStatsFiles, err := filepath.Glob(path + "/*/iostats")
+	if err != nil {
+		return nil, err
+	}
+
+	pools := make([]poolInfo, 0, len(poolsDirs)+len(ioStatsFiles))
 	for _, poolDir := range poolsDirs {
 		poolDirSplit := strings.Split(poolDir, "/")
 		pool := poolDirSplit[len(poolDirSplit)-2]
 		pools = append(pools, poolInfo{name: pool, ioFilename: poolDir, version: version})
 	}
+	for _, fn := range ioStatsFiles {
+		pools = append(pools, poolInfo{name: filepath.Base(filepath.Dir(fn)), ioFilename: fn, version: poolIOStats})
+	}
+
+	// Keep the order of the pools independent of the available files
+	slices.SortStableFunc(pools, func(a, b poolInfo) int {
+		return strings.Compare(a.name, b.name)
+	})
 
 	return pools, nil
 }
@@ -191,6 +215,8 @@ func (z *Zfs) gatherPoolStats(pool poolInfo, acc telegraf.Accumulator) error {
 		fields, gatherErr = gatherV1(lines)
 	case v2:
 		fields, gatherErr = z.gatherV2(lines, tags)
+	case poolIOStats:
+		fields, gatherErr = z.gatherIOStats(lines)
 	case unknown:
 		return errors.New("unknown metrics version detected")
 	}
@@ -269,6 +295,20 @@ func (z *Zfs) gatherV2(lines []string, tags map[string]string) (map[string]any, 
 	}
 	tags["dataset"] = dsn
 	delete(fields, "dataset_name")
+
+	return fields, nil
+}
+
+func (z *Zfs) gatherIOStats(lines []string) (map[string]any, error) {
+	data, err := z.processProcFile(lines)
+	if err != nil {
+		return nil, err
+	}
+
+	fields := make(map[string]any, len(data))
+	for k, v := range data {
+		fields["iostats_"+k] = v
+	}
 
 	return fields, nil
 }

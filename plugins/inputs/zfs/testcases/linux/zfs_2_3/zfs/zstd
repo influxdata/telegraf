@@ -1,0 +1,19 @@
+7 1 0x01 17 4624 25091040213 94789678409603
+name                            type data
+alloc_fail                      4    0
+alloc_fallback                  4    0
+compress_alloc_fail             4    0
+decompress_alloc_fail           4    0
+compress_level_invalid          4    0
+decompress_level_invalid        4    0
+decompress_header_invalid       4    0
+compress_failed                 4    0
+decompress_failed               4    0
+lz4pass_allowed                 4    7111
+lz4pass_rejected                4    17008
+zstdpass_allowed                4    176
+zstdpass_rejected               4    16832
+passignored                     4    11561
+passignored_size                4    11561
+buffers                         4    0
+size                            4    0
