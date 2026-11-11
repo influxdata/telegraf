@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -19,6 +20,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
@@ -42,6 +44,7 @@ type Elasticsearch struct {
 	HealthCheckTimeout  config.Duration `toml:"health_check_timeout"`
 	IndexName           string          `toml:"index_name"`
 	IndexTemplate       map[string]any  `toml:"template_index_settings"`
+	LocalAddress        string          `toml:"local_address"`
 	ManageTemplate      bool            `toml:"manage_template"`
 	OverwriteTemplate   bool            `toml:"overwrite_template"`
 	UseOpTypeCreate     bool            `toml:"use_optype_create"`
@@ -136,6 +139,14 @@ func (a *Elasticsearch) Connect() error {
 	}
 	transport := &http.Transport{
 		TLSClientConfig: tlsCfg,
+	}
+	if a.LocalAddress != "" {
+		localAddr, err := internal.ResolveLocalTCPAddress(a.LocalAddress)
+		if err != nil {
+			return err
+		}
+		dialer := &net.Dialer{LocalAddr: localAddr}
+		transport.DialContext = dialer.DialContext
 	}
 
 	httpclient := &http.Client{
