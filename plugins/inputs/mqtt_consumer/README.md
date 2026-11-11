@@ -132,14 +132,8 @@ to use them.
   ## reconnecting or restarting without a change in client ID.
   # persistent_session = false
 
-  ## Omit retained messages.
-  ## If this value is set to true, retained messages are not sent to the output
-  ## plug-ins. This prevents duplicate messages from being saved when Telegraf
-  ## is restarted. However, this also prevents the last state from being
-  ## received when Telegraf is first started. This only affects messages that
-  ## were sent by the broker as retained messages. Messages received during an
-  ## active subscription are still processed as usual, regardless if the
-  ## retained flag is set or not.
+  ## Omit retained messages from collection to prevents duplicate metrics from
+  ## being created when Telegraf restarts
   # omit_retained = false
 
   ## If unset, a random client ID will be generated.
