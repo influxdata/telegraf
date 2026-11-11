@@ -2,6 +2,10 @@ package cloudwatch
 
 import (
 	"math"
+	"net"
+	"net/http"
+	"net/http/httptest"
+	"runtime"
 	"testing"
 	"time"
 
@@ -11,6 +15,8 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	common_aws "github.com/influxdata/telegraf/plugins/common/aws"
+	common_http "github.com/influxdata/telegraf/plugins/common/http"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -382,4 +388,46 @@ func TestPartitionDatums(t *testing.T) {
 			require.Equal(t, tt.expected, partitionDatums(tt.input, partitionSize))
 		})
 	}
+}
+
+func TestLocalAddress(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Binding to 127.0.0.2 requires a loopback alias outside of Linux")
+	}
+
+	remote := make(chan string, 1)
+	ts := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		select {
+		case remote <- r.RemoteAddr:
+		default:
+		}
+	}))
+	defer ts.Close()
+
+	plugin := &CloudWatch{
+		Namespace: "telegraf",
+		CredentialConfig: common_aws.CredentialConfig{
+			Region:    "us-east-1",
+			AccessKey: "dummy",
+			SecretKey: "dummy",
+		},
+		HTTPClientConfig: common_http.HTTPClientConfig{
+			TransportConfig: common_http.TransportConfig{
+				LocalAddress: "127.0.0.2",
+			},
+		},
+		Log: testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+	defer plugin.Close()
+
+	// Use the client handed to the CloudWatch service
+	resp, err := plugin.client.Get(ts.URL)
+	require.NoError(t, err)
+	resp.Body.Close()
+
+	host, _, err := net.SplitHostPort(<-remote)
+	require.NoError(t, err)
+	require.Equal(t, "127.0.0.2", host)
 }
