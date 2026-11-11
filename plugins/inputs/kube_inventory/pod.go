@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"maps"
+	"slices"
 	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -30,7 +31,10 @@ func collectPods(ctx context.Context, acc telegraf.Accumulator, ki *KubernetesIn
 	}
 
 	var deployments map[string]string
-	if ki.PodWorkloadTags && hasReplicaSetOwner(listRef.Items) {
+	if ki.PodWorkloadTags && slices.ContainsFunc(listRef.Items, func(pod corev1.Pod) bool {
+		owner := metav1.GetControllerOf(&pod)
+		return owner != nil && owner.Kind == "ReplicaSet"
+	}) {
 		replicaSets, err := ki.client.getReplicaSets(ctx)
 		if err != nil {
 			acc.AddError(fmt.Errorf("listing replicasets failed: %w", err))
@@ -222,16 +226,6 @@ func replicaSetDeployments(list *appsv1.ReplicaSetList) map[string]string {
 		}
 	}
 	return deployments
-}
-
-// hasReplicaSetOwner lets collectPods skip listing replicasets for clusters with no Deployment-managed pods.
-func hasReplicaSetOwner(pods []corev1.Pod) bool {
-	for i := range pods {
-		if owner := metav1.GetControllerOf(&pods[i]); owner != nil && owner.Kind == "ReplicaSet" {
-			return true
-		}
-	}
-	return false
 }
 
 func podWorkloadTags(p *corev1.Pod, deployments map[string]string) map[string]string {
