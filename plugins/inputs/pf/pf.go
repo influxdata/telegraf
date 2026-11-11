@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/common/sudo"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -203,9 +204,10 @@ func (pf *PF) buildPfctlCmd() (string, []string, error) {
 	args := []string{"-s", "info"}
 	if pf.UseSudo {
 		args = append([]string{cmd}, args...)
-		cmd, err = execLookPath("sudo")
+		bin := sudo.Binary()
+		cmd, err = execLookPath(bin)
 		if err != nil {
-			return "", nil, fmt.Errorf("can't locate sudo: %w", err)
+			return "", nil, fmt.Errorf("can't locate %s: %w", bin, err)
 		}
 	}
 	return cmd, args, nil

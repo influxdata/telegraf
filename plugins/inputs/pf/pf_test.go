@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/influxdata/telegraf/plugins/common/sudo"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -31,7 +32,7 @@ func TestPfctlInvocation(t *testing.T) {
 		// 1: with sudo
 		{
 			config: PF{UseSudo: true},
-			cmd:    "fakesudo",
+			cmd:    "fake" + sudo.Binary(),
 			args:   []string{"fakepfctl", "-s", "info"},
 		},
 	}
