@@ -282,6 +282,21 @@ The option is similar to the
 [retries](https://kafka.apache.org/documentation/#producerconfigs) Producer
 option in the Java Kafka Producer.
 
+### Partial writes
+
+When Kafka reports failures for individual messages, successfully delivered
+metrics are removed from the buffer and only failed metrics are retried.
+Messages rejected for their size or timestamp, messages with headers unsupported
+by the configured Kafka version, and metrics that cannot be serialized are
+discarded individually. Other metrics in the batch are not discarded with them.
+If the producer cannot report individual results, all submitted metrics remain
+buffered; retrying them may produce duplicates.
+
+Unknown-topic-or-partition errors are retried because they can be temporary.
+Repeated failures can still fill a batch and eventually the buffer, preventing
+newer metrics from being sent. Correct the topic configuration or restore the
+missing topic or partition to let these metrics drain.
+
 ### Timeouts
 
 The `net_dial_timeout`, `net_read_timeout`, `net_write_timeout` and

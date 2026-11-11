@@ -26,7 +26,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 # This plugin ONLY supports non-Windows
 [[inputs.processes]]
   ## Use sudo to run ps command on *BSD systems. Linux systems will read
-  ## /proc, so this does not apply there.
+  ## /proc, so this does not apply there. On OpenBSD, doas is used instead of sudo.
   # use_sudo = false
 ```
 

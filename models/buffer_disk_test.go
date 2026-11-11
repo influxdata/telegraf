@@ -1,6 +1,7 @@
 package models
 
 import (
+	"os"
 	"path/filepath"
 	"sync"
 	"testing"
@@ -172,6 +173,53 @@ func TestDiskBufferEmptyClose(t *testing.T) {
 
 	// Read the complete set of metrics such that the buffer is empty again
 	tx = reopened.BeginTransaction(5)
+	testutil.RequireMetricsEqual(t, []telegraf.Metric{m}, tx.Batch)
+	tx.AcceptAll()
+	reopened.EndTransaction(tx)
+}
+
+func TestDiskBufferEmptyCloseRemovesDirectory(t *testing.T) {
+	tmpdir := t.TempDir()
+
+	buf, err := NewBuffer("test", "id123", "", 0, "disk_write_through", tmpdir, true)
+	require.NoError(t, err)
+	require.DirExists(t, filepath.Join(tmpdir, "id123"))
+
+	// Write and remove a metric so the buffer is empty again
+	buf.Add(metric.New("test", map[string]string{}, map[string]any{"value": 1}, time.Now()))
+	tx := buf.BeginTransaction(5)
+	tx.AcceptAll()
+	buf.EndTransaction(tx)
+	require.Zero(t, buf.Len())
+
+	// Closing the empty buffer should remove its directory
+	require.NoError(t, buf.Close())
+	require.NoDirExists(t, filepath.Join(tmpdir, "id123"))
+
+	entries, err := os.ReadDir(tmpdir)
+	require.NoError(t, err)
+	require.Empty(t, entries)
+}
+
+func TestDiskBufferNonEmptyCloseKeepsMetrics(t *testing.T) {
+	tmpdir := t.TempDir()
+
+	buf, err := NewBuffer("test", "id123", "", 0, "disk_write_through", tmpdir, true)
+	require.NoError(t, err)
+
+	m := metric.New("test", map[string]string{}, map[string]any{"value": 1}, time.Now())
+	buf.Add(m)
+
+	// Closing a buffer that still holds metrics must keep its directory
+	require.NoError(t, buf.Close())
+	require.DirExists(t, filepath.Join(tmpdir, "id123"))
+
+	// The metric should still be there after reopening the buffer
+	reopened, err := NewBuffer("test", "id123", "", 0, "disk_write_through", tmpdir, true)
+	require.NoError(t, err)
+	defer reopened.Close()
+
+	tx := reopened.BeginTransaction(5)
 	testutil.RequireMetricsEqual(t, []telegraf.Metric{m}, tx.Batch)
 	tx.AcceptAll()
 	reopened.EndTransaction(tx)

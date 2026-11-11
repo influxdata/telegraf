@@ -209,8 +209,10 @@ func (d *Docker) Start(telegraf.Accumulator) error {
 		return fmt.Errorf("failed to parse client version: %w", err)
 	}
 	if version.LessThan(semver.New(1, 23, 0, "", "")) {
+		d.Stop()
 		return fmt.Errorf("unsupported API version (%s), upgrade to docker engine 1.12+", version)
 	} else if version.LessThan(semver.New(1, 42, 0, "", "")) && len(d.StorageObjects) > 0 {
+		d.Stop()
 		return fmt.Errorf("unsupported API version (%s) for disk usage, upgrade to docker engine 23.0+", version)
 	}
 

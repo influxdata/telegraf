@@ -32,8 +32,9 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## For FreeBSD, the default is:
   # kstatMetrics = ["arcstats", "zfetchstats", "vdev_cache_stats"]
   ## For Linux, the default is:
-  # kstatMetrics = ["abdstats", "arcstats", "dnodestats", "dbufcachestats",
-  #     "dmu_tx", "fm", "vdev_mirror_stats", "zfetchstats", "zil"]
+  # kstatMetrics = ["abdstats", "arcstats", "brtstats", "dnodestats",
+  #     "dbufcachestats", "dbufstats", "dmu_tx", "fm", "metaslab_stats",
+  #     "vdev_mirror_stats", "zfetchstats", "zil", "zio_stats", "zstd"]
 
   ## By default, don't gather zpool stats
   # poolMetrics = false
@@ -335,6 +336,46 @@ For ZFS >= 2.2.x the following additional fields are available:
   - zil_itx_metaslab_slog_write (integer, bytes)
   - zil_itx_metaslab_slog_alloc (integer, bytes)
 
+Newer ZFS versions report additional fields, as of ZFS 2.3.x:
+
+- additional fields for ZFS 2.3.x
+  - zil_commit_error_count (integer, count)
+  - zil_commit_stall_count (integer, count)
+  - zil_commit_suspend_count (integer, count)
+  - zil_commit_crash_count (integer, count)
+
+The fields above are reported per dataset for ZFS >= 2.1.x. Additionally, the
+pool-wide statistics below are reported where available, without a `dataset`
+tag. The available fields depend on the ZFS version.
+
+- zfs_pool
+  - iostats_trim_extents_written (integer, count)
+  - iostats_trim_bytes_written (integer, bytes)
+  - iostats_trim_extents_skipped (integer, count)
+  - iostats_trim_bytes_skipped (integer, bytes)
+  - iostats_trim_extents_failed (integer, count)
+  - iostats_trim_bytes_failed (integer, bytes)
+  - iostats_autotrim_extents_written (integer, count)
+  - iostats_autotrim_bytes_written (integer, bytes)
+  - iostats_autotrim_extents_skipped (integer, count)
+  - iostats_autotrim_bytes_skipped (integer, bytes)
+  - iostats_autotrim_extents_failed (integer, count)
+  - iostats_autotrim_bytes_failed (integer, bytes)
+  - iostats_simple_trim_extents_written (integer, count)
+  - iostats_simple_trim_bytes_written (integer, bytes)
+  - iostats_simple_trim_extents_skipped (integer, count)
+  - iostats_simple_trim_bytes_skipped (integer, bytes)
+  - iostats_simple_trim_extents_failed (integer, count)
+  - iostats_simple_trim_bytes_failed (integer, bytes)
+  - iostats_arc_read_count (integer, count)
+  - iostats_arc_read_bytes (integer, bytes)
+  - iostats_arc_write_count (integer, count)
+  - iostats_arc_write_bytes (integer, bytes)
+  - iostats_direct_read_count (integer, count)
+  - iostats_direct_read_bytes (integer, bytes)
+  - iostats_direct_write_count (integer, count)
+  - iostats_direct_write_bytes (integer, bytes)
+
 On FreeBSD:
 
 - zfs_pool
@@ -376,6 +417,84 @@ dirty data growing too large
 - `dmu_tx_memory_reserve` counts when memory footprint of the txg exceeds the ARC
 size
 
+### BRT Stats (Linux Only)
+
+Statistics of the block reference table
+
+- `brtstats_addref_entry_not_on_disk`
+- `brtstats_addref_entry_on_disk`
+- `brtstats_decref_entry_in_memory`
+- `brtstats_decref_entry_loaded_from_disk`
+- `brtstats_decref_entry_not_in_memory`
+- `brtstats_decref_entry_read_lost_race`
+- `brtstats_decref_entry_still_referenced`
+- `brtstats_decref_free_data_later`
+- `brtstats_decref_free_data_now`
+- `brtstats_decref_no_entry`
+
+### DBUF Stats (Linux Only)
+
+Statistics of the DMU buffer cache and its hash table. Newer ZFS versions report
+those as `dbufstats` instead of `dbufcachestats`. The `N` in the field names
+stands for the indirection levels 0 to 11.
+
+- `dbufstats_cache_count`
+- `dbufstats_cache_size_bytes`
+- `dbufstats_cache_size_bytes_max`
+- `dbufstats_cache_target_bytes`
+- `dbufstats_cache_lowater_bytes`
+- `dbufstats_cache_hiwater_bytes`
+- `dbufstats_cache_total_evicts`
+- `dbufstats_cache_level_N`
+- `dbufstats_cache_level_N_bytes`
+- `dbufstats_hash_hits`
+- `dbufstats_hash_misses`
+- `dbufstats_hash_collisions`
+- `dbufstats_hash_elements`
+- `dbufstats_hash_chains`
+- `dbufstats_hash_chain_max`
+- `dbufstats_hash_insert_race`
+- `dbufstats_hash_table_count`
+- `dbufstats_hash_mutex_count`
+- `dbufstats_metadata_cache_count`
+- `dbufstats_metadata_cache_size_bytes`
+- `dbufstats_metadata_cache_size_bytes_max`
+- `dbufstats_metadata_cache_overflow`
+
+### Metaslab Stats (Linux Only)
+
+- `metaslab_stats_trace_over_limit`
+- `metaslab_stats_reload_tree`
+- `metaslab_stats_too_many_tries`
+- `metaslab_stats_try_hard`
+
+### ZIO Stats (Linux Only)
+
+- `zio_stats_total_allocations`
+- `zio_stats_alloc_class_fallbacks`
+- `zio_stats_gang_writes`
+- `zio_stats_gang_multilevel`
+
+### ZSTD Stats (Linux Only)
+
+- `zstd_alloc_fail`
+- `zstd_alloc_fallback`
+- `zstd_compress_alloc_fail`
+- `zstd_decompress_alloc_fail`
+- `zstd_compress_level_invalid`
+- `zstd_decompress_level_invalid`
+- `zstd_decompress_header_invalid`
+- `zstd_compress_failed`
+- `zstd_decompress_failed`
+- `zstd_lz4pass_allowed`
+- `zstd_lz4pass_rejected`
+- `zstd_zstdpass_allowed`
+- `zstd_zstdpass_rejected`
+- `zstd_passignored`
+- `zstd_passignored_size`
+- `zstd_buffers`
+- `zstd_size`
+
 ### Fault Management Ereport errors (Linux Only)
 
 - `fm_erpt-dropped` counts when an error report cannot be created (eg available
@@ -390,7 +509,7 @@ memory is too low)
 - Pool metrics (`zfs_pool`) will have the following tag:
   - pool - with the name of the pool which the metrics are for.
   - health - the health status of the pool. (FreeBSD only)
-  - dataset - ZFS >= 2.1.x only. (Linux only)
+  - dataset - ZFS >= 2.1.x only, not set for `iostats_*`. (Linux only)
 
 - Dataset metrics (`zfs_dataset`) will have the following tag:
   - dataset - with the name of the dataset which the metrics are for.

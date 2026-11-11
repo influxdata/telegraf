@@ -8,13 +8,14 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/common/sudo"
 )
 
 func (s *Smartctl) scanDevice(acc telegraf.Accumulator, deviceName, deviceType string) error {
 	args := []string{"--json", "--all", deviceName, "--device", deviceType, "--nocheck=" + s.NoCheck}
 	cmd := execCommand(s.Path, args...)
 	if s.UseSudo {
-		cmd = execCommand("sudo", append([]string{"-n", s.Path}, args...)...)
+		cmd = execCommand(sudo.Binary(), append([]string{"-n", s.Path}, args...)...)
 	}
 
 	var device smartctlDeviceJSON

@@ -43,6 +43,20 @@ func TestSetIfUsed(t *testing.T) {
 			expected: map[string]any{"pcie_link_width_current": int64(16)},
 		},
 		{
+			name:     "decimal int value is truncated not dropped",
+			datatype: "int",
+			key:      "temperature_gpu",
+			value:    "30.72 C",
+			expected: map[string]any{"temperature_gpu": int64(30)},
+		},
+		{
+			name:     "negative decimal int value is truncated not dropped",
+			datatype: "int",
+			key:      "temperature_max_tlimit_threshold",
+			value:    "-5.5 C",
+			expected: map[string]any{"temperature_max_tlimit_threshold": int64(-5)},
+		},
+		{
 			name:     "float",
 			datatype: "float",
 			key:      "power_draw",

@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -29,6 +31,7 @@ type NewRelic struct {
 	Timeout      config.Duration `toml:"timeout"`
 	HTTPProxy    string          `toml:"http_proxy"`
 	MetricURL    string          `toml:"metric_url"`
+	LocalAddress string          `toml:"local_address"`
 
 	harvestor   *telemetry.Harvester
 	dc          *cumulative.DeltaCalculator
@@ -159,18 +162,30 @@ func init() {
 }
 
 func (nr *NewRelic) initClient() error {
-	if nr.HTTPProxy == "" {
+	if nr.HTTPProxy == "" && nr.LocalAddress == "" {
 		nr.client = http.Client{}
 		return nil
 	}
 
-	proxyURL, err := url.Parse(nr.HTTPProxy)
-	if err != nil {
-		return err
+	transport := &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
 	}
 
-	transport := &http.Transport{
-		Proxy: http.ProxyURL(proxyURL),
+	if nr.HTTPProxy != "" {
+		proxyURL, err := url.Parse(nr.HTTPProxy)
+		if err != nil {
+			return err
+		}
+		transport.Proxy = http.ProxyURL(proxyURL)
+	}
+
+	if nr.LocalAddress != "" {
+		localAddr, err := internal.ResolveLocalTCPAddress(nr.LocalAddress)
+		if err != nil {
+			return err
+		}
+		dialer := &net.Dialer{LocalAddr: localAddr}
+		transport.DialContext = dialer.DialContext
 	}
 
 	nr.client = http.Client{
