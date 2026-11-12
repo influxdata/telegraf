@@ -133,14 +133,14 @@ func (m *Ipmi) parse(acc telegraf.Accumulator, server, sensor string) error {
 		opts = conn.options()
 	}
 
-	opts = append(opts, command...)
-
 	if m.UseCache {
 		cacheFile := filepath.Join(m.CachePath, server+"_ipmi_cache")
 		_, err := os.Stat(cacheFile)
 		if os.IsNotExist(err) {
-			dumpOpts := opts
 			// init cache file
+			dumpOpts := make([]string, 0, len(opts)+len(command)+2)
+			dumpOpts = append(dumpOpts, opts...)
+			dumpOpts = append(dumpOpts, command...)
 			dumpOpts = append(dumpOpts, "dump", cacheFile)
 			name := m.Path
 			if m.UseSudo {
@@ -154,8 +154,12 @@ func (m *Ipmi) parse(acc telegraf.Accumulator, server, sensor string) error {
 				return fmt.Errorf("failed to run command %q: %w - %s", strings.Join(sanitizeIPMICmd(cmd.Args), " "), err, string(out))
 			}
 		}
+		// -S is a general option of ipmitool and has to come before the
+		// command, ipmitool builds without GNU getopt reject it otherwise
 		opts = append(opts, "-S", cacheFile)
 	}
+	opts = append(opts, command...)
+
 	if m.MetricVersion == 2 && sensor == "sdr" {
 		opts = append(opts, "elist")
 	}
