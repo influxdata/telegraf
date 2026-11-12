@@ -23,6 +23,7 @@ func TestBasic(t *testing.T) {
 		InsightsKey:  "12345",
 		Timeout:      config.Duration(time.Second * 5),
 	}
+	require.NoError(t, nr.Init())
 
 	err := nr.Connect()
 	require.NoError(t, err)
@@ -133,33 +134,46 @@ func TestNewRelic_Write(t *testing.T) {
 	}
 }
 
+func TestInitMissingInsightsKey(t *testing.T) {
+	nr := &NewRelic{
+		MetricPrefix: "prefix",
+	}
+	require.ErrorContains(t, nr.Init(), "'insights_key' is a required")
+}
+
+func TestInitKeepsDefaultTransportSettings(t *testing.T) {
+	nr := &NewRelic{
+		InsightsKey:  "12345",
+		HTTPProxy:    "https://my.proxy",
+		LocalAddress: "127.0.0.1",
+	}
+	require.NoError(t, nr.Init())
+
+	transport, ok := nr.client.Transport.(*http.Transport)
+	require.True(t, ok)
+	defaults := http.DefaultTransport.(*http.Transport)
+	require.Equal(t, defaults.IdleConnTimeout, transport.IdleConnTimeout)
+	require.Equal(t, defaults.TLSHandshakeTimeout, transport.TLSHandshakeTimeout)
+	require.True(t, transport.ForceAttemptHTTP2)
+}
+
 func TestNewRelic_Connect(t *testing.T) {
 	tests := []struct {
 		name     string
 		newrelic *NewRelic
-		wantErr  bool
 	}{
-		{
-			name: "Test: No Insights key",
-			newrelic: &NewRelic{
-				MetricPrefix: "prefix",
-			},
-			wantErr: true,
-		},
 		{
 			name: "Test: Insights key",
 			newrelic: &NewRelic{
 				InsightsKey:  "12312133",
 				MetricPrefix: "prefix",
 			},
-			wantErr: false,
 		},
 		{
 			name: "Test: Only Insights key",
 			newrelic: &NewRelic{
 				InsightsKey: "12312133",
 			},
-			wantErr: false,
 		},
 		{
 			name: "Test: Insights key and Timeout",
@@ -167,7 +181,6 @@ func TestNewRelic_Connect(t *testing.T) {
 				InsightsKey: "12312133",
 				Timeout:     config.Duration(time.Second * 5),
 			},
-			wantErr: false,
 		},
 		{
 			name: "Test: HTTP Proxy",
@@ -175,7 +188,6 @@ func TestNewRelic_Connect(t *testing.T) {
 				InsightsKey: "12121212",
 				HTTPProxy:   "https://my.proxy",
 			},
-			wantErr: false,
 		},
 		{
 			name: "Test: Metric URL ",
@@ -183,15 +195,13 @@ func TestNewRelic_Connect(t *testing.T) {
 				InsightsKey: "12121212",
 				MetricURL:   "https://test.nr.com",
 			},
-			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			nr := tt.newrelic
-			if err := nr.Connect(); (err != nil) != tt.wantErr {
-				t.Errorf("NewRelic.Connect() error = %v, wantErr %v", err, tt.wantErr)
-			}
+			require.NoError(t, nr.Init())
+			require.NoError(t, nr.Connect())
 		})
 	}
 }
@@ -217,6 +227,7 @@ func TestLocalAddress(t *testing.T) {
 		MetricURL:    ts.URL,
 		LocalAddress: "127.0.0.2",
 	}
+	require.NoError(t, nr.Init())
 	require.NoError(t, nr.Connect())
 	require.NoError(t, nr.Write(testutil.MockMetrics()))
 
@@ -230,5 +241,5 @@ func TestInvalidLocalAddress(t *testing.T) {
 		InsightsKey:  "12345",
 		LocalAddress: "::1",
 	}
-	require.ErrorContains(t, nr.Connect(), "invalid local address")
+	require.ErrorContains(t, nr.Init(), "invalid local address")
 }
