@@ -5,8 +5,13 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
+	"time"
 
+	"github.com/gopcua/opcua/ua"
 	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestGenerateCertEmptyPaths(t *testing.T) {
@@ -100,4 +105,78 @@ func TestGenerateCertDifferentKeySize(t *testing.T) {
 	// Verify files were created
 	require.FileExists(t, certPath)
 	require.FileExists(t, keyPath)
+}
+
+func TestGenerateClientOptsPrefersUserTokenMatchingChannelPolicy(t *testing.T) {
+	dir := t.TempDir()
+	certFile := filepath.Join(dir, "cert.pem")
+	keyFile := filepath.Join(dir, "key.pem")
+	_, _, err := generateCert("urn:telegraf:gopcua:client", 2048, certFile, keyFile, time.Hour)
+	require.NoError(t, err)
+
+	tests := []struct {
+		name     string
+		tokens   []*ua.UserTokenPolicy
+		expected []string
+	}{
+		{
+			name: "legacy policy listed first",
+			tokens: []*ua.UserTokenPolicy{
+				{PolicyID: "anonymous", TokenType: ua.UserTokenTypeAnonymous},
+				{PolicyID: "user_basic128rsa15", TokenType: ua.UserTokenTypeUserName, SecurityPolicyURI: ua.SecurityPolicyURIPrefix + "Basic128Rsa15"},
+				{PolicyID: "user_basic256", TokenType: ua.UserTokenTypeUserName, SecurityPolicyURI: ua.SecurityPolicyURIPrefix + "Basic256"},
+				{PolicyID: "user_basic256sha256", TokenType: ua.UserTokenTypeUserName, SecurityPolicyURI: ua.SecurityPolicyURIPrefix + "Basic256Sha256"},
+			},
+			expected: []string{"user_basic256sha256", "anonymous", "user_basic128rsa15", "user_basic256"},
+		},
+		{
+			name: "empty token policy inherits the channel policy",
+			tokens: []*ua.UserTokenPolicy{
+				{PolicyID: "user_basic128rsa15", TokenType: ua.UserTokenTypeUserName, SecurityPolicyURI: ua.SecurityPolicyURIPrefix + "Basic128Rsa15"},
+				{PolicyID: "user_inherit", TokenType: ua.UserTokenTypeUserName},
+			},
+			expected: []string{"user_inherit", "user_basic128rsa15"},
+		},
+		{
+			name: "no matching token keeps the server order",
+			tokens: []*ua.UserTokenPolicy{
+				{PolicyID: "user_basic128rsa15", TokenType: ua.UserTokenTypeUserName, SecurityPolicyURI: ua.SecurityPolicyURIPrefix + "Basic128Rsa15"},
+				{PolicyID: "user_basic256", TokenType: ua.UserTokenTypeUserName, SecurityPolicyURI: ua.SecurityPolicyURIPrefix + "Basic256"},
+			},
+			expected: []string{"user_basic128rsa15", "user_basic256"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			endpoints := []*ua.EndpointDescription{{
+				EndpointURL:        "opc.tcp://localhost:4840",
+				SecurityPolicyURI:  ua.SecurityPolicyURIPrefix + "Basic256Sha256",
+				SecurityMode:       ua.MessageSecurityModeSignAndEncrypt,
+				SecurityLevel:      100,
+				UserIdentityTokens: tt.tokens,
+			}}
+			client := &OpcUAClient{
+				Config: &OpcUAClientConfig{
+					Endpoint:       "opc.tcp://localhost:4840",
+					SecurityPolicy: "Basic256Sha256",
+					SecurityMode:   "SignAndEncrypt",
+					AuthMethod:     "UserName",
+					Username:       config.NewSecret([]byte("user")),
+					Password:       config.NewSecret([]byte("pass")),
+					Certificate:    certFile,
+					PrivateKey:     keyFile,
+				},
+				Log: &testutil.Logger{},
+			}
+			_, err := client.generateClientOpts(endpoints)
+			require.NoError(t, err)
+
+			actual := make([]string, 0, len(tt.tokens))
+			for _, token := range endpoints[0].UserIdentityTokens {
+				actual = append(actual, token.PolicyID)
+			}
+			require.Equal(t, tt.expected, actual)
+		})
+	}
 }
