@@ -59,9 +59,6 @@ type Jenkins struct {
 	Log telegraf.Logger `toml:"-"`
 
 	semaphore chan struct{}
-
-	buildTagDisplayName bool
-	buildTagDescription bool
 }
 
 func (*Jenkins) SampleConfig() string {
@@ -71,10 +68,7 @@ func (*Jenkins) SampleConfig() string {
 func (j *Jenkins) Init() error {
 	for _, t := range j.BuildTags {
 		switch t {
-		case "display_name":
-			j.buildTagDisplayName = true
-		case "description":
-			j.buildTagDescription = true
+		case "display_name", "description":
 		default:
 			return fmt.Errorf("invalid value %q in build_tags", t)
 		}
@@ -463,11 +457,17 @@ func (jr jobRequest) parentsString() string {
 
 func (j *Jenkins) gatherJobBuild(jr jobRequest, b *buildResponse, acc telegraf.Accumulator) {
 	tags := map[string]string{"name": jr.name, "parents": jr.parentsString(), "result": b.Result, "source": j.source, "port": j.port}
-	if j.buildTagDisplayName && b.DisplayName != "" {
-		tags["display_name"] = b.DisplayName
-	}
-	if j.buildTagDescription && b.Description != "" {
-		tags["description"] = b.Description
+	for _, t := range j.BuildTags {
+		switch t {
+		case "display_name":
+			if b.DisplayName != "" {
+				tags["display_name"] = b.DisplayName
+			}
+		case "description":
+			if b.Description != "" {
+				tags["description"] = b.Description
+			}
+		}
 	}
 	fields := make(map[string]any)
 	fields["duration"] = b.Duration
