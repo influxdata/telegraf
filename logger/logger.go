@@ -222,6 +222,11 @@ type Config struct {
 
 	// internal  log-level
 	logLevel telegraf.LogLevel
+
+	// network and address of the syslog server, empty values connect to the
+	// local syslog daemon
+	syslogNetwork string
+	syslogAddress string
 }
 
 // SetupLogging configures the logging output.

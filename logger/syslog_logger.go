@@ -12,14 +12,6 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
-// Network and address of the syslog server. Empty values connect to the local
-// syslog daemon. Those variables are only modified in unit tests to redirect
-// the output.
-var (
-	syslogNetwork string
-	syslogAddress string
-)
-
 type syslogLogger struct {
 	writer *syslog.Writer
 	errlog *log.Logger
@@ -64,7 +56,7 @@ func (l *syslogLogger) Print(level telegraf.LogLevel, _ time.Time, prefix string
 }
 
 func createSyslogLogger(cfg *Config) (sink, error) {
-	w, err := syslog.Dial(syslogNetwork, syslogAddress, syslog.LOG_DAEMON|syslog.LOG_INFO, cfg.InstanceName)
+	w, err := syslog.Dial(cfg.syslogNetwork, cfg.syslogAddress, syslog.LOG_DAEMON|syslog.LOG_INFO, cfg.InstanceName)
 	if err != nil {
 		return nil, fmt.Errorf("connecting to syslog failed: %w", err)
 	}

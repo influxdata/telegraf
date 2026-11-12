@@ -35,19 +35,10 @@ func readSyslogMessage(t *testing.T, conn net.PacketConn, timeout time.Duration)
 	return string(buf[:n]), nil
 }
 
-func redirectSyslog(t *testing.T, network, address string) {
-	t.Helper()
-
-	syslogNetwork, syslogAddress = network, address
-	t.Cleanup(func() {
-		syslogNetwork, syslogAddress = "", ""
-	})
-}
-
 func setupSyslogLogging(t *testing.T, conn net.PacketConn, cfg *Config) {
 	t.Helper()
 
-	redirectSyslog(t, "udp", conn.LocalAddr().String())
+	cfg.syslogNetwork, cfg.syslogAddress = "udp", conn.LocalAddr().String()
 	cfg.LogFormat = "syslog"
 	require.NoError(t, SetupLogging(cfg))
 	t.Cleanup(func() {
@@ -128,9 +119,12 @@ func TestSyslogStdlogRedirect(t *testing.T) {
 func TestSyslogCloseTwice(t *testing.T) {
 	conn := newSyslogListener(t)
 
-	redirectSyslog(t, "udp", conn.LocalAddr().String())
-
-	s, err := createSyslogLogger(&Config{InstanceName: "telegraf"})
+	cfg := &Config{
+		InstanceName:  "telegraf",
+		syslogNetwork: "udp",
+		syslogAddress: conn.LocalAddr().String(),
+	}
+	s, err := createSyslogLogger(cfg)
 	require.NoError(t, err)
 
 	l, ok := s.(*syslogLogger)
@@ -140,8 +134,11 @@ func TestSyslogCloseTwice(t *testing.T) {
 }
 
 func TestSyslogConnectFailure(t *testing.T) {
-	redirectSyslog(t, "unix", t.TempDir()+"/nonexistent.sock")
-
-	_, err := createSyslogLogger(&Config{InstanceName: "telegraf"})
+	cfg := &Config{
+		InstanceName:  "telegraf",
+		syslogNetwork: "unix",
+		syslogAddress: t.TempDir() + "/nonexistent.sock",
+	}
+	_, err := createSyslogLogger(cfg)
 	require.ErrorContains(t, err, "connecting to syslog failed")
 }
