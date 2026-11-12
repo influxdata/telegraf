@@ -6,7 +6,9 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"net"
 	"os/user"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -868,7 +870,33 @@ func TestMultiInstance(t *testing.T) {
 }
 
 func TestErrorBehaviorRetry(t *testing.T) {
-	// Point the system bus at a socket that does not exist so connecting fails
+	// Leave a socket file without a listener behind so connecting is refused
+	socket := filepath.Join(t.TempDir(), "system_bus_socket")
+	listener, err := net.ListenUnix("unix", &net.UnixAddr{Name: socket, Net: "unix"})
+	require.NoError(t, err)
+	listener.SetUnlinkOnClose(false)
+	require.NoError(t, listener.Close())
+	t.Setenv("DBUS_SYSTEM_BUS_ADDRESS", "unix:path="+socket)
+
+	plugin := &SystemdUnits{
+		Timeout: config.Duration(time.Second),
+	}
+	model := models.NewRunningInput(plugin, &models.InputConfig{
+		Name:                 "systemd_units",
+		StartupErrorBehavior: "retry",
+	})
+	require.NoError(t, model.Init())
+	defer model.Stop()
+
+	// With "retry" the model swallows a retry-able startup error and
+	// tries again on the next gather
+	var acc testutil.Accumulator
+	require.NoError(t, model.Start(&acc))
+	require.ErrorIs(t, model.Gather(&acc), internal.ErrNotConnected)
+}
+
+func TestErrorBehaviorRetryMissingBus(t *testing.T) {
+	// A bus socket that does not exist won't appear later, so don't retry
 	t.Setenv("DBUS_SYSTEM_BUS_ADDRESS", "unix:path=/nonexistent/system_bus_socket")
 	plugin := &SystemdUnits{
 		Timeout: config.Duration(time.Second),
@@ -878,13 +906,10 @@ func TestErrorBehaviorRetry(t *testing.T) {
 		StartupErrorBehavior: "retry",
 	})
 	require.NoError(t, model.Init())
+	defer model.Stop()
 
-	// With "retry" the model swallows a retry-able startup error and
-	// tries again on the next gather
 	var acc testutil.Accumulator
-	require.NoError(t, model.Start(&acc))
-	require.ErrorIs(t, model.Gather(&acc), internal.ErrNotConnected)
-	model.Stop()
+	require.ErrorContains(t, model.Start(&acc), "connecting to the system bus failed")
 }
 
 func BenchmarkAllUnitsIntegration(b *testing.B) {
