@@ -9,11 +9,13 @@ import (
 	"fmt"
 	"maps"
 	"net"
+	"os"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -41,11 +43,14 @@ const (
 )
 
 type Statsd struct {
-	// Protocol used on listener - udp or tcp
+	// Protocol used on listener - udp, tcp or unixgram
 	Protocol string `toml:"protocol"`
 
 	// Address & Port to serve from
 	ServiceAddress string `toml:"service_address"`
+
+	// Permissions of the unixgram socket as an octal string
+	SocketMode string `toml:"socket_mode"`
 
 	// Number of messages allowed to queue up in between calls to Gather. If this
 	// fills up, packets will get dropped until the next Gather interval is ran.
@@ -122,8 +127,9 @@ type Statsd struct {
 	distributions []cacheddistributions
 
 	// Protocol listeners
-	UDPlistener *net.UDPConn
-	TCPlistener *net.TCPListener
+	UDPlistener  *net.UDPConn
+	TCPlistener  *net.TCPListener
+	unixgramConn *net.UnixConn
 
 	// track current connections so we can close them in Stop()
 	conns   map[string]*net.TCPConn
@@ -275,7 +281,40 @@ func (s *Statsd) Start(ac telegraf.Accumulator) error {
 		s.MetricSeparator = defaultSeparator
 	}
 
-	if s.isUDP() {
+	if s.isUnixgram() {
+		if err := checkUnixgramAddress(s.ServiceAddress); err != nil {
+			return err
+		}
+		if err := removeStaleSocket(s.ServiceAddress); err != nil {
+			return err
+		}
+
+		conn, err := net.ListenUnixgram("unixgram", &net.UnixAddr{Name: s.ServiceAddress, Net: "unixgram"})
+		if err != nil {
+			return err
+		}
+
+		if s.SocketMode != "" {
+			mode, err := strconv.ParseUint(s.SocketMode, 8, 32)
+			if err != nil {
+				conn.Close()
+				return fmt.Errorf("converting socket mode failed: %w", err)
+			}
+			if err := os.Chmod(s.ServiceAddress, os.FileMode(uint32(mode))); err != nil {
+				conn.Close()
+				return fmt.Errorf("changing socket permissions failed: %w", err)
+			}
+		}
+
+		s.Log.Infof("Unixgram listening on %q", s.ServiceAddress)
+		s.unixgramConn = conn
+
+		s.wg.Go(func() {
+			if err := s.udpListen(conn); err != nil {
+				ac.AddError(err)
+			}
+		})
+	} else if s.isUDP() {
 		address, err := net.ResolveUDPAddr(s.Protocol, s.ServiceAddress)
 		if err != nil {
 			return err
@@ -434,7 +473,14 @@ func (s *Statsd) Stop() {
 	s.Lock()
 	s.Log.Infof("Stopping the statsd service")
 	close(s.done)
-	if s.isUDP() {
+	if s.isUnixgram() {
+		if s.unixgramConn != nil {
+			s.unixgramConn.Close()
+			if err := os.Remove(s.ServiceAddress); err != nil && !errors.Is(err, os.ErrNotExist) {
+				s.Log.Warnf("Removing socket %q failed: %v", s.ServiceAddress, err)
+			}
+		}
+	} else if s.isUDP() {
 		if s.UDPlistener != nil {
 			s.UDPlistener.Close()
 		}
@@ -512,11 +558,13 @@ func (s *Statsd) tcpListen(listener *net.TCPListener) error {
 	}
 }
 
-// udpListen starts listening for UDP packets on the configured port.
-func (s *Statsd) udpListen(conn *net.UDPConn) error {
+// udpListen reads datagrams from the given UDP or unixgram socket.
+func (s *Statsd) udpListen(conn net.PacketConn) error {
 	if s.ReadBufferSize > 0 {
-		if err := s.UDPlistener.SetReadBuffer(s.ReadBufferSize); err != nil {
-			return err
+		if c, ok := conn.(interface{ SetReadBuffer(int) error }); ok {
+			if err := c.SetReadBuffer(s.ReadBufferSize); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -526,7 +574,7 @@ func (s *Statsd) udpListen(conn *net.UDPConn) error {
 		case <-s.done:
 			return nil
 		default:
-			n, addr, err := conn.ReadFromUDP(buf)
+			n, addr, err := conn.ReadFrom(buf)
 			if err != nil {
 				if !strings.Contains(err.Error(), "closed network") {
 					s.Log.Errorf("Error reading: %s", err.Error())
@@ -542,11 +590,15 @@ func (s *Statsd) udpListen(conn *net.UDPConn) error {
 			}
 			b.Reset()
 			b.Write(buf[:n])
+			var src string
+			if ua, ok := addr.(*net.UDPAddr); ok {
+				src = ua.IP.String()
+			}
 			select {
 			case s.in <- input{
 				Buffer: b,
 				Time:   time.Now(),
-				Addr:   addr.IP.String()}:
+				Addr:   src}:
 				s.Stats.PendingMessages.Set(int64(len(s.in)))
 			default:
 				s.Stats.UDPPacketsDrop.Incr(1)
@@ -1019,6 +1071,54 @@ func (s *Statsd) remember(id string, conn *net.TCPConn) {
 // IsUDP returns true if the protocol is UDP, false otherwise.
 func (s *Statsd) isUDP() bool {
 	return strings.HasPrefix(s.Protocol, "udp")
+}
+
+// checkUnixgramAddress rejects a service_address that is not usable as a unix
+// socket path. The default ":8125" would otherwise silently create a socket
+// file literally named ":8125" in the working directory.
+func checkUnixgramAddress(addr string) error {
+	if addr == "" {
+		return errors.New("service_address must be set to a socket path when protocol is unixgram")
+	}
+	if _, _, err := net.SplitHostPort(addr); err == nil && !strings.ContainsAny(addr, `/\`) {
+		return fmt.Errorf("service_address %q looks like host:port; it must be a socket path when protocol is unixgram", addr)
+	}
+	return nil
+}
+
+// removeStaleSocket removes a unix socket left behind at path by a previous
+// run. It refuses to remove anything that is not a socket, or a socket that
+// another process is still listening on.
+func removeStaleSocket(path string) error {
+	fi, err := os.Lstat(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if fi.Mode()&os.ModeSocket == 0 {
+		return fmt.Errorf("refusing to remove %q: not a socket", path)
+	}
+	// Only a refused connection proves nobody is listening; any other result
+	// (e.g. a stream socket answering a datagram dial) means it may be in use.
+	c, err := net.Dial("unixgram", path)
+	if err == nil {
+		c.Close()
+		return fmt.Errorf("socket %q is in use by another process", path)
+	}
+	if !errors.Is(err, syscall.ECONNREFUSED) {
+		return fmt.Errorf("refusing to remove socket %q: %w", path, err)
+	}
+	if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("removing stale socket failed: %w", err)
+	}
+	return nil
+}
+
+// isUnixgram returns true if the protocol is a unix datagram socket.
+func (s *Statsd) isUnixgram() bool {
+	return s.Protocol == "unixgram"
 }
 
 func (s *Statsd) expireCachedMetrics() {
