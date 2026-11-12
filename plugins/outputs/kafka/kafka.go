@@ -131,7 +131,7 @@ func (k *Kafka) Connect() error {
 	if k.LocalAddress != "" {
 		localAddr, err := internal.ResolveLocalTCPAddress(k.LocalAddress)
 		if err != nil {
-			return err
+			return &internal.StartupError{Err: err, Retry: true}
 		}
 		k.saramaConfig.Net.LocalAddr = localAddr
 	}
