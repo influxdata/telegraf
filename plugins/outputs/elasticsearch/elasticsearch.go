@@ -195,7 +195,7 @@ func (a *Elasticsearch) Connect() error {
 		c, err = a.newClientV7()
 	default:
 		a.Close()
-		return fmt.Errorf("elasticsearch version not supported: %s", version)
+		return fmt.Errorf("version %q not supported", version)
 	}
 	if err != nil {
 		a.Close()
