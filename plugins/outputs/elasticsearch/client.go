@@ -105,7 +105,7 @@ func (t roundTripper) RoundTrip(original *http.Request) (*http.Response, error) 
 		}
 		return nil, err
 	}
-	// Preserve the existing bearer-token override of configured headers.
+	// TODO: Revisit the existing bearer-token override of configured headers.
 	if t.bearerToken.Empty() {
 		for name, values := range t.headers {
 			for _, value := range values {
