@@ -985,3 +985,36 @@ func TestNormalizedKeys(t *testing.T) {
 		acc.AssertContainsTaggedFields(t, pluginName, c.expectedFields, expectedTags)
 	}
 }
+
+// TestNamespaceGoroutineNilResult ensures the typed accessors handle a command
+// that returns no result without panicking on a nil type assertion. This is the
+// condition hit once file descriptors are exhausted: net.Interfaces() and the
+// ethtool calls return (nil, err), so do() yields a nil result (GH-20094).
+func TestNamespaceGoroutineNilResult(t *testing.T) {
+	n := &namespaceGoroutine{
+		namespaceName: "test",
+		c:             make(chan namespacedAction),
+		log:           testutil.Logger{},
+	}
+	// Mimic the start() command loop, but force the error path so do() returns a
+	// nil result alongside the error.
+	go func() {
+		for command := range n.c {
+			command.result <- namespacedResult{result: nil, err: errors.New("too many open files")}
+			close(command.result)
+		}
+	}()
+	defer close(n.c)
+
+	interfaces, err := n.interfaces()
+	require.Error(t, err)
+	require.Nil(t, interfaces)
+
+	driver, err := n.driverName(namespacedInterface{})
+	require.Error(t, err)
+	require.Empty(t, driver)
+
+	stats, err := n.stats(namespacedInterface{})
+	require.Error(t, err)
+	require.Nil(t, stats)
+}
