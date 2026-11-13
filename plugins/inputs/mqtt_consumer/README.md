@@ -156,6 +156,21 @@ to use them.
   ## noisey, but essential for debugging issues.
   # client_trace = false
 
+  ## Content encoding of the message payloads. The payload is decoded before
+  ## being passed to the parser. Available values are
+  ##   "identity" -- apply no encoding
+  ##   "gzip"     -- decode gzip compressed payloads
+  ##   "zlib"     -- decode zlib compressed payloads
+  ##   "zstd"     -- decode zstd compressed payloads
+  ## The publisher must compress the payload using the selected algorithm.
+  ## Messages failing to decode are dropped and an error is logged.
+  # content_encoding = "identity"
+
+  ## Maximum size of a decoded message.
+  ## Acceptable units are B, KiB, KB, MiB, MB...
+  ## Without quotes and units, interpreted as size in bytes.
+  # max_decompression_size = "500MB"
+
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
@@ -282,7 +297,8 @@ sensors,site=CLE,version=v1,device_name=device5 temp=390,rpm=45.0,ph=1.45
 
 - when [[inputs.internal]] is set:
   - payload_size (int): get the cumulative size in bytes that have been received
-                        from incoming messages
+                        from incoming messages, measured before decoding
+                        according to `content_encoding`
   - messages_received (int): count of the number of messages that have been
                             received from mqtt
 
