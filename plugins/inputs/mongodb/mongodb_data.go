@@ -2,6 +2,7 @@ package mongodb
 
 import (
 	"fmt"
+	"maps"
 	"reflect"
 	"strconv"
 
@@ -435,42 +436,46 @@ func (d *mongoDBData) flush(acc telegraf.Accumulator) {
 	d.Fields = make(map[string]any)
 
 	for _, db := range d.DBData {
-		d.Tags["db_name"] = db.Name
+		tags := maps.Clone(d.Tags)
+		tags["db_name"] = db.Name
 		acc.AddFields(
 			"mongodb_db_stats",
 			db.Fields,
-			d.Tags,
+			tags,
 			d.StatLine.Time,
 		)
 		db.Fields = make(map[string]any)
 	}
 	for _, col := range d.ColData {
-		d.Tags["collection"] = col.Name
-		d.Tags["db_name"] = col.DBName
+		tags := maps.Clone(d.Tags)
+		tags["collection"] = col.Name
+		tags["db_name"] = col.DBName
 		acc.AddFields(
 			"mongodb_col_stats",
 			col.Fields,
-			d.Tags,
+			tags,
 			d.StatLine.Time,
 		)
 		col.Fields = make(map[string]any)
 	}
 	for _, host := range d.ShardHostData {
-		d.Tags["hostname"] = host.Name
+		tags := maps.Clone(d.Tags)
+		tags["hostname"] = host.Name
 		acc.AddFields(
 			"mongodb_shard_stats",
 			host.Fields,
-			d.Tags,
+			tags,
 			d.StatLine.Time,
 		)
 		host.Fields = make(map[string]any)
 	}
 	for _, col := range d.TopStatsData {
-		d.Tags["collection"] = col.Name
+		tags := maps.Clone(d.Tags)
+		tags["collection"] = col.Name
 		acc.AddFields(
 			"mongodb_top_stats",
 			col.Fields,
-			d.Tags,
+			tags,
 			d.StatLine.Time,
 		)
 		col.Fields = make(map[string]any)
