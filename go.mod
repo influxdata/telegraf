@@ -169,7 +169,6 @@ require (
 	github.com/newrelic/newrelic-telemetry-sdk-go v0.8.1
 	github.com/nsqio/go-nsq v1.1.0
 	github.com/nwaples/tacplus v0.0.3
-	github.com/olivere/elastic v6.2.37+incompatible
 	github.com/openconfig/gnmi v0.14.1
 	github.com/openconfig/goyang v1.6.3
 	github.com/opensearch-project/opensearch-go/v2 v2.3.0
