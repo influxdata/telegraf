@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -59,6 +60,7 @@ type Prometheus struct {
 	MetricVersion        int               `toml:"metric_version"`
 	URLTag               string            `toml:"url_tag"`
 	IgnoreTimestamp      bool              `toml:"ignore_timestamp"`
+	MaxParallelScrapes   int               `toml:"max_parallel_scrapes"`
 
 	// Kubernetes service discovery
 	MonitorPods                 bool                `toml:"monitor_kubernetes_pods"`
@@ -145,6 +147,10 @@ func (*Prometheus) SampleConfig() string {
 }
 
 func (p *Prometheus) Init() error {
+	if p.MaxParallelScrapes < 0 {
+		return fmt.Errorf("invalid 'max_parallel_scrapes' setting %d, must not be negative", p.MaxParallelScrapes)
+	}
+
 	// Setup content-type override if requested
 	switch p.ContentTypeOverride {
 	case "": // No override
@@ -309,10 +315,22 @@ func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
 
 	p.unregisterStaleStats(allURLs)
 
-	for _, URL := range allURLs {
+	// Limit the number of scrapes in flight if requested. The targets are
+	// scraped in a fixed order, so each target keeps its position within a
+	// collection and its scrape interval stays regular.
+	var slots chan struct{}
+	if p.MaxParallelScrapes > 0 {
+		slots = make(chan struct{}, p.MaxParallelScrapes)
+	}
+
+	for _, key := range slices.Sorted(maps.Keys(allURLs)) {
+		target := allURLs[key]
+		if slots != nil {
+			slots <- struct{}{}
+		}
 		wg.Add(1)
 		// Create internal metrics for the URL
-		urlStr := URL.url.String()
+		urlStr := target.url.String()
 		p.statURLs[urlStr] = struct{}{}
 		connectStat := p.Statistics.Register("prometheus", "connection_status", map[string]string{"url": urlStr})
 		gathersTotalSuccessStat := p.Statistics.Register("prometheus", "gathers_total", map[string]string{"url": urlStr, "status": "success"})
@@ -320,6 +338,9 @@ func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
 
 		go func(serviceURL urlAndAddress) {
 			defer wg.Done()
+			if slots != nil {
+				defer func() { <-slots }()
+			}
 			requestFields, tags, err := p.gatherURL(serviceURL, acc)
 			if err != nil {
 				gathersTotalFailureStat.Incr(1)
@@ -334,7 +355,7 @@ func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
 			if p.EnableRequestMetrics {
 				acc.AddFields("prometheus_request", requestFields, tags)
 			}
-		}(URL)
+		}(target)
 	}
 
 	wg.Wait()
