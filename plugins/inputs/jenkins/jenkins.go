@@ -44,6 +44,7 @@ type Jenkins struct {
 	MaxSubJobDepth    int             `toml:"max_subjob_depth"`
 	MaxSubJobPerLayer int             `toml:"max_subjob_per_layer"`
 	NodeLabelsAsTag   bool            `toml:"node_labels_as_tag"`
+	BuildTags         []string        `toml:"build_tags"`
 	JobExclude        []string        `toml:"job_exclude"`
 	JobInclude        []string        `toml:"job_include"`
 	jobFilter         filter.Filter
@@ -62,6 +63,17 @@ type Jenkins struct {
 
 func (*Jenkins) SampleConfig() string {
 	return sampleConfig
+}
+
+func (j *Jenkins) Init() error {
+	for _, t := range j.BuildTags {
+		switch t {
+		case "display_name", "description":
+		default:
+			return fmt.Errorf("invalid value %q in build_tags", t)
+		}
+	}
+	return nil
 }
 
 func (j *Jenkins) Gather(acc telegraf.Accumulator) error {
@@ -389,11 +401,13 @@ type jobBuild struct {
 }
 
 type buildResponse struct {
-	Building  bool   `json:"building"`
-	Duration  int64  `json:"duration"`
-	Number    int64  `json:"number"`
-	Result    string `json:"result"`
-	Timestamp int64  `json:"timestamp"`
+	Building    bool   `json:"building"`
+	Duration    int64  `json:"duration"`
+	Number      int64  `json:"number"`
+	Result      string `json:"result"`
+	Timestamp   int64  `json:"timestamp"`
+	DisplayName string `json:"displayName"`
+	Description string `json:"description"`
 }
 
 func (b *buildResponse) getTimestamp() time.Time {
@@ -443,6 +457,18 @@ func (jr jobRequest) parentsString() string {
 
 func (j *Jenkins) gatherJobBuild(jr jobRequest, b *buildResponse, acc telegraf.Accumulator) {
 	tags := map[string]string{"name": jr.name, "parents": jr.parentsString(), "result": b.Result, "source": j.source, "port": j.port}
+	for _, t := range j.BuildTags {
+		switch t {
+		case "display_name":
+			if b.DisplayName != "" {
+				tags["display_name"] = b.DisplayName
+			}
+		case "description":
+			if b.Description != "" {
+				tags["description"] = b.Description
+			}
+		}
+	}
 	fields := make(map[string]any)
 	fields["duration"] = b.Duration
 	fields["result_code"] = mapResultCode(b.Result)
