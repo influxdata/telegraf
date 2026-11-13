@@ -659,30 +659,30 @@ func (p *Prometheus) gatherURL(u urlAndAddress, acc telegraf.Accumulator) (map[s
 		return requestFields, tags, fmt.Errorf("error reading metrics for %q: %w", u.url, err)
 	}
 
+	if len(metrics) == 0 {
+		return requestFields, tags, nil
+	}
+
+	// strip user and password from URL
+	u.originalURL.User = nil
+	var urlValue string
+	if p.URLTag != "" {
+		urlValue = u.originalURL.String()
+	}
+
+	// Pass the parsed metrics on directly instead of rebuilding them from
+	// their tags and fields; the parsers already set the value type.
 	for _, metric := range metrics {
-		tags := metric.Tags()
-		// strip user and password from URL
-		u.originalURL.User = nil
 		if p.URLTag != "" {
-			tags[p.URLTag] = u.originalURL.String()
+			metric.AddTag(p.URLTag, urlValue)
 		}
 		if u.address != "" {
-			tags["address"] = u.address
+			metric.AddTag("address", u.address)
 		}
-		maps.Copy(tags, u.tags)
-
-		switch metric.Type() {
-		case telegraf.Counter:
-			acc.AddCounter(metric.Name(), metric.Fields(), tags, metric.Time())
-		case telegraf.Gauge:
-			acc.AddGauge(metric.Name(), metric.Fields(), tags, metric.Time())
-		case telegraf.Summary:
-			acc.AddSummary(metric.Name(), metric.Fields(), tags, metric.Time())
-		case telegraf.Histogram:
-			acc.AddHistogram(metric.Name(), metric.Fields(), tags, metric.Time())
-		default:
-			acc.AddFields(metric.Name(), metric.Fields(), tags, metric.Time())
+		for k, v := range u.tags {
+			metric.AddTag(k, v)
 		}
+		acc.AddMetric(metric)
 	}
 
 	return requestFields, tags, nil
