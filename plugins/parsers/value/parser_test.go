@@ -344,3 +344,25 @@ func BenchmarkParsing(b *testing.B) {
 		plugin.Parse([]byte(benchmarkData))
 	}
 }
+
+func FuzzParserValue(f *testing.F) {
+	f.Add([]byte(benchmarkData))
+	f.Add([]byte("3.14"))
+	f.Add([]byte("true"))
+	f.Add([]byte("aGVsbG8="))
+
+	dataTypes := []string{"integer", "float", "string", "base64", "boolean", "auto_integer", "auto_float"}
+	parsers := make([]*Parser, 0, len(dataTypes))
+	for _, dataType := range dataTypes {
+		parser := &Parser{MetricName: "value", DataType: dataType}
+		require.NoError(f, parser.Init())
+		parsers = append(parsers, parser)
+	}
+
+	f.Fuzz(func(_ *testing.T, input []byte) {
+		for _, parser := range parsers {
+			//nolint:errcheck // fuzz testing can give lots of errors, but we just want to test for crashes
+			parser.Parse(input)
+		}
+	})
+}
