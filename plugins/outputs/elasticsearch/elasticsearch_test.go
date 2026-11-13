@@ -152,29 +152,34 @@ func TestLocalAddress(t *testing.T) {
 		t.Skip("Binding to 127.0.0.2 requires a loopback alias outside of Linux")
 	}
 
-	// Setup a mock Elasticsearch endpoint
-	server := startMockServer(t)
-	defer server.close()
+	for _, version := range []string{"5.6.16", "6.8.23", "7.17.29"} {
+		t.Run(version, func(t *testing.T) {
+			// Setup a mock Elasticsearch endpoint
+			server := startMockServer(t)
+			server.setVersion(version)
+			defer server.close()
 
-	// Setup plugin
-	plugin := &Elasticsearch{
-		URLs:         []string{"http://" + server.addr()},
-		IndexName:    "test-%Y.%m.%d",
-		LocalAddress: "127.0.0.2",
-		Timeout:      config.Duration(time.Second * 5),
-		Log:          testutil.Logger{},
+			// Setup plugin
+			plugin := &Elasticsearch{
+				URLs:         []string{"http://" + server.addr()},
+				IndexName:    "test-%Y.%m.%d",
+				LocalAddress: "127.0.0.2",
+				Timeout:      config.Duration(time.Second * 5),
+				Log:          testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+			require.NoError(t, plugin.Connect())
+			defer plugin.Close()
+			require.NoError(t, plugin.Write(testutil.MockMetrics()))
+
+			// Check the connection came from the configured local address
+			remotes := server.remoteAddresses()
+			require.NotEmpty(t, remotes)
+			host, _, err := net.SplitHostPort(remotes[0])
+			require.NoError(t, err)
+			require.Equal(t, "127.0.0.2", host)
+		})
 	}
-	require.NoError(t, plugin.Init())
-	require.NoError(t, plugin.Connect())
-	defer plugin.Close()
-	require.NoError(t, plugin.Write(testutil.MockMetrics()))
-
-	// Check the connection came from the configured local address
-	remotes := server.remoteAddresses()
-	require.NotEmpty(t, remotes)
-	host, _, err := net.SplitHostPort(remotes[0])
-	require.NoError(t, err)
-	require.Equal(t, "127.0.0.2", host)
 }
 
 func TestInvalidLocalAddress(t *testing.T) {
