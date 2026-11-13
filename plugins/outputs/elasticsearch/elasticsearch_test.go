@@ -210,6 +210,26 @@ func TestInitFail(t *testing.T) {
 			expected: "no 'index_name' defined",
 		},
 		{
+			name: "basic and bearer authentication",
+			plugin: &Elasticsearch{
+				URLs:            []string{"http://localhost:9200"},
+				IndexName:       "test-%Y.%m.%d",
+				Username:        config.NewSecret([]byte("user")),
+				Password:        config.NewSecret([]byte("password")),
+				AuthBearerToken: config.NewSecret([]byte("token")),
+			},
+			expected: "cannot use both basic and bearer authentication",
+		},
+		{
+			name: "URL basic and bearer authentication",
+			plugin: &Elasticsearch{
+				URLs:            []string{"http://user:password@localhost:9200"},
+				IndexName:       "test-%Y.%m.%d",
+				AuthBearerToken: config.NewSecret([]byte("token")),
+			},
+			expected: "cannot use both basic and bearer authentication",
+		},
+		{
 			name: "invalid float handling",
 			plugin: &Elasticsearch{
 				URLs:          []string{"http://localhost:9200"},
