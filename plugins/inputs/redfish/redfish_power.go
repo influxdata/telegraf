@@ -34,7 +34,11 @@ func (r *Redfish) gatherPower(acc telegraf.Accumulator, system *schemas.Computer
 			// Location.PostalAddress.DataCenter is nowhere in the redfish standard
 			// We do some manual parsing in order to not break existing code
 			var datacenter datacenterTag
-			//nolint:errcheck // Ignore if the marshalling fails as this datapoint should not exist
+			// Try to parse the datacenter from the raw data. As this data is not defined
+			// in the standard, it might not exist in the raw data and parsing may fail. In this
+			// case we will get an "" for the datacenter which is perfectly fine, so ignore the
+			// marshaling error.
+			//nolint:errcheck
 			json.Unmarshal(chassis.RawData, &datacenter)
 
 			tags["datacenter"] = datacenter.Location.PostalAddress.DataCenter

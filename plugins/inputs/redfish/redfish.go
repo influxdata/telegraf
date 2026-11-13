@@ -8,7 +8,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"slices"
 	"time"
 
 	"github.com/stmcginnis/gofish"
@@ -91,24 +90,19 @@ func (r *Redfish) Init() error {
 		}
 	}
 
-	if slices.Contains(r.IncludeTagSets, tagSetChassisLocation) {
-		r.Log.Warn("The tag Datacenter (Chassis.Location.PostalAddress.DataCenter) is not part of DMTF's standard an will be removed in a future version")
-	}
-
 	r.tagSet = make(map[string]bool, len(r.IncludeTagSets))
 	for _, setLabel := range r.IncludeTagSets {
 		r.tagSet[setLabel] = true
 	}
 
+	// Extract the host from the address
 	u, err := url.Parse(r.Address)
 	if err != nil {
-		r.host = u.Host
-	} else {
-		r.host, _, err = net.SplitHostPort(u.Host)
+		return fmt.Errorf("parsing address failed: %w", err)
 	}
-
-	if err != nil {
-		r.host = u.Host
+	r.host = u.Host
+	if h, _, err := net.SplitHostPort(u.Host); err == nil {
+		r.host = h
 	}
 
 	return nil
@@ -150,7 +144,7 @@ func (r *Redfish) Start(_ telegraf.Accumulator) error {
 	}
 	c, err := gofish.Connect(gofishConfig)
 	if err != nil {
-		return fmt.Errorf("error parsing input from %s. This is likely due to the BMC response being in text/html: %w",
+		return fmt.Errorf("error parsing input from %s. %w",
 			r.Address+"/redfish/v1/Systems/"+r.ComputerSystemID,
 			err)
 	}
