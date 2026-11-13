@@ -66,37 +66,6 @@ func (t *roundTripper) configureAuth(addresses []string, username, password conf
 	return nil
 }
 
-func (a *Elasticsearch) probeVersion(ctx context.Context) (string, uint64, error) {
-	transport, err := a.newRoundTripper()
-	if err != nil {
-		return "", 0, fmt.Errorf("getting authentication options failed: %w", err)
-	}
-	probe, err := elasticsearch5.NewClient(elasticsearch5.Config{
-		Addresses: a.URLs,
-		Transport: transport,
-	})
-	if err != nil {
-		return "", 0, fmt.Errorf("creating ES client failed: %w", err)
-	}
-	res, err := probe.Info(probe.Info.WithContext(ctx))
-	if err != nil {
-		return "", 0, fmt.Errorf("checking ES version failed: %w", err)
-	}
-	defer res.Body.Close()
-	if err := checkForError(res.StatusCode, res.Body); err != nil {
-		return "", 0, fmt.Errorf("checking ES version failed: %w", err)
-	}
-	var info serverInfo
-	if err := json.NewDecoder(res.Body).Decode(&info); err != nil {
-		return "", 0, fmt.Errorf("checking ES version failed: %w", err)
-	}
-	version, err := semver.NewVersion(info.Version.Number)
-	if err != nil {
-		return "", 0, fmt.Errorf("parsing server version %q failed: %w", info.Version.Number, err)
-	}
-	return info.Version.Number, version.Major(), nil
-}
-
 func (t roundTripper) RoundTrip(original *http.Request) (*http.Response, error) {
 	req := original.Clone(original.Context())
 	if err := t.setAuth(req); err != nil {
@@ -170,6 +139,37 @@ func (t roundTripper) setAuth(req *http.Request) error {
 		token.Destroy()
 	}
 	return nil
+}
+
+func (a *Elasticsearch) probeVersion(ctx context.Context) (string, uint64, error) {
+	transport, err := a.newRoundTripper()
+	if err != nil {
+		return "", 0, fmt.Errorf("getting authentication options failed: %w", err)
+	}
+	probe, err := elasticsearch5.NewClient(elasticsearch5.Config{
+		Addresses: a.URLs,
+		Transport: transport,
+	})
+	if err != nil {
+		return "", 0, fmt.Errorf("creating ES client failed: %w", err)
+	}
+	res, err := probe.Info(probe.Info.WithContext(ctx))
+	if err != nil {
+		return "", 0, fmt.Errorf("checking ES version failed: %w", err)
+	}
+	defer res.Body.Close()
+	if err := checkForError(res.StatusCode, res.Body); err != nil {
+		return "", 0, fmt.Errorf("checking ES version failed: %w", err)
+	}
+	var info serverInfo
+	if err := json.NewDecoder(res.Body).Decode(&info); err != nil {
+		return "", 0, fmt.Errorf("checking ES version failed: %w", err)
+	}
+	version, err := semver.NewVersion(info.Version.Number)
+	if err != nil {
+		return "", 0, fmt.Errorf("parsing server version %q failed: %w", info.Version.Number, err)
+	}
+	return info.Version.Number, version.Major(), nil
 }
 
 func encodeBulk(documents []document, docType string) (*bytes.Buffer, error) {
