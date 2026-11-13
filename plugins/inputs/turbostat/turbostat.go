@@ -57,13 +57,16 @@ var (
 
 	// Regex to split a string into alphanumeric tokens, percent (%), plus (+), and minus (-).
 	splitter = regexp.MustCompile(`[0-9a-zA-Z]+|\%|\+|\-`)
+
+	defaultTagColumns = []string{"package", "node", "die", "core", "cpu", "apic", "x2apic"}
 )
 
 type Turbostat struct {
-	UseSudo  bool            `toml:"use_sudo"`
-	Path     string          `toml:"path"`
-	Interval config.Duration `toml:"interval"`
-	Log      telegraf.Logger `toml:"-"`
+	UseSudo    bool            `toml:"use_sudo"`
+	Path       string          `toml:"path"`
+	Interval   config.Duration `toml:"interval"`
+	TagColumns []string        `toml:"tag_columns"`
+	Log        telegraf.Logger `toml:"-"`
 
 	command []string
 	process *process.Process
@@ -86,6 +89,10 @@ func (t *Turbostat) Init() error {
 
 	if t.Interval <= 0 {
 		t.Interval = config.Duration(10 * time.Second)
+	}
+
+	if t.TagColumns == nil {
+		t.TagColumns = defaultTagColumns
 	}
 
 	// Build the command line to spawn Turbostat.
@@ -126,7 +133,7 @@ func (t *Turbostat) Start(acc telegraf.Accumulator) error {
 		headerFields := strings.Fields(scanner.Text())
 		columns := make([]column, 0, len(headerFields))
 		for _, s := range headerFields {
-			columns = append(columns, createColumn(s))
+			columns = append(columns, t.createColumn(s))
 		}
 		for scanner.Scan() {
 			values := strings.Fields(scanner.Text())
@@ -174,6 +181,8 @@ func processValues(acc telegraf.Accumulator, columns []column, values []string) 
 			timestamp = time.Unix(0, int64(f*1e9))
 		case column.isTag:
 			tags[column.name] = value
+		case value == "-":
+			continue
 		default:
 			v, err := strconv.ParseFloat(value, 64)
 			if err != nil {
@@ -190,7 +199,7 @@ func processValues(acc telegraf.Accumulator, columns []column, values []string) 
 }
 
 // Creates a column struct from a Turbostat column name.
-func createColumn(s string) column {
+func (t *Turbostat) createColumn(s string) column {
 	// Add underscores around words known not to have delimiters.
 	s = replacer.Replace(s)
 	// Split the column name into lower case tokens.
@@ -204,10 +213,10 @@ func createColumn(s string) column {
 
 	// Create and return the column.
 	name := strings.Join(tokens, "_")
-	switch name {
-	case "time_of_day_seconds":
+	switch {
+	case name == "time_of_day_seconds":
 		return column{name: name, isTime: true}
-	case "package", "node", "die", "core", "cpu", "apic", "x2apic":
+	case slices.Contains(t.TagColumns, name):
 		return column{name: name, isTag: true}
 	default:
 		return column{name: name}
