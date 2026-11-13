@@ -8,8 +8,10 @@ import (
 	"net"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -227,6 +229,41 @@ func TestListenData(t *testing.T) {
 			testutil.RequireMetricsEqual(t, expected, actual, testutil.SortMetrics())
 		})
 	}
+}
+
+func TestListenMulticastOwnGroupOnly(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Skipping on non-Linux, other systems filter groups per socket already")
+	}
+
+	// Both listeners need the same port
+	reserve, err := net.ListenUDP("udp4", &net.UDPAddr{IP: net.IPv4zero})
+	require.NoError(t, err)
+	port := strconv.Itoa(reserve.LocalAddr().(*net.UDPAddr).Port)
+	require.NoError(t, reserve.Close())
+
+	var received [2]atomic.Int32
+	for i, group := range []string{"239.255.0.1", "239.255.0.2"} {
+		cfg := &Config{}
+		sock, err := cfg.NewSocket("udp4://"+group+":"+port, &SplitConfig{}, &testutil.Logger{})
+		require.NoError(t, err)
+		require.NoError(t, sock.Setup())
+		sock.Listen(
+			func(net.Addr, []byte, time.Time) { received[i].Add(1) },
+			func(err error) { t.Error(err) },
+		)
+		t.Cleanup(sock.Close)
+	}
+
+	client, err := net.Dial("udp4", "239.255.0.1:"+port)
+	require.NoError(t, err)
+	defer client.Close()
+	_, err = client.Write([]byte("test v=1i\n"))
+	require.NoError(t, err)
+
+	require.Eventually(t, func() bool { return received[0].Load() == 1 }, time.Second, 10*time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
+	require.Zero(t, received[1].Load(), "listener of the other group received the packet")
 }
 
 func TestListenConnection(t *testing.T) {
