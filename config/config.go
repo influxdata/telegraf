@@ -245,10 +245,11 @@ type AgentConfig struct {
 	LogTarget string `toml:"logtarget" deprecated:"1.32.0;1.40.0;use 'logformat' and 'logfile' instead"`
 
 	// Log format controls the way messages are logged and can be one of "text",
-	// "structured" or, on Windows, "eventlog".
+	// "structured", "syslog" (non-Windows) or, on Windows, "eventlog".
 	LogFormat string `toml:"logformat"`
 
-	// Name of the file to be logged to or stderr if empty. Ignored for "eventlog" format.
+	// Name of the file to be logged to or stderr if empty. Ignored for "eventlog"
+	// and "syslog" formats.
 	Logfile string `toml:"logfile"`
 
 	// Message key for structured logs, to override the default of "msg".
