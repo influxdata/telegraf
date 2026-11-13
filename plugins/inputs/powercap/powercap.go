@@ -23,6 +23,7 @@ var sampleConfig string
 type Powercap struct {
 	Log telegraf.Logger `toml:"-"`
 
+	timeFunc         func() time.Time
 	previousReadings map[string]energyReading
 }
 
@@ -66,7 +67,7 @@ func (p *Powercap) gatherZone(acc telegraf.Accumulator, zonePath string) error {
 	if err != nil {
 		return fmt.Errorf("reading energy of zone %q failed: %w", zone, err)
 	}
-	current := energyReading{microjoules: microjoules, time: time.Now()}
+	current := energyReading{microjoules: microjoules, time: p.timeFunc()}
 
 	fields := map[string]any{"energy_uj": current.microjoules}
 	if previous, found := p.previousReadings[zone]; found {
@@ -108,6 +109,6 @@ func readUint(path string) (uint64, error) {
 
 func init() {
 	inputs.Add("powercap", func() telegraf.Input {
-		return &Powercap{}
+		return &Powercap{timeFunc: time.Now}
 	})
 }
