@@ -331,6 +331,7 @@ by running Telegraf with the `--debug` argument.
 - mongodb_top_stats
   - tags:
     - collection
+    - hostname
   - fields:
     - total_time (integer)
     - total_count (integer)
@@ -360,5 +361,5 @@ mongodb_db_stats,db_name=admin,hostname=127.0.0.1:27017 avg_obj_size=241,collect
 mongodb_db_stats,db_name=local,hostname=127.0.0.1:27017 avg_obj_size=813.9705882352941,collections=6i,data_size=55350i,index_size=102400i,indexes=5i,num_extents=0i,objects=68i,ok=1i,storage_size=204800i,type="db_stat" 1547159491000000000
 mongodb_col_stats,collection=foo,db_name=local,hostname=127.0.0.1:27017 size=375005928i,avg_obj_size=5494,type="col_stat",storage_size=249307136i,total_index_size=2138112i,ok=1i,count=68251i 1547159491000000000
 mongodb_shard_stats,hostname=127.0.0.1:27017 in_use=3i,available=3i,created=4i,refreshing=0i 1522799074000000000
-mongodb_top_stats,collection=foo total_time=1471i,total_count=158i,read_lock_time=49614i,read_lock_count=657i,write_lock_time=49125456i,write_lock_count=9841i,queries_time=174i,queries_count=495i,get_more_time=498i,get_more_count=46i,insert_time=2651i,insert_count=1265i,update_time=0i,update_count=0i,remove_time=0i,remove_count=0i,commands_time=498611i,commands_count=4615i
+mongodb_top_stats,collection=foo,hostname=127.0.0.1:27017 total_time=1471i,total_count=158i,read_lock_time=49614i,read_lock_count=657i,write_lock_time=49125456i,write_lock_count=9841i,queries_time=174i,queries_count=495i,get_more_time=498i,get_more_count=46i,insert_time=2651i,insert_count=1265i,update_time=0i,update_count=0i,remove_time=0i,remove_count=0i,commands_time=498611i,commands_count=4615i 1547159491000000000
 ```
