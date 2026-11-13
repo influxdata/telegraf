@@ -729,13 +729,13 @@ func TestKeepConnectionsIntegration(t *testing.T) {
 	}{
 		{name: "single database closed", keep: false, perDB: 3, expected: 0},
 		// The server is a primary, so no query runs and only the connection
-		// reading the server version and role has to be closed
+		// reading the server information has to be closed
 		{name: "no query run closed", keep: false, role: "replica", perDB: 3, expected: 0},
 		// The three queries run at the same time on the pool of the address
 		{name: "single database kept", keep: true, perDB: 3, expected: 3},
 		{name: "multiple databases closed", keep: false, include: []string{"app_*"}, perDB: 3, expected: 0},
 		// Two databases holding two connections each, plus the one reading
-		// the server version, the role and the database list
+		// the server information
 		{name: "multiple databases kept", keep: true, include: []string{"app_*"}, perDB: 2, expected: 5},
 	}
 
@@ -1196,7 +1196,7 @@ func TestConnectionLimitsIntegration(t *testing.T) {
 		connsPerDB     int
 		queries        []query
 		// coldMetadata measures the first collection, which still has to read
-		// the server version, the role and the database list
+		// the server information
 		coldMetadata bool
 
 		wantDatnames    []string
@@ -1260,9 +1260,9 @@ func TestConnectionLimitsIntegration(t *testing.T) {
 			},
 			wantDatnames: []string{"app_1", "app_2", "app_3", "app_4", "app_5"},
 			wantMaxPerDB: 2,
-			// The connection reading the server version, the role and the
-			// database list belongs to the connection database, which is not
-			// one of the databases being queried here
+			// The connection reading the server information belongs to the
+			// connection database, which is not one of the databases being
+			// queried here
 			wantMaxDBs:      3,
 			wantMaxTotalCap: 5,
 		},
@@ -1283,10 +1283,9 @@ func TestConnectionLimitsIntegration(t *testing.T) {
 				MaxIdle:            1,
 				MaxOpen:            1,
 				PreparedStatements: true,
-				// Read the server version, the role and the database list on
-				// the first collection only, and keep no connection open
-				// afterwards, so the measured collection shows the query
-				// connections alone
+				// Read the server information on the first collection only, and
+				// keep no connection open afterwards, so the measured collection
+				// shows the query connections alone
 				MetadataRefreshInterval:   metadataInterval,
 				KeepIdleConnections:       new(false),
 				NumericType:               "float",

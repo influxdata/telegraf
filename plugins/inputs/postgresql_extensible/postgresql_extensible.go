@@ -356,8 +356,7 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-// openConnections counts the connections currently open in the pool of the
-// connection database and in the pools kept for the other databases
+// openConnections counts the connections currently open in all pools
 func (p *Postgresql) openConnections() int64 {
 	count := int64(p.service.DB.Stats().OpenConnections)
 
@@ -429,9 +428,7 @@ func (p *Postgresql) poolFor(datname string, connections int) (*postgresql.Servi
 	return service, nil
 }
 
-// gatherInDatabase runs the queries in the given database. The connection
-// database uses the pool created at startup, any other database gets one of
-// its own, kept between collections while keep_idle_connections is set.
+// gatherInDatabase picks the pool of the given database and runs the queries on it
 func (p *Postgresql) gatherInDatabase(ctx context.Context, acc telegraf.Accumulator, datname string, coll *collection) error {
 	if datname == coll.connDatname {
 		p.gatherDatabase(ctx, acc, p.service, datname, coll)
@@ -500,9 +497,8 @@ func (p *Postgresql) Stop() {
 	p.service.Stop()
 }
 
-// refreshMetadata updates the cached server version, role and list of
-// databases if a refresh is due. A collection between two refreshes does
-// not read the server information again.
+// refreshMetadata updates the cached server information if a refresh is
+// due. A collection between two refreshes does not read it again.
 func (p *Postgresql) refreshMetadata(ctx context.Context) error {
 	if !refreshDue(p.metadataUpdated, time.Now(), time.Duration(p.MetadataRefreshInterval)) {
 		return nil
