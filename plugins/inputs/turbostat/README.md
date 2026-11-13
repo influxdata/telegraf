@@ -80,6 +80,10 @@ The exact metrics depend on the version of Turbostat, the system on which it
 runs, and the command line parameters. For further information, browse the
 Turbostat documentation.
 
+> [!NOTE]
+> Turbostat shows `-` when a column has no value for a row. For example the `L3`
+> column in the summary row on AMD EPYC and Threadripper processors.
+
 ## Example Output
 
 On an AMD consumer system.

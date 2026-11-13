@@ -1,0 +1,8 @@
+turbostat,apic=-,core=-,cpu=-,die=-,node=-,package=-,x2apic=- average_frequency_mhz=1,busy_frequency_mhz=2824,busy_percent=0.03,core_power_watt=23.22,ipc=0.58,irq=7559,nmi=0,package_power_watt=180.36,smi=0,tsc_frequency_mhz=2595,usec=12727
+turbostat,apic=0,core=0,cpu=0,die=0,node=0,package=0,x2apic=0 average_frequency_mhz=5,busy_frequency_mhz=2816,busy_percent=0.16,core_power_watt=0.17,ipc=0.34,irq=170,l3=0,nmi=0,package_power_watt=89.11,smi=0,tsc_frequency_mhz=2595,usec=12
+turbostat,apic=1,core=1,cpu=1,die=0,node=0,package=0,x2apic=1 average_frequency_mhz=0,busy_frequency_mhz=2866,busy_percent=0.02,core_power_watt=0.16,ipc=0.3,irq=40,l3=0,nmi=0,smi=0,tsc_frequency_mhz=2595,usec=5
+turbostat,apic=2,core=2,cpu=2,die=0,node=0,package=0,x2apic=2 average_frequency_mhz=1,busy_frequency_mhz=2724,busy_percent=0.02,core_power_watt=0.16,ipc=0.36,irq=89,l3=0,nmi=0,smi=0,tsc_frequency_mhz=2595,usec=6
+turbostat,apic=3,core=3,cpu=3,die=0,node=0,package=0,x2apic=3 average_frequency_mhz=1,busy_frequency_mhz=2761,busy_percent=0.04,core_power_watt=0.16,ipc=0.33,irq=132,l3=0,nmi=0,smi=0,tsc_frequency_mhz=2595,usec=5
+turbostat,apic=4,core=4,cpu=4,die=0,node=0,package=0,x2apic=4 average_frequency_mhz=0,busy_frequency_mhz=2915,busy_percent=0.01,core_power_watt=0.16,ipc=0.3,irq=11,l3=1,nmi=0,smi=0,tsc_frequency_mhz=2595,usec=7
+turbostat,apic=5,core=5,cpu=5,die=0,node=0,package=0,x2apic=5 average_frequency_mhz=0,busy_frequency_mhz=2936,busy_percent=0.01,core_power_watt=0.16,ipc=0.32,irq=35,l3=1,nmi=0,smi=0,tsc_frequency_mhz=2595,usec=5
+turbostat,apic=6,core=6,cpu=6,die=0,node=0,package=0,x2apic=6 average_frequency_mhz=0,busy_frequency_mhz=2745,busy_percent=0.01,core_power_watt=0.16,ipc=0.33,irq=16,l3=1,nmi=0,smi=0,tsc_frequency_mhz=2595,usec=7
