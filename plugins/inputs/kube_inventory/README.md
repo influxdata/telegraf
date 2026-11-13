@@ -70,6 +70,11 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # selector_include = []
   # selector_exclude = ["*"]
 
+  ## Tag kubernetes_pod_container metrics with the workload that controls the
+  ## pod: "deployment_name", "statefulset_name" or "daemonset_name". Tagging
+  ## deployments requires permission to list replicasets in the namespace.
+  # pod_workload_tags = false
+
   ## Optional TLS Config
   ## Trusted root certificates for server
   # tls_ca = "/path/to/cafile"
@@ -91,6 +96,10 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 If using [RBAC authorization][rbac], you will need to create a cluster role to
 list "persistentvolumes" and "nodes". You will then need to make an [aggregated
 ClusterRole][agg] that will eventually be bound to a user or group.
+
+With `pod_workload_tags` enabled, the plugin also lists "replicasets" in the
+`apps` API group when gathering pods owned by a Deployment. The aggregated
+`view` role below already grants this.
 
 [rbac]: https://kubernetes.io/docs/reference/access-authn-authz/rbac/
 [agg]: https://kubernetes.io/docs/reference/access-authn-authz/rbac/#aggregated-clusterroles
@@ -263,6 +272,9 @@ tls_key = "/run/telegraf-kubernetes-key"
     - namespace
     - node_name
     - pod_name
+    - deployment_name (only with `pod_workload_tags` enabled)
+    - statefulset_name (only with `pod_workload_tags` enabled)
+    - daemonset_name (only with `pod_workload_tags` enabled)
     - node_selector (\*varies)
     - phase
     - state

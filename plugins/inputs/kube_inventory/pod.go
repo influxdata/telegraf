@@ -2,9 +2,14 @@ package kube_inventory
 
 import (
 	"context"
+	"fmt"
+	"maps"
+	"slices"
 	"strings"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/influxdata/telegraf"
 )
@@ -24,12 +29,26 @@ func collectPods(ctx context.Context, acc telegraf.Accumulator, ki *KubernetesIn
 		acc.AddError(err)
 		return
 	}
+
+	var deployments map[string]string
+	if ki.PodWorkloadTags && slices.ContainsFunc(listRef.Items, func(pod corev1.Pod) bool {
+		owner := metav1.GetControllerOf(&pod)
+		return owner != nil && owner.Kind == "ReplicaSet"
+	}) {
+		replicaSets, err := ki.client.getReplicaSets(ctx)
+		if err != nil {
+			acc.AddError(fmt.Errorf("listing replicasets failed: %w", err))
+		} else {
+			deployments = replicaSetDeployments(replicaSets)
+		}
+	}
+
 	for i := range listRef.Items {
-		ki.gatherPod(&listRef.Items[i], acc)
+		ki.gatherPod(&listRef.Items[i], deployments, acc)
 	}
 }
 
-func (ki *KubernetesInventory) gatherPod(p *corev1.Pod, acc telegraf.Accumulator) {
+func (ki *KubernetesInventory) gatherPod(p *corev1.Pod, deployments map[string]string, acc telegraf.Accumulator) {
 	creationTS := p.GetCreationTimestamp()
 	if creationTS.IsZero() {
 		return
@@ -41,11 +60,21 @@ func (ki *KubernetesInventory) gatherPod(p *corev1.Pod, acc telegraf.Accumulator
 			initContainers = append(initContainers, c)
 		}
 	}
-	ki.gatherPodContainers(p, initContainers, p.Status.InitContainerStatuses, acc)
-	ki.gatherPodContainers(p, p.Spec.Containers, p.Status.ContainerStatuses, acc)
+	var workloadTags map[string]string
+	if ki.PodWorkloadTags {
+		workloadTags = podWorkloadTags(p, deployments)
+	}
+	ki.gatherPodContainers(p, workloadTags, initContainers, p.Status.InitContainerStatuses, acc)
+	ki.gatherPodContainers(p, workloadTags, p.Spec.Containers, p.Status.ContainerStatuses, acc)
 }
 
-func (ki *KubernetesInventory) gatherPodContainers(p *corev1.Pod, containers []corev1.Container, statuses []corev1.ContainerStatus, acc telegraf.Accumulator) {
+func (ki *KubernetesInventory) gatherPodContainers(
+	p *corev1.Pod,
+	workloadTags map[string]string,
+	containers []corev1.Container,
+	statuses []corev1.ContainerStatus,
+	acc telegraf.Accumulator,
+) {
 	containerList := make(map[string]*corev1.ContainerStatus, len(statuses))
 	for i := range statuses {
 		containerList[statuses[i].Name] = &statuses[i]
@@ -56,11 +85,17 @@ func (ki *KubernetesInventory) gatherPodContainers(p *corev1.Pod, containers []c
 		if !ok {
 			cs = &corev1.ContainerStatus{}
 		}
-		ki.gatherPodContainer(p, *cs, c, acc)
+		ki.gatherPodContainer(p, workloadTags, *cs, c, acc)
 	}
 }
 
-func (ki *KubernetesInventory) gatherPodContainer(p *corev1.Pod, cs corev1.ContainerStatus, c corev1.Container, acc telegraf.Accumulator) {
+func (ki *KubernetesInventory) gatherPodContainer(
+	p *corev1.Pod,
+	workloadTags map[string]string,
+	cs corev1.ContainerStatus,
+	c corev1.Container,
+	acc telegraf.Accumulator,
+) {
 	stateCode := 3
 	stateReason := ""
 	state := "unknown"
@@ -117,6 +152,7 @@ func (ki *KubernetesInventory) gatherPodContainer(p *corev1.Pod, cs corev1.Conta
 		tags["version"] = splitImage[1]
 	}
 	tags["image"] = splitImage[0]
+	maps.Copy(tags, workloadTags)
 	for key, val := range p.Spec.NodeSelector {
 		if ki.selectorFilter.Match(key) {
 			tags["node_selector_"+key] = val
@@ -156,6 +192,7 @@ func (ki *KubernetesInventory) gatherPodContainer(p *corev1.Pod, cs corev1.Conta
 		if len(splitImage) == 2 {
 			conditiontags["version"] = splitImage[1]
 		}
+		maps.Copy(conditiontags, workloadTags)
 		running := 0
 		podready := 0
 		if val.Status == "True" {
@@ -177,4 +214,37 @@ func (ki *KubernetesInventory) gatherPodContainer(p *corev1.Pod, cs corev1.Conta
 	}
 
 	acc.AddFields(podContainerMeasurement, fields, tags)
+}
+
+// replicaSetDeployments maps each Deployment-owned ReplicaSet, keyed by "namespace/name", to its Deployment.
+func replicaSetDeployments(list *appsv1.ReplicaSetList) map[string]string {
+	deployments := make(map[string]string, len(list.Items))
+	for i := range list.Items {
+		rs := &list.Items[i]
+		if owner := metav1.GetControllerOf(rs); owner != nil && owner.Kind == "Deployment" {
+			deployments[rs.Namespace+"/"+rs.Name] = owner.Name
+		}
+	}
+	return deployments
+}
+
+func podWorkloadTags(p *corev1.Pod, deployments map[string]string) map[string]string {
+	owner := metav1.GetControllerOf(p)
+	if owner == nil {
+		return nil
+	}
+	switch owner.Kind {
+	case "StatefulSet":
+		return map[string]string{"statefulset_name": owner.Name}
+	case "DaemonSet":
+		return map[string]string{"daemonset_name": owner.Name}
+	case "ReplicaSet":
+		name, found := deployments[p.Namespace+"/"+owner.Name]
+		if !found {
+			return nil
+		}
+		return map[string]string{"deployment_name": name}
+	default:
+		return nil
+	}
 }
