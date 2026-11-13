@@ -16,6 +16,21 @@ import (
 func TestTableSource(_ *testing.T) {
 }
 
+func TestNewTableSourcesBatchIndices(t *testing.T) {
+	p := newPostgresql()
+
+	metrics := []telegraf.Metric{
+		newMetric(t, "_a", nil, MSI{"v": 1}),
+		newMetric(t, "_b", nil, MSI{"v": 2}),
+		newMetric(t, "_a", nil, MSI{"v": 3}),
+	}
+
+	sources := NewTableSources(p, metrics)
+	require.Len(t, sources, 2)
+	require.Equal(t, []int{0, 2}, sources[t.Name()+"_a"].batchIndices)
+	require.Equal(t, []int{1}, sources[t.Name()+"_b"].batchIndices)
+}
+
 type source interface {
 	pgx.CopyFromSource
 	ColumnNames() []string

@@ -46,6 +46,7 @@ func (cl *columnList) Remove(name string) bool {
 type TableSource struct {
 	postgresql   *Postgresql
 	metrics      []telegraf.Metric
+	batchIndices []int // Indices in the original input batch, not in metrics.
 	cursor       int
 	cursorValues []any
 	cursorError  error
@@ -67,13 +68,14 @@ type TableSource struct {
 func NewTableSources(p *Postgresql, metrics []telegraf.Metric) map[string]*TableSource {
 	tableSources := make(map[string]*TableSource)
 
-	for _, m := range metrics {
+	for i, m := range metrics {
 		tsrc := tableSources[m.Name()]
 		if tsrc == nil {
 			tsrc = NewTableSource(p, m.Name())
 			tableSources[m.Name()] = tsrc
 		}
 		tsrc.AddMetric(m)
+		tsrc.batchIndices = append(tsrc.batchIndices, i)
 	}
 
 	return tableSources
