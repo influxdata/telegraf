@@ -103,7 +103,11 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	message = buf[:]
 
 	if p.registryObj != nil {
-		// The input must be Confluent Wire Protocol
+		// The input must be Confluent Wire Protocol: a zero byte followed by a
+		// four-byte schema ID.
+		if len(buf) < 5 {
+			return nil, errors.New("buffer too short for Confluent Wire Protocol")
+		}
 		if buf[0] != 0 {
 			return nil, errors.New("first byte is not 0: not Confluent Wire Protocol")
 		}
@@ -116,14 +120,21 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		codec = schemastruct.Codec
 		message = buf[5:]
 	} else {
-		// Check for single-object encoding
-		magicBytes := int(binary.BigEndian.Uint16(buf[:2]))
-		expectedMagic := int(binary.BigEndian.Uint16([]byte("c301")))
-		if magicBytes == expectedMagic {
-			message = buf[10:]
-			// We could in theory validate the fingerprint against
-			// the schema.  Maybe later.
-			// We would get the fingerprint as int(binary.LittleEndian.Uint64(buf[2:10]))
+		// Check for single-object encoding, whose two-byte marker is followed by
+		// an eight-byte schema fingerprint. A buffer too short to carry the marker
+		// cannot be single-object encoded, so fall through to bare Avro binary.
+		if len(buf) >= 2 {
+			magicBytes := int(binary.BigEndian.Uint16(buf[:2]))
+			expectedMagic := int(binary.BigEndian.Uint16([]byte("c301")))
+			if magicBytes == expectedMagic {
+				if len(buf) < 10 {
+					return nil, errors.New("buffer too short for Avro single-object encoding")
+				}
+				message = buf[10:]
+				// We could in theory validate the fingerprint against
+				// the schema.  Maybe later.
+				// We would get the fingerprint as int(binary.LittleEndian.Uint64(buf[2:10]))
+			}
 		} // Otherwise we assume bare Avro binary
 		schema = p.Schema
 		codec, err = goavro.NewCodec(schema)
