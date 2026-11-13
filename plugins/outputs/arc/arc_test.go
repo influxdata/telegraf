@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -429,4 +430,175 @@ func TestMultipleMeasurements(t *testing.T) {
 
 	require.True(t, measurementNames["cpu"], "should have cpu measurement")
 	require.True(t, measurementNames["mem"], "should have mem measurement")
+}
+
+func captureServer(t *testing.T) (*httptest.Server, *[][]byte) {
+	t.Helper()
+	var mu sync.Mutex
+	var bodies [][]byte
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var reader io.Reader = r.Body
+		if r.Header.Get("Content-Encoding") == "gzip" {
+			gz, err := gzip.NewReader(r.Body)
+			if err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			reader = gz
+		}
+		data, err := io.ReadAll(reader)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		mu.Lock()
+		bodies = append(bodies, data)
+		mu.Unlock()
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	t.Cleanup(ts.Close)
+	return ts, &bodies
+}
+
+func TestWriteSparse(t *testing.T) {
+	ts, bodies := captureServer(t)
+
+	plugin := &Arc{
+		URL:             ts.URL,
+		Timeout:         config.Duration(5 * time.Second),
+		ContentEncoding: "identity",
+		Log:             testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+
+	// Each metric carries a different field, as produced e.g. by
+	// inputs.prometheus with metric_version = 2.
+	metrics := []telegraf.Metric{
+		metric.New("prometheus", map[string]string{"job": "a"}, map[string]any{"up": float64(1)}, time.Unix(1, 0)),
+		metric.New("prometheus", map[string]string{"job": "b"}, map[string]any{"requests_total": uint64(42)}, time.Unix(2, 0)),
+		metric.New("prometheus", map[string]string{"job": "a", "le": "0.5"}, map[string]any{"latency": int64(-3)}, time.Unix(3, 0)),
+		metric.New("prometheus", map[string]string{"job": "c"}, map[string]any{"up": float64(0), "ok": true}, time.Unix(4, 0)),
+	}
+	require.NoError(t, plugin.Write(metrics))
+	require.Len(t, *bodies, 1)
+
+	decoded, _, err := msgp.ReadIntfBytes((*bodies)[0])
+	require.NoError(t, err)
+	expected := map[string]any{
+		"m": "prometheus",
+		"columns": map[string]any{
+			"up":             []any{float64(1), nil, nil, float64(0)},
+			"requests_total": []any{nil, int64(42), nil, nil}, // small unsigned values decode as signed
+			"latency":        []any{nil, nil, int64(-3), nil},
+			"ok":             []any{nil, nil, nil, true},
+			"job":            []any{"a", "b", "a", "c"},
+			"le":             []any{nil, nil, "0.5", nil},
+			"time":           []any{int64(1000), int64(2000), int64(3000), int64(4000)},
+		},
+	}
+	require.Equal(t, expected, decoded)
+}
+
+func TestWriteCollision(t *testing.T) {
+	tests := []struct {
+		name   string
+		tags   map[string]string
+		fields map[string]any
+	}{
+		{
+			name:   "tag and field with the same key",
+			tags:   map[string]string{"host": "a"},
+			fields: map[string]any{"host": float64(1)},
+		},
+		{
+			name:   "field named time",
+			fields: map[string]any{"time": float64(1)},
+		},
+		{
+			name:   "tag named time",
+			tags:   map[string]string{"time": "now"},
+			fields: map[string]any{"value": float64(1)},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts, bodies := captureServer(t)
+
+			plugin := &Arc{
+				URL:             ts.URL,
+				Timeout:         config.Duration(5 * time.Second),
+				ContentEncoding: "identity",
+				Log:             testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+			require.NoError(t, plugin.Connect())
+
+			// The measurement with the collision is dropped, the other one is
+			// sent on its own and therefore as a single map.
+			metrics := []telegraf.Metric{
+				metric.New("cpu", map[string]string{"host": "a"}, map[string]any{"usage": float64(1)}, time.Unix(1, 0)),
+				metric.New("broken", tt.tags, tt.fields, time.Unix(1, 0)),
+				metric.New("cpu", map[string]string{"host": "b"}, map[string]any{"usage": float64(2)}, time.Unix(2, 0)),
+			}
+			require.NoError(t, plugin.Write(metrics))
+			require.Len(t, *bodies, 1)
+
+			decoded, _, err := msgp.ReadIntfBytes((*bodies)[0])
+			require.NoError(t, err)
+			expected := map[string]any{
+				"m": "cpu",
+				"columns": map[string]any{
+					"usage": []any{float64(1), float64(2)},
+					"host":  []any{"a", "b"},
+					"time":  []any{int64(1000), int64(2000)},
+				},
+			}
+			require.Equal(t, expected, decoded)
+
+			// Nothing is sent if no measurement remains
+			require.NoError(t, plugin.Write(metrics[1:2]))
+			require.Len(t, *bodies, 1)
+		})
+	}
+}
+
+func TestWriteDeterministic(t *testing.T) {
+	ts, bodies := captureServer(t)
+
+	plugin := &Arc{
+		URL:     ts.URL,
+		Timeout: config.Duration(5 * time.Second),
+		Log:     testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+
+	metrics := make([]telegraf.Metric, 0, 60)
+	for i := range 60 {
+		metrics = append(metrics, metric.New(
+			"m"+strconv.Itoa(i%3),
+			map[string]string{"t" + strconv.Itoa(i%5): "v"},
+			map[string]any{"f" + strconv.Itoa(i%7): float64(i)},
+			time.Unix(int64(i), 0),
+		))
+	}
+
+	// Repeated writes reuse the gzip writer and must produce the same payload
+	for range 3 {
+		require.NoError(t, plugin.Write(metrics))
+	}
+	require.Len(t, *bodies, 3)
+	require.Equal(t, (*bodies)[0], (*bodies)[1])
+	require.Equal(t, (*bodies)[0], (*bodies)[2])
+
+	decoded, _, err := msgp.ReadIntfBytes((*bodies)[0])
+	require.NoError(t, err)
+	messages, ok := decoded.([]any)
+	require.True(t, ok)
+	require.Len(t, messages, 3)
+	for i, msg := range messages {
+		require.Equal(t, "m"+strconv.Itoa(i), msg.(map[string]any)["m"])
+	}
 }
