@@ -668,6 +668,24 @@ func (o *OpcUAInputClient) UpdateNodeValue(nodeIdx int, d *ua.DataValue) {
 				o.LastReceivedData[nodeIdx].Value = t.Format(o.Config.TimestampFormat)
 			}
 		}
+
+		// LocalizedText values are not valid field types, so store the text
+		switch v := d.Value.Value().(type) {
+		case *ua.LocalizedText:
+			if v == nil {
+				o.LastReceivedData[nodeIdx].Value = ""
+			} else {
+				o.LastReceivedData[nodeIdx].Value = v.Text
+			}
+		case []*ua.LocalizedText:
+			strs := make([]string, len(v))
+			for i, lt := range v {
+				if lt != nil {
+					strs[i] = lt.Text
+				}
+			}
+			o.LastReceivedData[nodeIdx].Value = strs
+		}
 	}
 	o.LastReceivedData[nodeIdx].ServerTime = d.ServerTimestamp
 	o.LastReceivedData[nodeIdx].SourceTime = d.SourceTimestamp
