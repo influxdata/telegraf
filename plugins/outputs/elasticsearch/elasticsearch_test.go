@@ -608,8 +608,8 @@ func TestWrite(t *testing.T) {
 			},
 			expected: msgBulk,
 			expectedHeaders: map[string][]string{
-				"Content-Type": {"application/x-ndjson", "application/json"},
-				"Accept":       {"application/json", "application/json", "text/plain"},
+				"Content-Type": {"application/json", "application/json"},
+				"Accept":       {"application/json", "text/plain"},
 			},
 		},
 		{

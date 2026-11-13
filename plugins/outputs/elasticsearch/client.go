@@ -97,72 +97,6 @@ func (a *Elasticsearch) probeVersion(ctx context.Context) (string, uint64, error
 	return info.Version.Number, version.Major(), nil
 }
 
-func encodeBulk(documents []document, docType string) (*bytes.Buffer, error) {
-	var body bytes.Buffer
-	encoder := json.NewEncoder(&body)
-	for _, doc := range documents {
-		metadata := bulkMetadata{Index: doc.index, ID: doc.id, Type: docType, Pipeline: doc.pipeline}
-		if err := encoder.Encode(map[string]bulkMetadata{doc.opType: metadata}); err != nil {
-			return nil, fmt.Errorf("encoding bulk metadata failed: %w", err)
-		}
-		if err := encoder.Encode(doc.body); err != nil {
-			return nil, fmt.Errorf("encoding document body failed: %w", err)
-		}
-	}
-	return &body, nil
-}
-
-func checkBulkResponse(status int, body io.Reader, log telegraf.Logger) error {
-	if err := checkForError(status, body); err != nil {
-		return fmt.Errorf("error sending bulk request to Elasticsearch: %w", err)
-	}
-	var response bulkResponse
-	if err := json.NewDecoder(body).Decode(&response); err != nil {
-		return fmt.Errorf("decoding message body failed: %w", err)
-	}
-	if !response.Errors {
-		return nil
-	}
-	var failed int
-	for _, item := range response.Items {
-		for _, result := range item {
-			if result.Status >= 200 && result.Status < 300 {
-				continue
-			}
-			if failed == 0 && result.Error != nil {
-				// Preserve the legacy failure-list index: only the first failure was logged, at index 0.
-				log.Errorf(
-					"Elasticsearch indexing failure, id: %d, status: %d, error: %s, caused by: %s, %s",
-					0, result.Status, result.Error.Reason, result.Error.CausedBy["reason"], result.Error.CausedBy["type"],
-				)
-			}
-			failed++
-		}
-	}
-	return fmt.Errorf("elasticsearch failed to index %d metrics", failed)
-}
-
-func checkForError(status int, body io.Reader) error {
-	if status >= 200 && status < 300 {
-		return nil
-	}
-	data, err := io.ReadAll(body)
-	if err != nil {
-		return err
-	}
-	message := fmt.Sprintf("received error %d (%s)", status, http.StatusText(status))
-	var response apiErrorResponse
-	if err := json.Unmarshal(data, &response); err == nil && response.Error.Reason != "" {
-		message += ": " + response.Error.Reason
-		if response.Error.Type != "" {
-			message += " [type=" + response.Error.Type + "]"
-		}
-	} else if text := strings.TrimSpace(string(data)); text != "" {
-		message += ": " + text
-	}
-	return errors.New(message)
-}
-
 func (t roundTripper) RoundTrip(original *http.Request) (*http.Response, error) {
 	req := original.Clone(original.Context())
 	if err := t.setAuth(req); err != nil {
@@ -170,15 +104,6 @@ func (t roundTripper) RoundTrip(original *http.Request) (*http.Response, error) 
 			req.Body.Close()
 		}
 		return nil, err
-	}
-	if req.Header.Get("Accept") == "" {
-		req.Header.Set("Accept", "application/json")
-	}
-	if strings.HasSuffix(req.URL.Path, "/_bulk") {
-		// The v5/v6/v7 APIs default to JSON even for newline-delimited bulk bodies.
-		req.Header.Set("Content-Type", "application/x-ndjson")
-	} else if req.Header.Get("Content-Type") == "" {
-		req.Header.Set("Content-Type", "application/json")
 	}
 	// Preserve the existing bearer-token override of configured headers.
 	if t.bearerToken.Empty() {
@@ -245,6 +170,72 @@ func (t roundTripper) setAuth(req *http.Request) error {
 		token.Destroy()
 	}
 	return nil
+}
+
+func encodeBulk(documents []document, docType string) (*bytes.Buffer, error) {
+	var body bytes.Buffer
+	encoder := json.NewEncoder(&body)
+	for _, doc := range documents {
+		metadata := bulkMetadata{Index: doc.index, ID: doc.id, Type: docType, Pipeline: doc.pipeline}
+		if err := encoder.Encode(map[string]bulkMetadata{doc.opType: metadata}); err != nil {
+			return nil, fmt.Errorf("encoding bulk metadata failed: %w", err)
+		}
+		if err := encoder.Encode(doc.body); err != nil {
+			return nil, fmt.Errorf("encoding document body failed: %w", err)
+		}
+	}
+	return &body, nil
+}
+
+func checkBulkResponse(status int, body io.Reader, log telegraf.Logger) error {
+	if err := checkForError(status, body); err != nil {
+		return fmt.Errorf("error sending bulk request to Elasticsearch: %w", err)
+	}
+	var response bulkResponse
+	if err := json.NewDecoder(body).Decode(&response); err != nil {
+		return fmt.Errorf("decoding message body failed: %w", err)
+	}
+	if !response.Errors {
+		return nil
+	}
+	var failed int
+	for _, item := range response.Items {
+		for _, result := range item {
+			if result.Status >= 200 && result.Status < 300 {
+				continue
+			}
+			if failed == 0 && result.Error != nil {
+				// Preserve the legacy failure-list index: only the first failure was logged, at index 0.
+				log.Errorf(
+					"Elasticsearch indexing failure, id: %d, status: %d, error: %s, caused by: %s, %s",
+					0, result.Status, result.Error.Reason, result.Error.CausedBy["reason"], result.Error.CausedBy["type"],
+				)
+			}
+			failed++
+		}
+	}
+	return fmt.Errorf("elasticsearch failed to index %d metrics", failed)
+}
+
+func checkForError(status int, body io.Reader) error {
+	if status >= 200 && status < 300 {
+		return nil
+	}
+	data, err := io.ReadAll(body)
+	if err != nil {
+		return err
+	}
+	message := fmt.Sprintf("received error %d (%s)", status, http.StatusText(status))
+	var response apiErrorResponse
+	if err := json.Unmarshal(data, &response); err == nil && response.Error.Reason != "" {
+		message += ": " + response.Error.Reason
+		if response.Error.Type != "" {
+			message += " [type=" + response.Error.Type + "]"
+		}
+	} else if text := strings.TrimSpace(string(data)); text != "" {
+		message += ": " + text
+	}
+	return errors.New(message)
 }
 
 // preserveConnectionPool keeps the previous v6/v7 SDK pool when discovery finds no eligible nodes.
