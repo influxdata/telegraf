@@ -13,25 +13,26 @@ import (
 )
 
 type clientV5 struct {
-	client     *elasticsearch5.Client
-	httpClient *http.Client
-	log        telegraf.Logger
+	client *elasticsearch5.Client
+	log    telegraf.Logger
 }
 
-func newClientV5(transport roundTripper) (client, error) {
+func (a *Elasticsearch) newClientV5() (client, error) {
+	transport, err := a.newRoundTripper()
+	if err != nil {
+		return nil, err
+	}
 	c, err := elasticsearch5.NewClient(elasticsearch5.Config{
-		Addresses: transport.urls,
+		Addresses: a.URLs,
 		Transport: transport,
 	})
 	if err != nil {
 		return nil, err
 	}
-	return &clientV5{client: c, httpClient: transport.httpClient, log: transport.log}, nil
+	return &clientV5{client: c, log: a.Log}, nil
 }
 
-func (c *clientV5) close() {
-	c.httpClient.CloseIdleConnections()
-}
+func (*clientV5) close() {}
 
 func (c *clientV5) bulk(ctx context.Context, documents []document) error {
 	body, err := encodeBulk(documents, "metrics")

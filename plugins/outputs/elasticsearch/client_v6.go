@@ -16,15 +16,18 @@ import (
 
 type clientV6 struct {
 	client          *elasticsearch6.Client
-	httpClient      *http.Client
 	log             telegraf.Logger
 	cancelDiscovery context.CancelFunc
 	discoveryWG     sync.WaitGroup
 }
 
-func newClientV6(transport roundTripper) (client, error) {
+func (a *Elasticsearch) newClientV6() (client, error) {
+	transport, err := a.newRoundTripper()
+	if err != nil {
+		return nil, err
+	}
 	c, err := elasticsearch6.NewClient(elasticsearch6.Config{
-		Addresses: transport.urls,
+		Addresses: a.URLs,
 		Transport: transport,
 		// Telegraf owns write retries; replaying a bulk request can duplicate documents.
 		DisableRetry:       true,
@@ -33,13 +36,13 @@ func newClientV6(transport roundTripper) (client, error) {
 	if err != nil {
 		return nil, err
 	}
-	client := &clientV6{client: c, httpClient: transport.httpClient, log: transport.log}
-	if transport.enableSniffer {
+	client := &clientV6{client: c, log: a.Log}
+	if a.EnableSniffer {
 		// The v6 client exposes only DiscoverNodes(), so in-flight calls cannot be canceled.
 		ctx, cancel := context.WithCancel(context.Background())
 		client.cancelDiscovery = cancel
 		client.discoveryWG.Go(func() {
-			startDiscovery(ctx, c.DiscoverNodes, transport.log)
+			startDiscovery(ctx, c.DiscoverNodes, a.Log)
 		})
 	}
 	return client, nil
@@ -50,7 +53,6 @@ func (c *clientV6) close() {
 		c.cancelDiscovery()
 		c.discoveryWG.Wait()
 	}
-	c.httpClient.CloseIdleConnections()
 }
 
 func (c *clientV6) bulk(ctx context.Context, documents []document) error {

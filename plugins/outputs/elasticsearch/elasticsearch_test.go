@@ -1661,10 +1661,10 @@ func TestConnectRetry(t *testing.T) {
 func TestClientClose(t *testing.T) {
 	for _, tt := range []struct {
 		name      string
-		newClient func(roundTripper) (client, error)
+		newClient func(*Elasticsearch) (client, error)
 	}{
-		{name: "v6", newClient: newClientV6},
-		{name: "v7", newClient: newClientV7},
+		{name: "v6", newClient: (*Elasticsearch).newClientV6},
+		{name: "v7", newClient: (*Elasticsearch).newClientV7},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			started := make(chan struct{})
@@ -1673,13 +1673,16 @@ func TestClientClose(t *testing.T) {
 				<-r.Context().Done()
 			}))
 			defer server.Close()
-			connection, err := tt.newClient(roundTripper{
-				urls:          []string{server.URL},
-				enableSniffer: true,
+
+			plugin := &Elasticsearch{
+				URLs:          []string{server.URL},
+				EnableSniffer: true,
 				httpClient:    &http.Client{Timeout: time.Second},
-				log:           testutil.Logger{},
-			})
+				Log:           testutil.Logger{},
+			}
+			connection, err := tt.newClient(plugin)
 			require.NoError(t, err)
+			defer plugin.Close()
 			defer connection.close()
 			select {
 			case <-started:

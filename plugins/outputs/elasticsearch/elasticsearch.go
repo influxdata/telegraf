@@ -60,6 +60,7 @@ type Elasticsearch struct {
 	tls.ClientConfig
 
 	client             client
+	httpClient         *http.Client
 	httpHeaders        http.Header
 	majorReleaseNumber uint64
 	pipelineName       string
@@ -141,7 +142,7 @@ func (a *Elasticsearch) Connect() error {
 	if err != nil {
 		return fmt.Errorf("creating TLS configuration failed: %w", err)
 	}
-	httpTransport := &http.Transport{
+	transport := &http.Transport{
 		TLSClientConfig: tlsCfg,
 	}
 	if a.LocalAddress != "" {
@@ -150,49 +151,37 @@ func (a *Elasticsearch) Connect() error {
 			return err
 		}
 		dialer := &net.Dialer{LocalAddr: localAddr}
-		httpTransport.DialContext = dialer.DialContext
+		transport.DialContext = dialer.DialContext
 	}
 
-	httpClient := &http.Client{
-		Transport: httpTransport,
+	a.httpClient = &http.Client{
+		Transport: transport,
 		Timeout:   time.Duration(a.Timeout),
 	}
-	transport := roundTripper{
-		urls:          a.URLs,
-		headers:       a.httpHeaders,
-		enableGzip:    a.EnableGzip,
-		enableSniffer: a.EnableSniffer,
-		httpClient:    httpClient,
-		log:           a.Log,
-	}
-	if err := transport.configureAuth(a.Username, a.Password, a.AuthBearerToken); err != nil {
-		httpClient.CloseIdleConnections()
-		return fmt.Errorf("getting authentication options failed: %w", err)
-	}
 
-	version, major, err := transport.probeVersion(context.Background())
+	version, major, err := a.probeVersion(context.Background())
 	if err != nil {
-		httpClient.CloseIdleConnections()
+		a.Close()
 		return err
 	}
 
 	var c client
 	switch major {
 	case 5:
-		if transport.enableSniffer {
+		if a.EnableSniffer {
 			a.Log.Warn("'enable_sniffer' is not supported for Elasticsearch 5.x and will be ignored")
 		}
-		c, err = newClientV5(transport)
+		c, err = a.newClientV5()
 	case 6:
-		c, err = newClientV6(transport)
+		c, err = a.newClientV6()
 	case 7:
-		c, err = newClientV7(transport)
+		c, err = a.newClientV7()
 	default:
-		httpClient.CloseIdleConnections()
+		a.Close()
 		return fmt.Errorf("elasticsearch version not supported: %s", version)
 	}
 	if err != nil {
-		httpClient.CloseIdleConnections()
+		a.Close()
 		return fmt.Errorf("creating ES client failed: %w", err)
 	}
 	a.client = c
@@ -216,6 +205,10 @@ func (a *Elasticsearch) Close() error {
 	if a.client != nil {
 		a.client.close()
 		a.client = nil
+	}
+	if a.httpClient != nil {
+		a.httpClient.CloseIdleConnections()
+		a.httpClient = nil
 	}
 	return nil
 }

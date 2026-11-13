@@ -20,9 +20,8 @@ import (
 	"github.com/influxdata/telegraf/config"
 )
 
-// roundTripper holds client settings and applies per-request authentication, headers, and compression through the configured HTTP client.
+// roundTripper applies per-request authentication, headers, and compression through the configured HTTP client.
 type roundTripper struct {
-	urls               []string
 	basicAuth          bool
 	userinfo           *url.Userinfo
 	username           config.Secret
@@ -30,19 +29,30 @@ type roundTripper struct {
 	bearerToken        config.Secret
 	headers            http.Header
 	enableGzip         bool
-	enableSniffer      bool
 	httpClient         *http.Client
-	log                telegraf.Logger
 	bypassProductCheck bool
 }
 
-func (t *roundTripper) configureAuth(username, password, bearerToken config.Secret) error {
+func (a *Elasticsearch) newRoundTripper() (roundTripper, error) {
+	transport := roundTripper{
+		headers:     a.httpHeaders,
+		enableGzip:  a.EnableGzip,
+		httpClient:  a.httpClient,
+		bearerToken: a.AuthBearerToken,
+	}
+	if err := transport.configureAuth(a.URLs, a.Username, a.Password); err != nil {
+		return roundTripper{}, err
+	}
+	return transport, nil
+}
+
+func (t *roundTripper) configureAuth(addresses []string, username, password config.Secret) error {
 	if !username.Empty() && !password.Empty() {
 		t.basicAuth = true
 		t.username, t.password = username, password
 	}
 	if !t.basicAuth {
-		for _, address := range t.urls {
+		for _, address := range addresses {
 			u, err := url.Parse(address)
 			if err != nil {
 				return fmt.Errorf("parsing URL %q failed: %w", address, err)
@@ -53,14 +63,17 @@ func (t *roundTripper) configureAuth(username, password, bearerToken config.Secr
 			}
 		}
 	}
-	t.bearerToken = bearerToken
 	return nil
 }
 
-func (t roundTripper) probeVersion(ctx context.Context) (string, uint64, error) {
+func (a *Elasticsearch) probeVersion(ctx context.Context) (string, uint64, error) {
+	transport, err := a.newRoundTripper()
+	if err != nil {
+		return "", 0, fmt.Errorf("getting authentication options failed: %w", err)
+	}
 	probe, err := elasticsearch5.NewClient(elasticsearch5.Config{
-		Addresses: t.urls,
-		Transport: t,
+		Addresses: a.URLs,
+		Transport: transport,
 	})
 	if err != nil {
 		return "", 0, fmt.Errorf("creating ES client failed: %w", err)

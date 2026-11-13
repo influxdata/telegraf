@@ -16,16 +16,19 @@ import (
 
 type clientV7 struct {
 	client          *elasticsearch7.Client
-	httpClient      *http.Client
 	log             telegraf.Logger
 	cancelDiscovery context.CancelFunc
 	discoveryWG     sync.WaitGroup
 }
 
-func newClientV7(transport roundTripper) (client, error) {
+func (a *Elasticsearch) newClientV7() (client, error) {
+	transport, err := a.newRoundTripper()
+	if err != nil {
+		return nil, err
+	}
 	transport.bypassProductCheck = true
 	c, err := elasticsearch7.NewClient(elasticsearch7.Config{
-		Addresses: transport.urls,
+		Addresses: a.URLs,
 		Transport: transport,
 		// Telegraf owns write retries; replaying a bulk request can duplicate documents.
 		DisableRetry:       true,
@@ -34,13 +37,13 @@ func newClientV7(transport roundTripper) (client, error) {
 	if err != nil {
 		return nil, err
 	}
-	client := &clientV7{client: c, httpClient: transport.httpClient, log: transport.log}
-	if transport.enableSniffer {
+	client := &clientV7{client: c, log: a.Log}
+	if a.EnableSniffer {
 		// The v7 connection-pool discovery API accepts no context, so in-flight calls cannot be canceled.
 		ctx, cancel := context.WithCancel(context.Background())
 		client.cancelDiscovery = cancel
 		client.discoveryWG.Go(func() {
-			startDiscovery(ctx, c.DiscoverNodes, transport.log)
+			startDiscovery(ctx, c.DiscoverNodes, a.Log)
 		})
 	}
 	return client, nil
@@ -51,7 +54,6 @@ func (c *clientV7) close() {
 		c.cancelDiscovery()
 		c.discoveryWG.Wait()
 	}
-	c.httpClient.CloseIdleConnections()
 }
 
 func (c *clientV7) bulk(ctx context.Context, documents []document) error {
