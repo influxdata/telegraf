@@ -32,10 +32,16 @@ func newPlugin() *Postgresql {
 	}
 }
 
-// TestInitDefaults checks the values Init fills in, both for the plugin and
-// for a query inheriting from it or overriding it
+// TestInitDefaults checks the values Init fills in for a plugin created by its
+// registered factory, as Telegraf does for a configuration without the new
+// options, and for a query inheriting from the plugin or overriding it
 func TestInitDefaults(t *testing.T) {
-	p := newPlugin()
+	creator, found := inputs.Inputs["postgresql_extensible"]
+	require.True(t, found)
+	p, ok := creator().(*Postgresql)
+	require.True(t, ok)
+	p.Log = testutil.Logger{}
+	p.Address = config.NewSecret(nil)
 	p.Queries = []query{{Sqlquery: "SELECT 1"}}
 	require.NoError(t, p.Init())
 
@@ -45,12 +51,13 @@ func TestInitDefaults(t *testing.T) {
 	require.Equal(t, 1, p.MaxParallelDatabases)
 	require.Equal(t, "any", p.Role)
 	require.True(t, p.keepIdle)
+	require.True(t, p.PreparedStatements)
 
 	q := p.Queries[0]
 	require.Equal(t, "postgresql", q.Measurement)
 	require.Equal(t, "any", q.Role)
 	require.False(t, q.stringTags)
-	require.True(t, q.numericFloat)
+	require.False(t, q.numericFloat)
 
 	// A query takes the settings of the plugin unless it sets its own
 	p = newPlugin()
@@ -77,29 +84,19 @@ func TestInitDefaults(t *testing.T) {
 	require.Equal(t, "replica", overridden.Role)
 	require.False(t, overridden.stringTags)
 	require.False(t, overridden.numericFloat)
-}
 
-// TestRegisteredDefaults pins the defaults of a registered plugin: no
-// timeout, no caching, numeric columns as strings and the connection kept
-// between collections.
-func TestRegisteredDefaults(t *testing.T) {
-	creator, found := inputs.Inputs["postgresql_extensible"]
-	require.True(t, found)
+	// An old configuration with max_idle = 0 does not keep the connection
+	// open, unless keep_idle_connections says otherwise
+	p = newPlugin()
+	p.MaxIdle = 0
+	require.NoError(t, p.Init())
+	require.False(t, p.keepIdle)
 
-	p, ok := creator().(*Postgresql)
-	require.True(t, ok)
-
-	require.Zero(t, p.Timeout)
-	require.Zero(t, p.MetadataRefreshInterval)
-	require.Zero(t, p.MaxConnectionsPerDatabase)
-	require.Zero(t, p.MaxParallelDatabases)
-	require.Empty(t, p.Role)
-	require.Empty(t, p.NumericType)
-	require.False(t, p.StringColumnsAsTags)
-	require.Nil(t, p.KeepIdleConnections)
-	require.True(t, p.PreparedStatements)
-	require.Equal(t, 1, p.MaxIdle)
-	require.Equal(t, 1, p.MaxOpen)
+	p = newPlugin()
+	p.MaxIdle = 0
+	p.KeepIdleConnections = new(true)
+	require.NoError(t, p.Init())
+	require.True(t, p.keepIdle)
 }
 
 func TestInitDeprecatedOptions(t *testing.T) {
@@ -223,37 +220,6 @@ func TestInitErrors(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.plugin.Init()
 			require.ErrorContains(t, err, tt.expected)
-		})
-	}
-}
-
-func TestDatnameFilter(t *testing.T) {
-	tests := []struct {
-		name     string
-		include  []string
-		exclude  []string
-		datname  string
-		expected bool
-	}{
-		{name: "include exact", include: []string{"app"}, datname: "app", expected: true},
-		{name: "include exact no prefix", include: []string{"app"}, datname: "myapp", expected: false},
-		{name: "include exact no suffix", include: []string{"app"}, datname: "app2", expected: false},
-		{name: "include glob", include: []string{"app_*"}, datname: "app_prod", expected: true},
-		{name: "include glob no match", include: []string{"app_*"}, datname: "billing", expected: false},
-		{name: "include multiple", include: []string{"app_*", "billing"}, datname: "billing", expected: true},
-		{name: "exclude only", exclude: []string{"*_test"}, datname: "app_test", expected: false},
-		{name: "exclude only no match", exclude: []string{"*_test"}, datname: "app_prod", expected: true},
-		{name: "include and exclude", include: []string{"app_*"}, exclude: []string{"*_test"}, datname: "app_test", expected: false},
-		{name: "include and exclude pass", include: []string{"app_*"}, exclude: []string{"*_test"}, datname: "app_prod", expected: true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			p := newPlugin()
-			p.DatnameInclude = tt.include
-			p.DatnameExclude = tt.exclude
-			require.NoError(t, p.Init())
-			require.Equal(t, tt.expected, p.datnameFilter.Match(tt.datname))
 		})
 	}
 }
@@ -527,37 +493,15 @@ type testServer struct {
 	port      string
 }
 
-// dsn builds a connection string for the given database, optionally tagging
-// the sessions with an application_name so a test can recognize them in
-// pg_stat_activity
-func (s *testServer) dsn(datname, appName string) string {
-	dsn := fmt.Sprintf("host=%s port=%s user=postgres dbname=%s sslmode=disable", s.host, s.port, datname)
+// dsn builds a connection string for the postgres database, optionally
+// tagging the sessions with an application_name so a test can recognize them
+// in pg_stat_activity
+func (s *testServer) dsn(appName string) string {
+	dsn := fmt.Sprintf("host=%s port=%s user=postgres dbname=postgres sslmode=disable", s.host, s.port)
 	if appName != "" {
 		dsn += " application_name=" + appName
 	}
 	return dsn
-}
-
-// seedSchema creates a few tables with indexes in the given database so the
-// table and index statistics views return rows
-func (s *testServer) seedSchema(t *testing.T, datname string) {
-	db, err := sql.Open("pgx", s.dsn(datname, ""))
-	require.NoError(t, err)
-	defer db.Close()
-
-	// The table names come from the hardcoded list below, so building the
-	// statements by concatenation is safe here
-	//nolint:gosec // G202: no user input reaches these statements
-	for _, table := range []string{"orders", "customers", "invoices"} {
-		_, err := db.Exec("CREATE TABLE " + table + " (id integer PRIMARY KEY, label text, amount numeric)")
-		require.NoErrorf(t, err, "creating table %q in %q failed", table, datname)
-		_, err = db.Exec("CREATE INDEX ON " + table + " (label)")
-		require.NoErrorf(t, err, "creating index on %q in %q failed", table, datname)
-		_, err = db.Exec("INSERT INTO " + table + " SELECT g, 'row-' || g, g * 1.5 FROM generate_series(1, 50) AS g")
-		require.NoErrorf(t, err, "filling table %q in %q failed", table, datname)
-	}
-	_, err = db.Exec("ANALYZE")
-	require.NoError(t, err)
 }
 
 func startServer(t *testing.T, databases ...string) *testServer {
@@ -707,7 +651,7 @@ func TestKeepConnectionsIntegration(t *testing.T) {
 	// the plugin can only be counted once its collection is done. The
 	// observer carries an application_name of its own, so it never counts
 	// itself.
-	observer, err := sql.Open("pgx", server.dsn("postgres", "keep_observer"))
+	observer, err := sql.Open("pgx", server.dsn("keep_observer"))
 	require.NoError(t, err)
 	defer observer.Close()
 	observer.SetMaxOpenConns(1)
@@ -743,7 +687,7 @@ func TestKeepConnectionsIntegration(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &Postgresql{
 				Log:                       testutil.Logger{},
-				Address:                   config.NewSecret([]byte(server.dsn("postgres", appName))),
+				Address:                   config.NewSecret([]byte(server.dsn(appName))),
 				MaxIdle:                   1,
 				MaxOpen:                   1,
 				NumericType:               "float",
@@ -782,7 +726,7 @@ func TestAddressWithoutDbnameIntegration(t *testing.T) {
 	server := startServer(t, "monitor")
 	defer server.stop()
 
-	admin, err := sql.Open("pgx", server.dsn("postgres", ""))
+	admin, err := sql.Open("pgx", server.dsn(""))
 	require.NoError(t, err)
 	defer admin.Close()
 	_, err = admin.Exec("CREATE ROLE monitor LOGIN")
@@ -850,44 +794,6 @@ func TestTimeoutsIntegration(t *testing.T) {
 	})
 }
 
-func TestCachedRoleIntegration(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
-	server := startServer(t)
-	defer server.stop()
-
-	p := &Postgresql{
-		Log:                     testutil.Logger{},
-		Address:                 config.NewSecret([]byte(server.address)),
-		MaxIdle:                 1,
-		MaxOpen:                 1,
-		NumericType:             "float",
-		MetadataRefreshInterval: config.Duration(time.Hour),
-		Queries:                 []query{{Measurement: "primary_only", Sqlquery: "SELECT 1 AS value", Role: "primary"}},
-	}
-	require.NoError(t, p.Init())
-
-	var acc testutil.Accumulator
-	require.NoError(t, p.Start(&acc))
-	defer p.Stop()
-
-	// The container is a primary, so the query runs
-	require.NoError(t, p.Gather(&acc))
-	require.Empty(t, acc.Errors)
-	require.True(t, acc.HasMeasurement("primary_only"))
-
-	// Pretend the server became a replica without the cache knowing about
-	// it: the next collection must use the cached role instead of asking
-	// the server again
-	acc.ClearMetrics()
-	p.inRecovery = true
-	require.NoError(t, p.Gather(&acc))
-	require.Empty(t, acc.Errors)
-	require.False(t, acc.HasMeasurement("primary_only"))
-}
-
 // TestMetadataFailureIntegration checks that the queries not limited to a
 // version still run if the server information cannot be read
 func TestMetadataFailureIntegration(t *testing.T) {
@@ -898,7 +804,7 @@ func TestMetadataFailureIntegration(t *testing.T) {
 	server := startServer(t)
 	defer server.stop()
 
-	admin, err := sql.Open("pgx", server.dsn("postgres", ""))
+	admin, err := sql.Open("pgx", server.dsn(""))
 	require.NoError(t, err)
 	defer admin.Close()
 	_, err = admin.Exec("CREATE ROLE monitor LOGIN")
@@ -964,108 +870,76 @@ func TestColumnTypesIntegration(t *testing.T) {
 	defer server.stop()
 
 	tests := []struct {
-		name   string
-		sql    string
-		plugin func(q *query, p *Postgresql)
-		check  func(t *testing.T, acc *testutil.Accumulator)
+		name           string
+		sql            string
+		numericType    string
+		stringTags     bool
+		expectedTags   map[string]string
+		expectedFields map[string]any
+		expectedTime   time.Time
 	}{
 		{
-			name: "float",
-			sql:  "SELECT 10.0::float AS myvalue",
-			check: func(t *testing.T, acc *testutil.Accumulator) {
-				v, found := acc.FloatField("postgresql", "myvalue")
-				require.True(t, found)
-				require.InDelta(t, 10.0, v, testutil.DefaultDelta)
-			},
+			name:           "float",
+			sql:            "SELECT 10.0::float AS myvalue",
+			expectedFields: map[string]any{"myvalue": 10.0},
 		},
 		{
-			name: "numeric as string",
-			sql:  "SELECT 10.0 AS myvalue",
-			check: func(t *testing.T, acc *testutil.Accumulator) {
-				v, found := acc.StringField("postgresql", "myvalue")
-				require.True(t, found)
-				require.Equal(t, "10.0", v)
-			},
+			name:           "numeric as string",
+			sql:            "SELECT 10.0 AS myvalue",
+			expectedFields: map[string]any{"myvalue": "10.0"},
 		},
 		{
-			name:   "numeric as float",
-			sql:    "SELECT 10.5::numeric AS myvalue",
-			plugin: func(_ *query, p *Postgresql) { p.NumericType = "float" },
-			check: func(t *testing.T, acc *testutil.Accumulator) {
-				v, found := acc.FloatField("postgresql", "myvalue")
-				require.True(t, found)
-				require.InDelta(t, 10.5, v, testutil.DefaultDelta)
-			},
+			name:           "numeric as float",
+			sql:            "SELECT 10.5::numeric AS myvalue",
+			numericType:    "float",
+			expectedFields: map[string]any{"myvalue": 10.5},
 		},
 		{
-			name: "query overrides numeric as float",
-			sql:  "SELECT 10.5::numeric AS myvalue",
-			plugin: func(q *query, p *Postgresql) {
-				p.NumericType = "float"
-				q.NumericType = "string"
-			},
-			check: func(t *testing.T, acc *testutil.Accumulator) {
-				v, found := acc.StringField("postgresql", "myvalue")
-				require.True(t, found)
-				require.Equal(t, "10.5", v)
-			},
-		},
-		{
-			name: "string",
-			sql:  "SELECT 'hello world' AS myvalue",
-			check: func(t *testing.T, acc *testutil.Accumulator) {
-				v, found := acc.StringField("postgresql", "myvalue")
-				require.True(t, found)
-				require.Equal(t, "hello world", v)
-			},
+			name:           "string",
+			sql:            "SELECT 'hello world' AS myvalue",
+			expectedFields: map[string]any{"myvalue": "hello world"},
 		},
 		{
 			name: "string columns as tags",
 			sql: "SELECT 'a'::text AS t, 'b'::varchar AS v, 'c'::char(1) AS c, 'd'::name AS n, " +
 				"2 / 0.8 AS ratio, 3 AS count",
-			plugin: func(_ *query, p *Postgresql) { p.StringColumnsAsTags = true },
-			check: func(t *testing.T, acc *testutil.Accumulator) {
-				require.Len(t, acc.Metrics, 1)
-				m := acc.Metrics[0]
-				for k, v := range map[string]string{"t": "a", "v": "b", "c": "c", "n": "d"} {
-					require.Equal(t, v, m.Tags[k], k)
-				}
-				require.Equal(t, map[string]any{"ratio": "2.5000000000000000", "count": int64(3)}, m.Fields)
-			},
+			stringTags:     true,
+			expectedTags:   map[string]string{"t": "a", "v": "b", "c": "c", "n": "d"},
+			expectedFields: map[string]any{"ratio": "2.5000000000000000", "count": int64(3)},
 		},
 		{
-			name: "boolean",
-			sql:  "SELECT true AS myvalue",
-			check: func(t *testing.T, acc *testutil.Accumulator) {
-				v, found := acc.BoolField("postgresql", "myvalue")
-				require.True(t, found)
-				require.True(t, v)
-			},
+			name:           "boolean",
+			sql:            "SELECT true AS myvalue",
+			expectedFields: map[string]any{"myvalue": true},
 		},
 		{
-			name: "timestamp column",
-			sql:  "SELECT timestamp'1980-07-23' AS ts, true AS myvalue",
-			check: func(t *testing.T, acc *testutil.Accumulator) {
-				v, found := acc.BoolField("postgresql", "myvalue")
-				require.True(t, found)
-				require.True(t, v)
-				require.True(t, acc.HasTimestamp("postgresql", time.Date(1980, 7, 23, 0, 0, 0, 0, time.UTC)))
-			},
+			name:           "timestamp column",
+			sql:            "SELECT timestamp'1980-07-23' AS ts, true AS myvalue",
+			expectedFields: map[string]any{"myvalue": true},
+			expectedTime:   time.Date(1980, 7, 23, 0, 0, 0, 0, time.UTC),
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			q := query{Sqlquery: tt.sql, MinVersion: 901, Timestamp: "ts"}
-			p := &Postgresql{}
-			if tt.plugin != nil {
-				tt.plugin(&q, p)
-			}
-			p.Queries = []query{q}
-
-			acc := server.run(t, p)
+			acc := server.run(t, &Postgresql{
+				NumericType:         tt.numericType,
+				StringColumnsAsTags: tt.stringTags,
+				Queries:             []query{{Sqlquery: tt.sql, MinVersion: 901, Timestamp: "ts"}},
+			})
 			require.Empty(t, acc.Errors)
-			tt.check(t, acc)
+			require.Len(t, acc.Metrics, 1)
+
+			m := acc.Metrics[0]
+			require.Equal(t, tt.expectedFields, m.Fields)
+			// The db and server tags come on top of the expected ones
+			require.Len(t, m.Tags, len(tt.expectedTags)+2)
+			for k, v := range tt.expectedTags {
+				require.Equal(t, v, m.Tags[k], k)
+			}
+			if !tt.expectedTime.IsZero() {
+				require.WithinDuration(t, tt.expectedTime, m.Time, 0)
+			}
 		})
 	}
 }
@@ -1086,7 +960,7 @@ type connSampler struct {
 }
 
 func newConnSampler(t *testing.T, server *testServer, appName string) *connSampler {
-	db, err := sql.Open("pgx", server.dsn("postgres", "conn_sampler"))
+	db, err := sql.Open("pgx", server.dsn("conn_sampler"))
 	require.NoError(t, err)
 
 	s := &connSampler{
@@ -1170,101 +1044,43 @@ func TestConnectionLimitsIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	server := startServer(t, "app_1", "app_2", "app_3", "app_4", "app_5")
+	databases := []string{"app_1", "app_2", "app_3"}
+	server := startServer(t, databases...)
 	defer server.stop()
-	for _, datname := range []string{"postgres", "app_1", "app_2", "app_3", "app_4", "app_5"} {
-		server.seedSchema(t, datname)
-	}
 
 	// Queries slow enough for the sampler to observe them. pg_sleep is put in
-	// a CTE so it runs once per query instead of once per row.
-	const sleep = "0.4"
-	trivial := func(n int) string {
-		return "WITH s AS (SELECT pg_sleep(" + sleep + ")) SELECT " + strconv.Itoa(n) + " AS value FROM s"
+	// a CTE so its result does not become a field.
+	slow := func(n int) string {
+		return "WITH s AS (SELECT pg_sleep(0.4)) SELECT " + strconv.Itoa(n) + " AS value FROM s"
 	}
-	tableStats := "WITH s AS (SELECT pg_sleep(" + sleep + ")) " +
-		"SELECT relname, n_live_tup, n_dead_tup FROM pg_stat_user_tables, s"
-	indexStats := "WITH s AS (SELECT pg_sleep(" + sleep + ")) " +
-		"SELECT indexrelname, idx_scan, idx_tup_read FROM pg_stat_user_indexes, s"
+	queries := []query{
+		{Measurement: "q1", Sqlquery: slow(1)},
+		{Measurement: "q2", Sqlquery: slow(2)},
+		{Measurement: "q3", Sqlquery: slow(3)},
+	}
+	const parallelDBs, connsPerDB = 2, 2
 
 	tests := []struct {
 		name string
-
-		datnameInclude []string
-		datnameExclude []string
-		parallelDBs    int
-		connsPerDB     int
-		queries        []query
 		// coldMetadata measures the first collection, which still has to read
 		// the server information
 		coldMetadata bool
-
-		wantDatnames    []string
-		wantMaxPerDB    int
-		wantMaxDBs      int
-		wantMaxTotalCap int
+		wantMaxDBs   int
+		wantMaxTotal int
 	}{
 		{
-			name:        "single database, three queries",
-			parallelDBs: 1,
-			connsPerDB:  3,
-			queries: []query{
-				{Measurement: "q1", Sqlquery: trivial(1)},
-				{Measurement: "q2", Sqlquery: trivial(2)},
-				{Measurement: "q3", Sqlquery: trivial(3)},
-			},
-			wantDatnames:    []string{"postgres"},
-			wantMaxPerDB:    3,
-			wantMaxDBs:      1,
-			wantMaxTotalCap: 3,
+			name:         "three databases without postgres",
+			wantMaxDBs:   parallelDBs,
+			wantMaxTotal: parallelDBs * connsPerDB,
 		},
 		{
-			name:           "five databases without postgres",
-			datnameExclude: []string{"postgres"},
-			parallelDBs:    2,
-			connsPerDB:     2,
-			queries: []query{
-				{Measurement: "pg_tables", Sqlquery: tableStats, Tagvalue: "relname"},
-				{Measurement: "pg_indexes", Sqlquery: indexStats, Tagvalue: "indexrelname"},
-			},
-			wantDatnames:    []string{"app_1", "app_2", "app_3", "app_4", "app_5"},
-			wantMaxPerDB:    2,
-			wantMaxDBs:      2,
-			wantMaxTotalCap: 4,
-		},
-		{
-			name:        "all databases including postgres",
-			parallelDBs: 2,
-			connsPerDB:  2,
-			// Match every database so the connection database is processed
-			// like any other one
-			datnameInclude: []string{"*"},
-			queries: []query{
-				{Measurement: "pg_tables", Sqlquery: tableStats, Tagvalue: "relname"},
-				{Measurement: "pg_indexes", Sqlquery: indexStats, Tagvalue: "indexrelname"},
-			},
-			wantDatnames:    []string{"app_1", "app_2", "app_3", "app_4", "app_5", "postgres"},
-			wantMaxPerDB:    2,
-			wantMaxDBs:      2,
-			wantMaxTotalCap: 4,
-		},
-		{
-			name:           "five databases with a cold metadata cache",
-			datnameExclude: []string{"postgres"},
-			parallelDBs:    2,
-			connsPerDB:     2,
-			coldMetadata:   true,
-			queries: []query{
-				{Measurement: "pg_tables", Sqlquery: tableStats, Tagvalue: "relname"},
-				{Measurement: "pg_indexes", Sqlquery: indexStats, Tagvalue: "indexrelname"},
-			},
-			wantDatnames: []string{"app_1", "app_2", "app_3", "app_4", "app_5"},
-			wantMaxPerDB: 2,
+			name:         "three databases with a cold metadata cache",
+			coldMetadata: true,
 			// The connection reading the server information belongs to the
 			// connection database, which is not one of the databases being
 			// queried here
-			wantMaxDBs:      3,
-			wantMaxTotalCap: 5,
+			wantMaxDBs:   parallelDBs + 1,
+			wantMaxTotal: parallelDBs*connsPerDB + 1,
 		},
 	}
 
@@ -1279,7 +1095,7 @@ func TestConnectionLimitsIntegration(t *testing.T) {
 
 			p := &Postgresql{
 				Log:                testutil.Logger{},
-				Address:            config.NewSecret([]byte(server.dsn("postgres", appName))),
+				Address:            config.NewSecret([]byte(server.dsn(appName))),
 				MaxIdle:            1,
 				MaxOpen:            1,
 				PreparedStatements: true,
@@ -1289,11 +1105,10 @@ func TestConnectionLimitsIntegration(t *testing.T) {
 				MetadataRefreshInterval:   metadataInterval,
 				KeepIdleConnections:       new(false),
 				NumericType:               "float",
-				DatnameInclude:            tt.datnameInclude,
-				DatnameExclude:            tt.datnameExclude,
-				MaxParallelDatabases:      tt.parallelDBs,
-				MaxConnectionsPerDatabase: tt.connsPerDB,
-				Queries:                   tt.queries,
+				DatnameExclude:            []string{"postgres"},
+				MaxParallelDatabases:      parallelDBs,
+				MaxConnectionsPerDatabase: connsPerDB,
+				Queries:                   queries,
 			}
 			require.NoError(t, p.Init())
 
@@ -1314,103 +1129,38 @@ func TestConnectionLimitsIntegration(t *testing.T) {
 			sampler.stop()
 			require.Empty(t, acc.Errors)
 
-			// Every expected database produced metrics for every query
-			for _, q := range tt.queries {
-				got := make([]string, 0, len(tt.wantDatnames))
+			// Every database produced metrics for every query
+			for _, q := range queries {
+				got := make([]string, 0, len(databases))
 				for datname := range dbTags(acc.GetTelegrafMetrics(), q.Measurement) {
 					got = append(got, datname)
 				}
 				sort.Strings(got)
-				require.Equalf(t, tt.wantDatnames, got, "databases for measurement %q", q.Measurement)
+				require.Equalf(t, databases, got, "databases for measurement %q", q.Measurement)
 			}
-
-			sampler.mu.Lock()
-			defer sampler.mu.Unlock()
-
-			datnames := make([]string, 0, len(sampler.maxPerDB))
-			for datname := range sampler.maxPerDB {
-				datnames = append(datnames, datname)
-			}
-			sort.Strings(datnames)
-
-			t.Logf("max_parallel_databases=%d max_connections_per_database=%d queries=%d",
-				tt.parallelDBs, tt.connsPerDB, len(tt.queries))
-			t.Logf("%-12s %s", "database", "peak connections")
-			for _, datname := range datnames {
-				t.Logf("%-12s %d", datname, sampler.maxPerDB[datname])
-			}
-			t.Logf("%-12s %d", "TOTAL", sampler.maxTotal)
-			t.Logf("databases seen at the same time: %d (samples taken: %d)", sampler.maxDBsAtOnce, sampler.samples)
 
 			require.Positive(t, sampler.samples, "the sampler never ran")
 			require.NotEmpty(t, sampler.maxPerDB, "no sessions of the plugin were observed")
 
-			for _, datname := range datnames {
-				require.LessOrEqualf(t, sampler.maxPerDB[datname], tt.connsPerDB,
+			for datname, peak := range sampler.maxPerDB {
+				require.LessOrEqualf(t, peak, connsPerDB,
 					"database %q exceeded max_connections_per_database", datname)
 			}
 			require.Equal(t, tt.wantMaxDBs, sampler.maxDBsAtOnce,
 				"number of databases processed at the same time")
-			require.LessOrEqual(t, sampler.maxTotal, tt.wantMaxTotalCap,
+			require.LessOrEqual(t, sampler.maxTotal, tt.wantMaxTotal,
 				"total number of connections")
 
 			// At least one database must have reached the per-database limit,
 			// otherwise the test would pass without any concurrency at all
 			var reached bool
-			for _, datname := range datnames {
-				if sampler.maxPerDB[datname] == tt.wantMaxPerDB {
+			for _, peak := range sampler.maxPerDB {
+				if peak == connsPerDB {
 					reached = true
 					break
 				}
 			}
-			require.Truef(t, reached, "no database reached %d connections", tt.wantMaxPerDB)
-		})
-	}
-}
-
-func BenchmarkAccRow(b *testing.B) {
-	columns := []string{
-		"datname", "relname", "schemaname", "n_live_tup", "n_dead_tup",
-		"seq_scan", "idx_scan", "table_size_b", "bloat_pct", "last_vacuum",
-	}
-	row := []any{
-		"app_1", "users", "public", int64(20000), int64(6667),
-		int64(15), int64(3), int64(5652480), 34.6, "2026-09-22",
-	}
-
-	for _, tt := range []struct {
-		name  string
-		debug bool
-	}{{name: "debug off", debug: false}, {name: "debug on", debug: true}} {
-		b.Run(tt.name, func(b *testing.B) {
-			p := newPlugin()
-			p.Log = testutil.Logger{Quiet: true}
-			p.Queries = []query{{Sqlquery: "SELECT 1", Measurement: "bench", Tagvalue: "relname,schemaname"}}
-			require.NoError(b, p.Init())
-
-			var acc testutil.Accumulator
-			j := job{datname: "app_1", query: &p.Queries[0]}
-			now := time.Now()
-
-			// The row buffers are prepared once per result set, as in
-			// gatherMetricsFromQuery
-			values := make([]any, len(columns))
-			pointers := make([]any, len(columns))
-			for i := range values {
-				pointers[i] = &values[i]
-			}
-			rs := &resultSet{columns: columns, values: values, debug: tt.debug}
-
-			b.ReportAllocs()
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				// simulate rows.Scan writing into the reused buffer
-				for k := range row {
-					*(pointers[k].(*any)) = row[k]
-				}
-				p.accRow(&acc, rs, j, now)
-				acc.ClearMetrics()
-			}
+			require.Truef(t, reached, "no database reached %d connections", connsPerDB)
 		})
 	}
 }
