@@ -2,3 +2,4 @@
 <=github.com/segmentio/asm@v1.2.0 MIT
 howett.net/plist BSD-2-Clause-Views,BSD-3-Clause
 <=github.com/segmentio/asm@v1.2.1 MIT
+<=github.com/prometheus-community/pro-bing@v0.9.1 MIT
