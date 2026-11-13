@@ -11,7 +11,6 @@ import (
 	"math"
 	"net"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -80,22 +79,6 @@ func (a *Elasticsearch) Init() error {
 	}
 	if a.IndexName == "" {
 		return errors.New("no 'index_name' defined")
-	}
-
-	if !a.AuthBearerToken.Empty() {
-		basicAuth := !a.Username.Empty() || !a.Password.Empty()
-		if !basicAuth {
-			for _, address := range a.URLs {
-				u, err := url.Parse(address)
-				if err == nil && u.User != nil {
-					basicAuth = true
-					break
-				}
-			}
-		}
-		if basicAuth {
-			return errors.New("cannot use both basic and bearer authentication")
-		}
 	}
 
 	// Determine if we should process NaN and inf values

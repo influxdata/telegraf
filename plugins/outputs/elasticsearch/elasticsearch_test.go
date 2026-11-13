@@ -210,26 +210,6 @@ func TestInitFail(t *testing.T) {
 			expected: "no 'index_name' defined",
 		},
 		{
-			name: "basic and bearer authentication",
-			plugin: &Elasticsearch{
-				URLs:            []string{"http://localhost:9200"},
-				IndexName:       "test-%Y.%m.%d",
-				Username:        config.NewSecret([]byte("user")),
-				Password:        config.NewSecret([]byte("password")),
-				AuthBearerToken: config.NewSecret([]byte("token")),
-			},
-			expected: "cannot use both basic and bearer authentication",
-		},
-		{
-			name: "URL basic and bearer authentication",
-			plugin: &Elasticsearch{
-				URLs:            []string{"http://user:password@localhost:9200"},
-				IndexName:       "test-%Y.%m.%d",
-				AuthBearerToken: config.NewSecret([]byte("token")),
-			},
-			expected: "cannot use both basic and bearer authentication",
-		},
-		{
 			name: "invalid float handling",
 			plugin: &Elasticsearch{
 				URLs:          []string{"http://localhost:9200"},
@@ -735,30 +715,40 @@ func TestWriteAuthentication(t *testing.T) {
 		username    string
 		password    string
 		bearerToken string
-		expected    []string
+		expected    [][]string
 	}{
 		{
 			name:     "rotating basic credentials",
 			username: "@{test:credential}",
 			password: "@{test:credential}",
-			expected: []string{"Basic Zmlyc3Q6Zmlyc3Q=", "Basic c2Vjb25kOnNlY29uZA=="},
+			expected: [][]string{{"Basic Zmlyc3Q6Zmlyc3Q="}, {"Basic c2Vjb25kOnNlY29uZA=="}},
 		},
 		{
 			name:        "rotating bearer token",
 			bearerToken: "@{test:credential}",
-			expected:    []string{"Bearer first", "Bearer second"},
+			expected:    [][]string{{"Bearer first"}, {"Bearer second"}},
+		},
+		{
+			name:        "basic credentials precede bearer token",
+			username:    "@{test:credential}",
+			password:    "@{test:credential}",
+			bearerToken: "@{test:credential}",
+			expected: [][]string{
+				{"Basic Zmlyc3Q6Zmlyc3Q=", "Bearer first"},
+				{"Basic c2Vjb25kOnNlY29uZA==", "Bearer second"},
+			},
 		},
 		{
 			name:     "literal URL password",
 			userinfo: "user:%40%7Ba%3Ab%7D",
-			expected: []string{"Basic dXNlcjpAe2E6Yn0=", "Basic dXNlcjpAe2E6Yn0="},
+			expected: [][]string{{"Basic dXNlcjpAe2E6Yn0="}, {"Basic dXNlcjpAe2E6Yn0="}},
 		},
 		{
 			name:     "configured credentials override URL credentials",
 			userinfo: "urluser:urlpassword",
 			username: "@{test:credential}",
 			password: "@{test:credential}",
-			expected: []string{"Basic Zmlyc3Q6Zmlyc3Q=", "Basic c2Vjb25kOnNlY29uZA=="},
+			expected: [][]string{{"Basic Zmlyc3Q6Zmlyc3Q="}, {"Basic c2Vjb25kOnNlY29uZA=="}},
 		},
 	}
 	for _, version := range []string{"5.6.16", "6.8.23", "7.17.29"} {
@@ -802,7 +792,7 @@ func TestWriteAuthentication(t *testing.T) {
 					headers := server.headers()
 					require.Len(t, headers, len(tt.expected))
 					for i, expected := range tt.expected {
-						require.Equal(t, []string{expected}, headers[i].Values("Authorization"))
+						require.Equal(t, expected, headers[i].Values("Authorization"))
 					}
 				})
 			}

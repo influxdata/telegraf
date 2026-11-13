@@ -271,6 +271,8 @@ to use them.
   # password = "mypassword"
   ## HTTP bearer token authentication details
   # auth_bearer_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
+  ## If both basic and bearer authentication are configured, both are sent with
+  ## basic authentication first.
 
   ## Index Config
   ## The target index for metrics (Elasticsearch will create if it not exists).
