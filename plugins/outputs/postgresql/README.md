@@ -69,6 +69,14 @@ to use them.
   ## Postgres schema to use.
   # schema = "public"
 
+  ## The value of this tag will be used to determine the schema. If this tag
+  ## is not set or empty, the 'schema' option above is used instead. The schema
+  ## must already exist or be created using the templates below.
+  # schema_tag = ""
+
+  ## If true, the 'schema_tag' will not be included in the written metric.
+  # exclude_schema_tag = false
+
   ## Store tags as foreign keys in the metrics table. Default is false.
   # tags_as_foreign_keys = false
 
@@ -165,6 +173,38 @@ batches will be buffered within telegraf core.
 When using `tags_as_foreign_keys`, tags will be written to a separate table
 with a `tag_id` column used for joins. Each series (unique combination of tag
 values) gets its own entry in the tags table, and a unique `tag_id`.
+
+### Schema from tag
+
+By default all metrics are written to the schema set by the `schema` option.
+With `schema_tag` set, the value of that tag selects the schema of each metric
+instead. Metrics without this tag, or with an empty value, are written to the
+schema set by `schema`. Each batch is split by schema and table, so a single
+output can write to several schemas. Set `exclude_schema_tag` to not write the
+tag as a column.
+
+```toml
+[[outputs.postgresql]]
+  schema = "public"
+  schema_tag = "schema"
+  exclude_schema_tag = true
+```
+
+The tag value is used verbatim as the schema name. The plugin does not create
+schemas, so they must exist before metrics are written to them. Alternatively,
+create them via the templates. When using `tags_as_foreign_keys`, the tag table
+is created first, so add the statement to both template options:
+
+```toml
+  create_templates = [
+    '''CREATE SCHEMA IF NOT EXISTS {{ .table.Schema|quoteIdentifier }}''',
+    '''CREATE TABLE {{ .table }} ({{ .columns }})''',
+  ]
+  tag_table_create_templates = [
+    '''CREATE SCHEMA IF NOT EXISTS {{ .table.Schema|quoteIdentifier }}''',
+    '''CREATE TABLE {{ .table }} ({{ .columns }}, PRIMARY KEY (tag_id))''',
+  ]
+```
 
 ## Data types
 

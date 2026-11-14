@@ -27,17 +27,17 @@ func TestTableManagerIntegration_EnsureStructure(t *testing.T) {
 	missingCols, err := p.tableManager.EnsureStructure(
 		ctx,
 		p.db,
-		p.tableManager.table(t.Name()),
+		p.tableManager.table(p.Schema, t.Name()),
 		cols,
 		p.CreateTemplates,
 		p.AddColumnTemplates,
-		p.tableManager.table(t.Name()),
+		p.tableManager.table(p.Schema, t.Name()),
 		nil,
 	)
 	require.NoError(t, err)
 	require.Empty(t, missingCols)
 
-	tblCols := p.tableManager.table(t.Name()).columns
+	tblCols := p.tableManager.table(p.Schema, t.Name()).columns
 	require.EqualValues(t, cols[0], tblCols["foo"])
 	require.EqualValues(t, cols[1], tblCols["baz"])
 }
@@ -59,11 +59,11 @@ func TestTableManagerIntegration_EnsureStructure_alter(t *testing.T) {
 	_, err = p.tableManager.EnsureStructure(
 		ctx,
 		p.db,
-		p.tableManager.table(t.Name()),
+		p.tableManager.table(p.Schema, t.Name()),
 		cols,
 		p.CreateTemplates,
 		p.AddColumnTemplates,
-		p.tableManager.table(t.Name()),
+		p.tableManager.table(p.Schema, t.Name()),
 		nil,
 	)
 	require.NoError(t, err)
@@ -72,17 +72,17 @@ func TestTableManagerIntegration_EnsureStructure_alter(t *testing.T) {
 	missingCols, err := p.tableManager.EnsureStructure(
 		ctx,
 		p.db,
-		p.tableManager.table(t.Name()),
+		p.tableManager.table(p.Schema, t.Name()),
 		cols,
 		p.CreateTemplates,
 		p.AddColumnTemplates,
-		p.tableManager.table(t.Name()),
+		p.tableManager.table(p.Schema, t.Name()),
 		nil,
 	)
 	require.NoError(t, err)
 	require.Empty(t, missingCols)
 
-	tblCols := p.tableManager.table(t.Name()).columns
+	tblCols := p.tableManager.table(p.Schema, t.Name()).columns
 	require.EqualValues(t, cols[0], tblCols["foo"])
 	require.EqualValues(t, cols[1], tblCols["bar"])
 	require.EqualValues(t, cols[2], tblCols["baz"])
@@ -97,7 +97,7 @@ func TestTableManagerIntegration_EnsureStructure_overflowTableName(t *testing.T)
 	require.NoError(t, err)
 	require.NoError(t, p.Connect())
 
-	tbl := p.tableManager.table("ăăăăăăăăăăăăăăăăăăăăăăăăăăăăăăăă") // 32 2-byte unicode characters = 64 bytes
+	tbl := p.tableManager.table(p.Schema, "ăăăăăăăăăăăăăăăăăăăăăăăăăăăăăăăă") // 32 2-byte unicode characters = 64 bytes
 	cols := []utils.Column{
 		p.columnFromField("foo", 0),
 	}
@@ -125,7 +125,7 @@ func TestTableManagerIntegration_EnsureStructure_overflowTagName(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, p.Connect())
 
-	tbl := p.tableManager.table(t.Name())
+	tbl := p.tableManager.table(p.Schema, t.Name())
 	cols := []utils.Column{
 		p.columnFromTag("ăăăăăăăăăăăăăăăăăăăăăăăăăăăăăăăă", "a"), // 32 2-byte unicode characters = 64 bytes
 		p.columnFromField("foo", 0),
@@ -153,7 +153,7 @@ func TestTableManagerIntegration_EnsureStructure_overflowFieldName(t *testing.T)
 	require.NoError(t, err)
 	require.NoError(t, p.Connect())
 
-	tbl := p.tableManager.table(t.Name())
+	tbl := p.tableManager.table(p.Schema, t.Name())
 	cols := []utils.Column{
 		p.columnFromField("foo", 0),
 		p.columnFromField("ăăăăăăăăăăăăăăăăăăăăăăăăăăăăăăăă", 0),
@@ -189,19 +189,19 @@ func TestTableManagerIntegration_getColumns(t *testing.T) {
 	_, err = p.tableManager.EnsureStructure(
 		ctx,
 		p.db,
-		p.tableManager.table(t.Name()),
+		p.tableManager.table(p.Schema, t.Name()),
 		cols,
 		p.CreateTemplates,
 		p.AddColumnTemplates,
-		p.tableManager.table(t.Name()),
+		p.tableManager.table(p.Schema, t.Name()),
 		nil,
 	)
 	require.NoError(t, err)
 
 	p.tableManager.ClearTableCache()
-	require.Empty(t, p.tableManager.table(t.Name()).columns)
+	require.Empty(t, p.tableManager.table(p.Schema, t.Name()).columns)
 
-	curCols, err := p.tableManager.getColumns(ctx, p.db, t.Name())
+	curCols, err := p.tableManager.getColumns(ctx, p.db, p.Schema, t.Name())
 	require.NoError(t, err)
 
 	require.EqualValues(t, cols[0], curCols["foo"])
@@ -221,11 +221,11 @@ func TestTableManagerIntegration_MatchSource(t *testing.T) {
 	metrics := []telegraf.Metric{
 		newMetric(t, "", MSS{"tag": "foo"}, MSI{"a": 1}),
 	}
-	tsrc := NewTableSources(p.Postgresql, metrics)[t.Name()]
+	tsrc := NewTableSources(p.Postgresql, metrics)[tableKey{schema: p.Schema, name: t.Name()}]
 
 	require.NoError(t, p.tableManager.MatchSource(ctx, p.db, tsrc))
-	require.Contains(t, p.tableManager.table(t.Name()+p.TagTableSuffix).columns, "tag")
-	require.Contains(t, p.tableManager.table(t.Name()).columns, "a")
+	require.Contains(t, p.tableManager.table(p.Schema, t.Name()+p.TagTableSuffix).columns, "tag")
+	require.Contains(t, p.tableManager.table(p.Schema, t.Name()).columns, "a")
 }
 
 func TestTableManagerIntegration_MatchSource_UnsignedIntegers(t *testing.T) {
@@ -248,10 +248,10 @@ func TestTableManagerIntegration_MatchSource_UnsignedIntegers(t *testing.T) {
 	metrics := []telegraf.Metric{
 		newMetric(t, "", nil, MSI{"a": uint64(1)}),
 	}
-	tsrc := NewTableSources(p.Postgresql, metrics)[t.Name()]
+	tsrc := NewTableSources(p.Postgresql, metrics)[tableKey{schema: p.Schema, name: t.Name()}]
 
 	require.NoError(t, p.tableManager.MatchSource(ctx, p.db, tsrc))
-	require.Equal(t, PgUint8, p.tableManager.table(t.Name()).columns["a"].Type)
+	require.Equal(t, PgUint8, p.tableManager.table(p.Schema, t.Name()).columns["a"].Type)
 }
 
 func TestTableManagerIntegration_noCreateTable(t *testing.T) {
@@ -267,7 +267,7 @@ func TestTableManagerIntegration_noCreateTable(t *testing.T) {
 	metrics := []telegraf.Metric{
 		newMetric(t, "", MSS{"tag": "foo"}, MSI{"a": 1}),
 	}
-	tsrc := NewTableSources(p.Postgresql, metrics)[t.Name()]
+	tsrc := NewTableSources(p.Postgresql, metrics)[tableKey{schema: p.Schema, name: t.Name()}]
 
 	require.Error(t, p.tableManager.MatchSource(ctx, p.db, tsrc))
 }
@@ -286,7 +286,7 @@ func TestTableManagerIntegration_noCreateTagTable(t *testing.T) {
 	metrics := []telegraf.Metric{
 		newMetric(t, "", MSS{"tag": "foo"}, MSI{"a": 1}),
 	}
-	tsrc := NewTableSources(p.Postgresql, metrics)[t.Name()]
+	tsrc := NewTableSources(p.Postgresql, metrics)[tableKey{schema: p.Schema, name: t.Name()}]
 
 	require.Error(t, p.tableManager.MatchSource(ctx, p.db, tsrc))
 }
@@ -305,7 +305,7 @@ func TestTableManagerIntegration_cache(t *testing.T) {
 	metrics := []telegraf.Metric{
 		newMetric(t, "", MSS{"tag": "foo"}, MSI{"a": 1}),
 	}
-	tsrc := NewTableSources(p.Postgresql, metrics)[t.Name()]
+	tsrc := NewTableSources(p.Postgresql, metrics)[tableKey{schema: p.Schema, name: t.Name()}]
 
 	require.NoError(t, p.tableManager.MatchSource(ctx, p.db, tsrc))
 }
@@ -324,14 +324,14 @@ func TestTableManagerIntegration_noAlterMissingTag(t *testing.T) {
 	metrics := []telegraf.Metric{
 		newMetric(t, "", MSS{"tag": "foo"}, MSI{"a": 1}),
 	}
-	tsrc := NewTableSources(p.Postgresql, metrics)[t.Name()]
+	tsrc := NewTableSources(p.Postgresql, metrics)[tableKey{schema: p.Schema, name: t.Name()}]
 	require.NoError(t, p.tableManager.MatchSource(ctx, p.db, tsrc))
 
 	metrics = []telegraf.Metric{
 		newMetric(t, "", MSS{"tag": "foo"}, MSI{"a": 2}),
 		newMetric(t, "", MSS{"tag": "foo", "bar": "baz"}, MSI{"a": 3}),
 	}
-	tsrc = NewTableSources(p.Postgresql, metrics)[t.Name()]
+	tsrc = NewTableSources(p.Postgresql, metrics)[tableKey{schema: p.Schema, name: t.Name()}]
 	require.NoError(t, p.tableManager.MatchSource(ctx, p.db, tsrc))
 	require.NotContains(t, tsrc.ColumnNames(), "bar")
 }
@@ -352,14 +352,14 @@ func TestTableManagerIntegration_noAlterMissingTagTableTag(t *testing.T) {
 	metrics := []telegraf.Metric{
 		newMetric(t, "", MSS{"tag": "foo"}, MSI{"a": 1}),
 	}
-	tsrc := NewTableSources(p.Postgresql, metrics)[t.Name()]
+	tsrc := NewTableSources(p.Postgresql, metrics)[tableKey{schema: p.Schema, name: t.Name()}]
 	require.NoError(t, p.tableManager.MatchSource(ctx, p.db, tsrc))
 
 	metrics = []telegraf.Metric{
 		newMetric(t, "", MSS{"tag": "foo"}, MSI{"a": 2}),
 		newMetric(t, "", MSS{"tag": "foo", "bar": "baz"}, MSI{"a": 3}),
 	}
-	tsrc = NewTableSources(p.Postgresql, metrics)[t.Name()]
+	tsrc = NewTableSources(p.Postgresql, metrics)[tableKey{schema: p.Schema, name: t.Name()}]
 	ttsrc := NewTagTableSource(tsrc)
 	require.NoError(t, p.tableManager.MatchSource(ctx, p.db, tsrc))
 	require.NotContains(t, ttsrc.ColumnNames(), "bar")
@@ -383,14 +383,14 @@ func TestTableManagerIntegration_badAlterTagTable(t *testing.T) {
 	metrics := []telegraf.Metric{
 		newMetric(t, "", MSS{"tag": "foo"}, MSI{"a": 1}),
 	}
-	tsrc := NewTableSources(p.Postgresql, metrics)[t.Name()]
+	tsrc := NewTableSources(p.Postgresql, metrics)[tableKey{schema: p.Schema, name: t.Name()}]
 	require.NoError(t, p.tableManager.MatchSource(ctx, p.db, tsrc))
 
 	metrics = []telegraf.Metric{
 		newMetric(t, "", MSS{"tag": "foo"}, MSI{"a": 2}),
 		newMetric(t, "", MSS{"tag": "foo", "bar": "baz"}, MSI{"a": 3}),
 	}
-	tsrc = NewTableSources(p.Postgresql, metrics)[t.Name()]
+	tsrc = NewTableSources(p.Postgresql, metrics)[tableKey{schema: p.Schema, name: t.Name()}]
 	ttsrc := NewTagTableSource(tsrc)
 	require.NoError(t, p.tableManager.MatchSource(ctx, p.db, tsrc))
 	require.NotContains(t, ttsrc.ColumnNames(), "bar")
@@ -410,14 +410,14 @@ func TestTableManagerIntegration_noAlterMissingField(t *testing.T) {
 	metrics := []telegraf.Metric{
 		newMetric(t, "", MSS{"tag": "foo"}, MSI{"a": 1}),
 	}
-	tsrc := NewTableSources(p.Postgresql, metrics)[t.Name()]
+	tsrc := NewTableSources(p.Postgresql, metrics)[tableKey{schema: p.Schema, name: t.Name()}]
 	require.NoError(t, p.tableManager.MatchSource(ctx, p.db, tsrc))
 
 	metrics = []telegraf.Metric{
 		newMetric(t, "", MSS{"tag": "foo"}, MSI{"a": 2}),
 		newMetric(t, "", MSS{"tag": "foo"}, MSI{"a": 3, "b": 3}),
 	}
-	tsrc = NewTableSources(p.Postgresql, metrics)[t.Name()]
+	tsrc = NewTableSources(p.Postgresql, metrics)[tableKey{schema: p.Schema, name: t.Name()}]
 	require.NoError(t, p.tableManager.MatchSource(ctx, p.db, tsrc))
 	require.NotContains(t, tsrc.ColumnNames(), "b")
 }
@@ -438,14 +438,14 @@ func TestTableManagerIntegration_badAlterField(t *testing.T) {
 	metrics := []telegraf.Metric{
 		newMetric(t, "", MSS{"tag": "foo"}, MSI{"a": 1}),
 	}
-	tsrc := NewTableSources(p.Postgresql, metrics)[t.Name()]
+	tsrc := NewTableSources(p.Postgresql, metrics)[tableKey{schema: p.Schema, name: t.Name()}]
 	require.NoError(t, p.tableManager.MatchSource(ctx, p.db, tsrc))
 
 	metrics = []telegraf.Metric{
 		newMetric(t, "", MSS{"tag": "foo"}, MSI{"a": 2}),
 		newMetric(t, "", MSS{"tag": "foo"}, MSI{"a": 3, "b": 3}),
 	}
-	tsrc = NewTableSources(p.Postgresql, metrics)[t.Name()]
+	tsrc = NewTableSources(p.Postgresql, metrics)[tableKey{schema: p.Schema, name: t.Name()}]
 	require.NoError(t, p.tableManager.MatchSource(ctx, p.db, tsrc))
 	require.NotContains(t, tsrc.ColumnNames(), "b")
 }
@@ -459,7 +459,7 @@ func TestTableManager_addColumnTemplates(t *testing.T) {
 	metrics := []telegraf.Metric{
 		newMetric(t, "", MSS{"foo": "bar"}, MSI{"a": 1}),
 	}
-	tsrc := NewTableSources(p.Postgresql, metrics)[t.Name()]
+	tsrc := NewTableSources(p.Postgresql, metrics)[tableKey{schema: p.Schema, name: t.Name()}]
 	require.NoError(t, p.tableManager.MatchSource(ctx, p.db, tsrc))
 
 	p, err = newPostgresqlTest(t)
@@ -474,7 +474,7 @@ func TestTableManager_addColumnTemplates(t *testing.T) {
 	metrics = []telegraf.Metric{
 		newMetric(t, "", MSS{"pop": "tart"}, MSI{"a": 1, "b": 2}),
 	}
-	tsrc = NewTableSources(p.Postgresql, metrics)[t.Name()]
+	tsrc = NewTableSources(p.Postgresql, metrics)[tableKey{schema: p.Schema, name: t.Name()}]
 	require.NoError(t, p.tableManager.MatchSource(ctx, p.db, tsrc))
 	p.Logger.Info("ok")
 
@@ -500,7 +500,7 @@ func TestTableManager_TimeWithTimezone(t *testing.T) {
 	metrics := []telegraf.Metric{
 		newMetric(t, "", MSS{"pop": "tart"}, MSI{"a": 1, "b": 2}),
 	}
-	tsrc := NewTableSources(p.Postgresql, metrics)[t.Name()]
+	tsrc := NewTableSources(p.Postgresql, metrics)[tableKey{schema: p.Schema, name: t.Name()}]
 	require.NoError(t, p.tableManager.MatchSource(ctx, p.db, tsrc))
 	p.Logger.Info("ok")
 
