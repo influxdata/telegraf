@@ -1,0 +1,4 @@
+     remote           refid      st t when poll reach   delay   offset  jitter
+==============================================================================
+*x.ns.gin.ntt.n  .GPS.            1 u   34   64  377    5.012   -0.321   0.201
++ox.example.org  192.0.2.1        2 u   12   64  377   10.500    0.150   0.090
