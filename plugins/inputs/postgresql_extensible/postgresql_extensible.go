@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/common/postgresql"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -23,10 +25,14 @@ var sampleConfig string
 
 var ignoredColumns = map[string]bool{"stats_reset": true}
 
+// Values accepted by role
+var roles = []string{"any", "primary", "replica"}
+
 type Postgresql struct {
 	Databases          []string        `deprecated:"1.22.4;use the sqlquery option to specify database to use"`
 	Query              []query         `toml:"query"`
 	PreparedStatements bool            `toml:"prepared_statements"`
+	Role               string          `toml:"role"`
 	Log                telegraf.Logger `toml:"-"`
 	postgresql.Config
 
@@ -43,6 +49,7 @@ type query struct {
 	Tagvalue    string `toml:"tagvalue"`
 	Measurement string `toml:"measurement"`
 	Timestamp   string `toml:"timestamp"`
+	Role        string `toml:"role"`
 
 	additionalTags map[string]bool
 }
@@ -56,6 +63,13 @@ func (*Postgresql) SampleConfig() string {
 }
 
 func (p *Postgresql) Init() error {
+	if p.Role == "" {
+		p.Role = "any"
+	}
+	if err := choice.Check(p.Role, roles); err != nil {
+		return fmt.Errorf("config option 'role': %w", err)
+	}
+
 	// Set defaults for the queries
 	for i, q := range p.Query {
 		if q.Sqlquery == "" {
@@ -81,6 +95,12 @@ func (p *Postgresql) Init() error {
 			}
 		}
 		q.Sqlquery += queryAddon
+		if q.Role == "" {
+			q.Role = p.Role
+		}
+		if err := choice.Check(q.Role, roles); err != nil {
+			return fmt.Errorf("query %d: config option 'role': %w", i, err)
+		}
 
 		q.additionalTags = make(map[string]bool)
 		if q.Tagvalue != "" {
@@ -107,10 +127,17 @@ func (p *Postgresql) Start(_ telegraf.Accumulator) error {
 }
 
 func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
-	// Retrieving the database version
-	query := `SELECT setting::integer / 100 AS version FROM pg_settings WHERE name = 'server_version_num'`
+	// Retrieving the database version and the server role
+	query := `SELECT setting::integer / 100 AS version, pg_is_in_recovery() FROM pg_settings WHERE name = 'server_version_num'`
 	var dbVersion int
-	if err := p.service.DB.QueryRow(query).Scan(&dbVersion); err != nil {
+	var inRecovery bool
+	if err := p.service.DB.QueryRow(query).Scan(&dbVersion, &inRecovery); err != nil {
+		if p.metadataRequired() {
+			acc.AddError(fmt.Errorf("querying metadata failed: %w", err))
+			return nil
+		}
+		// Servers without pg_settings such as the PgBouncer admin console
+		// still run the queries not limited to a version
 		dbVersion = 0
 	}
 
@@ -122,6 +149,10 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	// Query is not run if Database version does not match the query version.
 	for _, q := range p.Query {
 		if q.MinVersion <= dbVersion && (q.MaxVersion == 0 || q.MaxVersion > dbVersion) {
+			if !matchesRole(q.Role, inRecovery) {
+				p.Log.Debugf("Skipping query %q as the server role does not match %q", q.Measurement, q.Role)
+				continue
+			}
 			acc.AddError(p.gatherMetricsFromQuery(acc, q, timestamp))
 		}
 	}
@@ -130,6 +161,13 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 
 func (p *Postgresql) Stop() {
 	p.service.Stop()
+}
+
+// metadataRequired tells whether the queries depend on the server information
+func (p *Postgresql) metadataRequired() bool {
+	return slices.ContainsFunc(p.Query, func(q query) bool {
+		return q.Role != "any"
+	})
 }
 
 func (p *Postgresql) gatherMetricsFromQuery(acc telegraf.Accumulator, q query, timestamp time.Time) error {
@@ -225,6 +263,17 @@ func (p *Postgresql) accRow(acc telegraf.Accumulator, row scanner, columns []str
 	}
 	acc.AddFields(q.Measurement, fields, tags, timestamp)
 	return nil
+}
+
+func matchesRole(role string, inRecovery bool) bool {
+	switch role {
+	case "primary":
+		return !inRecovery
+	case "replica":
+		return inRecovery
+	default:
+		return true
+	}
 }
 
 func init() {
