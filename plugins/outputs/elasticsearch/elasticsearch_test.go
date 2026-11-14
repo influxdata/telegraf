@@ -2,17 +2,21 @@ package elasticsearch
 
 import (
 	"compress/gzip"
+	"context"
 	"fmt"
 	"io"
 	"math"
+	"net"
 	"net/http"
 	"net/http/httptest"
+	"runtime"
 	"slices"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	elasticsearch6 "github.com/elastic/go-elasticsearch/v6"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
@@ -30,6 +34,8 @@ func TestConnect(t *testing.T) {
 		template          string
 		manageTemplate    bool
 		overwriteTemplate bool
+		existingTemplate  bool
+		expectedOverwrite bool
 	}{
 		{
 			name:              "template management",
@@ -37,6 +43,36 @@ func TestConnect(t *testing.T) {
 			template:          "telegraf",
 			manageTemplate:    true,
 			overwriteTemplate: true,
+			expectedOverwrite: true,
+		},
+		{
+			name:              "create non-existing template",
+			index:             "test-%Y.%m.%d",
+			template:          "telegraf",
+			manageTemplate:    true,
+			expectedOverwrite: true,
+		},
+		{
+			name:              "overwrite existing template",
+			index:             "test-%Y.%m.%d",
+			template:          "telegraf",
+			manageTemplate:    true,
+			overwriteTemplate: true,
+			existingTemplate:  true,
+			expectedOverwrite: true,
+		},
+		{
+			name:             "keep existing template",
+			index:            "test-%Y.%m.%d",
+			template:         "telegraf",
+			manageTemplate:   true,
+			existingTemplate: true,
+		},
+		{
+			name:             "no template management",
+			index:            "test-%Y.%m.%d",
+			template:         "telegraf",
+			existingTemplate: true,
 		},
 	}
 
@@ -45,6 +81,12 @@ func TestConnect(t *testing.T) {
 			// Setup a mock Elasticsearch endpoint
 			server := startMockServer(t)
 			defer server.close()
+
+			// Pre-populate the template if requested
+			const existing = `{"existing": true}`
+			if tt.existingTemplate {
+				server.setTemplate(tt.template, existing)
+			}
 
 			// Setup plugin
 			plugin := &Elasticsearch{
@@ -60,8 +102,61 @@ func TestConnect(t *testing.T) {
 			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Connect())
 			defer plugin.Close()
+
+			// Check the template state
+			tmpl, found := server.template(tt.template)
+			if tt.expectedOverwrite {
+				require.True(t, found, "template not created")
+				require.NotEqual(t, existing, tmpl, "template not updated")
+			} else {
+				require.Equal(t, tt.existingTemplate, found)
+				if tt.existingTemplate {
+					require.Equal(t, existing, tmpl, "existing template modified")
+				}
+			}
 		})
 	}
+}
+
+func TestLocalAddress(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Binding to 127.0.0.2 requires a loopback alias outside of Linux")
+	}
+
+	// Setup a mock Elasticsearch endpoint
+	server := startMockServer(t)
+	defer server.close()
+
+	// Setup plugin
+	plugin := &Elasticsearch{
+		URLs:         []string{"http://" + server.addr()},
+		IndexName:    "test-%Y.%m.%d",
+		LocalAddress: "127.0.0.2",
+		Timeout:      config.Duration(time.Second * 5),
+		Log:          testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+	defer plugin.Close()
+	require.NoError(t, plugin.Write(testutil.MockMetrics()))
+
+	// Check the connection came from the configured local address
+	remotes := server.remoteAddresses()
+	require.NotEmpty(t, remotes)
+	host, _, err := net.SplitHostPort(remotes[0])
+	require.NoError(t, err)
+	require.Equal(t, "127.0.0.2", host)
+}
+
+func TestInvalidLocalAddress(t *testing.T) {
+	plugin := &Elasticsearch{
+		URLs:         []string{"http://localhost:9200"},
+		IndexName:    "test-%Y.%m.%d",
+		LocalAddress: "::1",
+		Log:          testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+	require.ErrorContains(t, plugin.Connect(), "invalid local address")
 }
 
 func TestInitFail(t *testing.T) {
@@ -1039,22 +1134,105 @@ func TestWriteIntegration(t *testing.T) {
 
 	// Verify that we can successfully write data to Elasticsearch
 	require.NoError(t, plugin.Write(testutil.MockMetrics()))
+
+	// Create a separate client for document verification.
+	client, err := elasticsearch6.NewClient(elasticsearch6.Config{
+		Addresses: plugin.URLs,
+	})
+	require.NoError(t, err)
+
+	// Refresh the index so the written documents are visible to searches.
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(plugin.Timeout))
+	defer cancel()
+	refresh, err := client.Indices.Refresh(
+		client.Indices.Refresh.WithContext(ctx),
+		client.Indices.Refresh.WithIndex("test-*"),
+	)
+	require.NoError(t, err)
+	defer refresh.Body.Close()
+	require.Equal(t, http.StatusOK, refresh.StatusCode)
+
+	// Verify the stored document independently of the bulk request.
+	result, err := client.Search(
+		client.Search.WithContext(ctx),
+		client.Search.WithIndex("test-*"),
+		client.Search.WithFilterPath("hits.hits._index", "hits.hits._type", "hits.hits._source"),
+	)
+	require.NoError(t, err)
+	defer result.Body.Close()
+	require.Equal(t, http.StatusOK, result.StatusCode)
+
+	actual, err := io.ReadAll(result.Body)
+	require.NoError(t, err)
+	require.JSONEq(t, `{
+		"hits": {
+			"hits": [
+				{
+					"_index": "test-2009.11.10",
+					"_type": "metrics",
+					"_source": {
+						"@timestamp": "2009-11-10T23:00:00Z",
+						"measurement_name": "test1",
+						"tag": {
+							"tag1": "value1"
+						},
+						"test1": {
+							"value": 1
+						}
+					}
+				}
+			]
+		}
+	}`, string(actual))
 }
 
 type mockServer struct {
-	server *httptest.Server
-	msgs   []string
-	hdrs   []http.Header
+	server    *httptest.Server
+	msgs      []string
+	hdrs      []http.Header
+	addrs     []string
+	templates map[string]string
 	sync.Mutex
 }
 
 func startMockServer(t *testing.T) *mockServer {
 	s := &mockServer{
-		msgs: make([]string, 0),
-		hdrs: make([]http.Header, 0),
+		msgs:      make([]string, 0),
+		hdrs:      make([]http.Header, 0),
+		templates: make(map[string]string),
 	}
 
 	s.server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if name, found := strings.CutPrefix(r.URL.Path, "/_template/"); found {
+			switch r.Method {
+			case http.MethodHead:
+				s.Lock()
+				_, exists := s.templates[name]
+				s.Unlock()
+				if !exists {
+					w.WriteHeader(http.StatusNotFound)
+				}
+			case http.MethodPut:
+				body, err := io.ReadAll(r.Body)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+					return
+				}
+				s.Lock()
+				s.templates[name] = string(body)
+				s.Unlock()
+				if _, err := w.Write([]byte(`{"acknowledged": true}`)); err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Error(err)
+				}
+			default:
+				w.WriteHeader(http.StatusMethodNotAllowed)
+				t.Errorf("unexpected method %q for template %q", r.Method, name)
+			}
+			return
+		}
+
 		switch r.URL.Path {
 		case "/_bulk":
 			// The request body is compressed if the plugin is configured to use
@@ -1080,6 +1258,7 @@ func startMockServer(t *testing.T) *mockServer {
 			s.Lock()
 			s.msgs = append(s.msgs, string(body))
 			s.hdrs = append(s.hdrs, r.Header.Clone())
+			s.addrs = append(s.addrs, r.RemoteAddr)
 			s.Unlock()
 
 			if _, err := w.Write([]byte("{}")); err != nil {
@@ -1115,4 +1294,23 @@ func (s *mockServer) headers() []http.Header {
 	s.Lock()
 	defer s.Unlock()
 	return slices.Clone(s.hdrs)
+}
+
+func (s *mockServer) setTemplate(name, body string) {
+	s.Lock()
+	defer s.Unlock()
+	s.templates[name] = body
+}
+
+func (s *mockServer) template(name string) (string, bool) {
+	s.Lock()
+	defer s.Unlock()
+	body, found := s.templates[name]
+	return body, found
+}
+
+func (s *mockServer) remoteAddresses() []string {
+	s.Lock()
+	defer s.Unlock()
+	return slices.Clone(s.addrs)
 }

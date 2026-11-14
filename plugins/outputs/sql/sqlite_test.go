@@ -12,7 +12,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -410,4 +413,96 @@ func TestSqliteSendBatch(t *testing.T) {
 	require.Equal(t, "tag4", j)
 	require.Equal(t, "string2", k)
 	require.False(t, rows4.Next())
+}
+
+func TestSqliteSendBatchPrepareFailureReleasesConnection(t *testing.T) {
+	dbfile := filepath.Join(t.TempDir(), "db")
+	defer os.Remove(dbfile)
+
+	p := &SQL{
+		Driver:            "sqlite",
+		DataSourceName:    config.NewSecret([]byte(dbfile)),
+		Convert:           defaultConvert,
+		TimestampColumn:   "timestamp",
+		ConnectionMaxIdle: 1,
+		ConnectionMaxOpen: 1,
+		Log:               testutil.Logger{},
+		BatchTx:           true,
+	}
+	require.NoError(t, p.Init())
+
+	require.NoError(t, p.Connect())
+	defer p.Close()
+	require.NoError(t, p.Write(testMetrics))
+
+	// Without a table update template, metrics with new fields fail to prepare.
+	// Each failed write must release its connection, otherwise the next write
+	// blocks forever on the exhausted pool.
+	for range 3 {
+		require.ErrorContains(t, p.Write(postCreateMetrics), "prepare failed")
+	}
+	require.NoError(t, p.Write(testMetrics))
+}
+
+func TestSqlitePartialWrite(t *testing.T) {
+	tests := []struct {
+		name     string
+		batch    bool
+		accepted []int
+	}{
+		{
+			name:     "individual",
+			accepted: []int{0},
+		},
+		{
+			name:     "batch",
+			batch:    true,
+			accepted: []int{0, 2},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dbfile := filepath.Join(t.TempDir(), "db")
+
+			// Create the second table up front with a constraint the metric
+			// violates so the write fails after the first metric is committed
+			p := &SQL{
+				Driver:            "sqlite",
+				DataSourceName:    config.NewSecret([]byte(dbfile)),
+				Convert:           defaultConvert,
+				InitSQL:           `CREATE TABLE "zulu"("value" INT CHECK ("value" > 0))`,
+				ConnectionMaxIdle: 2,
+				BatchTx:           tt.batch,
+				Log:               testutil.Logger{},
+			}
+			require.NoError(t, p.Init())
+			require.NoError(t, p.Connect())
+			defer p.Close()
+
+			metrics := []telegraf.Metric{
+				metric.New("alpha", map[string]string{}, map[string]any{"value": int64(1)}, ts),
+				metric.New("zulu", map[string]string{}, map[string]any{"value": int64(-1)}, ts),
+				metric.New("alpha", map[string]string{}, map[string]any{"value": int64(2)}, ts),
+			}
+
+			// The committed metrics must be reported as accepted so the
+			// agent only retries the remaining ones
+			var werr *internal.PartialWriteError
+			require.ErrorAs(t, p.Write(metrics), &werr)
+			require.ErrorContains(t, werr, "CHECK constraint failed")
+			require.Equal(t, tt.accepted, werr.MetricsAccept)
+			require.Empty(t, werr.MetricsReject)
+
+			// Check that only the accepted metrics landed in the database
+			db, err := gosql.Open("sqlite", dbfile)
+			require.NoError(t, err)
+			defer db.Close()
+
+			var count int
+			require.NoError(t, db.QueryRow("select count(*) from alpha").Scan(&count))
+			require.Len(t, tt.accepted, count)
+			require.NoError(t, db.QueryRow("select count(*) from zulu").Scan(&count))
+			require.Zero(t, count)
+		})
+	}
 }

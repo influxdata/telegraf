@@ -1,0 +1,192 @@
+[
+  {
+    "path": "/org/freedesktop/UPower/devices/battery_BAT0",
+    "props": [
+      {
+        "name": "NativePath",
+        "type": "string",
+        "value": "BAT0"
+      },
+      {
+        "name": "Vendor",
+        "type": "string",
+        "value": "LGC"
+      },
+      {
+        "name": "Model",
+        "type": "string",
+        "value": "5B10W13973"
+      },
+      {
+        "name": "Serial",
+        "type": "string",
+        "value": "1234"
+      },
+      {
+        "name": "Type",
+        "type": "uint32",
+        "value": "2"
+      },
+      {
+        "name": "State",
+        "type": "uint32",
+        "value": "2"
+      },
+      {
+        "name": "Technology",
+        "type": "uint32",
+        "value": "2"
+      },
+      {
+        "name": "WarningLevel",
+        "type": "uint32",
+        "value": "1"
+      },
+      {
+        "name": "Percentage",
+        "type": "double",
+        "value": "83.0"
+      },
+      {
+        "name": "Energy",
+        "type": "double",
+        "value": "41.57"
+      },
+      {
+        "name": "EnergyEmpty",
+        "type": "double",
+        "value": "0.0"
+      },
+      {
+        "name": "EnergyFull",
+        "type": "double",
+        "value": "50.08"
+      },
+      {
+        "name": "EnergyFullDesign",
+        "type": "double",
+        "value": "57.0"
+      },
+      {
+        "name": "EnergyRate",
+        "type": "double",
+        "value": "7.891"
+      },
+      {
+        "name": "Voltage",
+        "type": "double",
+        "value": "11.98"
+      },
+      {
+        "name": "Temperature",
+        "type": "double",
+        "value": "0.0"
+      },
+      {
+        "name": "Capacity",
+        "type": "double",
+        "value": "87.86"
+      },
+      {
+        "name": "ChargeCycles",
+        "type": "int32",
+        "value": "213"
+      },
+      {
+        "name": "TimeToEmpty",
+        "type": "int64",
+        "value": "18966"
+      },
+      {
+        "name": "TimeToFull",
+        "type": "int64",
+        "value": "0"
+      },
+      {
+        "name": "IsPresent",
+        "type": "boolean",
+        "value": "true"
+      },
+      {
+        "name": "IsRechargeable",
+        "type": "boolean",
+        "value": "true"
+      },
+      {
+        "name": "PowerSupply",
+        "type": "boolean",
+        "value": "true"
+      }
+    ]
+  },
+  {
+    "path": "/org/freedesktop/UPower/devices/line_power_AC",
+    "props": [
+      {
+        "name": "NativePath",
+        "type": "string",
+        "value": "AC"
+      },
+      {
+        "name": "Type",
+        "type": "uint32",
+        "value": "1"
+      },
+      {
+        "name": "Online",
+        "type": "boolean",
+        "value": "false"
+      }
+    ]
+  },
+  {
+    "path": "/org/freedesktop/UPower/devices/mouse_hidpp_battery_0",
+    "props": [
+      {
+        "name": "NativePath",
+        "type": "string",
+        "value": "hidpp_battery_0"
+      },
+      {
+        "name": "Vendor",
+        "type": "string",
+        "value": "Logitech"
+      },
+      {
+        "name": "Model",
+        "type": "string",
+        "value": "MX Master 3"
+      },
+      {
+        "name": "Type",
+        "type": "uint32",
+        "value": "5"
+      },
+      {
+        "name": "State",
+        "type": "uint32",
+        "value": "2"
+      },
+      {
+        "name": "WarningLevel",
+        "type": "uint32",
+        "value": "1"
+      },
+      {
+        "name": "Percentage",
+        "type": "double",
+        "value": "55.0"
+      },
+      {
+        "name": "IsPresent",
+        "type": "boolean",
+        "value": "true"
+      },
+      {
+        "name": "IsRechargeable",
+        "type": "boolean",
+        "value": "true"
+      }
+    ]
+  }
+]

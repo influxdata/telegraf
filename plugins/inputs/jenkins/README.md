@@ -73,6 +73,11 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## are found, then a tag with the value of 'none' is used. Finally, if a
   ## label contains a comma it is replaced with an underscore.
   # node_labels_as_tag = false
+
+  ## Additional build attributes to add as tags to the jenkins_job metric.
+  ## Available values are "display_name" and "description". Note that these
+  ## may increase series cardinality, especially if they are set per build.
+  # build_tags = []
 ```
 
 ## Metrics
@@ -111,6 +116,8 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
     - result
     - source
     - port
+    - display_name (optional, if enabled via `build_tags`)
+    - description (optional, if enabled via `build_tags`)
   - fields:
     - duration (ms)
     - number
@@ -130,7 +137,7 @@ SELECT mean("duration") AS "mean_duration" FROM "jenkins_job" WHERE time > now()
 
 ```text
 jenkins,host=myhost,port=80,source=my-jenkins-instance busy_executors=4i,total_executors=8i 1580418261000000000
-jenkins_node,arch=Linux\ (amd64),disk_path=/var/jenkins_home,temp_path=/tmp,host=myhost,node_name=master,source=my-jenkins-instance,port=8080 swap_total=4294963200,memory_available=586711040,memory_total=6089498624,status=online,response_time=1000i,disk_available=152392036352,temp_available=152392036352,swap_available=3503263744,num_executors=2i 1516031535000000000
+jenkins_node,arch=Linux\ (amd64),disk_path=/var/jenkins_home,temp_path=/tmp,host=myhost,node_name=master,source=my-jenkins-instance,port=8080,status=online swap_total=4294963200,memory_available=586711040,memory_total=6089498624,response_time=1000i,disk_available=152392036352,temp_available=152392036352,swap_available=3503263744,num_executors=2i 1516031535000000000
 jenkins_job,host=myhost,name=JOB1,parents=apps/br1,result=SUCCESS,source=my-jenkins-instance,port=8080 duration=2831i,result_code=0i 1516026630000000000
 jenkins_job,host=myhost,name=JOB2,parents=apps/br2,result=SUCCESS,source=my-jenkins-instance,port=8080 duration=2285i,result_code=0i 1516027230000000000
 ```

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
 	"path/filepath"
 	"slices"
 	"sort"
@@ -230,19 +231,14 @@ func (b *DiskBuffer) EndTransaction(tx *Transaction) {
 		return
 	}
 
-	// Determine up to which index we can remove the entries from the WAL file
-	var correction int
+	// Determine how many entries we can remove from the front of the WAL file
+	var removeIdx int
 	for i, offset := range b.mask {
 		if offset != i {
 			break
 		}
-		correction = offset
+		removeIdx = i + 1
 	}
-	// The 'correction' denotes the offset to subtract from the remaining mask
-	// (if any) and the 'removalIdx' denotes the index to use when truncating
-	// the file and mask. Keep them separate to be able to handle the special
-	// "the file cannot be empty" property of the WAL file.
-	removeIdx := correction + 1
 
 	// Remove the metrics in front from the WAL file
 	if err := b.file.TruncateFront(b.batchFirst + uint64(removeIdx)); err != nil {
@@ -253,7 +249,7 @@ func (b *DiskBuffer) EndTransaction(tx *Transaction) {
 	// Truncate the mask and update the relative offsets
 	b.mask = b.mask[removeIdx:]
 	for i := range b.mask {
-		b.mask[i] -= correction
+		b.mask[i] -= removeIdx
 	}
 
 	// check if the original end index is still valid, clear if not
@@ -275,6 +271,14 @@ func (b *DiskBuffer) Close() error {
 
 	if err := b.file.Close(); err != nil {
 		return fmt.Errorf("closing buffer failed: %w", err)
+	}
+
+	// Remove the directory of an empty buffer, its name depends on the output's
+	// ID so it would be left behind when the output's configuration changes
+	if *b.closedLength == 0 {
+		if err := os.RemoveAll(b.path); err != nil {
+			return fmt.Errorf("removing empty buffer directory failed: %w", err)
+		}
 	}
 
 	return nil

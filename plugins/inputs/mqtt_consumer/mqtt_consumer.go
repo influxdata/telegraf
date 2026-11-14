@@ -45,6 +45,7 @@ type MQTTConsumer struct {
 	KeepAliveInterval      config.Duration      `toml:"keepalive"`
 	PingTimeout            config.Duration      `toml:"ping_timeout"`
 	MaxUndeliveredMessages int                  `toml:"max_undelivered_messages"`
+	OmitRetained           bool                 `toml:"omit_retained"`
 	PersistentSession      bool                 `toml:"persistent_session"`
 	ClientTrace            bool                 `toml:"client_trace"`
 	ClientID               string               `toml:"client_id"`
@@ -235,6 +236,14 @@ func (m *MQTTConsumer) onDelivered(track telegraf.DeliveryInfo) {
 
 func (m *MQTTConsumer) onMessage(_ mqtt.Client, msg mqtt.Message) {
 	m.sem <- empty{}
+
+	if msg.Retained() && m.OmitRetained {
+		if m.PersistentSession {
+			msg.Ack()
+		}
+		<-m.sem
+		return
+	}
 
 	payloadBytes := len(msg.Payload())
 	m.payloadSize.Incr(int64(payloadBytes))

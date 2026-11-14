@@ -20,6 +20,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/common/sudo"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -373,10 +374,10 @@ var (
 	knownReadMethods = []string{"concurrent", "sequential"}
 
 	// Wrap with sudo
-	runCmd = func(timeout config.Duration, sudo bool, command string, args ...string) ([]byte, error) {
+	runCmd = func(timeout config.Duration, useSudo bool, command string, args ...string) ([]byte, error) {
 		cmd := exec.Command(command, args...)
-		if sudo {
-			cmd = exec.Command("sudo", append([]string{"-n", command}, args...)...)
+		if useSudo {
+			cmd = exec.Command(sudo.Binary(), append([]string{"-n", command}, args...)...)
 		}
 		return internal.CombinedOutputTimeout(cmd, time.Duration(timeout))
 	}

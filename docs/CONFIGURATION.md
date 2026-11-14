@@ -366,8 +366,9 @@ The agent table configures Telegraf and the defaults used across all plugins.
   aggregators processors only run once.
 
 - **skip_processors_after_aggregators**:
-  By default, processors are run a second time after aggregators. Changing
-  this setting to true will skip the second run of processors.
+  By default, processors are not run on aggregator output if they already ran
+  before the aggregators. Set this to `false` to always run processors on the
+  aggregator output too.
 
 - **buffer_strategy**:
   The type of buffer to use for telegraf output plugins. Supported modes are
@@ -378,7 +379,8 @@ The agent table configures Telegraf and the defaults used across all plugins.
 
 - **buffer_directory**:
   The directory to use when in `disk` buffer mode. Each output plugin will make
-  another subdirectory in this directory with the output plugin's ID.
+  another subdirectory in this directory with the output plugin's ID. The
+  subdirectory is removed when the output is stopped with an empty buffer.
 
 - **buffer_disk_sync**:
   Controls writes durability when "disk" buffer strategy is used.

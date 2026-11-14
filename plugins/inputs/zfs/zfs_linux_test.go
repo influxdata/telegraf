@@ -162,6 +162,13 @@ zil_itx_metaslab_slog_bytes     4    15
 zil_itx_metaslab_slog_write     4    16
 zil_itx_metaslab_slog_alloc     4    17
 `
+const ioStatsContents = `128 1 0x01 3 816 31102162300 94789608938355
+name                            type data
+trim_extents_written            4    12
+arc_read_count                  4    145242
+arc_read_bytes                  4    4520346112
+`
+
 const zilContents = `7 1 0x01 14 672 34118481334 437444452158445
 name                            type data
 zil_commit_count                4    77
@@ -279,6 +286,40 @@ func TestZfsPoolMetrics(t *testing.T) {
 	tags["dataset"] = "HOMEV22"
 	poolMetrics = getPoolMetricsNewFormatV22()
 	acc.AssertContainsTaggedFields(t, "zfs_pool", poolMetrics, tags)
+}
+
+func TestZfsPoolIOStats(t *testing.T) {
+	testKstatPath := t.TempDir()
+	require.NoError(t, os.Mkdir(filepath.Join(testKstatPath, "with-datasets"), 0750))
+	require.NoError(t, os.WriteFile(filepath.Join(testKstatPath, "with-datasets", "objset-0x20a"), []byte(objsetContents), 0640))
+	require.NoError(t, os.WriteFile(filepath.Join(testKstatPath, "with-datasets", "iostats"), []byte(ioStatsContents), 0640))
+	require.NoError(t, os.Mkdir(filepath.Join(testKstatPath, "a-no-datasets"), 0750))
+	require.NoError(t, os.WriteFile(filepath.Join(testKstatPath, "a-no-datasets", "iostats"), []byte(ioStatsContents), 0640))
+
+	expected := map[string]any{
+		"iostats_trim_extents_written": int64(12),
+		"iostats_arc_read_count":       int64(145242),
+		"iostats_arc_read_bytes":       int64(4520346112),
+	}
+
+	// Pool statistics are only gathered if enabled
+	plugin := &Zfs{KstatPath: testKstatPath, KstatMetrics: []string{""}, Log: testutil.Logger{}}
+	require.NoError(t, plugin.Init())
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Gather(&acc))
+	require.Empty(t, acc.Errors)
+	require.False(t, acc.HasMeasurement("zfs_pool"))
+
+	plugin.PoolMetrics = true
+	require.NoError(t, plugin.Gather(&acc))
+	require.Empty(t, acc.Errors)
+	acc.AssertContainsTaggedFields(t, "zfs_pool", expected, map[string]string{"pool": "with-datasets"})
+	acc.AssertContainsTaggedFields(t, "zfs_pool", expected, map[string]string{"pool": "a-no-datasets"})
+	acc.AssertContainsTaggedFields(t, "zfs_pool", getPoolMetricsNewFormat(), map[string]string{"pool": "with-datasets", "dataset": "HOME"})
+
+	pools, err := getPools(testKstatPath)
+	require.NoError(t, err)
+	require.Equal(t, map[string]string{"pools": "a-no-datasets::with-datasets"}, getTags(pools))
 }
 
 func TestZfsGeneratesMetrics(t *testing.T) {
@@ -402,8 +443,9 @@ func TestGetTags(t *testing.T) {
 func TestDefaults(t *testing.T) {
 	expectedPath := "/proc/spl/kstat/zfs"
 	expectedMetrics := []string{
-		"abdstats", "arcstats", "dnodestats", "dbufcachestats",
-		"dmu_tx", "fm", "vdev_mirror_stats", "zfetchstats", "zil",
+		"abdstats", "arcstats", "brtstats", "dnodestats", "dbufcachestats",
+		"dbufstats", "dmu_tx", "fm", "metaslab_stats", "vdev_mirror_stats",
+		"zfetchstats", "zil", "zio_stats", "zstd",
 	}
 
 	plugin := &Zfs{}

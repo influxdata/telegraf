@@ -33,6 +33,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
   ## Use sudo
   ## Setting 'use_sudo' to true will make use of sudo to run ipmitool.
+  ## On OpenBSD, doas is used instead of sudo.
   ## Sudo must be configured to allow the telegraf user to run ipmitool
   ## without a password.
   # use_sudo = false
