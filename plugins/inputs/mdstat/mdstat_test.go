@@ -5,9 +5,12 @@ package mdstat
 import (
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -114,6 +117,43 @@ func TestInvalidMdStatProcFile1(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestInactiveMdStatProcFile(t *testing.T) {
+	filename := makeFakeMDStatFile([]byte(mdStatFileInactive))
+	defer os.Remove(filename)
+
+	k := Mdstat{
+		FileName: filename,
+	}
+
+	acc := testutil.Accumulator{}
+	require.NoError(t, k.Gather(&acc))
+
+	expected := []telegraf.Metric{
+		metric.New(
+			"mdstat",
+			map[string]string{
+				"ActivityState": "inactive",
+				"Devices":       "sda,sdb",
+				"Name":          "md127",
+			},
+			map[string]any{
+				"BlocksSynced":           int64(3906764976),
+				"BlocksSyncedFinishTime": float64(0),
+				"BlocksSyncedPct":        float64(0),
+				"BlocksSyncedSpeed":      float64(0),
+				"BlocksTotal":            int64(3906764976),
+				"DisksActive":            int64(0),
+				"DisksFailed":            int64(0),
+				"DisksSpare":             int64(2),
+				"DisksTotal":             int64(0),
+				"DisksDown":              int64(0),
+			},
+			time.Unix(0, 0),
+		),
+	}
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+}
+
 const mdStatFileFull = `
 Personalities : [raid1] [raid10] [linear] [multipath] [raid0] [raid6] [raid5] [raid4]
 md2 : active raid10 sde[2] sdl[9] sdf[3] sdk[8] sdh[5] sdd[1] sdg[4] sdn[11] sdm[10] sdj[7] sdc[0] sdi[6]
@@ -153,6 +193,14 @@ Personalities : [linear] [multipath] [raid0] [raid1] [raid6] [raid5] [raid4] [ra
 md0 : active raid5 sdd1[3] sdb1[1] sda1[0]
       5860144128 blocks super 1.2 level 5, 64k chunk, algorithm 2 [4/3] [UUU_]
       bitmap: 8/15 pages [32KB], 65536KB chunk
+
+unused devices: <none>
+`
+
+const mdStatFileInactive = `
+Personalities : [raid1]
+md127 : inactive sdb[1](S) sda[0](S)
+      3906764976 blocks super 1.2
 
 unused devices: <none>
 `
