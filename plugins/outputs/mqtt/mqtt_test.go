@@ -802,6 +802,65 @@ func TestMissingServers(t *testing.T) {
 	require.ErrorContains(t, plugin.Init(), "no servers specified")
 }
 
+func TestInvalidWill(t *testing.T) {
+	tests := []struct {
+		name     string
+		topic    string
+		qos      int
+		expected string
+	}{
+		{
+			name:     "qos too large",
+			topic:    "telegraf/status",
+			qos:      3,
+			expected: "will_qos value must be 0, 1, or 2: 3",
+		},
+		{
+			name:     "negative qos",
+			topic:    "telegraf/status",
+			qos:      -1,
+			expected: "will_qos value must be 0, 1, or 2: -1",
+		},
+		{
+			name:     "multi-level wildcard",
+			topic:    "telegraf/#",
+			expected: "found forbidden character in the will topic name telegraf/#",
+		},
+		{
+			name:     "single-level wildcard",
+			topic:    "telegraf/+/status",
+			expected: "found forbidden character in the will topic name telegraf/+/status",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := &MQTT{
+				MqttConfig: mqtt.MqttConfig{
+					Servers:   []string{"tcp://localhost:1883"},
+					WillTopic: tt.topic,
+					WillQoS:   tt.qos,
+				},
+				Topic: "telegraf",
+				Log:   testutil.Logger{},
+			}
+			require.ErrorContains(t, plugin.Init(), tt.expected)
+		})
+	}
+}
+
+func TestWillQoSIgnoredWithoutTopic(t *testing.T) {
+	plugin := &MQTT{
+		MqttConfig: mqtt.MqttConfig{
+			Servers: []string{"tcp://localhost:1883"},
+			WillQoS: 3,
+		},
+		Topic: "telegraf",
+		Log:   testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+}
+
 func TestMQTTTopicGenerationTemplateIsValid(t *testing.T) {
 	tests := []struct {
 		name          string

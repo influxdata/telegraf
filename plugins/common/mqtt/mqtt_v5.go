@@ -36,6 +36,14 @@ func NewMQTTv5Client(cfg *MqttConfig) (*mqttv5Client, error) {
 		c.CleanStart = cfg.PersistentSession
 		return c, nil
 	}
+	if cfg.WillTopic != "" {
+		opts.WillMessage = &mqttv5.WillMessage{
+			Topic:   cfg.WillTopic,
+			Payload: []byte(cfg.WillPayload),
+			QoS:     byte(cfg.WillQoS),
+			Retain:  cfg.WillRetain,
+		}
+	}
 
 	if time.Duration(cfg.ConnectionTimeout) >= 1*time.Second {
 		opts.ConnectTimeout = time.Duration(cfg.ConnectionTimeout)
