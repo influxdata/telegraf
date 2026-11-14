@@ -106,6 +106,9 @@ to use them.
   ## message to 'will_topic'. The will is only enabled if 'will_topic' is set;
   ## the topic must not contain wildcards. 'will_qos' accepts the same values
   ## as 'qos' (0, 1 or 2) and 'will_retain' sets the RETAIN flag of the will.
+  ## NOTE: With 'will_retain' set, the broker keeps the will message after
+  ## publishing it. Telegraf does not replace or clear that message when it
+  ## connects again, so new subscribers of 'will_topic' still receive it.
   # will_topic = ""
   # will_payload = ""
   # will_qos = 0
