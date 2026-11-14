@@ -567,13 +567,18 @@ func TestKeepConnectionsIntegration(t *testing.T) {
 			var acc testutil.Accumulator
 			require.NoError(t, p.Start(&acc))
 			defer p.Stop()
-			require.NoError(t, p.Gather(&acc))
-			require.Empty(t, acc.Errors)
 
-			// Give the server a moment to register closed sessions
-			require.Eventually(t, func() bool {
-				return sessions() == tt.expected
-			}, 5*time.Second, 100*time.Millisecond)
+			// The second collection has to reuse the kept connections instead
+			// of opening new ones
+			for range 2 {
+				require.NoError(t, p.Gather(&acc))
+				require.Empty(t, acc.Errors)
+
+				// Give the server a moment to register closed sessions
+				require.Eventually(t, func() bool {
+					return sessions() == tt.expected
+				}, 5*time.Second, 100*time.Millisecond)
+			}
 		})
 	}
 }
