@@ -3,6 +3,7 @@ package postgresql_extensible
 import (
 	"errors"
 	"fmt"
+	"net"
 	"testing"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -341,4 +343,152 @@ func (f fakeRow) Scan(dest ...any) error {
 		}
 	}
 	return nil
+}
+
+// TestInitDefaults checks the values Init fills in for a plugin created by its
+// registered factory, as Telegraf does for a configuration without the new
+// options
+func TestInitDefaults(t *testing.T) {
+	creator, found := inputs.Inputs["postgresql_extensible"]
+	require.True(t, found)
+	p, ok := creator().(*Postgresql)
+	require.True(t, ok)
+	p.Log = testutil.Logger{}
+	p.Address = config.NewSecret(nil)
+	p.Query = []query{{Sqlquery: "SELECT 1"}}
+	require.NoError(t, p.Init())
+
+	require.Zero(t, p.Timeout)
+}
+
+type testServer struct {
+	container *testutil.Container
+	address   string
+}
+
+func startServer(t *testing.T) *testServer {
+	servicePort := "5432"
+	container := &testutil.Container{
+		Image:        "postgres:alpine",
+		ExposedPorts: []string{servicePort},
+		Env: map[string]string{
+			"POSTGRES_HOST_AUTH_METHOD": "trust",
+		},
+		WaitingFor: wait.ForAll(
+			wait.ForLog("database system is ready to accept connections").WithOccurrence(2),
+			wait.ForListeningPort(servicePort),
+		),
+	}
+	require.NoError(t, container.Start(), "failed to start container")
+
+	address := fmt.Sprintf(
+		"host=%s port=%s user=postgres dbname=postgres sslmode=disable",
+		container.Address,
+		container.Ports[servicePort],
+	)
+
+	return &testServer{
+		container: container,
+		address:   address,
+	}
+}
+
+func (s *testServer) stop() {
+	s.container.Terminate()
+}
+
+func (s *testServer) run(t *testing.T, p *Postgresql) *testutil.Accumulator {
+	p.Log = testutil.Logger{}
+	p.Address = config.NewSecret([]byte(s.address))
+	if p.MaxOpen == 0 {
+		p.MaxIdle = 1
+		p.MaxOpen = 1
+	}
+	require.NoError(t, p.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, p.Start(&acc))
+	defer p.Stop()
+	require.NoError(t, p.Gather(&acc))
+
+	return &acc
+}
+
+func TestTimeoutUnresponsiveServer(t *testing.T) {
+	// The connections to this listener are never answered
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer listener.Close()
+
+	host, port, err := net.SplitHostPort(listener.Addr().String())
+	require.NoError(t, err)
+	server := &testServer{
+		address: fmt.Sprintf("host=%s port=%s user=postgres dbname=postgres sslmode=disable", host, port),
+	}
+
+	acc := server.run(t, &Postgresql{
+		Timeout: config.Duration(500 * time.Millisecond),
+		Query:   []query{{Measurement: "not_started", Sqlquery: "SELECT 1 AS value"}},
+	})
+
+	require.Len(t, acc.Errors, 1)
+	require.ErrorContains(t, acc.Errors[0], "querying metadata failed")
+	require.Empty(t, acc.GetTelegrafMetrics())
+}
+
+func TestTimeoutsIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	server := startServer(t)
+	defer server.stop()
+
+	t.Run("query", func(t *testing.T) {
+		acc := server.run(t, &Postgresql{
+			Query: []query{
+				{Measurement: "slow", Sqlquery: "SELECT pg_sleep(5), 1 AS value", Timeout: config.Duration(500 * time.Millisecond)},
+				{Measurement: "fast", Sqlquery: "SELECT 1 AS value"},
+			},
+		})
+
+		require.Len(t, acc.Errors, 1)
+		require.ErrorContains(t, acc.Errors[0], `query "slow": query timeout 500ms exceeded`)
+		require.False(t, acc.HasMeasurement("slow"))
+		require.True(t, acc.HasInt64Field("fast", "value"))
+	})
+
+	t.Run("collection", func(t *testing.T) {
+		acc := server.run(t, &Postgresql{
+			Timeout: config.Duration(500 * time.Millisecond),
+			Query: []query{
+				{Measurement: "slow", Sqlquery: "SELECT pg_sleep(5), 1 AS value"},
+				{Measurement: "not_started", Sqlquery: "SELECT 1 AS value"},
+			},
+		})
+
+		require.Len(t, acc.Errors, 1)
+		require.ErrorContains(t, acc.Errors[0], `collection timeout 500ms exceeded in database "postgres": query "slow"`)
+		require.False(t, acc.HasMeasurement("not_started"))
+	})
+
+	t.Run("query while reading rows", func(t *testing.T) {
+		acc := server.run(t, &Postgresql{
+			Query: []query{
+				{
+					Measurement: "slow",
+					// Every row is larger than the send buffer of the server, so
+					// the first rows arrive long before the query is done
+					Sqlquery: "SELECT repeat('x', 10000) AS pad, pg_sleep(0.1)::text AS s FROM generate_series(1, 50)",
+					Timeout:  config.Duration(time.Second),
+				},
+				{Measurement: "fast", Sqlquery: "SELECT 1 AS value"},
+			},
+		})
+
+		require.Len(t, acc.Errors, 1)
+		require.ErrorContains(t, acc.Errors[0], `query "slow": query timeout 1s exceeded`)
+		require.True(t, acc.HasMeasurement("slow"))
+		require.True(t, acc.HasInt64Field("fast", "value"))
+	})
 }
