@@ -1453,3 +1453,19 @@ func TestWriteMetricsFromMeasureRejectsEmptyName(t *testing.T) {
 	err := p.writeMetricsFromMeasure(context.Background(), nil, src)
 	require.ErrorContains(t, err, "empty measurement name")
 }
+
+func TestTagTempTableName(t *testing.T) {
+	name := tagTempTableName("public", "cpu_tag")
+	require.True(t, strings.HasSuffix(name, "_temp"))
+	require.Equal(t, name, tagTempTableName("public", "cpu_tag"))
+
+	// The same table name in another schema must not share the temp table
+	require.NotEqual(t, name, tagTempTableName("other", "cpu_tag"))
+	require.NotEqual(t, tagTempTableName("ab", "c"), tagTempTableName("a", "bc"))
+
+	// PostgreSQL truncates identifiers to 63 bytes
+	long := strings.Repeat("x", 63)
+	longName := tagTempTableName(long, long)
+	require.LessOrEqual(t, len(longName), 63)
+	require.NotEqual(t, longName, tagTempTableName(long, long[:62]+"y"))
+}

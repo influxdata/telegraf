@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"hash/fnv"
 	"strings"
 	"time"
 
@@ -491,7 +492,7 @@ func writeTagTable(ctx context.Context, db dbh, tableSource *TableSource) error 
 	defer tx.Rollback(ctx) //nolint:errcheck // In case of failure during commit, "err" from commit will be returned
 
 	ident := pgx.Identifier{ttsrc.Schema(), ttsrc.Name()}
-	identTemp := pgx.Identifier{ttsrc.Name() + "_temp"}
+	identTemp := pgx.Identifier{tagTempTableName(ttsrc.Schema(), ttsrc.Name())}
 	sql := fmt.Sprintf("CREATE TEMP TABLE %s (LIKE %s) ON COMMIT DROP", identTemp.Sanitize(), ident.Sanitize())
 	if _, err := tx.Exec(ctx, sql); err != nil {
 		return fmt.Errorf("creating tags temp table: %w", err)
@@ -506,18 +507,24 @@ func writeTagTable(ctx context.Context, db dbh, tableSource *TableSource) error 
 		return fmt.Errorf("inserting into tags table: %w", err)
 	}
 
-	// When called inside a savepoint, the temp table is only dropped when the outer transaction commits. Drop it
-	// explicitly, so that a tag table with the same name in another schema can be written in the same transaction.
-	if _, err := tx.Exec(ctx, "DROP TABLE "+identTemp.Sanitize()); err != nil {
-		return fmt.Errorf("dropping tags temp table: %w", err)
-	}
-
 	if err := tx.Commit(ctx); err != nil {
 		return err
 	}
 
 	ttsrc.UpdateCache()
 	return nil
+}
+
+// tagTempTableName returns the name of the temp table used for writing to the given tag table. When called inside a
+// savepoint, the temp table is only dropped when the outer transaction commits, so the name must differ for tag
+// tables with the same name in different schemas. The name is built from a hash of the schema and the table name,
+// as PostgreSQL truncates identifiers to 63 bytes and a name containing both could be cut.
+func tagTempTableName(schema, name string) string {
+	h := fnv.New64a()
+	h.Write([]byte(schema))
+	h.Write([]byte{0})
+	h.Write([]byte(name))
+	return fmt.Sprintf("telegraf_%016x_temp", h.Sum64())
 }
 
 func newPostgresql() *Postgresql {
