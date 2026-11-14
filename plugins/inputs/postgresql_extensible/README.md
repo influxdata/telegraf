@@ -2,9 +2,8 @@
 
 This plugin queries a [PostgreSQL][postgres] server and provides metrics for
 the returned result. This is useful when using PostgreSQL extensions to collect
-additional metrics. The queries can be run in many databases of the server,
-restricted to the primary or replica role, limited in runtime and executed
-concurrently.
+additional metrics. The queries can be run in many databases of the server and
+executed concurrently.
 
 > [!TIP]
 > Please also check the more generic [sql input plugin][inputs_sql].
@@ -62,21 +61,13 @@ to use them.
   ## running.
   # max_lifetime = "0s"
 
-  ## Timeout for a complete collection cycle. Zero means no limit.
-  ## Queries may set their own timeout.
-  # timeout = "0s"
-
-  ## Server role required to run the queries. Queries may override this.
-  ## Valid values are "any", "primary" and "replica".
-  # role = "any"
-
   ## Run the queries in all databases matching the filters instead of the
   ## database of the connection only. Each entry is a glob pattern.
   # datname_include = []
   # datname_exclude = []
 
-  ## Interval for refreshing the cached server version, server role and list
-  ## of databases. Zero reads them on every collection.
+  ## Interval for refreshing the cached server version and list of databases.
+  ## Zero reads them on every collection.
   # metadata_refresh_interval = "0s"
 
   ## Number of databases processed at the same time. Only relevant when the
@@ -90,15 +81,6 @@ to use them.
   ## once a collection is done. With many databases this may exceed the
   ## max_connections setting of the server.
   # keep_idle_connections = true
-
-  ## Use the columns of the text types (text, varchar, char and name) as tags
-  ## instead of fields. Queries may override this.
-  # string_columns_as_tags = false
-
-  ## Field type for columns of the PostgreSQL numeric type, which has more
-  ## precision than a float can hold. Available values are "string" and
-  ## "float". Queries may override this.
-  # numeric_type = "string"
 
   ## Queries to run
   ##
@@ -116,25 +98,15 @@ to use them.
   ## The min_version and max_version options restrict the query to the given
   ## server versions. The version is the server_version_num divided by 100,
   ## e.g. 9.6.2 -> 906 and 15.2 -> 1500. The query is not run on max_version.
-  ##
-  ## The timeout option limits the runtime of the query.
-  ##
-  ## The role, string_columns_as_tags and numeric_type options override the
-  ## plugin-level settings for this query.
   [[inputs.postgresql_extensible.query]]
     measurement = "pg_stat_database"
     sqlquery = "SELECT * FROM pg_stat_database"
     min_version = 901
     tagvalue = ""
-    # timeout = "0s"
-    # role = "any"
-    # string_columns_as_tags = false
-    # numeric_type = "string"
   [[inputs.postgresql_extensible.query]]
     script = "your_sql-filepath.sql"
     min_version = 901
     max_version = 1300
-    role = "primary"
 ```
 
 ### Example with several intervals
@@ -156,13 +128,8 @@ together.
   max_lifetime = "1h"
 
   ## Read the metadata every 10 minutes instead of on every collection: the
-  ## server version, pg_is_in_recovery() and, with the datname filters, the
-  ## list of databases
+  ## server version and, with the datname filters, the list of databases
   metadata_refresh_interval = "10m"
-
-  ## Stop the collection after this time. For example, if the agent collecting
-  ## the metrics has a 30 second timeout, there is no point in continuing.
-  timeout = "30s"
 
   [[inputs.postgresql_extensible.query]]
     measurement = "pg_stat_database"
@@ -170,10 +137,8 @@ together.
 
   [[inputs.postgresql_extensible.query]]
     measurement = "pg_replication_slots"
-    sqlquery = "SELECT slot_name, active, pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn) AS lag_bytes FROM pg_replication_slots"
+    sqlquery = "SELECT slot_name, active, pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)::bigint AS lag_bytes FROM pg_replication_slots WHERE NOT pg_is_in_recovery()"
     tagvalue = "slot_name"
-    role = "primary"
-    numeric_type = "float"
 
   ## Other queries
   # [[inputs.postgresql_extensible.query]]
@@ -192,7 +157,6 @@ together.
   prepared_statements = false
 
   metadata_refresh_interval = "10m"
-  timeout = "30s"
 
   [[inputs.postgresql_extensible.query]]
     measurement = "pg_stat_statements"
@@ -204,7 +168,6 @@ together.
   interval = "30m"
   address = "host=localhost user=postgres dbname=postgres sslmode=disable"
   prepared_statements = false
-  timeout = "30s"
 
   ## Run the queries in every database except postgres, two databases at a
   ## time and two queries at a time within each database, and close the
@@ -215,26 +178,21 @@ together.
   max_connections_per_database = 2
   keep_idle_connections = false
 
-  ## Each query below stops after 10 seconds, so that a slow one does not use
-  ## up the collection time left for the other queries
   [[inputs.postgresql_extensible.query]]
     measurement = "pg_stat_user_tables"
     sqlquery = "SELECT * FROM pg_stat_user_tables"
     tagvalue = "schemaname,relname"
-    timeout = "10s"
 
   [[inputs.postgresql_extensible.query]]
     measurement = "pg_stat_user_indexes"
     sqlquery = "SELECT * FROM pg_stat_user_indexes"
     tagvalue = "schemaname,relname,indexrelname"
-    timeout = "10s"
 
   ## A file with the SQL query instead of sqlquery
   [[inputs.postgresql_extensible.query]]
     measurement = "pg_invalid_indexes"
     script = "/etc/telegraf/sql/invalid_indexes.sql"
     tagvalue = "table_name,index_name"
-    timeout = "10s"
 ```
 
 ## Databases
@@ -255,29 +213,16 @@ A new database shows up on the next collection, or with
 `metadata_refresh_interval` set, after at most that interval plus one
 collection interval.
 
-## Server role
-
-The server role is read with `pg_is_in_recovery()` and cached if
-`metadata_refresh_interval` is set. Queries with `role = "primary"` are only
-run if the server is not in recovery, queries with `role = "replica"` only if
-it is. The plugin-level `role` option sets the default for all queries.
-
 ## Cached server information
 
-The server version, the server role and the list of databases are read
-together from the database of the `address` and cached for
-`metadata_refresh_interval`. They are refreshed on the first collection after
-each interval boundary on the wall clock. A collection between two refreshes
-uses the cached values and does not read the server information again. After
-a role change the plugin therefore keeps using the previous role for up to
-`metadata_refresh_interval` plus one collection interval. The default of zero
-reads them on every collection.
+The server version and the list of databases are read together from the
+database of the `address` and cached for `metadata_refresh_interval`. They are
+refreshed on the first collection after each interval boundary on the wall
+clock. A collection between two refreshes uses the cached values and does not
+read the server information again. The default of zero reads them on every
+collection.
 
-## Timeouts and concurrency
-
-The plugin-level `timeout` limits a complete collection cycle. Each query
-is run with its own `timeout` if set, or the remaining time of the cycle
-otherwise. The default of zero means no limit.
+## Concurrency
 
 Concurrency has two independent knobs. `max_parallel_databases` sets how
 many databases are processed at the same time, `max_connections_per_database`
@@ -336,11 +281,8 @@ By default, the following format will be used
       column if present
     * server - the sanitized connection address
     * all columns listed in `tagvalue`
-    * all columns of the `text`, `varchar`, `char` and `name` types if
-      `string_columns_as_tags` is set
   * fields:
-    * all remaining columns; `numeric` columns are converted to floats if
-      `numeric_type` is `"float"`, otherwise they are reported as strings
+    * all remaining columns
 
 The `stats_reset` column is never reported. To drop further columns use the
 `fieldexclude` and `tagexclude` options every input plugin supports.

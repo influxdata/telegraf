@@ -5,7 +5,6 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
-	"math"
 	"os"
 	"slices"
 	"strings"
@@ -20,7 +19,6 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/common/postgresql"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -31,29 +29,16 @@ var sampleConfig string
 // Columns never reported as a field or tag
 var ignoredColumns = map[string]bool{"stats_reset": true}
 
-// Values accepted by role
-var roles = []string{"any", "primary", "replica"}
-
-// Values accepted by numeric_type
-var numericTypes = []string{"string", "float"}
-
-// Column types that string_columns_as_tags turns into tags
-var textTypes = map[string]bool{"TEXT": true, "VARCHAR": true, "BPCHAR": true, "CHAR": true, "NAME": true}
-
 type Postgresql struct {
 	Databases                 []string        `deprecated:"1.22.4;use the sqlquery option to specify database to use"`
 	Queries                   []query         `toml:"query"`
 	PreparedStatements        bool            `toml:"prepared_statements"`
-	Timeout                   config.Duration `toml:"timeout"`
-	Role                      string          `toml:"role"`
 	DatnameInclude            []string        `toml:"datname_include"`
 	DatnameExclude            []string        `toml:"datname_exclude"`
 	MetadataRefreshInterval   config.Duration `toml:"metadata_refresh_interval"`
 	MaxConnectionsPerDatabase int             `toml:"max_connections_per_database"`
 	MaxParallelDatabases      int             `toml:"max_parallel_databases"`
 	KeepIdleConnections       *bool           `toml:"keep_idle_connections"`
-	StringColumnsAsTags       bool            `toml:"string_columns_as_tags"`
-	NumericType               string          `toml:"numeric_type"`
 	Log                       telegraf.Logger `toml:"-"`
 	postgresql.Config
 
@@ -70,30 +55,23 @@ type Postgresql struct {
 	datnameFilter filter.Filter
 
 	dbVersion       int
-	inRecovery      bool
 	currentDatabase string
 	datnames        []string
 	metadataUpdated time.Time
 }
 
 type query struct {
-	Sqlquery            string          `toml:"sqlquery"`
-	Script              string          `toml:"script"`
-	Version             int             `deprecated:"1.28.0;use minVersion to specify minimal DB version this query supports"`
-	MinVersion          int             `toml:"min_version"`
-	MaxVersion          int             `toml:"max_version"`
-	Tagvalue            string          `toml:"tagvalue"`
-	Measurement         string          `toml:"measurement"`
-	Timestamp           string          `toml:"timestamp"`
-	Withdbname          bool            `deprecated:"1.22.4;use the sqlquery option to specify database to use"`
-	Timeout             config.Duration `toml:"timeout"`
-	Role                string          `toml:"role"`
-	StringColumnsAsTags *bool           `toml:"string_columns_as_tags"`
-	NumericType         string          `toml:"numeric_type"`
+	Sqlquery    string `toml:"sqlquery"`
+	Script      string `toml:"script"`
+	Version     int    `deprecated:"1.28.0;use minVersion to specify minimal DB version this query supports"`
+	MinVersion  int    `toml:"min_version"`
+	MaxVersion  int    `toml:"max_version"`
+	Tagvalue    string `toml:"tagvalue"`
+	Measurement string `toml:"measurement"`
+	Timestamp   string `toml:"timestamp"`
+	Withdbname  bool   `deprecated:"1.22.4;use the sqlquery option to specify database to use"`
 
 	additionalTags map[string]bool
-	stringTags     bool
-	numericFloat   bool
 }
 
 // job is a single unit of work: one query executed in one database
@@ -107,10 +85,6 @@ type job struct {
 type resultSet struct {
 	columns []string
 	values  []any
-	// numeric names the columns of the NUMERIC type
-	numeric map[string]bool
-	// text names the columns of the text types
-	text map[string]bool
 	// debug tells whether every column value is logged
 	debug bool
 }
@@ -148,18 +122,6 @@ func (p *Postgresql) Init() error {
 	if p.KeepIdleConnections != nil {
 		p.keepIdle = *p.KeepIdleConnections
 	}
-	if p.Role == "" {
-		p.Role = "any"
-	}
-	if err := choice.Check(p.Role, roles); err != nil {
-		return fmt.Errorf("config option 'role': %w", err)
-	}
-	if p.NumericType == "" {
-		p.NumericType = "string"
-	}
-	if err := choice.Check(p.NumericType, numericTypes); err != nil {
-		return fmt.Errorf("config option 'numeric_type': %w", err)
-	}
 
 	if len(p.DatnameInclude) > 0 || len(p.DatnameExclude) > 0 {
 		f, err := filter.NewIncludeExcludeFilter(p.DatnameInclude, p.DatnameExclude)
@@ -194,24 +156,6 @@ func (p *Postgresql) Init() error {
 				q.Sqlquery += " is not null"
 			}
 		}
-		if q.Role == "" {
-			q.Role = p.Role
-		}
-		if err := choice.Check(q.Role, roles); err != nil {
-			return fmt.Errorf("query %d: config option 'role': %w", i, err)
-		}
-
-		q.stringTags = p.StringColumnsAsTags
-		if q.StringColumnsAsTags != nil {
-			q.stringTags = *q.StringColumnsAsTags
-		}
-		if q.NumericType == "" {
-			q.NumericType = p.NumericType
-		}
-		if err := choice.Check(q.NumericType, numericTypes); err != nil {
-			return fmt.Errorf("query %d: config option 'numeric_type': %w", i, err)
-		}
-		q.numericFloat = q.NumericType == "float"
 
 		q.additionalTags = make(map[string]bool)
 		if q.Tagvalue != "" {
@@ -254,21 +198,16 @@ func (p *Postgresql) Start(_ telegraf.Accumulator) error {
 }
 
 func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
-	// A timeout of zero means no limit on the duration of a collection
-	ctx, cancel := context.WithCancel(context.Background())
-	if p.Timeout > 0 {
-		ctx, cancel = context.WithTimeout(context.Background(), time.Duration(p.Timeout))
-	}
-	defer cancel()
+	ctx := context.Background()
 
 	if !p.keepIdle {
 		defer p.closeIdleConnections()
 	}
 
 	if err := p.refreshMetadata(ctx); err != nil {
-		if p.metadataRequired() || ctx.Err() != nil {
+		if p.metadataRequired() {
 			acc.AddError(err)
-			if p.dbVersion == 0 || ctx.Err() != nil {
+			if p.dbVersion == 0 {
 				return nil
 			}
 		} else {
@@ -282,10 +221,6 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	for i := range p.Queries {
 		q := &p.Queries[i]
 		if !matchesVersion(q, p.dbVersion) {
-			continue
-		}
-		if !matchesRole(q.Role, p.inRecovery) {
-			p.Log.Debugf("Skipping query %q as the server role does not match %q", q.Measurement, q.Role)
 			continue
 		}
 		queries = append(queries, q)
@@ -328,10 +263,6 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	semaphore := make(chan struct{}, p.MaxParallelDatabases)
 	for _, datname := range datnames {
 		semaphore <- struct{}{}
-		// Do not start anything once the collection timed out
-		if ctx.Err() != nil {
-			break
-		}
 		wg.Go(func() {
 			defer func() { <-semaphore }()
 
@@ -476,10 +407,6 @@ func (p *Postgresql) gatherDatabase(ctx context.Context, acc telegraf.Accumulato
 	semaphore := make(chan struct{}, coll.connectionsPerDatabase)
 	for _, q := range coll.queries {
 		semaphore <- struct{}{}
-		// Do not start anything once the collection timed out
-		if ctx.Err() != nil {
-			break
-		}
 		j := job{datname: datname, query: q}
 		wg.Go(func() {
 			defer func() { <-semaphore }()
@@ -505,8 +432,8 @@ func (p *Postgresql) refreshMetadata(ctx context.Context) error {
 	}
 
 	row := p.service.DB.QueryRowContext(ctx,
-		`SELECT setting::integer / 100, pg_is_in_recovery(), current_database() FROM pg_settings WHERE name = 'server_version_num'`)
-	if err := row.Scan(&p.dbVersion, &p.inRecovery, &p.currentDatabase); err != nil {
+		`SELECT setting::integer / 100, current_database() FROM pg_settings WHERE name = 'server_version_num'`)
+	if err := row.Scan(&p.dbVersion, &p.currentDatabase); err != nil {
 		return fmt.Errorf("querying metadata failed: %w", err)
 	}
 
@@ -522,9 +449,7 @@ func (p *Postgresql) refreshMetadata(ctx context.Context) error {
 
 // metadataRequired tells whether the queries depend on the server information
 func (p *Postgresql) metadataRequired() bool {
-	return p.datnameFilter != nil || slices.ContainsFunc(p.Queries, func(q query) bool {
-		return q.Role != "any"
-	})
+	return p.datnameFilter != nil
 }
 
 // refreshDatnames updates the list of databases matching the filters
@@ -569,26 +494,10 @@ func (p *Postgresql) gatherMetricsFromQuery(
 	j job,
 	timestamp time.Time,
 ) error {
-	queryCtx := ctx
-	if j.query.Timeout > 0 {
-		var cancel context.CancelFunc
-		queryCtx, cancel = context.WithTimeout(ctx, time.Duration(j.query.Timeout))
-		defer cancel()
-	}
-
-	err := p.runQuery(queryCtx, acc, service, j, timestamp)
-	switch {
-	case err == nil:
-		return nil
-	case ctx.Err() != nil:
-		return fmt.Errorf("collection timeout %s exceeded in database %q: query %q",
-			time.Duration(p.Timeout), j.datname, j.query.Measurement)
-	case queryCtx.Err() != nil:
-		return fmt.Errorf("database %q: query %q: query timeout %s exceeded",
-			j.datname, j.query.Measurement, time.Duration(j.query.Timeout))
-	default:
+	if err := p.runQuery(ctx, acc, service, j, timestamp); err != nil {
 		return fmt.Errorf("database %q: query %q: %w", j.datname, j.query.Measurement, err)
 	}
+	return nil
 }
 
 func (p *Postgresql) runQuery(
@@ -608,21 +517,6 @@ func (p *Postgresql) runQuery(
 	if err != nil {
 		return err
 	}
-	columnTypes, err := rows.ColumnTypes()
-	if err != nil {
-		return err
-	}
-	numeric := make(map[string]bool, len(columnTypes))
-	text := make(map[string]bool, len(columnTypes))
-	for _, ct := range columnTypes {
-		switch typeName := ct.DatabaseTypeName(); {
-		case typeName == "NUMERIC":
-			numeric[ct.Name()] = true
-		case textTypes[typeName]:
-			text[ct.Name()] = true
-		}
-	}
-
 	// Prepare the row buffers once and reuse them for every row
 	values := make([]any, len(columns))
 	pointers := make([]any, len(columns))
@@ -633,8 +527,6 @@ func (p *Postgresql) runQuery(
 	rs := &resultSet{
 		columns: columns,
 		values:  values,
-		numeric: numeric,
-		text:    text,
 		// Logging every value is only done on demand: the arguments of a
 		// disabled Debugf call are still boxed and allocated for every
 		// column of every row
@@ -696,26 +588,6 @@ func (p *Postgresql) accRow(acc telegraf.Accumulator, rs *resultSet, j job, time
 			continue
 		}
 
-		if q.numericFloat && rs.numeric[col] {
-			v, err := internal.ToFloat64(value)
-			if err != nil {
-				p.Log.Debugf("Failed to convert numeric column %q: %v", col, err)
-				continue
-			}
-			if math.IsNaN(v) || math.IsInf(v, 0) {
-				continue
-			}
-			fields[col] = v
-			continue
-		}
-
-		if q.stringTags && rs.text[col] {
-			if v, err := internal.ToString(value); err == nil {
-				tags[col] = v
-				continue
-			}
-		}
-
 		if v, ok := value.([]byte); ok {
 			fields[col] = string(v)
 		} else {
@@ -734,17 +606,6 @@ func refreshDue(updated, now time.Time, interval time.Duration) bool {
 
 func matchesVersion(q *query, dbVersion int) bool {
 	return q.MinVersion <= dbVersion && (q.MaxVersion == 0 || q.MaxVersion > dbVersion)
-}
-
-func matchesRole(role string, inRecovery bool) bool {
-	switch role {
-	case "primary":
-		return !inRecovery
-	case "replica":
-		return inRecovery
-	default:
-		return true
-	}
 }
 
 func init() {

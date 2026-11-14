@@ -28,13 +28,12 @@ func newPlugin() *Postgresql {
 		MaxIdle:            1,
 		MaxOpen:            1,
 		PreparedStatements: true,
-		NumericType:        "float",
 	}
 }
 
 // TestInitDefaults checks the values Init fills in for a plugin created by its
 // registered factory, as Telegraf does for a configuration without the new
-// options, and for a query inheriting from the plugin or overriding it
+// options
 func TestInitDefaults(t *testing.T) {
 	creator, found := inputs.Inputs["postgresql_extensible"]
 	require.True(t, found)
@@ -45,45 +44,14 @@ func TestInitDefaults(t *testing.T) {
 	p.Queries = []query{{Sqlquery: "SELECT 1"}}
 	require.NoError(t, p.Init())
 
-	require.Zero(t, p.Timeout)
 	require.Zero(t, p.MetadataRefreshInterval)
 	require.Equal(t, 1, p.MaxConnectionsPerDatabase)
 	require.Equal(t, 1, p.MaxParallelDatabases)
-	require.Equal(t, "any", p.Role)
 	require.True(t, p.keepIdle)
 	require.True(t, p.PreparedStatements)
 
 	q := p.Queries[0]
 	require.Equal(t, "postgresql", q.Measurement)
-	require.Equal(t, "any", q.Role)
-	require.False(t, q.stringTags)
-	require.False(t, q.numericFloat)
-
-	// A query takes the settings of the plugin unless it sets its own
-	p = newPlugin()
-	p.Role = "primary"
-	p.StringColumnsAsTags = true
-	p.NumericType = "float"
-	p.Queries = []query{
-		{Sqlquery: "SELECT 1"},
-		{
-			Sqlquery:            "SELECT 2",
-			Role:                "replica",
-			StringColumnsAsTags: new(false),
-			NumericType:         "string",
-		},
-	}
-	require.NoError(t, p.Init())
-
-	inherited := p.Queries[0]
-	require.Equal(t, "primary", inherited.Role)
-	require.True(t, inherited.stringTags)
-	require.True(t, inherited.numericFloat)
-
-	overridden := p.Queries[1]
-	require.Equal(t, "replica", overridden.Role)
-	require.False(t, overridden.stringTags)
-	require.False(t, overridden.numericFloat)
 
 	// An old configuration with max_idle = 0 does not keep the connection
 	// open, unless keep_idle_connections says otherwise
@@ -159,24 +127,6 @@ func TestInitErrors(t *testing.T) {
 		expected string
 	}{
 		{
-			name: "invalid plugin role",
-			plugin: func() *Postgresql {
-				p := newPlugin()
-				p.Role = "master"
-				return p
-			}(),
-			expected: "config option 'role': unknown choice master",
-		},
-		{
-			name: "invalid query role",
-			plugin: func() *Postgresql {
-				p := newPlugin()
-				p.Queries = []query{{Sqlquery: "SELECT 1", Role: "standby"}}
-				return p
-			}(),
-			expected: "query 0: config option 'role': unknown choice standby",
-		},
-		{
 			name: "invalid database filter",
 			plugin: func() *Postgresql {
 				p := newPlugin()
@@ -184,24 +134,6 @@ func TestInitErrors(t *testing.T) {
 				return p
 			}(),
 			expected: "creating database filter failed",
-		},
-		{
-			name: "invalid numeric type",
-			plugin: func() *Postgresql {
-				p := newPlugin()
-				p.NumericType = "decimal"
-				return p
-			}(),
-			expected: "config option 'numeric_type'",
-		},
-		{
-			name: "invalid query numeric type",
-			plugin: func() *Postgresql {
-				p := newPlugin()
-				p.Queries = []query{{Sqlquery: "SELECT 1", NumericType: "decimal"}}
-				return p
-			}(),
-			expected: "query 0: config option 'numeric_type'",
 		},
 		{
 			name: "missing script",
@@ -222,15 +154,6 @@ func TestInitErrors(t *testing.T) {
 			require.ErrorContains(t, err, tt.expected)
 		})
 	}
-}
-
-func TestMatchesRole(t *testing.T) {
-	require.True(t, matchesRole("any", false))
-	require.True(t, matchesRole("any", true))
-	require.True(t, matchesRole("primary", false))
-	require.False(t, matchesRole("primary", true))
-	require.False(t, matchesRole("replica", false))
-	require.True(t, matchesRole("replica", true))
 }
 
 func TestMatchesVersion(t *testing.T) {
@@ -260,8 +183,6 @@ func TestAccRow(t *testing.T) {
 		name           string
 		query          query
 		columns        []string
-		numeric        map[string]bool
-		text           map[string]bool
 		values         []any
 		expectedTags   map[string]string
 		expectedFields map[string]any
@@ -320,34 +241,6 @@ func TestAccRow(t *testing.T) {
 			expectedFields: map[string]any{"count": int64(3)},
 		},
 		{
-			name:    "string columns as tags",
-			query:   query{StringColumnsAsTags: new(true)},
-			columns: []string{"relname", "raw", "count"},
-			text:    map[string]bool{"relname": true, "raw": true},
-			values:  []any{"users", []byte("bytes"), int64(3)},
-			expectedTags: map[string]string{
-				"server":  "server",
-				"db":      "mydb",
-				"relname": "users",
-				"raw":     "bytes",
-			},
-			expectedFields: map[string]any{"count": int64(3)},
-		},
-		{
-			name:    "string columns as tags skip numeric columns",
-			query:   query{StringColumnsAsTags: new(true), NumericType: "string"},
-			columns: []string{"relname", "ratio", "uuid"},
-			numeric: map[string]bool{"ratio": true},
-			text:    map[string]bool{"relname": true},
-			values:  []any{"users", "2.5", "a0eebc99"},
-			expectedTags: map[string]string{
-				"server":  "server",
-				"db":      "mydb",
-				"relname": "users",
-			},
-			expectedFields: map[string]any{"ratio": "2.5", "uuid": "a0eebc99"},
-		},
-		{
 			name:    "string columns as fields",
 			columns: []string{"relname", "raw"},
 			values:  []any{"users", []byte("bytes")},
@@ -356,29 +249,6 @@ func TestAccRow(t *testing.T) {
 				"db":     "mydb",
 			},
 			expectedFields: map[string]any{"relname": "users", "raw": "bytes"},
-		},
-		{
-			name:    "numeric as float",
-			columns: []string{"ratio", "text", "big", "nan", "bad"},
-			numeric: map[string]bool{"ratio": true, "big": true, "nan": true, "bad": true},
-			values:  []any{"10.5", "10.5", []byte("1e3"), "NaN", "abc"},
-			expectedTags: map[string]string{
-				"server": "server",
-				"db":     "mydb",
-			},
-			expectedFields: map[string]any{"ratio": 10.5, "text": "10.5", "big": 1000.0},
-		},
-		{
-			name:    "numeric as string",
-			query:   query{NumericType: "string"},
-			columns: []string{"ratio"},
-			numeric: map[string]bool{"ratio": true},
-			values:  []any{"10.5"},
-			expectedTags: map[string]string{
-				"server": "server",
-				"db":     "mydb",
-			},
-			expectedFields: map[string]any{"ratio": "10.5"},
 		},
 		{
 			name:    "timestamp column",
@@ -404,7 +274,7 @@ func TestAccRow(t *testing.T) {
 			var acc testutil.Accumulator
 			j := job{datname: "mydb", query: &p.Queries[0]}
 			now := time.Now()
-			p.accRow(&acc, &resultSet{columns: tt.columns, values: tt.values, numeric: tt.numeric, text: tt.text}, j, now)
+			p.accRow(&acc, &resultSet{columns: tt.columns, values: tt.values}, j, now)
 			require.Len(t, acc.Metrics, 1)
 
 			metric := acc.Metrics[0]
@@ -427,13 +297,11 @@ func TestMetadataCached(t *testing.T) {
 
 	// The pool is not started, so any query would panic on a nil database
 	p.dbVersion = 1700
-	p.inRecovery = true
 	p.datnames = []string{"app_1"}
 	p.metadataUpdated = time.Now()
 
 	require.NoError(t, p.refreshMetadata(context.Background()))
 	require.Equal(t, 1700, p.dbVersion)
-	require.True(t, p.inRecovery)
 	require.Equal(t, []string{"app_1"}, p.datnames)
 }
 
@@ -586,7 +454,6 @@ func TestGeneratesMetricsIntegration(t *testing.T) {
 	defer server.stop()
 
 	acc := server.run(t, &Postgresql{
-		NumericType: "float",
 		Queries: []query{{
 			Sqlquery:   "SELECT * FROM pg_stat_database WHERE datname = 'postgres'",
 			MinVersion: 901,
@@ -614,7 +481,6 @@ func TestMultipleDatabasesIntegration(t *testing.T) {
 	defer server.stop()
 
 	acc := server.run(t, &Postgresql{
-		NumericType:    "float",
 		DatnameInclude: []string{"app_*", "postgres"},
 		DatnameExclude: []string{"app_2"},
 		Queries: []query{{
@@ -667,14 +533,10 @@ func TestKeepConnectionsIntegration(t *testing.T) {
 		name     string
 		keep     bool
 		include  []string
-		role     string
 		perDB    int
 		expected int
 	}{
 		{name: "single database closed", keep: false, perDB: 3, expected: 0},
-		// The server is a primary, so no query runs and only the connection
-		// reading the server information has to be closed
-		{name: "no query run closed", keep: false, role: "replica", perDB: 3, expected: 0},
 		// The three queries run at the same time on the pool of the address
 		{name: "single database kept", keep: true, perDB: 3, expected: 3},
 		{name: "multiple databases closed", keep: false, include: []string{"app_*"}, perDB: 3, expected: 0},
@@ -690,12 +552,10 @@ func TestKeepConnectionsIntegration(t *testing.T) {
 				Address:                   config.NewSecret([]byte(server.dsn(appName))),
 				MaxIdle:                   1,
 				MaxOpen:                   1,
-				NumericType:               "float",
 				MaxConnectionsPerDatabase: tt.perDB,
 				MaxParallelDatabases:      2,
 				KeepIdleConnections:       new(tt.keep),
 				DatnameInclude:            tt.include,
-				Role:                      tt.role,
 				Queries: []query{
 					{Measurement: "q1", Sqlquery: "SELECT pg_sleep(0.1), 1 AS v"},
 					{Measurement: "q2", Sqlquery: "SELECT pg_sleep(0.1), 2 AS v"},
@@ -757,43 +617,6 @@ func TestAddressWithoutDbnameIntegration(t *testing.T) {
 	}
 }
 
-func TestTimeoutsIntegration(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
-	server := startServer(t)
-	defer server.stop()
-
-	t.Run("query", func(t *testing.T) {
-		acc := server.run(t, &Postgresql{
-			Queries: []query{
-				{Measurement: "slow", Sqlquery: "SELECT pg_sleep(5), 1 AS value", Timeout: config.Duration(500 * time.Millisecond)},
-				{Measurement: "fast", Sqlquery: "SELECT 1 AS value"},
-			},
-		})
-
-		require.Len(t, acc.Errors, 1)
-		require.ErrorContains(t, acc.Errors[0], `query "slow": query timeout 500ms exceeded`)
-		require.False(t, acc.HasMeasurement("slow"))
-		require.True(t, acc.HasInt64Field("fast", "value"))
-	})
-
-	t.Run("collection", func(t *testing.T) {
-		acc := server.run(t, &Postgresql{
-			Timeout: config.Duration(500 * time.Millisecond),
-			Queries: []query{
-				{Measurement: "slow", Sqlquery: "SELECT pg_sleep(5), 1 AS value"},
-				{Measurement: "not_started", Sqlquery: "SELECT 1 AS value"},
-			},
-		})
-
-		require.Len(t, acc.Errors, 1)
-		require.ErrorContains(t, acc.Errors[0], `collection timeout 500ms exceeded in database "postgres": query "slow"`)
-		require.False(t, acc.HasMeasurement("not_started"))
-	})
-}
-
 // TestMetadataFailureIntegration checks that the queries not limited to a
 // version still run if the server information cannot be read
 func TestMetadataFailureIntegration(t *testing.T) {
@@ -835,30 +658,6 @@ func TestMetadataFailureIntegration(t *testing.T) {
 	require.False(t, acc.HasMeasurement("versioned"))
 }
 
-func TestRoleFilterIntegration(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
-	server := startServer(t)
-	defer server.stop()
-
-	// The container is always a primary
-	acc := server.run(t, &Postgresql{
-		NumericType: "float",
-		Queries: []query{
-			{Measurement: "primary_only", Sqlquery: "SELECT 1 AS value", Role: "primary"},
-			{Measurement: "replica_only", Sqlquery: "SELECT 1 AS value", Role: "replica"},
-			{Measurement: "everywhere", Sqlquery: "SELECT 1 AS value"},
-		},
-	})
-	require.Empty(t, acc.Errors)
-
-	require.True(t, acc.HasMeasurement("primary_only"))
-	require.False(t, acc.HasMeasurement("replica_only"))
-	require.True(t, acc.HasMeasurement("everywhere"))
-}
-
 // TestColumnTypesIntegration checks the mapping of the column types to the
 // field types
 func TestColumnTypesIntegration(t *testing.T) {
@@ -872,9 +671,6 @@ func TestColumnTypesIntegration(t *testing.T) {
 	tests := []struct {
 		name           string
 		sql            string
-		numericType    string
-		stringTags     bool
-		expectedTags   map[string]string
 		expectedFields map[string]any
 		expectedTime   time.Time
 	}{
@@ -889,23 +685,9 @@ func TestColumnTypesIntegration(t *testing.T) {
 			expectedFields: map[string]any{"myvalue": "10.0"},
 		},
 		{
-			name:           "numeric as float",
-			sql:            "SELECT 10.5::numeric AS myvalue",
-			numericType:    "float",
-			expectedFields: map[string]any{"myvalue": 10.5},
-		},
-		{
 			name:           "string",
 			sql:            "SELECT 'hello world' AS myvalue",
 			expectedFields: map[string]any{"myvalue": "hello world"},
-		},
-		{
-			name: "string columns as tags",
-			sql: "SELECT 'a'::text AS t, 'b'::varchar AS v, 'c'::char(1) AS c, 'd'::name AS n, " +
-				"2 / 0.8 AS ratio, 3 AS count",
-			stringTags:     true,
-			expectedTags:   map[string]string{"t": "a", "v": "b", "c": "c", "n": "d"},
-			expectedFields: map[string]any{"ratio": "2.5000000000000000", "count": int64(3)},
 		},
 		{
 			name:           "boolean",
@@ -923,20 +705,15 @@ func TestColumnTypesIntegration(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			acc := server.run(t, &Postgresql{
-				NumericType:         tt.numericType,
-				StringColumnsAsTags: tt.stringTags,
-				Queries:             []query{{Sqlquery: tt.sql, MinVersion: 901, Timestamp: "ts"}},
+				Queries: []query{{Sqlquery: tt.sql, MinVersion: 901, Timestamp: "ts"}},
 			})
 			require.Empty(t, acc.Errors)
 			require.Len(t, acc.Metrics, 1)
 
 			m := acc.Metrics[0]
 			require.Equal(t, tt.expectedFields, m.Fields)
-			// The db and server tags come on top of the expected ones
-			require.Len(t, m.Tags, len(tt.expectedTags)+2)
-			for k, v := range tt.expectedTags {
-				require.Equal(t, v, m.Tags[k], k)
-			}
+			// Only the db and server tags
+			require.Len(t, m.Tags, 2)
 			if !tt.expectedTime.IsZero() {
 				require.WithinDuration(t, tt.expectedTime, m.Time, 0)
 			}
@@ -1104,7 +881,6 @@ func TestConnectionLimitsIntegration(t *testing.T) {
 				// shows the query connections alone
 				MetadataRefreshInterval:   metadataInterval,
 				KeepIdleConnections:       new(false),
-				NumericType:               "float",
 				DatnameExclude:            []string{"postgres"},
 				MaxParallelDatabases:      parallelDBs,
 				MaxConnectionsPerDatabase: connsPerDB,
