@@ -249,13 +249,13 @@ func ToUint16(value any) (uint16, error) {
 			x, err := strconv.ParseUint(after, 16, 16)
 			return uint16(x), err
 		}
-		x, err := strconv.ParseUint(v, 10, 32)
+		x, err := strconv.ParseUint(v, 10, 16)
 		return uint16(x), err
 	case []byte:
-		x, err := strconv.ParseUint(string(v), 10, 32)
+		x, err := strconv.ParseUint(string(v), 10, 16)
 		return uint16(x), err
 	case fmt.Stringer:
-		x, err := strconv.ParseUint(v.String(), 10, 32)
+		x, err := strconv.ParseUint(v.String(), 10, 16)
 		return uint16(x), err
 	case bool:
 		if v {
@@ -326,13 +326,13 @@ func ToUint8(value any) (uint8, error) {
 			x, err := strconv.ParseUint(after, 16, 8)
 			return uint8(x), err
 		}
-		x, err := strconv.ParseUint(v, 10, 32)
+		x, err := strconv.ParseUint(v, 10, 8)
 		return uint8(x), err
 	case []byte:
-		x, err := strconv.ParseUint(string(v), 10, 32)
+		x, err := strconv.ParseUint(string(v), 10, 8)
 		return uint8(x), err
 	case fmt.Stringer:
-		x, err := strconv.ParseUint(v.String(), 10, 32)
+		x, err := strconv.ParseUint(v.String(), 10, 8)
 		return uint8(x), err
 	case bool:
 		if v {
@@ -535,13 +535,13 @@ func ToInt16(value any) (int16, error) {
 			x, err := strconv.ParseInt(after, 16, 16)
 			return int16(x), err
 		}
-		x, err := strconv.ParseInt(v, 10, 32)
+		x, err := strconv.ParseInt(v, 10, 16)
 		return int16(x), err
 	case []byte:
-		x, err := strconv.ParseInt(string(v), 10, 32)
+		x, err := strconv.ParseInt(string(v), 10, 16)
 		return int16(x), err
 	case fmt.Stringer:
-		x, err := strconv.ParseInt(v.String(), 10, 32)
+		x, err := strconv.ParseInt(v.String(), 10, 16)
 		return int16(x), err
 	case bool:
 		if v {
@@ -609,13 +609,13 @@ func ToInt8(value any) (int8, error) {
 			x, err := strconv.ParseInt(after, 16, 8)
 			return int8(x), err
 		}
-		x, err := strconv.ParseInt(v, 10, 32)
+		x, err := strconv.ParseInt(v, 10, 8)
 		return int8(x), err
 	case []byte:
-		x, err := strconv.ParseInt(string(v), 10, 32)
+		x, err := strconv.ParseInt(string(v), 10, 8)
 		return int8(x), err
 	case fmt.Stringer:
-		x, err := strconv.ParseInt(v.String(), 10, 32)
+		x, err := strconv.ParseInt(v.String(), 10, 8)
 		return int8(x), err
 	case bool:
 		if v {
