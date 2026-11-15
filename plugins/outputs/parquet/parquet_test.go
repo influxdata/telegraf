@@ -12,6 +12,7 @@ import (
 	"github.com/apache/arrow-go/v18/arrow"
 	"github.com/apache/arrow-go/v18/parquet"
 	"github.com/apache/arrow-go/v18/parquet/file"
+	parquetschema "github.com/apache/arrow-go/v18/parquet/schema"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -750,4 +751,71 @@ func TestFailedWriterLeavesNoFile(t *testing.T) {
 	entries, err := os.ReadDir(testDir)
 	require.NoError(t, err)
 	require.Empty(t, entries)
+}
+
+func TestDefaultTimestampTypeStoresPlainNanoseconds(t *testing.T) {
+	sampled := time.Date(2026, 11, 14, 17, 4, 15, 123456789, time.UTC)
+	column, stored := writeTimestampColumn(t, "", sampled)
+
+	require.Equal(t, parquetschema.NewIntLogicalType(64, true), column.LogicalType())
+	require.Equal(t, sampled.UnixNano(), stored)
+}
+
+func TestTimestampTypeStoresAPointInTime(t *testing.T) {
+	sampled := time.Date(2026, 11, 14, 17, 4, 15, 123456789, time.UTC)
+	tests := []struct {
+		timestampType string
+		unit          parquetschema.TimeUnitType
+		stored        int64
+	}{
+		{timestampType: "timestamp_us", unit: parquetschema.TimeUnitMicros, stored: sampled.UnixMicro()},
+		{timestampType: "timestamp_ns", unit: parquetschema.TimeUnitNanos, stored: sampled.UnixNano()},
+	}
+	for _, tt := range tests {
+		t.Run(tt.timestampType, func(t *testing.T) {
+			column, stored := writeTimestampColumn(t, tt.timestampType, sampled)
+
+			logical, ok := column.LogicalType().(parquetschema.TimestampLogicalType)
+			require.Truef(t, ok, "timestamp column has logical type %s", column.LogicalType())
+			require.True(t, logical.IsAdjustedToUTC())
+			require.Equal(t, tt.unit, logical.TimeUnit())
+			require.Equal(t, tt.stored, stored)
+		})
+	}
+}
+
+func TestUnknownTimestampTypeIsRejected(t *testing.T) {
+	p := &Parquet{Directory: t.TempDir(), TimestampType: "timestamp", Log: testutil.Logger{}}
+	require.ErrorContains(t, p.Init(), "timestamp_type")
+}
+
+func writeTimestampColumn(t *testing.T, timestampType string, sampled time.Time) (*parquetschema.Column, int64) {
+	t.Helper()
+
+	dir := t.TempDir()
+	p := &Parquet{Directory: dir, TimestampFieldName: "timestamp", TimestampType: timestampType, Log: testutil.Logger{}}
+	require.NoError(t, p.Init())
+	require.NoError(t, p.Write([]telegraf.Metric{
+		metric.New("demo", nil, map[string]any{"value": int64(1)}, sampled),
+	}))
+	require.NoError(t, p.Close())
+
+	written, err := filepath.Glob(filepath.Join(dir, "*.parquet"))
+	require.NoError(t, err)
+	require.Len(t, written, 1)
+
+	reader, err := file.OpenParquetFile(written[0], false)
+	require.NoError(t, err)
+	defer reader.Close()
+
+	index := reader.MetaData().Schema.ColumnIndexByName("timestamp")
+	columnReader, err := reader.RowGroup(0).Column(index)
+	require.NoError(t, err)
+
+	values := make([]int64, 1)
+	_, read, err := columnReader.(*file.Int64ColumnChunkReader).ReadBatch(1, values, nil, nil)
+	require.NoError(t, err)
+	require.Equal(t, 1, read)
+
+	return reader.MetaData().Schema.Column(index), values[0]
 }
