@@ -89,8 +89,10 @@ Parquet files must close properly or the file will not be readable. The parquet
 format requires a footer at the end of the file and if that footer is not
 present then the file cannot be read correctly.
 
-If Telegraf were to crash while writing parquet files there is the possibility
-of this occurring.
+Telegraf writes each file as `.<name>.parquet.inprogress` and renames it to
+`<name>.parquet` only after it writes the footer. Readers that match
+`*.parquet` only see complete files. If Telegraf crashes, the `.inprogress`
+file stays behind and parquet readers cannot open it.
 
 ## File Rotation
 
@@ -102,10 +104,11 @@ set, measured from the time the current file was created. Due to the usage of a
 buffered writer, a size based rotation is not possible as the file may not
 actually get data at each interval.
 
-The file is not inspected between rotations, so a file removed or replaced
-underneath the agent goes unnoticed and everything written to it is lost until
-the next rotation opens a new file. With `rotation_interval` unset there is no
-next rotation, so those metrics are lost for the lifetime of the agent.
+The `.inprogress` file is not inspected between rotations, so a file removed or
+replaced underneath the agent goes unnoticed and everything written to it is
+lost until the next rotation opens a new file. With `rotation_interval` unset
+there is no next rotation, so those metrics are lost for the lifetime of the
+agent.
 
 ## Explore Parquet Files
 

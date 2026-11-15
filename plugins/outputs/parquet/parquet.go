@@ -29,6 +29,10 @@ var sampleConfig string
 
 var defaultTimestampFieldName = "timestamp"
 
+func inProgressName(filename string) string {
+	return "." + filename + ".inprogress"
+}
+
 type metricGroup struct {
 	filename string
 	created  time.Time
@@ -111,12 +115,13 @@ func (*Parquet) Connect() error {
 
 func (p *Parquet) Close() error {
 	var errorOccurred bool
-	for _, metrics := range p.metricGroups {
-		if err := metrics.writer.Close(); err != nil {
-			p.Log.Errorf("failed to close file %q: %v", metrics.filename, err)
+	for _, group := range p.metricGroups {
+		if err := p.publish(group); err != nil {
+			p.Log.Error(err)
 			errorOccurred = true
 		}
 	}
+	clear(p.metricGroups)
 
 	if p.root != nil {
 		p.root.Close()
@@ -215,8 +220,8 @@ func (p *Parquet) rotateIfNeeded(name string, now time.Time) error {
 		return nil
 	}
 
-	if err := group.writer.Close(); err != nil {
-		return fmt.Errorf("failed to close file for rotation %q: %w", group.filename, err)
+	if err := p.publish(group); err != nil {
+		p.Log.Error(err)
 	}
 
 	writer, filename, err := p.createWriter(name, group.schema, now)
@@ -227,6 +232,16 @@ func (p *Parquet) rotateIfNeeded(name string, now time.Time) error {
 	group.filename = filename
 	group.created = now
 
+	return nil
+}
+
+func (p *Parquet) publish(group *metricGroup) error {
+	if err := group.writer.Close(); err != nil {
+		return fmt.Errorf("failed to close file %q, so it stays unpublished: %w", inProgressName(group.filename), err)
+	}
+	if err := p.root.Rename(inProgressName(group.filename), group.filename); err != nil {
+		return fmt.Errorf("failed to rename file %q to %q: %w", inProgressName(group.filename), group.filename, err)
+	}
 	return nil
 }
 
@@ -478,7 +493,13 @@ func (p *Parquet) createWriter(name string, schema *arrow.Schema, now time.Time)
 	}
 	filename := fmt.Sprintf("%s-%s-%s.parquet", name, now.Format("20060102150405"), id)
 
-	f, err := p.root.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0666)
+	switch _, err := p.root.Lstat(filename); {
+	case err == nil:
+		return nil, "", fmt.Errorf("failed to create file %q: %w", filename, os.ErrExist)
+	case !errors.Is(err, os.ErrNotExist):
+		return nil, "", fmt.Errorf("failed to create file %q: %w", filename, err)
+	}
+	f, err := p.root.OpenFile(inProgressName(filename), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0666)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to create file %q: %w", filename, err)
 	}
@@ -489,7 +510,7 @@ func (p *Parquet) createWriter(name string, schema *arrow.Schema, now time.Time)
 		// Do not leave an empty file without a parquet footer behind for readers
 		return nil, "", errors.Join(
 			fmt.Errorf("failed to create parquet writer for file %q: %w", filename, err),
-			p.root.Remove(filename),
+			p.root.Remove(inProgressName(filename)),
 		)
 	}
 
