@@ -20,6 +20,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -28,6 +29,9 @@ var sampleConfig string
 
 // Message printed by journalctl if the given cursor cannot be used
 const seekCursorFailed = "Failed to seek to cursor"
+
+// Maximum time to wait for the journalctl run checking the settings at startup
+const checkTimeout = 10 * time.Second
 
 type Journald struct {
 	Binary                string          `toml:"binary"`
@@ -162,6 +166,17 @@ func (j *Journald) SetState(state any) error {
 }
 
 func (j *Journald) Start(acc telegraf.Accumulator) error {
+	// Report settings journalctl fails on right away, like an invalid match
+	// or a missing directory, as startup error instead of restarting
+	// journalctl forever. journalctl also fails if no unit in the journal
+	// matches a unit pattern, which can change later, so keep retrying then.
+	if err := j.check(); err != nil {
+		if !hasUnitPatterns(j.Units) && !hasUnitPatterns(j.UserUnits) {
+			return &internal.StartupError{Err: err, Retry: true}
+		}
+		j.Log.Warnf("%v; this is expected if no unit matching the patterns logged yet, retrying", err)
+	}
+
 	// Only continue at the persisted cursor if requested
 	switch j.InitialReadOffset {
 	case "saved-or-beginning", "saved-or-end":
@@ -241,6 +256,47 @@ func (j *Journald) args() []string {
 		args = append(args, "--lines=0")
 	}
 	return append(args, j.Matches...)
+}
+
+// checkArgs returns the arguments for running journalctl once without
+// following the journal to check the settings
+func (j *Journald) checkArgs() []string {
+	args := make([]string, 0, len(j.baseArgs)+1+len(j.Matches))
+	for _, arg := range j.baseArgs {
+		if arg != "--follow" {
+			args = append(args, arg)
+		}
+	}
+	args = append(args, "--lines=0")
+	return append(args, j.Matches...)
+}
+
+// check runs journalctl once without following the journal and returns an
+// error if it fails, e.g. because of invalid matches or a missing directory
+func (j *Journald) check() error {
+	ctx, cancel := context.WithTimeout(context.Background(), checkTimeout)
+	defer cancel()
+
+	var stderr bytes.Buffer
+	cmd := exec.CommandContext(ctx, j.command, j.checkArgs()...)
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		if msg := strings.TrimSpace(stderr.String()); msg != "" {
+			return fmt.Errorf("journalctl failed: %w: %s", err, msg)
+		}
+		return fmt.Errorf("journalctl failed: %w", err)
+	}
+	return nil
+}
+
+// hasUnitPatterns returns true if any of the units is a glob pattern
+func hasUnitPatterns(units []string) bool {
+	for _, u := range units {
+		if strings.ContainsAny(u, "*?[") {
+			return true
+		}
+	}
+	return false
 }
 
 func (j *Journald) follow(ctx context.Context) error {

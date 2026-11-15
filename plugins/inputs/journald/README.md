@@ -40,6 +40,23 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 [CONFIGURATION.md]: ../../../docs/CONFIGURATION.md#plugins
 
+## Startup error behavior options <!-- @/docs/includes/startup_error_behavior.md -->
+
+In addition to the plugin-specific and global configuration settings the plugin
+supports options for specifying the behavior when experiencing startup errors
+using the `startup_error_behavior` setting. Available values are:
+
+- `error`:  Telegraf with stop and exit in case of startup errors. This is the
+            default behavior.
+- `ignore`: Telegraf will ignore startup errors for this plugin and disables it
+            but continues processing for all other plugins.
+- `retry`:  Telegraf will try to startup the plugin in every gather or write
+            cycle in case of startup errors. The plugin is disabled until
+            the startup succeeds.
+- `probe`:  Telegraf will probe the plugin's function (if possible) and disables
+            the plugin in case probing fails. If the plugin does not support
+            probing, Telegraf will behave as if `ignore` was set instead.
+
 ## Configuration
 
 ```toml @sample.conf
@@ -127,6 +144,15 @@ or vacuumed), the plugin logs a warning and starts according to
 If journalctl exits while Telegraf is running, it is restarted after
 `restart_delay` and continues after the last entry read.
 
+### Startup errors
+
+On startup, the plugin runs journalctl once without following the journal to
+check the settings. If journalctl fails, e.g. because of an invalid match or a
+missing `directory`, the plugin reports a startup error that is handled
+according to `startup_error_behavior`. journalctl also fails if no unit in the
+journal matches a pattern in `units` or `user_units` yet, so with unit
+patterns the plugin only logs a warning and keeps retrying instead.
+
 [cursor]: https://www.freedesktop.org/software/systemd/man/latest/sd_journal_get_cursor.html
 
 ## Metrics
@@ -137,8 +163,8 @@ If journalctl exits while Telegraf is running, it is restarted after
     - unit (string, optional) - Systemd unit of the process (`_SYSTEMD_UNIT`)
     - user_unit (string, optional) - Systemd user unit of the process
       (`_SYSTEMD_USER_UNIT`)
-    - identifier (string, optional) - Syslog identifier of the process
-      (`SYSLOG_IDENTIFIER`)
+    - appname (string, optional) - Syslog identifier of the process, i.e. the
+      syslog APP-NAME (`SYSLOG_IDENTIFIER`)
     - severity (string, optional) - Syslog severity name, e.g. `err` or `info`
       (`PRIORITY`)
     - facility (string, optional) - Syslog facility name, e.g. `daemon`
@@ -158,7 +184,7 @@ for fields occurring multiple times in an entry, the first value is used.
 ## Example Output
 
 ```text
-journald,facility=auth,hostname=web-01,identifier=sshd,severity=info,unit=ssh.service facility_code=4i,message="Accepted publickey for deploy from 10.0.0.12 port 51234 ssh2",pid=1734i,severity_code=6i 1762265101000000000
-journald,facility=kern,hostname=web-01,identifier=kernel,severity=warning facility_code=0i,message="EXT4-fs (sda1): warning: mounting fs with errors, running e2fsck is recommended",severity_code=4i 1762265101250001000
-journald,facility=daemon,hostname=web-01,identifier=backup,severity=err,unit=user@1000.service,user_unit=backup.service facility_code=3i,message="upload of \"db.tar\" failed: connection reset",pid=2211i,severity_code=3i 1762265101500002000
+journald,appname=sshd,facility=auth,hostname=web-01,severity=info,unit=ssh.service facility_code=4i,message="Accepted publickey for deploy from 10.0.0.12 port 51234 ssh2",pid=1734i,severity_code=6i 1762265101000000000
+journald,appname=kernel,facility=kern,hostname=web-01,severity=warning facility_code=0i,message="EXT4-fs (sda1): warning: mounting fs with errors, running e2fsck is recommended",severity_code=4i 1762265101250001000
+journald,appname=backup,facility=daemon,hostname=web-01,severity=err,unit=user@1000.service,user_unit=backup.service facility_code=3i,message="upload of \"db.tar\" failed: connection reset",pid=2211i,severity_code=3i 1762265101500002000
 ```

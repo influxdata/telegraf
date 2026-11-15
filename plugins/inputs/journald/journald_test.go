@@ -20,6 +20,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
@@ -30,6 +31,7 @@ const (
 	envEntries     = "JOURNALD_MOCK_ENTRIES"
 	envInvocations = "JOURNALD_MOCK_INVOCATIONS"
 	envExit        = "JOURNALD_MOCK_EXIT"
+	envCheckError  = "JOURNALD_MOCK_CHECK_ERROR"
 )
 
 func TestCases(t *testing.T) {
@@ -198,6 +200,69 @@ func TestArguments(t *testing.T) {
 	}
 }
 
+func TestCheckArguments(t *testing.T) {
+	plugin := &Journald{
+		Binary:            mockBinary(t),
+		Units:             []string{"nginx.service"},
+		InitialReadOffset: "beginning",
+		Matches:           []string{"_TRANSPORT=kernel"},
+		Log:               &testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+	plugin.readCursor = "s=1;i=2"
+
+	// The check never follows the journal and ignores the position
+	expected := []string{"--output=json", "--all", "--no-pager", "--unit=nginx.service", "--lines=0", "_TRANSPORT=kernel"}
+	require.Equal(t, expected, plugin.checkArgs())
+}
+
+func TestStartFail(t *testing.T) {
+	invocations := mock(t, filepath.Join("testcases", "basic", "entries.json"), false)
+	t.Setenv(envCheckError, "Failed to add match 'foo': Invalid argument")
+
+	plugin := &Journald{
+		Binary:  mockBinary(t),
+		Matches: []string{"foo"},
+		Log:     &testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	err := plugin.Start(&acc)
+	require.ErrorContains(t, err, "Failed to add match 'foo': Invalid argument")
+	var serr *internal.StartupError
+	require.ErrorAs(t, err, &serr)
+	require.True(t, serr.Retry)
+	plugin.Stop()
+
+	// journalctl is not started to follow the journal
+	require.Empty(t, readInvocations(t, invocations))
+}
+
+func TestStartUnitPatternWithoutMatchingUnit(t *testing.T) {
+	invocations := mock(t, filepath.Join("testcases", "basic", "entries.json"), false)
+	t.Setenv(envCheckError, "Failed to add filter for units: No data available")
+
+	plugin := &Journald{
+		Binary:            mockBinary(t),
+		Units:             []string{"app-*"},
+		InitialReadOffset: "beginning",
+		Log:               &testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	// No unit matches the pattern yet, which can change later, so journalctl
+	// is still started
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	require.Eventually(t, func() bool {
+		return acc.NMetrics() >= 3
+	}, 5*time.Second, 10*time.Millisecond)
+	require.Len(t, readInvocations(t, invocations), 1)
+}
+
 func TestSudo(t *testing.T) {
 	plugin := &Journald{
 		Binary:  "/usr/bin/journalctl",
@@ -259,7 +324,7 @@ func TestResumeFromState(t *testing.T) {
 			require.Equal(t, []string{"--after-cursor=" + cursors[0]}, cursorArgs(readInvocations(t, invocations)[0]))
 			metrics := acc.GetTelegrafMetrics()
 			require.Len(t, metrics, 2)
-			require.Equal(t, "kernel", metrics[0].Tags()["identifier"])
+			require.Equal(t, "kernel", metrics[0].Tags()["appname"])
 
 			// The state only changes once the entries are delivered
 			require.Equal(t, cursors[0], plugin.GetState())
@@ -550,6 +615,7 @@ func mock(t *testing.T, entries string, exit bool) string {
 	} else {
 		t.Setenv(envExit, "")
 	}
+	t.Setenv(envCheckError, "")
 	return invocations
 }
 
@@ -623,6 +689,22 @@ func TestMain(m *testing.M) {
 
 func runMock(entries, invocations string, exit bool) int {
 	args := os.Args[1:]
+
+	// Check the settings without following the journal, optionally failing
+	// like journalctl does for invalid settings
+	if !slices.Contains(args, "--follow") {
+		for _, required := range []string{"--output=json", "--all", "--no-pager", "--lines=0"} {
+			if !slices.Contains(args, required) {
+				fmt.Fprintf(os.Stderr, "missing argument %q\n", required)
+				return 1
+			}
+		}
+		if msg := os.Getenv(envCheckError); msg != "" {
+			fmt.Fprintln(os.Stderr, msg)
+			return 1
+		}
+		return 0
+	}
 
 	// Record the invocation
 	buf, err := json.Marshal(args)

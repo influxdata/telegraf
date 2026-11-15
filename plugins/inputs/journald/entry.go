@@ -31,7 +31,7 @@ var defaultTags = map[string]string{
 	"_HOSTNAME":          "hostname",
 	"_SYSTEMD_UNIT":      "unit",
 	"_SYSTEMD_USER_UNIT": "user_unit",
-	"SYSLOG_IDENTIFIER":  "identifier",
+	"SYSLOG_IDENTIFIER":  "appname",
 }
 
 // checkPriority validates the priority setting in the forms accepted by
