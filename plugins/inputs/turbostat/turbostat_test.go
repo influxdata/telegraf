@@ -71,6 +71,15 @@ func TestProcessValues(t *testing.T) {
 				time.Time{},
 			),
 		},
+		{
+			values: []string{"0", "1", "-", "4.56"},
+			metric: metric.New(
+				"turbostat",
+				map[string]string{"cpu": "0", "core": "1"},
+				map[string]any{"core_power_watt": 4.56},
+				time.Time{},
+			),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("%s", tt.values), func(t *testing.T) {
@@ -96,6 +105,10 @@ func TestProcessValuesErrors(t *testing.T) {
 	}{
 		{
 			values: []string{"0", "1"},
+			err:    "no value for any field",
+		},
+		{
+			values: []string{"0", "1", "-", "-"},
 			err:    "no value for any field",
 		},
 		{
