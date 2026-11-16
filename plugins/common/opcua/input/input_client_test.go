@@ -682,6 +682,45 @@ func TestUpdateNodeValue(t *testing.T) {
 				},
 			},
 		},
+		{
+			"datetime should be stored as formatted text",
+			[]testStep{
+				{
+					0,
+					time.Date(2022, 3, 17, 8, 55, 0, 0, time.UTC),
+					ua.StatusOK,
+					"2022-03-17T08:55:00Z",
+				},
+			},
+		},
+		{
+			"datetime array should be stored as formatted text",
+			[]testStep{
+				{
+					0,
+					[]time.Time{
+						time.Date(2022, 3, 17, 8, 55, 0, 0, time.UTC),
+						time.Date(2022, 3, 17, 8, 56, 0, 0, time.UTC),
+					},
+					ua.StatusOK,
+					[]string{"2022-03-17T08:55:00Z", "2022-03-17T08:56:00Z"},
+				},
+			},
+		},
+		{
+			"datetime array should preserve the timezone",
+			[]testStep{
+				{
+					0,
+					[]time.Time{
+						time.Date(2022, 3, 17, 8, 55, 0, 0, time.FixedZone("EST", -5*3600)),
+						time.Date(2022, 3, 17, 8, 56, 0, 0, time.FixedZone("EST", -5*3600)),
+					},
+					ua.StatusOK,
+					[]string{"2022-03-17T08:55:00-05:00", "2022-03-17T08:56:00-05:00"},
+				},
+			},
+		},
 	}
 
 	conf := &opcua.OpcUAClientConfig{
@@ -697,6 +736,7 @@ func TestUpdateNodeValue(t *testing.T) {
 	require.NoError(t, err)
 	o := OpcUAInputClient{
 		OpcUAClient: c,
+		Config:      InputClientConfig{TimestampFormat: time.RFC3339Nano},
 		Log:         testutil.Logger{},
 		NodeMetricMapping: []NodeMetricMapping{
 			{
@@ -830,64 +870,6 @@ func TestMetricForNode(t *testing.T) {
 				map[string]string{"t1": "v1", "id": "ns=3;s=hi"},
 				map[string]any{"Quality": "The operation succeeded. StatusGood (0x0)", "fn[0]": byte(1), "fn[1]": byte(2)},
 				time.Date(2022, 03, 17, 8, 55, 00, 00, &time.Location{})),
-		},
-		{
-			testname: "datetime array metric build correctly",
-			nmm: []NodeMetricMapping{
-				{
-					Tag: NodeSettings{
-						FieldName: "fn",
-					},
-					idStr:      "ns=3;s=hi",
-					metricName: "testingmetric",
-					MetricTags: map[string]string{"t1": "v1"},
-				},
-			},
-			v: []time.Time{
-				time.Date(2022, 3, 17, 8, 55, 0, 0, time.UTC),
-				time.Date(2022, 3, 17, 8, 56, 0, 0, time.UTC),
-			},
-			isArray:  true,
-			dataType: ua.TypeIDDateTime,
-			time:     time.Date(2022, 3, 17, 8, 55, 0, 0, &time.Location{}),
-			status:   ua.StatusOK,
-			expected: metric.New("testingmetric",
-				map[string]string{"t1": "v1", "id": "ns=3;s=hi"},
-				map[string]any{
-					"Quality": "The operation succeeded. StatusGood (0x0)",
-					"fn[0]":   "2022-03-17T08:55:00Z",
-					"fn[1]":   "2022-03-17T08:56:00Z",
-				},
-				time.Date(2022, 3, 17, 8, 55, 0, 0, &time.Location{})),
-		},
-		{
-			testname: "datetime array preserves timezone",
-			nmm: []NodeMetricMapping{
-				{
-					Tag: NodeSettings{
-						FieldName: "fn",
-					},
-					idStr:      "ns=3;s=hi",
-					metricName: "testingmetric",
-					MetricTags: map[string]string{"t1": "v1"},
-				},
-			},
-			v: []time.Time{
-				time.Date(2022, 3, 17, 8, 55, 0, 0, time.FixedZone("EST", -5*3600)),
-				time.Date(2022, 3, 17, 8, 56, 0, 0, time.FixedZone("EST", -5*3600)),
-			},
-			isArray:  true,
-			dataType: ua.TypeIDDateTime,
-			time:     time.Date(2022, 3, 17, 8, 55, 0, 0, &time.Location{}),
-			status:   ua.StatusOK,
-			expected: metric.New("testingmetric",
-				map[string]string{"t1": "v1", "id": "ns=3;s=hi"},
-				map[string]any{
-					"Quality": "The operation succeeded. StatusGood (0x0)",
-					"fn[0]":   "2022-03-17T08:55:00-05:00",
-					"fn[1]":   "2022-03-17T08:56:00-05:00",
-				},
-				time.Date(2022, 3, 17, 8, 55, 0, 0, &time.Location{})),
 		},
 		{
 			testname: "nil does not panic",
