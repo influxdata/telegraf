@@ -773,9 +773,10 @@ func TestRunningOutputNoRetriggerOnUnsuccessfulPartialWriteError(t *testing.T) {
 	require.Equal(t, 1, int(triggerCount.Load()))
 }
 
-func TestRunningOutputRetriggerOnContinueFlushingPartialWriteError(t *testing.T) {
-	// Setup output failing the first write without accepting any metric but
-	// requesting to continue flushing. All subsequent writes will succeed.
+func TestRunningOutputRetriggerOnRejectPartialWriteError(t *testing.T) {
+	// Setup output to reject the first metric on write without accepting
+	// any metric. The rejected metric should retrigger flushes, which are then
+	// accepted.
 	conf := &OutputConfig{
 		Filter: Filter{},
 	}
@@ -786,8 +787,8 @@ func TestRunningOutputRetriggerOnContinueFlushingPartialWriteError(t *testing.T)
 		preWriteHook: func([]telegraf.Metric) error {
 			if failed.CompareAndSwap(false, true) {
 				return &internal.PartialWriteError{
-					Err:              errors.New("writing failed"),
-					ContinueFlushing: true,
+					Err:           errors.New("writing failed"),
+					MetricsReject: []int{0},
 				}
 			}
 			return nil
@@ -844,7 +845,7 @@ func TestRunningOutputRetriggerOnContinueFlushingPartialWriteError(t *testing.T)
 	require.Equal(t, 2, int(triggerCount.Load()))
 	require.Equal(t, 1, int(errCount.Load()))
 	require.Equal(t, batchCount+1, int(plugin.writes.Load()))
-	require.Len(t, plugin.Metrics(), totalMetrics)
+	require.Len(t, plugin.Metrics(), totalMetrics-1)
 }
 
 func TestRunningOutputNoRetriggerOnStopFlushingPartialWriteError(t *testing.T) {
@@ -860,8 +861,7 @@ func TestRunningOutputNoRetriggerOnStopFlushingPartialWriteError(t *testing.T) {
 		preWriteHook: func([]telegraf.Metric) error {
 			if failed.CompareAndSwap(false, true) {
 				return &internal.PartialWriteError{
-					Err:              errors.New("writing failed"),
-					ContinueFlushing: false,
+					Err: errors.New("writing failed"),
 				}
 			}
 			return nil
