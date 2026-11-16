@@ -423,10 +423,10 @@ func (r *RunningOutput) updateTransaction(tx *Transaction, err error) {
 	}
 
 	// Transfer the accepted and rejected indices based on the write error
-	// values. Only allow to retrigger before the flush interval if either the
-	// plugin explicitly said so or at least one metric was accepted in order to
-	// avoid flush storms hammering the plugin's endpoint with requests while it
-	// potentially cannot accept any.
+	// values. Only allow to retrigger before the flush interval if the buffer
+	// was modified, i.e. at least one metric was accepted or rejected, in order
+	// to avoid flush storms hammering the plugin's endpoint with requests while
+	// it potentially cannot accept any.
 	r.continueFlushing.Store(len(writeErr.MetricsAccept) > 0 || len(writeErr.MetricsReject) > 0)
 	tx.Accept = writeErr.MetricsAccept
 	tx.Reject = writeErr.MetricsReject
