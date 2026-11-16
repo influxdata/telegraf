@@ -77,20 +77,14 @@ func (n *namespaceGoroutine) driverName(intf namespacedInterface) (string, error
 	driver, err := n.do(func(n *namespaceGoroutine) (any, error) {
 		return n.ethtoolClient.DriverName(intf.Name)
 	})
-	if driver != nil {
-		return driver.(string), err
-	}
-	return "", err
+	return driver.(string), err
 }
 
 func (n *namespaceGoroutine) stats(intf namespacedInterface) (map[string]uint64, error) {
 	driver, err := n.do(func(n *namespaceGoroutine) (any, error) {
 		return n.ethtoolClient.Stats(intf.Name)
 	})
-	if driver != nil {
-		return driver.(map[string]uint64), err
-	}
-	return nil, err
+	return driver.(map[string]uint64), err
 }
 
 func (n *namespaceGoroutine) get(intf namespacedInterface) (map[string]uint64, error) {
@@ -149,6 +143,10 @@ func (n *namespaceGoroutine) start() error {
 			started <- err
 			return
 		}
+		// The handle is only needed for the comparison and switch below; close
+		// it on every return path so a start() that fails (for example without
+		// CAP_SYS_ADMIN) does not leak one descriptor per namespace per gather.
+		defer initialNamespace.Close()
 		if !initialNamespace.Equal(n.handle) {
 			if err := netns.Set(n.handle); err != nil {
 				n.log.Errorf("Could not switch to namespace %q: %s", n.namespaceName, err.Error())

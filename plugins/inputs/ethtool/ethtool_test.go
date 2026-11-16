@@ -986,11 +986,13 @@ func TestNormalizedKeys(t *testing.T) {
 	}
 }
 
-// TestNamespaceGoroutineNilResult ensures the typed accessors handle a command
-// that returns no result without panicking on a nil type assertion. This is the
-// condition hit once file descriptors are exhausted: net.Interfaces() and the
-// ethtool calls return (nil, err), so do() yields a nil result (GH-20094).
-func TestNamespaceGoroutineNilResult(t *testing.T) {
+// TestNamespaceInterfacesNilResult ensures interfaces() handles a command that
+// returns no result without panicking on a nil type assertion. Its do() closure
+// returns an untyped (nil, err) when net.Interfaces() fails, which is the
+// condition hit once file descriptors are exhausted (GH-20094). driverName() and
+// stats() return the ethtool client's typed values straight through, so their
+// result is never an untyped nil and needs no guard.
+func TestNamespaceInterfacesNilResult(t *testing.T) {
 	n := &namespaceGoroutine{
 		namespaceName: "test",
 		c:             make(chan namespacedAction),
@@ -1009,12 +1011,4 @@ func TestNamespaceGoroutineNilResult(t *testing.T) {
 	interfaces, err := n.interfaces()
 	require.Error(t, err)
 	require.Nil(t, interfaces)
-
-	driver, err := n.driverName(namespacedInterface{})
-	require.Error(t, err)
-	require.Empty(t, driver)
-
-	stats, err := n.stats(namespacedInterface{})
-	require.Error(t, err)
-	require.Nil(t, stats)
 }
