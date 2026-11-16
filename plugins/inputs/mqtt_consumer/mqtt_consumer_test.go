@@ -697,6 +697,62 @@ func TestOmitRetained(t *testing.T) {
 	}
 }
 
+func TestOmitRetainedWithFullWindow(t *testing.T) {
+	var handler mqtt.MessageHandler
+	fClient := &fakeClient{
+		connectF: func() mqtt.Token {
+			return &fakeToken{}
+		},
+		addRouteF: func(callback mqtt.MessageHandler) {
+			handler = callback
+		},
+		subscribeMultipleF: func() mqtt.Token {
+			return &fakeToken{}
+		},
+		disconnectF: func() {
+		},
+	}
+
+	plugin := newMQTTConsumer(func(o *mqtt.ClientOptions) client {
+		fClient.opts = o
+		return fClient
+	})
+	plugin.Log = testutil.Logger{}
+	plugin.Topics = []string{"telegraf"}
+	plugin.OmitRetained = true
+	plugin.MaxUndeliveredMessages = 1
+
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	plugin.SetParser(parser)
+
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	// Fill the only slot with a message that is never delivered
+	handler(nil, &message{topic: "telegraf"})
+	require.Len(t, plugin.sem, 1)
+
+	// Skipping a retained message must not wait for a free slot
+	done := make(chan struct{})
+	go func() {
+		handler(nil, &message{topic: "telegraf", retained: true})
+		close(done)
+	}()
+	require.Eventually(t, func() bool {
+		select {
+		case <-done:
+			return true
+		default:
+			return false
+		}
+	}, time.Second, 10*time.Millisecond)
+	require.Len(t, plugin.sem, 1)
+}
+
 func TestAddRouteCalledForEachTopic(t *testing.T) {
 	fClient := &fakeClient{
 		connectF: func() mqtt.Token {

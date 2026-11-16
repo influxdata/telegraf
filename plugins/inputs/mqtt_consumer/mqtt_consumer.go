@@ -235,15 +235,14 @@ func (m *MQTTConsumer) onDelivered(track telegraf.DeliveryInfo) {
 }
 
 func (m *MQTTConsumer) onMessage(_ mqtt.Client, msg mqtt.Message) {
-	m.sem <- empty{}
-
 	if msg.Retained() && m.OmitRetained {
 		if m.PersistentSession {
 			msg.Ack()
 		}
-		<-m.sem
 		return
 	}
+
+	m.sem <- empty{}
 
 	payloadBytes := len(msg.Payload())
 	m.payloadSize.Incr(int64(payloadBytes))
