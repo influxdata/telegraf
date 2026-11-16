@@ -144,7 +144,7 @@ func (r *Redfish) Start(_ telegraf.Accumulator) error {
 	}
 	c, err := gofish.Connect(gofishConfig)
 	if err != nil {
-		return fmt.Errorf("error parsing input from %s. %w",
+		return fmt.Errorf("error parsing input from %s. Response in text/html:%w",
 			r.Address+"/redfish/v1/Systems/"+r.ComputerSystemID,
 			err)
 	}
