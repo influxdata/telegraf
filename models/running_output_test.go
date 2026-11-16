@@ -848,7 +848,7 @@ func TestRunningOutputRetriggerOnRejectPartialWriteError(t *testing.T) {
 	require.Len(t, plugin.Metrics(), totalMetrics-1)
 }
 
-func TestRunningOutputNoRetriggerOnStopFlushingPartialWriteError(t *testing.T) {
+func TestRunningOutputNoRetriggerOnAllRetryPartialWriteError(t *testing.T) {
 	// Setup output failing the first write without accepting any metric and
 	// requesting to stop flushing. All subsequent writes would succeed.
 	conf := &OutputConfig{
