@@ -84,7 +84,7 @@ to use them.
   # vm_instances = true ## true by default
   ## Custom VM properties to collect.
   ## If the properties are text-based, they will be added as tags; otherwise, they will be added as metrics.
-  # vm_property_include = ["runtime.powerState", "summary.config.MemorySizeMB", "summary.config.MemoryReservation"]
+  # vm_property_include = []
 
   ## Hosts
   ## Typical host metrics (if omitted or empty, all metrics are collected)
@@ -981,7 +981,7 @@ For example :
 
 ```toml
   host_property_include = ["summary.runtime.powerState", "summary.overallStatus", "summary.runtime.inMaintenanceMode", "summary.runtime.connectionState"]
-  vm_property_include = ["runtime.powerState"]
+  vm_property_include = ["runtime.powerState", "runtime.powerState", "summary.config.memorySizeMB", "summary.config.memoryReservation"]
   cluster_property_include = ["summary.overallStatus"]
   datastore_property_include = ["summary.accessible"]
   resource_pool_property_include = ["overallStatus"]
@@ -996,7 +996,7 @@ For example :
 [[processors.enum]]
   [[processors.enum.mapping]]
     ## Names of the fields to map. Globs accepted.
-    tag = "powerstate"
+    tags = ["runtime_powerState"]
     default = 0
 
     ## Table of mappings
@@ -1006,7 +1006,8 @@ For example :
       poweredOff = 3
 ```
 
-It is recommended to use it with `processors.converter` to convert as fields to measurement.
+It is recommended to use it with `processors.converter` to convert as fields
+to measurement.
 
 For example :
 
@@ -1014,7 +1015,7 @@ For example :
 [[processors.converter]]
   [[processors.converter.tags]]
     ## Names of the fields to map. Globs accepted.
-    measurement = ["powerstate"]
+    integer = ["runtime_powerState"]
 ```
 
 ## Add a vSAN extension

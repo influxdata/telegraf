@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"math"
 	"math/rand"
 	"net/url"
@@ -98,16 +99,18 @@ type metricEntry struct {
 type objectMap map[string]*objectRef
 
 type objectRef struct {
-	name             string
-	altID            string
-	ref              types.ManagedObjectReference
-	parentRef        *types.ManagedObjectReference // Pointer because it must be nillable
-	guest            string
-	dcname           string
-	rpname           string
-	customValues     map[string]string
-	customProperties map[string]interface{}
-	lookup           map[string]string
+	name              string
+	altID             string
+	ref               types.ManagedObjectReference
+	parentRef         *types.ManagedObjectReference // Pointer because it must be nillable
+	guest             string
+	memorySizeMB      int32
+	memoryReservation int32
+	dcname            string
+	rpname            string
+	customValues      map[string]string
+	customProperties  map[string]interface{}
+	lookup            map[string]string
 }
 
 func (e *endpoint) getParent(obj *objectRef, res *resourceKind) (*objectRef, bool) {
@@ -856,15 +859,17 @@ func getVMs(ctx context.Context, e *endpoint, rf *resourceFilter, propertyInclud
 		}
 
 		m[r.ExtensibleManagedObject.Reference().Value] = &objectRef{
-			name:             r.Name,
-			ref:              r.ExtensibleManagedObject.Reference(),
-			parentRef:        r.Runtime.Host,
-			guest:            guest,
-			altID:            uuid,
-			rpname:           rpname,
-			customValues:     e.loadCustomAttributes(r.ManagedEntity),
-			customProperties: e.loadCustomProperties(r, propertyInclude),
-			lookup:           lookup,
+			name:              r.Name,
+			ref:               r.ExtensibleManagedObject.Reference(),
+			parentRef:         r.Runtime.Host,
+			guest:             guest,
+			memorySizeMB:      r.Summary.Config.MemorySizeMB,
+			memoryReservation: r.Summary.Config.MemoryReservation,
+			altID:             uuid,
+			rpname:            rpname,
+			customValues:      e.loadCustomAttributes(r.ManagedEntity),
+			customProperties:  e.loadCustomProperties(r, propertyInclude),
+			lookup:            lookup,
 		}
 	}
 	return m, nil
@@ -1269,6 +1274,7 @@ func (e *endpoint) collectChunk(
 
 			nValues := 0
 			alignedInfo, alignedValues := e.alignSamples(em.SampleInfo, v.Value, interval)
+			globalFields := e.populateGlobalFields(objectRef, resourceType, prefix)
 			for idx, sample := range alignedInfo {
 				// According to the docs, SampleInfo and Value should have the same length, but we've seen corrupted
 				// data coming back with missing values. Take care of that gracefully!
@@ -1287,7 +1293,8 @@ func (e *endpoint) collectChunk(
 				bKey := mn + " " + v.Instance + " " + strconv.FormatInt(ts.UnixNano(), 10)
 				bucket, found := buckets[bKey]
 				if !found {
-					fields := make(map[string]interface{})
+					fields := maps.Clone(globalFields)
+					// fields := make(map[string]interface{})
 					bucket = metricEntry{name: mn, ts: ts, fields: fields, tags: t}
 					buckets[bKey] = bucket
 				}
@@ -1437,6 +1444,19 @@ func (e *endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 	}
 }
 
+func (e *endpoint) populateGlobalFields(objectRef *objectRef, resourceType, prefix string) map[string]any {
+	globalFields := make(map[string]any)
+	if resourceType == "vm" && objectRef.memorySizeMB != 0 {
+		_, fieldName := e.makeMetricIdentifier(prefix, "memorySizeMB")
+		globalFields[fieldName] = strconv.Itoa(int(objectRef.memorySizeMB))
+	}
+	if resourceType == "vm" && objectRef.memoryReservation != 0 {
+		_, fieldName := e.makeMetricIdentifier(prefix, "memoryReservation")
+		globalFields[fieldName] = strconv.Itoa(int(objectRef.memoryReservation))
+	}
+	return globalFields
+}
+
 func (e *endpoint) makeMetricIdentifier(prefix, metric string) (metricName, fieldName string) {
 	parts := strings.Split(metric, ".")
 	if len(parts) == 1 {
@@ -1495,7 +1515,19 @@ func (e *endpoint) getExtraProperty(entity interface{}, fieldPath string) interf
 
 	// Return the value as a string.
 	if v.IsValid() && v.CanInterface() {
-		return v
+		switch v.Kind() {
+		case reflect.String:
+			return v.String()
+		case reflect.Bool:
+			return v.Bool()
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			return v.Int()
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			return v.Uint()
+		case reflect.Float32, reflect.Float64:
+			return v.Float()
+		}
+		return v.Interface()
 	}
 	e.parent.Log.Warnf("Field %s of %s no interface. Skipping", fieldPath, reflect.TypeOf(entity))
 	return nil
