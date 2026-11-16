@@ -16,6 +16,7 @@ import (
 const schemaAdvisoryLockID int64 = 5705450890675909945
 
 type tableState struct {
+	schema  string
 	name    string
 	columns map[string]utils.Column
 	sync.RWMutex
@@ -24,8 +25,8 @@ type tableState struct {
 type TableManager struct {
 	*Postgresql
 
-	// map[tableName]map[columnName]utils.Column
-	tables      map[string]*tableState
+	// map[tableKey]map[columnName]utils.Column
+	tables      map[tableKey]*tableState
 	tablesMutex sync.Mutex
 
 	// Map to track which columns are already logged
@@ -38,7 +39,7 @@ type TableManager struct {
 func NewTableManager(postgresql *Postgresql) *TableManager {
 	return &TableManager{
 		Postgresql:           postgresql,
-		tables:               make(map[string]*tableState),
+		tables:               make(map[tableKey]*tableState),
 		loggedLongColumnWarn: make(map[string]bool),
 		loggedLongColumnErr:  make(map[string]bool),
 	}
@@ -68,7 +69,7 @@ func (tm *TableManager) ClearTableSourceCache(tsrc *TableSource) {
 	}
 	tm.tablesMutex.Lock()
 	for _, name := range names {
-		if tbl := tm.tables[name]; tbl != nil {
+		if tbl := tm.tables[tableKey{schema: tsrc.Schema(), name: name}]; tbl != nil {
 			tbl.Lock()
 			tbl.columns = nil
 			tbl.Unlock()
@@ -83,12 +84,13 @@ func (tm *TableManager) ClearTableSourceCache(tsrc *TableSource) {
 	}
 }
 
-func (tm *TableManager) table(name string) *tableState {
+func (tm *TableManager) table(schema, name string) *tableState {
+	key := tableKey{schema: schema, name: name}
 	tm.tablesMutex.Lock()
-	tbl := tm.tables[name]
+	tbl := tm.tables[key]
 	if tbl == nil {
-		tbl = &tableState{name: name}
-		tm.tables[name] = tbl
+		tbl = &tableState{schema: schema, name: name}
+		tm.tables[key] = tbl
 	}
 	tm.tablesMutex.Unlock()
 	return tbl
@@ -100,10 +102,10 @@ func (tm *TableManager) table(name string) *tableState {
 // If a field missing from the DB, the field is omitted.
 // If a tag is missing from the DB, the metric is dropped.
 func (tm *TableManager) MatchSource(ctx context.Context, db dbh, rowSource *TableSource) error {
-	metricTable := tm.table(rowSource.Name())
+	metricTable := tm.table(rowSource.Schema(), rowSource.Name())
 	var tagTable *tableState
 	if tm.TagsAsForeignKeys {
-		tagTable = tm.table(metricTable.name + tm.TagTableSuffix)
+		tagTable = tm.table(rowSource.Schema(), metricTable.name+tm.TagTableSuffix)
 
 		missingCols, err := tm.EnsureStructure(
 			ctx,
@@ -260,7 +262,7 @@ func (tm *TableManager) EnsureStructure(
 
 	// read_db
 	var err error
-	if currCols, err = tm.getColumns(ctx, db, tbl.name); err != nil {
+	if currCols, err = tm.getColumns(ctx, db, tbl.schema, tbl.name); err != nil {
 		return nil, err
 	}
 	tbl.columns = currCols
@@ -295,7 +297,7 @@ func (tm *TableManager) EnsureStructure(
 	}
 
 	// read_db
-	if currCols, err = tm.getColumns(ctx, tx, tbl.name); err != nil {
+	if currCols, err = tm.getColumns(ctx, tx, tbl.schema, tbl.name); err != nil {
 		return nil, err
 	}
 	tbl.columns = currCols
@@ -317,7 +319,7 @@ func (tm *TableManager) EnsureStructure(
 		return append(addColumns, invalidColumns...), err
 	}
 
-	if currCols, err = tm.getColumns(ctx, tx, tbl.name); err != nil {
+	if currCols, err = tm.getColumns(ctx, tx, tbl.schema, tbl.name); err != nil {
 		return append(addColumns, invalidColumns...), err
 	}
 
@@ -333,14 +335,14 @@ func (tm *TableManager) EnsureStructure(
 	return invalidColumns, nil
 }
 
-func (tm *TableManager) getColumns(ctx context.Context, db dbh, name string) (map[string]utils.Column, error) {
+func (tm *TableManager) getColumns(ctx context.Context, db dbh, schema, name string) (map[string]utils.Column, error) {
 	rows, err := db.Query(ctx, `
 		SELECT
 			column_name,
 			CASE WHEN data_type='USER-DEFINED' THEN udt_name ELSE data_type END,
 			col_description(format('%I.%I', table_schema, table_name)::regclass::oid, ordinal_position)
 		FROM information_schema.columns
-		WHERE table_schema = $1 and table_name = $2`, tm.Schema, name)
+		WHERE table_schema = $1 and table_name = $2`, schema, name)
 	if err != nil {
 		return nil, err
 	}
@@ -394,11 +396,11 @@ func (tm *TableManager) update(ctx context.Context,
 	missingCols []utils.Column,
 	metricsTable, tagsTable *tableState,
 ) error {
-	tmplTable := sqltemplate.NewTable(tm.Schema, state.name, colMapToSlice(state.columns))
-	metricsTmplTable := sqltemplate.NewTable(tm.Schema, metricsTable.name, colMapToSlice(metricsTable.columns))
+	tmplTable := sqltemplate.NewTable(state.schema, state.name, colMapToSlice(state.columns))
+	metricsTmplTable := sqltemplate.NewTable(metricsTable.schema, metricsTable.name, colMapToSlice(metricsTable.columns))
 	var tagsTmplTable *sqltemplate.Table
 	if tagsTable != nil {
-		tagsTmplTable = sqltemplate.NewTable(tm.Schema, tagsTable.name, colMapToSlice(tagsTable.columns))
+		tagsTmplTable = sqltemplate.NewTable(tagsTable.schema, tagsTable.name, colMapToSlice(tagsTable.columns))
 	} else {
 		tagsTmplTable = sqltemplate.NewTable("", "", nil)
 	}
