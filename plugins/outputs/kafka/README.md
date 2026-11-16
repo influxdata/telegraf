@@ -53,6 +53,11 @@ to use them.
   ## will communicate solely with the kafka leader and not all defined brokers.
   brokers = ["localhost:9092"]
 
+  ## Local address to bind when connecting to the brokers
+  ## If empty or not set, the local address is automatically chosen.
+  ## Cannot be used together with the SOCKS5 proxy.
+  # local_address = ""
+
   ## Kafka topic for producer messages
   topic = "telegraf"
 
