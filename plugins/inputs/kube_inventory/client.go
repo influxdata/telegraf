@@ -134,6 +134,12 @@ func (c *client) getPods(ctx context.Context, nodeName string) (*corev1.PodList,
 	return c.CoreV1().Pods(c.namespace).List(ctx, metav1.ListOptions{FieldSelector: fieldSelector})
 }
 
+func (c *client) getReplicaSets(ctx context.Context) (*appsv1.ReplicaSetList, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel()
+	return c.AppsV1().ReplicaSets(c.namespace).List(ctx, metav1.ListOptions{})
+}
+
 func (c *client) getServices(ctx context.Context) (*corev1.ServiceList, error) {
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()

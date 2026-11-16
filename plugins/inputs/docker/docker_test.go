@@ -1393,6 +1393,50 @@ func TestStartLegacyAPIVersion(t *testing.T) {
 	require.NotEmpty(t, acc.GetTelegrafMetrics())
 }
 
+func TestStartUnsupportedAPIVersion(t *testing.T) {
+	tests := []struct {
+		name           string
+		apiVersion     string
+		storageObjects []string
+		expected       string
+	}{
+		{
+			name:       "too old",
+			apiVersion: "1.22",
+			expected:   "unsupported API version (1.22.0), upgrade to docker engine 1.12+",
+		},
+		{
+			name:           "too old for disk usage",
+			apiVersion:     "1.39",
+			storageObjects: []string{"container"},
+			expected:       "unsupported API version (1.39.0) for disk usage",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server, err := mock.NewServerFromFiles("testdata")
+			require.NoError(t, err)
+			server.APIVersion = tt.apiVersion
+
+			addr := server.Start(t)
+			defer server.Close()
+
+			plugin := &Docker{
+				Endpoint:       addr,
+				Timeout:        config.Duration(time.Second * 5),
+				StorageObjects: tt.storageObjects,
+				Log:            testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+
+			var acc testutil.Accumulator
+			require.ErrorContains(t, plugin.Start(&acc), tt.expected)
+			require.Nil(t, plugin.client)
+		})
+	}
+}
+
 func TestStartCurrentAPIVersionNotPinned(t *testing.T) {
 	server, err := mock.NewServerFromFiles("testdata")
 	require.NoError(t, err)

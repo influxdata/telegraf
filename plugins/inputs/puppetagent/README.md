@@ -95,6 +95,10 @@ Measurement names:
 - puppetagent_time_user
 - puppetagent_version_config
 
+Each entry of `include_resources` adds a `puppetagent_time_<resource>`
+measurement taken from the `time` section of the summary file. Resources
+already listed above are collected by default and ignored there.
+
 ### PuppetAgent string measurements
 
 Meta:

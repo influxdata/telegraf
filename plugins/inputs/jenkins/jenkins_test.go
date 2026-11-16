@@ -3,6 +3,7 @@ package jenkins
 
 import (
 	"encoding/json"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -1948,6 +1949,155 @@ func TestGatherJobs(t *testing.T) {
 
 			actual := acc.GetTelegrafMetrics()
 			testutil.RequireMetricsEqual(t, tt.expected, actual, options...)
+		})
+	}
+}
+
+func TestInitBuildTags(t *testing.T) {
+	tests := []struct {
+		name      string
+		buildTags []string
+		expected  string
+	}{
+		{
+			name: "unset",
+		},
+		{
+			name:      "valid",
+			buildTags: []string{"display_name", "description"},
+		},
+		{
+			name:      "invalid",
+			buildTags: []string{"display_name", "foo"},
+			expected:  `invalid value "foo" in build_tags`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := &Jenkins{
+				BuildTags: tt.buildTags,
+				Log:       testutil.Logger{},
+			}
+			err := plugin.Init()
+			if tt.expected == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.ErrorContains(t, err, tt.expected)
+		})
+	}
+}
+
+func TestGatherJobBuildTags(t *testing.T) {
+	ts := httptest.NewServer(mockHandler{
+		responseMap: map[string]any{
+			"/api/json": &jobResponse{
+				Jobs: []innerJob{{Name: "job1"}},
+			},
+			"/computer/api/json": nodeResponse{},
+			"/job/job1/api/json": &jobResponse{
+				Builds: []jobBuild{{Number: 2}, {Number: 1}},
+			},
+			"/job/job1/1/api/json": &buildResponse{
+				Result:      "SUCCESS",
+				Duration:    1000,
+				Number:      1,
+				Timestamp:   (time.Now().Unix() - int64(time.Minute.Seconds())) * 1000,
+				DisplayName: "#1 release-1.2",
+				Description: "triggered by PR",
+			},
+			"/job/job1/2/api/json": &buildResponse{
+				Result:      "FAILURE",
+				Duration:    2000,
+				Number:      2,
+				Timestamp:   (time.Now().Unix() - int64(time.Minute.Seconds())) * 1000,
+				DisplayName: "#2 release-1.3",
+			},
+		},
+	})
+	defer ts.Close()
+
+	baseTags := func(result string, extra map[string]string) map[string]string {
+		tags := map[string]string{
+			"source":  "127.0.0.1",
+			"port":    "",
+			"name":    "job1",
+			"result":  result,
+			"parents": "",
+		}
+		maps.Copy(tags, extra)
+		return tags
+	}
+	jobMetrics := func(tags1, tags2 map[string]string) []telegraf.Metric {
+		return []telegraf.Metric{
+			metric.New(
+				"jenkins",
+				map[string]string{"source": "127.0.0.1", "port": ""},
+				map[string]any{"busy_executors": 0, "total_executors": 0},
+				time.Unix(0, 0),
+			),
+			metric.New(
+				"jenkins_job",
+				baseTags("SUCCESS", tags1),
+				map[string]any{"duration": int64(1000), "number": int64(1), "result_code": 0},
+				time.Unix(0, 0),
+			),
+			metric.New(
+				"jenkins_job",
+				baseTags("FAILURE", tags2),
+				map[string]any{"duration": int64(2000), "number": int64(2), "result_code": 1},
+				time.Unix(0, 0),
+			),
+		}
+	}
+
+	tests := []struct {
+		name      string
+		buildTags []string
+		expected  []telegraf.Metric
+	}{
+		{
+			name:     "unset",
+			expected: jobMetrics(nil, nil),
+		},
+		{
+			name:      "display name only",
+			buildTags: []string{"display_name"},
+			expected: jobMetrics(
+				map[string]string{"display_name": "#1 release-1.2"},
+				map[string]string{"display_name": "#2 release-1.3"},
+			),
+		},
+		{
+			name:      "display name and description",
+			buildTags: []string{"display_name", "description"},
+			expected: jobMetrics(
+				map[string]string{"display_name": "#1 release-1.2", "description": "triggered by PR"},
+				map[string]string{"display_name": "#2 release-1.3"},
+			),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := &Jenkins{
+				URL:             ts.URL,
+				MaxBuildAge:     config.Duration(time.Hour),
+				ResponseTimeout: config.Duration(time.Second),
+				BuildTags:       tt.buildTags,
+				Log:             testutil.Logger{},
+			}
+			require.NoError(t, plugin.Init())
+
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Gather(&acc))
+			require.Empty(t, acc.Errors)
+
+			options := []cmp.Option{
+				testutil.IgnoreTime(),
+				testutil.SortMetrics(),
+				testutil.IgnoreTags("port"),
+			}
+			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics(), options...)
 		})
 	}
 }

@@ -26,7 +26,8 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## address in the nsd config file.
   server = "127.0.0.1:8953"
 
-  ## If running as a restricted user you can prepend sudo for additional access:
+  ## If running as a restricted user you can prepend sudo for additional access.
+  ## On OpenBSD, nsd-control is run with doas as the _nsd user.
   # use_sudo = false
 
   ## The default location of the nsd-control binary can be overridden with:

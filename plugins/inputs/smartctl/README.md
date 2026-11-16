@@ -40,6 +40,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ## On most platforms used, smartctl requires root access. Setting 'use_sudo'
     ## to true will make use of sudo to run smartctl. Sudo must be configured to
     ## allow the telegraf user to run smartctl without a password.
+    ## On OpenBSD, doas is used instead of sudo.
     # use_sudo = false
 
     ## Devices to include or exclude

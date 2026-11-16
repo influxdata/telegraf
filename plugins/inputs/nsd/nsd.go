@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net"
 	"os/exec"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/common/sudo"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -120,7 +122,11 @@ func nsdRunner(cmdName string, timeout config.Duration, useSudo bool, server, co
 
 	if useSudo {
 		cmdArgs = append([]string{cmdName}, cmdArgs...)
-		cmd = exec.Command("sudo", cmdArgs...)
+		// OpenBSD doas rules run nsd-control as _nsd. doas targets root unless -u is set.
+		if runtime.GOOS == "openbsd" {
+			cmdArgs = append([]string{"-u", "_nsd"}, cmdArgs...)
+		}
+		cmd = exec.Command(sudo.Binary(), cmdArgs...)
 	}
 
 	var out bytes.Buffer

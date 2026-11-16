@@ -6,11 +6,13 @@ package systemd_units
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"math"
 	"os/user"
 	"path"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/coreos/go-systemd/v22/dbus"
@@ -18,6 +20,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/filter"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -229,7 +232,20 @@ func (s *SystemdUnits) Start(telegraf.Accumulator) error {
 		client, err = dbus.NewSystemConnectionContext(ctx)
 	}
 	if err != nil {
-		return err
+		// Only a refused, reset or busy bus can recover. A missing socket,
+		// a missing session bus address or a failed authentication won't.
+		return &internal.StartupError{
+			Err:   fmt.Errorf("connecting to the %s bus failed: %w", s.scope, err),
+			Retry: errors.Is(err, syscall.ECONNREFUSED) || errors.Is(err, syscall.ECONNRESET) || errors.Is(err, syscall.EAGAIN),
+		}
+	}
+
+	// The bus might be available without systemd running on it
+	if _, err := client.GetManagerProperty("Version"); err != nil {
+		client.Close()
+		return &internal.StartupError{
+			Err: fmt.Errorf("querying systemd on the %s bus failed: %w", s.scope, err),
+		}
 	}
 
 	s.client = client

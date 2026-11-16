@@ -174,6 +174,8 @@ func processValues(acc telegraf.Accumulator, columns []column, values []string) 
 			timestamp = time.Unix(0, int64(f*1e9))
 		case column.isTag:
 			tags[column.name] = value
+		case value == "-":
+			continue
 		default:
 			v, err := strconv.ParseFloat(value, 64)
 			if err != nil {

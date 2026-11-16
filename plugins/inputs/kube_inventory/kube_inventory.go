@@ -68,6 +68,8 @@ type KubernetesInventory struct {
 	SelectorInclude []string `toml:"selector_include"`
 	SelectorExclude []string `toml:"selector_exclude"`
 
+	PodWorkloadTags bool `toml:"pod_workload_tags"`
+
 	NodeName string          `toml:"node_name"`
 	Log      telegraf.Logger `toml:"-"`
 

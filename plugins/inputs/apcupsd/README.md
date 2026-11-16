@@ -62,7 +62,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ## Example Output
 
 ```text
-apcupsd,serial=AS1231515,status=ONLINE,ups_name=name1 time_on_battery=0,load_percent=9.7,time_left_minutes=98,output_voltage=230.4,internal_temp=32.4,battery_voltage=27.4,input_frequency=50.2,input_voltage=230.4,battery_charge_percent=100,status_flags=8i 1490035922000000000
+apcupsd,serial=AS1231515,status=ONLINE,ups_name=name1 time_on_battery_ns=0i,load_percent=9.7,time_left_ns=5880000000000i,output_voltage=230.4,internal_temp=32.4,battery_voltage=27.4,input_frequency=50.2,input_voltage=230.4,battery_charge_percent=100,status_flags=8i 1490035922000000000
 ```
 
 [status-bits]: http://www.apcupsd.org/manual/manual.html#status-bits

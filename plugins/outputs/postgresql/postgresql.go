@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"hash/fnv"
 	"strings"
 	"time"
 
@@ -38,6 +39,8 @@ var sampleConfig string
 type Postgresql struct {
 	Connection                 config.Secret           `toml:"connection"`
 	Schema                     string                  `toml:"schema"`
+	SchemaTag                  string                  `toml:"schema_tag"`
+	ExcludeSchemaTag           bool                    `toml:"exclude_schema_tag"`
 	TagsAsForeignKeys          bool                    `toml:"tags_as_foreign_keys"`
 	TagTableSuffix             string                  `toml:"tag_table_suffix"`
 	ForeignTagConstraint       bool                    `toml:"foreign_tag_constraint"`
@@ -270,12 +273,25 @@ func (p *Postgresql) Write(metrics []telegraf.Metric) error {
 	return err
 }
 
-func (p *Postgresql) writeSequential(tableSources map[string]*TableSource) error {
+func (p *Postgresql) writeSequential(tableSources map[tableKey]*TableSource) error {
 	tx, err := p.db.Begin(p.dbContext)
 	if err != nil {
 		return fmt.Errorf("starting transaction: %w", err)
 	}
 	defer tx.Rollback(p.dbContext) //nolint:errcheck // In case of failure during commit, "err" from commit will be returned
+
+	// Schema changes and tag inserts run inside this transaction, so when it or a savepoint is rolled back, the cache
+	// entries of the rolled back tables no longer match the database and have to be reloaded. Only the sources written
+	// so far can have touched the cache.
+	written := make([]*TableSource, 0, len(tableSources))
+	committed := false
+	defer func() {
+		if !committed {
+			for _, tableSource := range written {
+				p.tableManager.ClearTableSourceCache(tableSource)
+			}
+		}
+	}()
 
 	for _, tableSource := range tableSources {
 		sp := tx
@@ -287,6 +303,7 @@ func (p *Postgresql) writeSequential(tableSources map[string]*TableSource) error
 			}
 		}
 
+		written = append(written, tableSource)
 		err := p.writeMetricsFromMeasure(p.dbContext, sp, tableSource)
 		if err != nil {
 			if isTempError(err) {
@@ -301,6 +318,7 @@ func (p *Postgresql) writeSequential(tableSources map[string]*TableSource) error
 			if err := sp.Rollback(p.dbContext); err != nil {
 				return err
 			}
+			p.tableManager.ClearTableSourceCache(tableSource)
 		}
 		// savepoints do not need to be committed (released), so save the round trip and skip it
 	}
@@ -308,10 +326,11 @@ func (p *Postgresql) writeSequential(tableSources map[string]*TableSource) error
 	if err := tx.Commit(p.dbContext); err != nil {
 		return fmt.Errorf("committing transaction: %w", err)
 	}
+	committed = true
 	return nil
 }
 
-func (p *Postgresql) writeConcurrent(tableSources map[string]*TableSource) {
+func (p *Postgresql) writeConcurrent(tableSources map[tableKey]*TableSource) {
 	for _, tableSource := range tableSources {
 		select {
 		case p.writeChan <- tableSource:
@@ -438,16 +457,17 @@ func (p *Postgresql) writeMetricsFromMeasure(ctx context.Context, db dbh, tableS
 
 	if p.TagsAsForeignKeys {
 		if err = writeTagTable(ctx, db, tableSource); err != nil {
+			tagTableName := tableSource.Schema() + "." + tableSource.Name() + p.TagTableSuffix
 			if p.ForeignTagConstraint {
-				return fmt.Errorf("writing to tag table %q: %w", tableSource.Name()+p.TagTableSuffix, err)
+				return fmt.Errorf("writing to tag table %q: %w", tagTableName, err)
 			}
 			// log and continue. As the admin can correct the issue, and tags don't change over time, they can be
 			// added from future metrics after issue is corrected.
-			p.Logger.Errorf("writing to tag table %q: %s", tableSource.Name()+p.TagTableSuffix, err.Error())
+			p.Logger.Errorf("writing to tag table %q: %s", tagTableName, err.Error())
 		}
 	}
 
-	fullTableName := utils.FullTableName(p.Schema, tableSource.Name())
+	fullTableName := utils.FullTableName(tableSource.Schema(), tableSource.Name())
 	if _, err := db.CopyFrom(ctx, fullTableName, tableSource.ColumnNames(), tableSource); err != nil {
 		return err
 	}
@@ -471,8 +491,8 @@ func writeTagTable(ctx context.Context, db dbh, tableSource *TableSource) error 
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck // In case of failure during commit, "err" from commit will be returned
 
-	ident := pgx.Identifier{ttsrc.postgresql.Schema, ttsrc.Name()}
-	identTemp := pgx.Identifier{ttsrc.Name() + "_temp"}
+	ident := pgx.Identifier{ttsrc.Schema(), ttsrc.Name()}
+	identTemp := pgx.Identifier{tagTempTableName(ttsrc.Schema(), ttsrc.Name())}
 	sql := fmt.Sprintf("CREATE TEMP TABLE %s (LIKE %s) ON COMMIT DROP", identTemp.Sanitize(), ident.Sanitize())
 	if _, err := tx.Exec(ctx, sql); err != nil {
 		return fmt.Errorf("creating tags temp table: %w", err)
@@ -493,6 +513,18 @@ func writeTagTable(ctx context.Context, db dbh, tableSource *TableSource) error 
 
 	ttsrc.UpdateCache()
 	return nil
+}
+
+// tagTempTableName returns the name of the temp table used for writing to the given tag table. When called inside a
+// savepoint, the temp table is only dropped when the outer transaction commits, so the name must differ for tag
+// tables with the same name in different schemas. The name is built from a hash of the schema and the table name,
+// as PostgreSQL truncates identifiers to 63 bytes and a name containing both could be cut.
+func tagTempTableName(schema, name string) string {
+	h := fnv.New64a()
+	h.Write([]byte(schema))
+	h.Write([]byte{0})
+	h.Write([]byte(name))
+	return fmt.Sprintf("telegraf_%016x_temp", h.Sum64())
 }
 
 func newPostgresql() *Postgresql {

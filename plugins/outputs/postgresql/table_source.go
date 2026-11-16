@@ -42,15 +42,22 @@ func (cl *columnList) Remove(name string) bool {
 	return true
 }
 
+// tableKey identifies a table by its schema and name.
+type tableKey struct {
+	schema string
+	name   string
+}
+
 // TableSource satisfies pgx.CopyFromSource
 type TableSource struct {
 	postgresql   *Postgresql
+	schema       string
 	metrics      []telegraf.Metric
 	cursor       int
 	cursorValues []any
 	cursorError  error
-	// tagHashSalt is so that we can use a global tag cache for all tables. The salt is unique per table, and combined
-	// with the tag ID when looked up in the cache.
+	// tagHashSalt is so that we can use a global tag cache for all tables. The salt is unique per schema and table, and
+	// combined with the tag ID when looked up in the cache.
 	tagHashSalt int64
 
 	tagColumns *columnList
@@ -64,14 +71,33 @@ type TableSource struct {
 	droppedTagColumns []string
 }
 
-func NewTableSources(p *Postgresql, metrics []telegraf.Metric) map[string]*TableSource {
-	tableSources := make(map[string]*TableSource)
+func NewTableSources(p *Postgresql, metrics []telegraf.Metric) map[tableKey]*TableSource {
+	tableSources := make(map[tableKey]*TableSource)
 
 	for _, m := range metrics {
-		tsrc := tableSources[m.Name()]
+		schema := p.Schema
+		if p.SchemaTag != "" {
+			if value, ok := m.GetTag(p.SchemaTag); ok {
+				// An empty schema name is not a valid identifier, so fall back
+				// to the configured schema in this case.
+				if value != "" {
+					schema = value
+				}
+				if p.ExcludeSchemaTag {
+					// Avoid modifying the metric in case we need to retry the
+					// write or the metric is shared with other outputs.
+					m = m.Copy()
+					m.Accept()
+					m.RemoveTag(p.SchemaTag)
+				}
+			}
+		}
+
+		key := tableKey{schema: schema, name: m.Name()}
+		tsrc := tableSources[key]
 		if tsrc == nil {
-			tsrc = NewTableSource(p, m.Name())
-			tableSources[m.Name()] = tsrc
+			tsrc = NewTableSource(p, schema, m.Name())
+			tableSources[key] = tsrc
 		}
 		tsrc.AddMetric(m)
 	}
@@ -79,12 +105,15 @@ func NewTableSources(p *Postgresql, metrics []telegraf.Metric) map[string]*Table
 	return tableSources
 }
 
-func NewTableSource(postgresql *Postgresql, name string) *TableSource {
+func NewTableSource(postgresql *Postgresql, schema, name string) *TableSource {
 	h := fnv.New64a()
+	h.Write([]byte(schema))
+	h.Write([]byte{0})
 	h.Write([]byte(name))
 
 	tsrc := &TableSource{
 		postgresql:  postgresql,
+		schema:      schema,
 		cursor:      -1,
 		tagSets:     make(map[int64][]*telegraf.Tag),
 		tagHashSalt: int64(h.Sum64()),
@@ -119,6 +148,11 @@ func (tsrc *TableSource) AddMetric(metric telegraf.Metric) {
 	}
 
 	tsrc.metrics = append(tsrc.metrics, metric)
+}
+
+// Schema returns the database schema the metrics of the source are written to.
+func (tsrc *TableSource) Schema() string {
+	return tsrc.schema
 }
 
 func (tsrc *TableSource) Name() string {

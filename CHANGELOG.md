@@ -63,6 +63,12 @@
   If you set `default_service_state`, it now also applies to metrics with
   numeric fields but without thresholds, which used to get `SERVICE_OK`.
   Please check alerts relying on these states.
+- PR [#19853](https://github.com/influxdata/telegraf/pull/19853) makes
+  `use_sudo` invoke doas(1) instead of sudo on OpenBSD. A configuration
+  that relies on sudoers will fail until a doas.conf(5) rule permits the
+  same command. `inputs.nsd` and `inputs.unbound` run as `_nsd` and
+  `_unbound`.
+
 ## v1.40.3 [2026-11-02]
 
 ### Bugfixes
@@ -296,6 +302,14 @@
   a duration (e.g. `182h+39m+24.879s`). The value was previously reported in
   seconds and is now reported in hours. Please check your queries and
   dashboards for the mentioned field.
+- PR [#19549](https://github.com/influxdata/telegraf/pull/19549) updates Go to
+  v1.27.0 which now also honors the `SSL_CERT_FILE` and `SSL_CERT_DIR`
+  environment variables on Windows and macOS. If set, Telegraf loads the
+  certificates from the given locations and verifies with Go's own verifier
+  instead of the platform certificate store. If you see errors like
+  `tls: failed to verify certificate: x509: certificate signed by unknown authority`,
+  please correct or unset those variables, or set
+  `GODEBUG=x509sslcertoverrideplatform=0` to restore the previous behavior.
 - Removal of deprecated plugins:
   - [#19123](https://github.com/influxdata/telegraf/pull/19123) `outputs.amon` Remove deprecated plugin
   - [#19124](https://github.com/influxdata/telegraf/pull/19124) `inputs.sflow` Remove deprecated plugin

@@ -25,7 +25,8 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Will lookup IP if given a hostname
   server = "127.0.0.1:8953"
 
-  ## If running as a restricted user you can prepend sudo for additional access:
+  ## If running as a restricted user you can prepend sudo for additional access.
+  ## On OpenBSD, unbound-control is run with doas as the _unbound user.
   # use_sudo = false
 
   ## The default location of the unbound-control binary can be overridden with:

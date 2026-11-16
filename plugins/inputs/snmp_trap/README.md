@@ -78,6 +78,11 @@ to use them.
   # priv_protocol = ""
   ## Privacy password used for encrypted messages.
   # priv_password = ""
+  ## Local engine ID as hex string, used to answer the engine discovery of
+  ## SNMPv3 inform senders. If not set, a random ID is generated on startup.
+  ## Senders may use this ID in the engine_id tag, so set it if a stable value
+  ## is required.
+  # engine_id = "0x80001f888001020304"
 ```
 
 ### SNMP backend: `gosmi` vs `netsnmp`

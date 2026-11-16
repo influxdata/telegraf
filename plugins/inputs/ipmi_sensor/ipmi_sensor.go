@@ -20,6 +20,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/choice"
+	"github.com/influxdata/telegraf/plugins/common/sudo"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -145,7 +146,7 @@ func (m *Ipmi) parse(acc telegraf.Accumulator, server, sensor string) error {
 			if m.UseSudo {
 				// -n - avoid prompting the user for input of any kind
 				dumpOpts = append([]string{"-n", name}, dumpOpts...)
-				name = "sudo"
+				name = sudo.Binary()
 			}
 			cmd := execCommand(name, dumpOpts...)
 			out, err := internal.CombinedOutputTimeout(cmd, time.Duration(m.Timeout))
@@ -162,7 +163,7 @@ func (m *Ipmi) parse(acc telegraf.Accumulator, server, sensor string) error {
 	if m.UseSudo {
 		// -n - avoid prompting the user for input of any kind
 		opts = append([]string{"-n", name}, opts...)
-		name = "sudo"
+		name = sudo.Binary()
 	}
 	cmd := execCommand(name, opts...)
 	out, err := internal.CombinedOutputTimeout(cmd, time.Duration(m.Timeout))

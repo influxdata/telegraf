@@ -42,6 +42,10 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## proxy environment variables to determine proxy, if any.
   # http_proxy = "http://corporate.proxy:3128"
 
+  ## Local address to bind when connecting to the server
+  ## If empty or not set, the local address is automatically chosen.
+  # local_address = ""
+
   ## Metric URL override to enable geographic location endpoints.
   # If not set use values from the standard
   # metric_url = "https://metric-api.newrelic.com/metric/v1"

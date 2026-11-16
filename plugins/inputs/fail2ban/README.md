@@ -27,7 +27,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ```toml @sample.conf
 # Read metrics from fail2ban.
 [[inputs.fail2ban]]
-  ## Use sudo to run fail2ban-client
+  ## Use sudo to run fail2ban-client. On OpenBSD, doas is used instead of sudo.
   # use_sudo = false
 
   ## Use the given socket instead of the default one

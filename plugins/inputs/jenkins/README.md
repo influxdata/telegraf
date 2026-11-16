@@ -73,6 +73,11 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## are found, then a tag with the value of 'none' is used. Finally, if a
   ## label contains a comma it is replaced with an underscore.
   # node_labels_as_tag = false
+
+  ## Additional build attributes to add as tags to the jenkins_job metric.
+  ## Available values are "display_name" and "description". Note that these
+  ## may increase series cardinality, especially if they are set per build.
+  # build_tags = []
 ```
 
 ## Metrics
@@ -111,6 +116,8 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
     - result
     - source
     - port
+    - display_name (optional, if enabled via `build_tags`)
+    - description (optional, if enabled via `build_tags`)
   - fields:
     - duration (ms)
     - number
