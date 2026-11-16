@@ -418,15 +418,6 @@ func dbIdentifierDump(t *testing.T, db *pgxpool.Pool, ident pgx.Identifier) []MS
 	return dump
 }
 
-func requirePartialWriteError(t *testing.T, err error, accept, reject []int) {
-	t.Helper()
-
-	var writeErr *internal.PartialWriteError
-	require.ErrorAs(t, err, &writeErr)
-	require.ElementsMatch(t, accept, writeErr.MetricsAccept)
-	require.ElementsMatch(t, reject, writeErr.MetricsReject)
-}
-
 func TestWriteIntegration_sequential(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -544,7 +535,11 @@ func TestWriteIntegration_sequentialPermError(t *testing.T) {
 		newMetric(t, "_a", MSS{}, MSI{"v": "a"}),
 		newMetric(t, "_b", MSS{}, MSI{"v": 3}),
 	}
-	requirePartialWriteError(t, p.Write(metrics), []int{1}, []int{0})
+	err = p.Write(metrics)
+	var writeErr *internal.PartialWriteError
+	require.ErrorAs(t, err, &writeErr)
+	require.ElementsMatch(t, []int{1}, writeErr.MetricsAccept)
+	require.ElementsMatch(t, []int{0}, writeErr.MetricsReject)
 
 	dumpA := dbTableDump(t, p.db, "_a")
 	dumpB := dbTableDump(t, p.db, "_b")
@@ -582,7 +577,11 @@ func TestWriteIntegration_sequentialPermErrorBatchIndices(t *testing.T) {
 		newMetric(t, "_a", MSS{}, MSI{"v": "x"}),
 		newMetric(t, "_b", MSS{}, MSI{"v": 3}),
 	}
-	requirePartialWriteError(t, p.Write(metrics), []int{1, 3}, []int{0, 2})
+	err = p.Write(metrics)
+	var writeErr *internal.PartialWriteError
+	require.ErrorAs(t, err, &writeErr)
+	require.ElementsMatch(t, []int{1, 3}, writeErr.MetricsAccept)
+	require.ElementsMatch(t, []int{0, 2}, writeErr.MetricsReject)
 
 	require.Len(t, dbTableDump(t, p.db, "_a"), 1)
 	require.Len(t, dbTableDump(t, p.db, "_b"), 3)
@@ -606,7 +605,11 @@ func TestWriteIntegration_sequentialSinglePermError(t *testing.T) {
 	metrics = []telegraf.Metric{
 		newMetric(t, "", MSS{}, MSI{"v": "a"}),
 	}
-	requirePartialWriteError(t, p.Write(metrics), nil, []int{0})
+	err = p.Write(metrics)
+	var writeErr *internal.PartialWriteError
+	require.ErrorAs(t, err, &writeErr)
+	require.Empty(t, writeErr.MetricsAccept)
+	require.ElementsMatch(t, []int{0}, writeErr.MetricsReject)
 }
 
 // Test that a column added in a dropped sub-batch is added again by the next write.
@@ -630,7 +633,11 @@ func TestWriteIntegration_sequentialPermErrorAddColumn(t *testing.T) {
 		newMetric(t, "_a", MSS{}, MSI{"v": "a", "g": 1}),
 		newMetric(t, "_b", MSS{}, MSI{"v": 2}),
 	}
-	requirePartialWriteError(t, p.Write(metrics), []int{1}, []int{0})
+	err = p.Write(metrics)
+	var writeErr *internal.PartialWriteError
+	require.ErrorAs(t, err, &writeErr)
+	require.ElementsMatch(t, []int{1}, writeErr.MetricsAccept)
+	require.ElementsMatch(t, []int{0}, writeErr.MetricsReject)
 
 	metrics = []telegraf.Metric{
 		newMetric(t, "_a", MSS{}, MSI{"v": 3, "g": 1}),
@@ -663,7 +670,11 @@ func TestWriteIntegration_sequentialSinglePermErrorAddColumn(t *testing.T) {
 	metrics = []telegraf.Metric{
 		newMetric(t, "", MSS{}, MSI{"v": "a", "g": 1}),
 	}
-	requirePartialWriteError(t, p.Write(metrics), nil, []int{0})
+	err = p.Write(metrics)
+	var writeErr *internal.PartialWriteError
+	require.ErrorAs(t, err, &writeErr)
+	require.Empty(t, writeErr.MetricsAccept)
+	require.ElementsMatch(t, []int{0}, writeErr.MetricsReject)
 
 	metrics = []telegraf.Metric{
 		newMetric(t, "", MSS{}, MSI{"v": 3, "g": 1}),
@@ -699,7 +710,11 @@ func TestWriteIntegration_sequentialPermErrorTagCache(t *testing.T) {
 		newMetric(t, "_a", MSS{"tag": "bar"}, MSI{"v": "a"}),
 		newMetric(t, "_b", MSS{"tag": "foo"}, MSI{"v": 2}),
 	}
-	requirePartialWriteError(t, p.Write(metrics), []int{1}, []int{0})
+	err = p.Write(metrics)
+	var writeErr *internal.PartialWriteError
+	require.ErrorAs(t, err, &writeErr)
+	require.ElementsMatch(t, []int{1}, writeErr.MetricsAccept)
+	require.ElementsMatch(t, []int{0}, writeErr.MetricsReject)
 
 	metrics = []telegraf.Metric{
 		newMetric(t, "_a", MSS{"tag": "bar"}, MSI{"v": 3}),
@@ -1107,7 +1122,11 @@ func TestWriteIntegration_tagError_foreignConstraint(t *testing.T) {
 	metrics = []telegraf.Metric{
 		newMetric(t, "", MSS{"tag": "bar"}, MSI{"v": 2}),
 	}
-	requirePartialWriteError(t, p.Write(metrics), nil, []int{0})
+	err = p.Write(metrics)
+	var writeErr *internal.PartialWriteError
+	require.ErrorAs(t, err, &writeErr)
+	require.Empty(t, writeErr.MetricsAccept)
+	require.ElementsMatch(t, []int{0}, writeErr.MetricsReject)
 	haveError := false
 	for _, l := range p.Logger.Logs() {
 		if strings.Contains(l.String(), "write error") {
