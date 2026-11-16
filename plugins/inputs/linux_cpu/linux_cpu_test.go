@@ -8,6 +8,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/models"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -24,7 +26,12 @@ func TestNoCPUs(t *testing.T) {
 		Metrics:   []string{"cpufreq"},
 		PathSysfs: td,
 	}
-	require.Error(t, plugin.Init())
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	var serr *internal.StartupError
+	require.ErrorAs(t, plugin.Start(&acc), &serr)
+	require.False(t, serr.Retry)
 }
 
 func TestNoCPUMetrics(t *testing.T) {
@@ -37,7 +44,12 @@ func TestNoCPUMetrics(t *testing.T) {
 		Metrics:   []string{"cpufreq"},
 		PathSysfs: td,
 	}
-	require.Error(t, plugin.Init())
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	var serr *internal.StartupError
+	require.ErrorAs(t, plugin.Start(&acc), &serr)
+	require.False(t, serr.Retry)
 }
 
 func TestGatherCPUFreq(t *testing.T) {
@@ -62,6 +74,8 @@ func TestGatherCPUFreq(t *testing.T) {
 	require.NoError(t, plugin.Init())
 
 	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
 	require.NoError(t, plugin.Gather(&acc))
 
 	tags1 := map[string]string{
@@ -105,6 +119,8 @@ func TestGatherThermal(t *testing.T) {
 	require.NoError(t, plugin.Init())
 
 	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
 	require.NoError(t, plugin.Gather(&acc))
 
 	acc.AssertContainsFields(t, "linux_cpu", map[string]any{
@@ -130,10 +146,13 @@ func TestGatherPropertyRemoved(t *testing.T) {
 
 	require.NoError(t, plugin.Init())
 
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
 	// Remove one of the properties
 	require.NoError(t, os.RemoveAll(td+"/devices/system/cpu/cpu0/cpufreq/scaling_max_freq"))
 
-	var acc testutil.Accumulator
 	require.NoError(t, plugin.Gather(&acc))
 
 	tags1 := map[string]string{
@@ -167,6 +186,8 @@ func TestGatherPropertyInvalid(t *testing.T) {
 	require.NoError(t, plugin.Init())
 
 	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
 	require.NoError(t, plugin.Gather(&acc))
 
 	tags1 := map[string]string{
@@ -181,4 +202,53 @@ func TestGatherPropertyInvalid(t *testing.T) {
 
 	acc.AssertDoesNotContainsTaggedFields(t, "linux_cpu", fields1, tags1)
 	require.NotEmpty(t, acc.Errors)
+}
+
+func TestStartupErrorBehavior(t *testing.T) {
+	// Virtual machines might expose the CPUs without any cpufreq properties
+	td := t.TempDir()
+	require.NoError(t, os.MkdirAll(td+"/devices/system/cpu/cpu0", 0750))
+	require.NoError(t, os.MkdirAll(td+"/devices/system/cpu/cpu1", 0750))
+
+	tests := []struct {
+		behavior string
+		fatal    bool
+	}{
+		{behavior: ""},
+		{behavior: "error"},
+		// The missing properties won't appear later, so retrying stops Telegraf
+		{behavior: "retry"},
+		{behavior: "ignore", fatal: true},
+		{behavior: "probe", fatal: true},
+	}
+
+	for _, tt := range tests {
+		t.Run("behavior "+tt.behavior, func(t *testing.T) {
+			plugin := &LinuxCPU{
+				Log:       testutil.Logger{Name: "LinuxCPUPluginTest"},
+				Metrics:   []string{"cpufreq"},
+				PathSysfs: td,
+			}
+			model := models.NewRunningInput(plugin, &models.InputConfig{
+				Name:                 "linux_cpu",
+				StartupErrorBehavior: tt.behavior,
+			})
+			require.NoError(t, model.Init())
+			defer model.Stop()
+
+			var acc testutil.Accumulator
+			err := model.Start(&acc)
+			require.ErrorContains(t, err, "no CPUs detected to track")
+
+			// A fatal error tells the agent to remove the plugin and keep running
+			var ferr *internal.FatalError
+			if tt.fatal {
+				require.ErrorAs(t, err, &ferr)
+			} else {
+				require.NotErrorAs(t, err, &ferr)
+				var serr *internal.StartupError
+				require.ErrorAs(t, err, &serr)
+			}
+		})
+	}
 }
