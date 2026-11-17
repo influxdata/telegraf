@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -213,6 +214,38 @@ func TestGather(t *testing.T) {
 	for _, test := range testsWithoutServer {
 		acc.AssertContainsTaggedFields(t, "ipmi_sensor", test.fields, test.tags)
 	}
+}
+
+func TestGatherCacheOptionBeforeCommand(t *testing.T) {
+	cachePath := t.TempDir()
+	cacheFile := filepath.Join(cachePath, "_ipmi_cache")
+	require.NoError(t, os.WriteFile(cacheFile, nil, 0o600))
+
+	i := &Ipmi{
+		Path:      "ipmitool",
+		Privilege: "USER",
+		Timeout:   config.Duration(time.Second * 5),
+		UseCache:  true,
+		CachePath: cachePath,
+		Sensors:   []string{"sdr", "chassis_power_status"},
+		Log:       testutil.Logger{},
+	}
+
+	var calls [][]string
+	execCommand = func(command string, args ...string) *exec.Cmd {
+		calls = append(calls, args)
+		return fakeExecCommand(command, args...)
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, i.Init())
+	require.NoError(t, acc.GatherError(i.Gather))
+
+	expected := [][]string{
+		{"-S", cacheFile, "sdr"},
+		{"-S", cacheFile, "chassis", "power", "status"},
+	}
+	require.Equal(t, expected, calls)
 }
 
 // fakeExecCommand is a helper function that mock
