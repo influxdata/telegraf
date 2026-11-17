@@ -214,7 +214,7 @@ require (
 	github.com/tdrn-org/go-nsdp v0.5.3
 	github.com/tdrn-org/go-tr064 v0.4.0
 	github.com/testcontainers/testcontainers-go v0.45.0
-	github.com/testcontainers/testcontainers-go/modules/azure v0.44.0
+	github.com/testcontainers/testcontainers-go/modules/azure v0.45.0
 	github.com/testcontainers/testcontainers-go/modules/kafka v0.45.0
 	github.com/thomasklein94/packer-plugin-libvirt v0.5.0
 	github.com/tidwall/gjson v1.20.1
