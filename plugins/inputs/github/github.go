@@ -7,13 +7,11 @@ import (
 	"errors"
 	"fmt"
 	"maps"
-	"net/http"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/google/go-github/v32/github"
-	"golang.org/x/oauth2"
+	"github.com/google/go-github/v93/github"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -47,7 +45,7 @@ func (g *GitHub) Gather(acc telegraf.Accumulator) error {
 	ctx := context.Background()
 
 	if g.githubClient == nil {
-		githubClient, err := g.createGitHubClient(ctx)
+		githubClient, err := g.createGitHubClient()
 		if err != nil {
 			return err
 		}
@@ -112,36 +110,23 @@ func (g *GitHub) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (g *GitHub) createGitHubClient(ctx context.Context) (*github.Client, error) {
-	httpClient := &http.Client{
-		Transport: &http.Transport{
-			Proxy: http.ProxyFromEnvironment,
-		},
-		Timeout: time.Duration(g.HTTPTimeout),
+func (g *GitHub) createGitHubClient() (*github.Client, error) {
+	opts := []github.ClientOptionsFunc{
+		github.WithTimeout(time.Duration(g.HTTPTimeout)),
+		github.WithEnvProxy(),
 	}
 
 	g.obfuscatedToken = "Unauthenticated"
-
 	if g.AccessToken != "" {
-		tokenSource := oauth2.StaticTokenSource(
-			&oauth2.Token{AccessToken: g.AccessToken},
-		)
-		oauthClient := oauth2.NewClient(ctx, tokenSource)
-		_ = context.WithValue(ctx, oauth2.HTTPClient, oauthClient)
-
 		g.obfuscatedToken = g.AccessToken[0:4] + "..." + g.AccessToken[len(g.AccessToken)-3:]
-
-		return g.newGithubClient(oauthClient)
+		opts = append(opts, github.WithAuthToken(g.AccessToken))
 	}
 
-	return g.newGithubClient(httpClient)
-}
-
-func (g *GitHub) newGithubClient(httpClient *http.Client) (*github.Client, error) {
 	if g.EnterpriseBaseURL != "" {
-		return github.NewEnterpriseClient(g.EnterpriseBaseURL, "", httpClient)
+		opts = append(opts, github.WithEnterpriseURLs(g.EnterpriseBaseURL, g.EnterpriseBaseURL))
 	}
-	return github.NewClient(httpClient), nil
+
+	return github.NewClient(opts...)
 }
 
 func (g *GitHub) handleRateLimit(response *github.Response, err error) {
