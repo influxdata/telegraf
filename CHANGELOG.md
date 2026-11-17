@@ -68,6 +68,12 @@
   that relies on sudoers will fail until a doas.conf(5) rule permits the
   same command. `inputs.nsd` and `inputs.unbound` run as `_nsd` and
   `_unbound`.
+- PR [#20144](https://github.com/influxdata/telegraf/pull/20144) fixes tags
+  leaking between the `inputs.mongodb` stats measurements.
+  `mongodb_shard_stats` no longer carries `collection` and `db_name` tags, and
+  `mongodb_top_stats` no longer carries `db_name` and now has the server
+  address as `hostname` instead of a shard host. Please check queries and
+  dashboards using these tags.
 
 ## v1.40.3 [2026-11-02]
 
