@@ -391,6 +391,7 @@ following works:
 - github.com/remyoudompheng/bigfft [BSD 3-Clause "New" or "Revised" License](https://github.com/remyoudompheng/bigfft/blob/master/LICENSE)
 - github.com/rfjakob/eme [MIT License](https://github.com/rfjakob/eme/blob/master/LICENSE)
 - github.com/riemann/riemann-go-client [MIT License](https://github.com/riemann/riemann-go-client/blob/master/LICENSE)
+- github.com/rivo/uniseg [MIT License](https://github.com/rivo/uniseg/blob/master/LICENSE.txt)
 - github.com/robbiet480/go.nut [MIT License](https://github.com/robbiet480/go.nut/blob/master/LICENSE)
 - github.com/robinson/gos7 [BSD 3-Clause "New" or "Revised" License](https://github.com/robinson/gos7/blob/master/LICENSE)
 - github.com/russross/blackfriday [BSD 2-Clause "Simplified" License](https://github.com/russross/blackfriday/blob/master/LICENSE.txt)
