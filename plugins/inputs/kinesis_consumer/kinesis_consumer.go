@@ -32,6 +32,7 @@ type KinesisConsumer struct {
 	DynamoDB               *dynamoDB       `toml:"checkpoint_dynamodb"`
 	MaxUndeliveredMessages int             `toml:"max_undelivered_messages"`
 	ContentEncoding        string          `toml:"content_encoding"`
+	PartitionKeyTag        string          `toml:"partition_key_tag"`
 	Log                    telegraf.Logger `toml:"-"`
 	common_aws.CredentialConfig
 
@@ -209,6 +210,12 @@ func (k *KinesisConsumer) onMessage(acc telegraf.TrackingAccumulator, shard stri
 	metrics, err := k.parser.Parse(data)
 	if err != nil {
 		return err
+	}
+
+	if k.PartitionKeyTag != "" && r.PartitionKey != nil {
+		for _, m := range metrics {
+			m.AddTag(k.PartitionKeyTag, *r.PartitionKey)
+		}
 	}
 
 	if len(metrics) == 0 {
