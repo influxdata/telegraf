@@ -656,6 +656,71 @@ func TestUpdateNodeValue(t *testing.T) {
 				},
 			},
 		},
+		{
+			"localized text should be stored as plain text",
+			[]testStep{
+				{
+					0,
+					&ua.LocalizedText{
+						EncodingMask: ua.LocalizedTextText | ua.LocalizedTextLocale,
+						Text:         "Hello",
+						Locale:       "en-US",
+					},
+					ua.StatusOK,
+					"Hello",
+				},
+			},
+		},
+		{
+			"localized text array should be stored as plain text",
+			[]testStep{
+				{
+					0,
+					[]*ua.LocalizedText{{Text: "a"}, nil, {Text: "b"}},
+					ua.StatusOK,
+					[]string{"a", "", "b"},
+				},
+			},
+		},
+		{
+			"datetime should be stored as formatted text",
+			[]testStep{
+				{
+					0,
+					time.Date(2022, 3, 17, 8, 55, 0, 0, time.UTC),
+					ua.StatusOK,
+					"2022-03-17T08:55:00Z",
+				},
+			},
+		},
+		{
+			"datetime array should be stored as formatted text",
+			[]testStep{
+				{
+					0,
+					[]time.Time{
+						time.Date(2022, 3, 17, 8, 55, 0, 0, time.UTC),
+						time.Date(2022, 3, 17, 8, 56, 0, 0, time.UTC),
+					},
+					ua.StatusOK,
+					[]string{"2022-03-17T08:55:00Z", "2022-03-17T08:56:00Z"},
+				},
+			},
+		},
+		{
+			"datetime array should preserve the timezone",
+			[]testStep{
+				{
+					0,
+					[]time.Time{
+						time.Date(2022, 3, 17, 8, 55, 0, 0, time.FixedZone("EST", -5*3600)),
+						time.Date(2022, 3, 17, 8, 56, 0, 0, time.FixedZone("EST", -5*3600)),
+					},
+					ua.StatusOK,
+					[]string{"2022-03-17T08:55:00-05:00", "2022-03-17T08:56:00-05:00"},
+				},
+			},
+		},
 	}
 
 	conf := &opcua.OpcUAClientConfig{
@@ -671,6 +736,7 @@ func TestUpdateNodeValue(t *testing.T) {
 	require.NoError(t, err)
 	o := OpcUAInputClient{
 		OpcUAClient: c,
+		Config:      InputClientConfig{TimestampFormat: time.RFC3339Nano},
 		Log:         testutil.Logger{},
 		NodeMetricMapping: []NodeMetricMapping{
 			{
@@ -806,64 +872,6 @@ func TestMetricForNode(t *testing.T) {
 				time.Date(2022, 03, 17, 8, 55, 00, 00, &time.Location{})),
 		},
 		{
-			testname: "datetime array metric build correctly",
-			nmm: []NodeMetricMapping{
-				{
-					Tag: NodeSettings{
-						FieldName: "fn",
-					},
-					idStr:      "ns=3;s=hi",
-					metricName: "testingmetric",
-					MetricTags: map[string]string{"t1": "v1"},
-				},
-			},
-			v: []time.Time{
-				time.Date(2022, 3, 17, 8, 55, 0, 0, time.UTC),
-				time.Date(2022, 3, 17, 8, 56, 0, 0, time.UTC),
-			},
-			isArray:  true,
-			dataType: ua.TypeIDDateTime,
-			time:     time.Date(2022, 3, 17, 8, 55, 0, 0, &time.Location{}),
-			status:   ua.StatusOK,
-			expected: metric.New("testingmetric",
-				map[string]string{"t1": "v1", "id": "ns=3;s=hi"},
-				map[string]any{
-					"Quality": "The operation succeeded. StatusGood (0x0)",
-					"fn[0]":   "2022-03-17T08:55:00Z",
-					"fn[1]":   "2022-03-17T08:56:00Z",
-				},
-				time.Date(2022, 3, 17, 8, 55, 0, 0, &time.Location{})),
-		},
-		{
-			testname: "datetime array preserves timezone",
-			nmm: []NodeMetricMapping{
-				{
-					Tag: NodeSettings{
-						FieldName: "fn",
-					},
-					idStr:      "ns=3;s=hi",
-					metricName: "testingmetric",
-					MetricTags: map[string]string{"t1": "v1"},
-				},
-			},
-			v: []time.Time{
-				time.Date(2022, 3, 17, 8, 55, 0, 0, time.FixedZone("EST", -5*3600)),
-				time.Date(2022, 3, 17, 8, 56, 0, 0, time.FixedZone("EST", -5*3600)),
-			},
-			isArray:  true,
-			dataType: ua.TypeIDDateTime,
-			time:     time.Date(2022, 3, 17, 8, 55, 0, 0, &time.Location{}),
-			status:   ua.StatusOK,
-			expected: metric.New("testingmetric",
-				map[string]string{"t1": "v1", "id": "ns=3;s=hi"},
-				map[string]any{
-					"Quality": "The operation succeeded. StatusGood (0x0)",
-					"fn[0]":   "2022-03-17T08:55:00-05:00",
-					"fn[1]":   "2022-03-17T08:56:00-05:00",
-				},
-				time.Date(2022, 3, 17, 8, 55, 0, 0, &time.Location{})),
-		},
-		{
 			testname: "nil does not panic",
 			nmm: []NodeMetricMapping{
 				{
@@ -899,6 +907,80 @@ func TestMetricForNode(t *testing.T) {
 			require.Equal(t, tt.expected.Tags(), actual.Tags())
 			require.Equal(t, tt.expected.Fields(), actual.Fields())
 			require.Equal(t, tt.expected.Time(), actual.Time())
+		})
+	}
+}
+
+func TestMetricForNodeLocalizedText(t *testing.T) {
+	conf := &opcua.OpcUAClientConfig{
+		Endpoint:       "opc.tcp://localhost:4930",
+		SecurityPolicy: "None",
+		SecurityMode:   "None",
+		AuthMethod:     "",
+		ConnectTimeout: config.Duration(2 * time.Second),
+		RequestTimeout: config.Duration(2 * time.Second),
+		Workarounds:    opcua.OpcUAWorkarounds{},
+	}
+	c, err := conf.CreateClient(testutil.Logger{})
+	require.NoError(t, err)
+
+	ts := time.Date(2022, 03, 17, 8, 55, 00, 00, &time.Location{})
+	tests := []struct {
+		testname string
+		value    any
+		expected map[string]any
+	}{
+		{
+			testname: "scalar",
+			value:    &ua.LocalizedText{EncodingMask: ua.LocalizedTextText, Text: "Hello"},
+			expected: map[string]any{
+				"Quality": "The operation succeeded. StatusGood (0x0)",
+				"fn":      "Hello",
+			},
+		},
+		{
+			testname: "array",
+			value:    []*ua.LocalizedText{{Text: "a"}, {Text: "b"}},
+			expected: map[string]any{
+				"Quality": "The operation succeeded. StatusGood (0x0)",
+				"fn[0]":   "a",
+				"fn[1]":   "b",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.testname, func(t *testing.T) {
+			o := OpcUAInputClient{
+				Config: InputClientConfig{
+					Timestamp:       TimestampSourceSource,
+					TimestampFormat: time.RFC3339Nano,
+				},
+				OpcUAClient: c,
+				Log:         testutil.Logger{},
+				NodeMetricMapping: []NodeMetricMapping{
+					{
+						Tag:        NodeSettings{FieldName: "fn"},
+						idStr:      "ns=3;s=hi",
+						metricName: "testingmetric",
+						MetricTags: map[string]string{"t1": "v1"},
+					},
+				},
+				LastReceivedData: make([]NodeValue, 1),
+			}
+
+			v, err := ua.NewVariant(tt.value)
+			require.NoError(t, err)
+			o.UpdateNodeValue(0, &ua.DataValue{
+				Value:           v,
+				Status:          ua.StatusOK,
+				SourceTimestamp: ts,
+			})
+
+			actual := o.MetricForNode(0)
+			require.Equal(t, map[string]string{"t1": "v1", "id": "ns=3;s=hi"}, actual.Tags())
+			require.Equal(t, tt.expected, actual.Fields())
+			require.Equal(t, ts, actual.Time())
 		})
 	}
 }

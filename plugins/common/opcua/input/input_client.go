@@ -658,19 +658,42 @@ func (o *OpcUAInputClient) UpdateNodeValue(nodeIdx int, d *ua.DataValue) {
 		return
 	}
 
-	if d.Value != nil {
-		o.LastReceivedData[nodeIdx].DataType = d.Value.Type()
-		o.LastReceivedData[nodeIdx].IsArray = d.Value.Has(ua.VariantArrayValues)
-
-		o.LastReceivedData[nodeIdx].Value = d.Value.Value()
-		if o.LastReceivedData[nodeIdx].DataType == ua.TypeIDDateTime {
-			if t, ok := d.Value.Value().(time.Time); ok {
-				o.LastReceivedData[nodeIdx].Value = t.Format(o.Config.TimestampFormat)
-			}
-		}
-	}
 	o.LastReceivedData[nodeIdx].ServerTime = d.ServerTimestamp
 	o.LastReceivedData[nodeIdx].SourceTime = d.SourceTimestamp
+
+	if d.Value == nil {
+		return
+	}
+	o.LastReceivedData[nodeIdx].DataType = d.Value.Type()
+	o.LastReceivedData[nodeIdx].IsArray = d.Value.Has(ua.VariantArrayValues)
+
+	// Handle special value types such as localized text or date-times
+	switch raw := d.Value.Value().(type) {
+	case time.Time:
+		o.LastReceivedData[nodeIdx].Value = raw.Format(o.Config.TimestampFormat)
+	case []time.Time:
+		strs := make([]string, len(raw))
+		for i, v := range raw {
+			strs[i] = v.Format(o.Config.TimestampFormat)
+		}
+		o.LastReceivedData[nodeIdx].Value = strs
+	case *ua.LocalizedText:
+		var v string
+		if raw != nil {
+			v = raw.Text
+		}
+		o.LastReceivedData[nodeIdx].Value = v
+	case []*ua.LocalizedText:
+		strs := make([]string, len(raw))
+		for i, v := range raw {
+			if v != nil {
+				strs[i] = v.Text
+			}
+		}
+		o.LastReceivedData[nodeIdx].Value = strs
+	default:
+		o.LastReceivedData[nodeIdx].Value = raw
+	}
 }
 
 func (o *OpcUAInputClient) MetricForNode(nodeIdx int) telegraf.Metric {
@@ -713,12 +736,6 @@ func (o *OpcUAInputClient) MetricForNode(nodeIdx int) telegraf.Metric {
 				fields = unpack(nmm.Tag.FieldName, typedValue)
 			case []bool:
 				fields = unpack(nmm.Tag.FieldName, typedValue)
-			case []time.Time:
-				strs := make([]string, len(typedValue))
-				for i, t := range typedValue {
-					strs[i] = t.Format(o.Config.TimestampFormat)
-				}
-				fields = unpack(nmm.Tag.FieldName, strs)
 			default:
 				o.Log.Errorf("could not unpack variant array of type: %T", typedValue)
 			}
