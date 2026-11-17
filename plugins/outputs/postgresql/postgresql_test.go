@@ -535,7 +535,11 @@ func TestWriteIntegration_sequentialPermError(t *testing.T) {
 		newMetric(t, "_a", MSS{}, MSI{"v": "a"}),
 		newMetric(t, "_b", MSS{}, MSI{"v": 3}),
 	}
-	require.NoError(t, p.Write(metrics))
+	err = p.Write(metrics)
+	var writeErr *internal.PartialWriteError
+	require.ErrorAs(t, err, &writeErr)
+	require.ElementsMatch(t, []int{1}, writeErr.MetricsAccept)
+	require.ElementsMatch(t, []int{0}, writeErr.MetricsReject)
 
 	dumpA := dbTableDump(t, p.db, "_a")
 	dumpB := dbTableDump(t, p.db, "_b")
@@ -552,7 +556,38 @@ func TestWriteIntegration_sequentialPermError(t *testing.T) {
 	require.True(t, haveError, "write error not found in log")
 }
 
-// Test that in a bach with only 1 sub-batch, that we don't return an error.
+func TestWriteIntegration_sequentialPermErrorBatchIndices(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	p, err := newPostgresqlTest(t)
+	require.NoError(t, err)
+	require.NoError(t, p.Connect())
+
+	metrics := []telegraf.Metric{
+		newMetric(t, "_a", MSS{}, MSI{"v": 1}),
+		newMetric(t, "_b", MSS{}, MSI{"v": 1}),
+	}
+	require.NoError(t, p.Write(metrics))
+
+	metrics = []telegraf.Metric{
+		newMetric(t, "_a", MSS{}, MSI{"v": "x"}),
+		newMetric(t, "_b", MSS{}, MSI{"v": 2}),
+		newMetric(t, "_a", MSS{}, MSI{"v": "x"}),
+		newMetric(t, "_b", MSS{}, MSI{"v": 3}),
+	}
+	err = p.Write(metrics)
+	var writeErr *internal.PartialWriteError
+	require.ErrorAs(t, err, &writeErr)
+	require.ElementsMatch(t, []int{1, 3}, writeErr.MetricsAccept)
+	require.ElementsMatch(t, []int{0, 2}, writeErr.MetricsReject)
+
+	require.Len(t, dbTableDump(t, p.db, "_a"), 1)
+	require.Len(t, dbTableDump(t, p.db, "_b"), 3)
+}
+
+// Test that a permanent error in a single sub-batch rejects the whole batch.
 func TestWriteIntegration_sequentialSinglePermError(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -570,7 +605,11 @@ func TestWriteIntegration_sequentialSinglePermError(t *testing.T) {
 	metrics = []telegraf.Metric{
 		newMetric(t, "", MSS{}, MSI{"v": "a"}),
 	}
-	require.NoError(t, p.Write(metrics))
+	err = p.Write(metrics)
+	var writeErr *internal.PartialWriteError
+	require.ErrorAs(t, err, &writeErr)
+	require.Empty(t, writeErr.MetricsAccept)
+	require.ElementsMatch(t, []int{0}, writeErr.MetricsReject)
 }
 
 // Test that a column added in a dropped sub-batch is added again by the next write.
@@ -594,7 +633,11 @@ func TestWriteIntegration_sequentialPermErrorAddColumn(t *testing.T) {
 		newMetric(t, "_a", MSS{}, MSI{"v": "a", "g": 1}),
 		newMetric(t, "_b", MSS{}, MSI{"v": 2}),
 	}
-	require.NoError(t, p.Write(metrics))
+	err = p.Write(metrics)
+	var writeErr *internal.PartialWriteError
+	require.ErrorAs(t, err, &writeErr)
+	require.ElementsMatch(t, []int{1}, writeErr.MetricsAccept)
+	require.ElementsMatch(t, []int{0}, writeErr.MetricsReject)
 
 	metrics = []telegraf.Metric{
 		newMetric(t, "_a", MSS{}, MSI{"v": 3, "g": 1}),
@@ -627,7 +670,11 @@ func TestWriteIntegration_sequentialSinglePermErrorAddColumn(t *testing.T) {
 	metrics = []telegraf.Metric{
 		newMetric(t, "", MSS{}, MSI{"v": "a", "g": 1}),
 	}
-	require.NoError(t, p.Write(metrics))
+	err = p.Write(metrics)
+	var writeErr *internal.PartialWriteError
+	require.ErrorAs(t, err, &writeErr)
+	require.Empty(t, writeErr.MetricsAccept)
+	require.ElementsMatch(t, []int{0}, writeErr.MetricsReject)
 
 	metrics = []telegraf.Metric{
 		newMetric(t, "", MSS{}, MSI{"v": 3, "g": 1}),
@@ -663,7 +710,11 @@ func TestWriteIntegration_sequentialPermErrorTagCache(t *testing.T) {
 		newMetric(t, "_a", MSS{"tag": "bar"}, MSI{"v": "a"}),
 		newMetric(t, "_b", MSS{"tag": "foo"}, MSI{"v": 2}),
 	}
-	require.NoError(t, p.Write(metrics))
+	err = p.Write(metrics)
+	var writeErr *internal.PartialWriteError
+	require.ErrorAs(t, err, &writeErr)
+	require.ElementsMatch(t, []int{1}, writeErr.MetricsAccept)
+	require.ElementsMatch(t, []int{0}, writeErr.MetricsReject)
 
 	metrics = []telegraf.Metric{
 		newMetric(t, "_a", MSS{"tag": "bar"}, MSI{"v": 3}),
@@ -1071,7 +1122,11 @@ func TestWriteIntegration_tagError_foreignConstraint(t *testing.T) {
 	metrics = []telegraf.Metric{
 		newMetric(t, "", MSS{"tag": "bar"}, MSI{"v": 2}),
 	}
-	require.NoError(t, p.Write(metrics))
+	err = p.Write(metrics)
+	var writeErr *internal.PartialWriteError
+	require.ErrorAs(t, err, &writeErr)
+	require.Empty(t, writeErr.MetricsAccept)
+	require.ElementsMatch(t, []int{0}, writeErr.MetricsReject)
 	haveError := false
 	for _, l := range p.Logger.Logs() {
 		if strings.Contains(l.String(), "write error") {
