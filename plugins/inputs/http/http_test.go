@@ -53,11 +53,21 @@ func TestHTTPWithPrometheusWithoutFinalNewline(t *testing.T) {
 
 	var acc testutil.Accumulator
 	require.NoError(t, acc.GatherError(plugin.Gather))
-	require.Len(t, acc.Metrics, 2)
-	acc.AssertContainsTaggedFields(t, "xtars_dependency_state", map[string]any{"gauge": float64(1)},
-		map[string]string{"dependency": "postgresql", "state": "up", "url": server.URL})
-	acc.AssertContainsTaggedFields(t, "xtars_reachability_worker_utilization_ratio", map[string]any{"gauge": float64(0)},
-		map[string]string{"url": server.URL})
+	expected := []telegraf.Metric{
+		metric.New(
+			"xtars_dependency_state",
+			map[string]string{"dependency": "postgresql", "state": "up", "url": server.URL},
+			map[string]any{"gauge": float64(1)},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"xtars_reachability_worker_utilization_ratio",
+			map[string]string{"url": server.URL},
+			map[string]any{"gauge": float64(0)},
+			time.Unix(0, 0),
+		),
+	}
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime(), testutil.SortMetrics())
 }
 
 func TestHTTPWithJSONFormat(t *testing.T) {
