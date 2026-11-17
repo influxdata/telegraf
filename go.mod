@@ -112,7 +112,7 @@ require (
 	github.com/google/cel-go v0.31.0
 	github.com/google/gnxi v0.0.0-20231026134436-d82d9936af15
 	github.com/google/go-cmp v0.7.0
-	github.com/google/go-github/v32 v32.1.0
+	github.com/google/go-github/v93 v93.0.0
 	github.com/google/licensecheck v0.3.1
 	github.com/google/uuid v1.6.0
 	github.com/gopacket/gopacket v1.7.7
@@ -604,7 +604,6 @@ require (
 	go.uber.org/zap v1.28.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.6 // indirect
-	golang.org/x/crypto/openpgp v0.1.0-deprecated // indirect
 	golang.org/x/exp/typeparams v0.0.0-20260811152304-ee035b5b010f // indirect
 	golang.org/x/telemetry v0.0.0-20261009151841-97e8ea77aa2a // indirect
 	golang.org/x/time v0.16.0 // indirect
