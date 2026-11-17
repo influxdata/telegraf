@@ -206,7 +206,7 @@ require (
 	github.com/sleepinggenius2/gosmi v0.4.4
 	github.com/snowflakedb/gosnowflake/v2 v2.3.0
 	github.com/srebhan/cborquery v1.0.5
-	github.com/srebhan/protobufquery v1.0.4
+	github.com/srebhan/protobufquery v1.0.5
 	github.com/stretchr/testify v1.12.1
 	github.com/tbrandon/mbserver v0.0.0-20170611213546-993e1772cc62
 	github.com/tdrn-org/go-fritzsmarthome v0.1.1
