@@ -11,7 +11,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -239,31 +238,41 @@ func TestListenMulticastOwnGroupOnly(t *testing.T) {
 	// Both listeners need the same port
 	reserve, err := net.ListenUDP("udp4", &net.UDPAddr{IP: net.IPv4zero})
 	require.NoError(t, err)
-	port := strconv.Itoa(reserve.LocalAddr().(*net.UDPAddr).Port)
+	port := reserve.LocalAddr().(*net.UDPAddr).Port
 	require.NoError(t, reserve.Close())
 
-	var received [2]atomic.Int32
-	for i, group := range []string{"239.255.0.1", "239.255.0.2"} {
+	groups := []string{"239.255.0.1", "239.255.0.2"}
+	received := [2]chan string{make(chan string, 2), make(chan string, 2)}
+	for i, group := range groups {
 		cfg := &Config{}
-		sock, err := cfg.NewSocket("udp4://"+group+":"+port, &SplitConfig{}, &testutil.Logger{})
+		sock, err := cfg.NewSocket("udp4://"+group+":"+strconv.Itoa(port), &SplitConfig{}, &testutil.Logger{})
 		require.NoError(t, err)
 		require.NoError(t, sock.Setup())
 		sock.Listen(
-			func(net.Addr, []byte, time.Time) { received[i].Add(1) },
+			func(_ net.Addr, data []byte, _ time.Time) { received[i] <- string(data) },
 			func(err error) { t.Error(err) },
 		)
 		t.Cleanup(sock.Close)
 	}
 
-	client, err := net.Dial("udp4", "239.255.0.1:"+port)
+	// Packets from one socket arrive in order, so a packet leaked from the
+	// first group reaches the second listener before its own packet does.
+	client, err := net.ListenUDP("udp4", nil)
 	require.NoError(t, err)
 	defer client.Close()
-	_, err = client.Write([]byte("test v=1i\n"))
-	require.NoError(t, err)
+	for _, group := range groups {
+		_, err = client.WriteToUDP([]byte(group), &net.UDPAddr{IP: net.ParseIP(group), Port: port})
+		require.NoError(t, err)
+	}
 
-	require.Eventually(t, func() bool { return received[0].Load() == 1 }, time.Second, 10*time.Millisecond)
-	time.Sleep(100 * time.Millisecond)
-	require.Zero(t, received[1].Load(), "listener of the other group received the packet")
+	for i, group := range groups {
+		select {
+		case data := <-received[i]:
+			require.Equal(t, group, data, "listener %d received a packet of another group", i)
+		case <-time.After(time.Second):
+			require.Failf(t, "no packet", "listener %d received nothing", i)
+		}
+	}
 }
 
 func TestListenConnection(t *testing.T) {
