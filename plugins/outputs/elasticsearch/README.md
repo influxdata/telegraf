@@ -265,6 +265,11 @@ to use them.
   enable_sniffer = false
   ## Set to true to enable gzip compression
   enable_gzip = false
+  ## Set the interval to check if the Elasticsearch nodes are available
+  ## Setting to "0s" will disable the health check (not recommended in production)
+  health_check_interval = "10s"
+  ## Set the timeout for periodic health checks.
+  # health_check_timeout = "1s"
   ## HTTP basic authentication details.
   ## HTTP basic authentication details
   # username = "telegraf"
@@ -385,6 +390,9 @@ the `default_tag_value` will be used instead.
   discovery; the plugin logs a warning and ignores this option.
   The v6 client selects nodes with both the `data` and `ingest` roles. The v7
   client excludes dedicated master nodes.
+* `health_check_interval`: Set the interval to check if the nodes are available,
+  in seconds. Setting to 0 will disable the health check (not recommended in
+  production).
 * `username`: The username for HTTP basic authentication details (eg. when using
   Shield).
 * `password`: The password for HTTP basic authentication details (eg. when using

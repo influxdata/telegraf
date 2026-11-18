@@ -44,8 +44,8 @@ type Elasticsearch struct {
 	FloatHandling       string          `toml:"float_handling"`
 	FloatReplacement    float64         `toml:"float_replacement_value"`
 	ForceDocumentID     bool            `toml:"force_document_id"`
-	HealthCheckInterval config.Duration `toml:"health_check_interval" deprecated:"1.41.0;option is ignored"`
-	HealthCheckTimeout  config.Duration `toml:"health_check_timeout" deprecated:"1.41.0;option is ignored, use 'timeout' instead"`
+	HealthCheckInterval config.Duration `toml:"health_check_interval"`
+	HealthCheckTimeout  config.Duration `toml:"health_check_timeout"`
 	IndexName           string          `toml:"index_name"`
 	IndexTemplate       map[string]any  `toml:"template_index_settings"`
 	LocalAddress        string          `toml:"local_address"`
@@ -389,7 +389,9 @@ func getISOWeek(eventTime time.Time) string {
 func init() {
 	outputs.Add("elasticsearch", func() telegraf.Output {
 		return &Elasticsearch{
-			Timeout: config.Duration(time.Second * 5),
+			Timeout:             config.Duration(time.Second * 5),
+			HealthCheckInterval: config.Duration(time.Second * 10),
+			HealthCheckTimeout:  config.Duration(time.Second * 1),
 		}
 	})
 }
