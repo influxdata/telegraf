@@ -135,6 +135,9 @@ func (z *Zookeeper) gatherServer(ctx context.Context, address string, acc telegr
 		// Finally, save as a string
 		fields[measurement] = sValue
 	}
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("reading mntr response failed: %w", err)
+	}
 
 	srv := "localhost"
 	if service[0] != "" {

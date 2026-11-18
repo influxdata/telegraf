@@ -1,7 +1,9 @@
 package zookeeper
 
 import (
+	"bufio"
 	"fmt"
+	"net"
 	"testing"
 	"time"
 
@@ -23,6 +25,42 @@ func TestInit(t *testing.T) {
 	require.Equal(t, config.Duration(5*time.Second), plugin.Timeout)
 
 	require.Nil(t, plugin.tlsConfig)
+}
+
+func TestGatherIncompleteResponse(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer listener.Close()
+
+	// Answer the request with the first lines of a response and stall
+	// afterwards to make the plugin run into its timeout
+	done := make(chan struct{})
+	defer close(done)
+	go func() {
+		conn, err := listener.Accept()
+		if err != nil {
+			return
+		}
+		defer conn.Close()
+
+		if _, err := bufio.NewReader(conn).ReadString('\n'); err != nil {
+			return
+		}
+		if _, err := conn.Write([]byte("zk_version\t3.9.3\nzk_avg_latency\t0\n")); err != nil {
+			return
+		}
+		<-done
+	}()
+
+	plugin := &Zookeeper{
+		Servers: []string{listener.Addr().String()},
+		Timeout: config.Duration(time.Second),
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.ErrorContains(t, acc.GatherError(plugin.Gather), "reading mntr response failed")
+	require.Empty(t, acc.GetTelegrafMetrics())
 }
 
 func TestZookeeperGeneratesMetricsIntegration(t *testing.T) {
