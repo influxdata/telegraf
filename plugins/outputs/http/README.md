@@ -20,8 +20,8 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Secret store support
 
-This plugin supports secrets from secret stores for the `username`, `password`
-`headers`, and `cookie_auth_headers` option.
+This plugin supports secrets from secret stores for the `username`, `password`,
+`headers`, `cookie_auth_headers`, `client_id`, and `client_secret` options.
 See the [secret store documentation][SECRETSTORE] for more details on how
 to use them.
 

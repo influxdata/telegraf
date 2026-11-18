@@ -502,8 +502,8 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 			name: "success",
 			plugin: &HTTP{
 				URL:          u.String() + "/write",
-				ClientID:     "howdy",
-				ClientSecret: "secret",
+				ClientID:     config.NewSecret([]byte("howdy")),
+				ClientSecret: config.NewSecret([]byte("secret")),
 				TokenURL:     u.String() + "/token",
 				Scopes:       []string{"urn:opc:idm:__myscopes__"},
 			},
@@ -525,8 +525,8 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 			name: "audience",
 			plugin: &HTTP{
 				URL:          u.String() + "/write",
-				ClientID:     "howdy",
-				ClientSecret: "secret",
+				ClientID:     config.NewSecret([]byte("howdy")),
+				ClientSecret: config.NewSecret([]byte("secret")),
 				TokenURL:     u.String() + "/token",
 				Scopes:       []string{"urn:opc:idm:__myscopes__"},
 				Audience:     "audience",

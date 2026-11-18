@@ -87,7 +87,10 @@ func (h *HTTPClientConfig) CreateClient(ctx context.Context, log telegraf.Logger
 
 	// While CreateOauth2Client returns a http.Client keeping the Transport configuration,
 	// it does not keep other http.Client parameters (e.g. Timeout).
-	client = h.OAuth2Config.CreateOauth2Client(ctx, client)
+	client, err = h.OAuth2Config.CreateOauth2Client(ctx, client)
+	if err != nil {
+		return nil, fmt.Errorf("creating OAuth2 client failed: %w", err)
+	}
 
 	if h.CookieAuthConfig.URL != "" {
 		if err := h.CookieAuthConfig.Start(client, log, clock.New()); err != nil {
