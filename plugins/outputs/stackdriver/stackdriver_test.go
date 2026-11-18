@@ -233,7 +233,6 @@ func TestWriteMetricTypesOfficial(t *testing.T) {
 				"+Inf":  1.0,
 			},
 			time.Unix(3, 0),
-			telegraf.Histogram,
 		),
 	}
 	require.NoError(t, plugin.Write(input))
