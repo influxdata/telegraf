@@ -325,6 +325,14 @@ func TestWrite(t *testing.T) {
 		}
 		`,
 	}
+	msgBulkV7 := []string{
+		`{"index":{"_index":"test-2009.11.10"}}`,
+		msgBulk[1],
+	}
+	gzipHeaders := map[string][]string{
+		"Content-Encoding": {"gzip"},
+		"Accept-Encoding":  {"gzip"},
+	}
 
 	tests := []struct {
 		version         string
@@ -353,13 +361,10 @@ func TestWrite(t *testing.T) {
 			expected: msgBulk,
 		},
 		{
-			name:    "Elasticsearch v7",
-			version: "7.17.29",
-			value:   1,
-			expected: []string{
-				`{"index":{"_index":"test-2009.11.10"}}`,
-				msgBulk[1],
-			},
+			name:     "Elasticsearch v7",
+			version:  "7.17.29",
+			value:    1,
+			expected: msgBulkV7,
 		},
 		{
 			name:          "float handling drop NaN",
@@ -526,14 +531,28 @@ func TestWrite(t *testing.T) {
 			},
 		},
 		{
-			name:       "gzip enabled",
-			value:      1,
-			enableGzip: true,
-			expected:   msgBulk,
-			expectedHeaders: map[string][]string{
-				"Content-Encoding": {"gzip"},
-				"Accept-Encoding":  {"gzip"},
-			},
+			name:            "gzip enabled Elasticsearch v5",
+			version:         "5.6.16",
+			value:           1,
+			enableGzip:      true,
+			expected:        msgBulk,
+			expectedHeaders: gzipHeaders,
+		},
+		{
+			name:            "gzip enabled Elasticsearch v6",
+			version:         "6.8.23",
+			value:           1,
+			enableGzip:      true,
+			expected:        msgBulk,
+			expectedHeaders: gzipHeaders,
+		},
+		{
+			name:            "gzip enabled Elasticsearch v7",
+			version:         "7.17.29",
+			value:           1,
+			enableGzip:      true,
+			expected:        msgBulkV7,
+			expectedHeaders: gzipHeaders,
 		},
 		{
 			name:            "auth bearer token",

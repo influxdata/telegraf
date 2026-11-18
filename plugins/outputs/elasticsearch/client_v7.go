@@ -31,8 +31,9 @@ func (a *Elasticsearch) newClientV7() (client, error) {
 		Addresses: a.URLs,
 		Transport: transport,
 		// Telegraf owns write retries; replaying a bulk request can duplicate documents.
-		DisableRetry:       true,
-		ConnectionPoolFunc: preserveConnectionPool(estransport7.NewConnectionPool),
+		DisableRetry:        true,
+		CompressRequestBody: a.EnableGzip,
+		ConnectionPoolFunc:  preserveConnectionPool(estransport7.NewConnectionPool),
 	})
 	if err != nil {
 		return nil, err

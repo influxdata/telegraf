@@ -1,22 +1,24 @@
 package elasticsearch
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
 	"sync"
 
 	elasticsearch6 "github.com/elastic/go-elasticsearch/v6"
 	estransport6 "github.com/elastic/go-elasticsearch/v6/estransport"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 )
 
 type clientV6 struct {
 	client          *elasticsearch6.Client
 	log             telegraf.Logger
+	encoder         *internal.GzipEncoder
 	cancelDiscovery context.CancelFunc
 	discoveryWG     sync.WaitGroup
 }
@@ -37,6 +39,13 @@ func (a *Elasticsearch) newClientV6() (client, error) {
 		return nil, err
 	}
 	client := &clientV6{client: c, log: a.Log}
+	if a.EnableGzip {
+		encoder, err := internal.NewGzipEncoder()
+		if err != nil {
+			return nil, fmt.Errorf("setting up gzip encoder failed: %w", err)
+		}
+		client.encoder = encoder
+	}
 	if a.EnableSniffer {
 		// The v6 client exposes only DiscoverNodes(), so in-flight calls cannot be canceled.
 		ctx, cancel := context.WithCancel(context.Background())
@@ -55,12 +64,31 @@ func (c *clientV6) close() {
 	}
 }
 
+func (c *clientV6) compressRequestBodyIfEnabled(body []byte) (*bytes.Reader, map[string]string, error) {
+	if c.encoder == nil {
+		return bytes.NewReader(body), nil, nil
+	}
+	data, err := c.encoder.Encode(body)
+	if err != nil {
+		return nil, nil, err
+	}
+	return bytes.NewReader(data), map[string]string{"Content-Encoding": "gzip"}, nil
+}
+
 func (c *clientV6) bulk(ctx context.Context, documents []document) error {
 	body, err := encodeBulk(documents, "metrics")
 	if err != nil {
 		return fmt.Errorf("error sending bulk request to Elasticsearch: %w", err)
 	}
-	res, err := c.client.Bulk(body, c.client.Bulk.WithContext(ctx))
+	requestBody, headers, err := c.compressRequestBodyIfEnabled(body.Bytes())
+	if err != nil {
+		return fmt.Errorf("error sending bulk request to Elasticsearch: %w", err)
+	}
+	res, err := c.client.Bulk(
+		requestBody,
+		c.client.Bulk.WithContext(ctx),
+		c.client.Bulk.WithHeader(headers),
+	)
 	if err != nil {
 		return fmt.Errorf("error sending bulk request to Elasticsearch: %w", err)
 	}
@@ -84,7 +112,16 @@ func (c *clientV6) templateExists(ctx context.Context, name string) (bool, error
 }
 
 func (c *clientV6) putTemplate(ctx context.Context, name, body string) error {
-	res, err := c.client.Indices.PutTemplate(name, strings.NewReader(body), c.client.Indices.PutTemplate.WithContext(ctx))
+	requestBody, headers, err := c.compressRequestBodyIfEnabled([]byte(body))
+	if err != nil {
+		return err
+	}
+	res, err := c.client.Indices.PutTemplate(
+		name,
+		requestBody,
+		c.client.Indices.PutTemplate.WithContext(ctx),
+		c.client.Indices.PutTemplate.WithHeader(headers),
+	)
 	if err != nil {
 		return err
 	}

@@ -2,7 +2,6 @@ package elasticsearch
 
 import (
 	"bytes"
-	"compress/gzip"
 	"context"
 	"encoding/json"
 	"errors"
@@ -20,7 +19,7 @@ import (
 	"github.com/influxdata/telegraf/config"
 )
 
-// roundTripper applies per-request authentication, headers, and compression through the configured HTTP client.
+// roundTripper applies per-request authentication and headers through the configured HTTP client.
 type roundTripper struct {
 	basicAuth          bool
 	userinfo           *url.Userinfo
@@ -28,7 +27,6 @@ type roundTripper struct {
 	password           config.Secret
 	bearerToken        config.Secret
 	headers            http.Header
-	enableGzip         bool
 	httpClient         *http.Client
 	bypassProductCheck bool
 }
@@ -36,7 +34,6 @@ type roundTripper struct {
 func (a *Elasticsearch) newRoundTripper() (roundTripper, error) {
 	transport := roundTripper{
 		headers:     a.httpHeaders,
-		enableGzip:  a.EnableGzip,
 		httpClient:  a.httpClient,
 		bearerToken: a.AuthBearerToken,
 	}
@@ -81,27 +78,6 @@ func (t roundTripper) RoundTrip(original *http.Request) (*http.Response, error) 
 				req.Header.Add(name, value)
 			}
 		}
-	}
-	if t.enableGzip && req.Body != nil && req.Body != http.NoBody {
-		var compressed bytes.Buffer
-		writer := gzip.NewWriter(&compressed)
-		_, err := io.Copy(writer, req.Body)
-		req.Body.Close()
-		if err != nil {
-			writer.Close()
-			return nil, err
-		}
-		if err := writer.Close(); err != nil {
-			return nil, err
-		}
-		data := compressed.Bytes()
-		req.Body = io.NopCloser(bytes.NewReader(data))
-		req.GetBody = func() (io.ReadCloser, error) {
-			return io.NopCloser(bytes.NewReader(data)), nil
-		}
-		req.ContentLength = int64(compressed.Len())
-		req.Header.Set("Content-Encoding", "gzip")
-		req.Header.Add("Vary", "Accept-Encoding")
 	}
 	res, err := t.httpClient.Do(req)
 	if err == nil && t.bypassProductCheck {
