@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	elasticsearch5 "github.com/elastic/go-elasticsearch/v5"
+	esapi5 "github.com/elastic/go-elasticsearch/v5/esapi"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -17,6 +18,7 @@ type clientV5 struct {
 	client  *elasticsearch5.Client
 	log     telegraf.Logger
 	encoder *internal.GzipEncoder
+	headers http.Header
 }
 
 func (a *Elasticsearch) newClientV5() (client, error) {
@@ -31,7 +33,7 @@ func (a *Elasticsearch) newClientV5() (client, error) {
 	if err != nil {
 		return nil, err
 	}
-	client := &clientV5{client: c, log: a.Log}
+	client := &clientV5{client: c, log: a.Log, headers: a.clientHeaders()}
 	if a.EnableGzip {
 		encoder, err := internal.NewGzipEncoder()
 		if err != nil {
@@ -55,6 +57,19 @@ func (c *clientV5) compressRequestBodyIfEnabled(body []byte) (*bytes.Reader, map
 	return bytes.NewReader(data), map[string]string{"Content-Encoding": "gzip"}, nil
 }
 
+func (c *clientV5) requestHeaders(additional map[string]string) http.Header {
+	headers := make(http.Header, len(c.headers)+len(additional))
+	for name, value := range additional {
+		headers.Add(name, value)
+	}
+	for name, values := range c.headers {
+		for _, value := range values {
+			headers.Add(name, value)
+		}
+	}
+	return headers
+}
+
 func (c *clientV5) bulk(ctx context.Context, documents []document) error {
 	body, err := encodeBulk(documents, "metrics")
 	if err != nil {
@@ -64,11 +79,8 @@ func (c *clientV5) bulk(ctx context.Context, documents []document) error {
 	if err != nil {
 		return fmt.Errorf("error sending bulk request to Elasticsearch: %w", err)
 	}
-	res, err := c.client.Bulk(
-		requestBody,
-		c.client.Bulk.WithContext(ctx),
-		c.client.Bulk.WithHeader(headers),
-	)
+	request := esapi5.BulkRequest{Body: requestBody, Header: c.requestHeaders(headers)}
+	res, err := request.Do(ctx, c.client)
 	if err != nil {
 		return fmt.Errorf("error sending bulk request to Elasticsearch: %w", err)
 	}
@@ -77,7 +89,8 @@ func (c *clientV5) bulk(ctx context.Context, documents []document) error {
 }
 
 func (c *clientV5) templateExists(ctx context.Context, name string) (bool, error) {
-	res, err := c.client.Indices.ExistsTemplate([]string{name}, c.client.Indices.ExistsTemplate.WithContext(ctx))
+	request := esapi5.IndicesExistsTemplateRequest{Name: []string{name}, Header: c.requestHeaders(nil)}
+	res, err := request.Do(ctx, c.client)
 	if err != nil {
 		return false, err
 	}
@@ -96,12 +109,8 @@ func (c *clientV5) putTemplate(ctx context.Context, name, body string) error {
 	if err != nil {
 		return err
 	}
-	res, err := c.client.Indices.PutTemplate(
-		name,
-		requestBody,
-		c.client.Indices.PutTemplate.WithContext(ctx),
-		c.client.Indices.PutTemplate.WithHeader(headers),
-	)
+	request := esapi5.IndicesPutTemplateRequest{Name: name, Body: requestBody, Header: c.requestHeaders(headers)}
+	res, err := request.Do(ctx, c.client)
 	if err != nil {
 		return err
 	}

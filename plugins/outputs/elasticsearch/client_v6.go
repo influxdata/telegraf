@@ -30,6 +30,7 @@ func (a *Elasticsearch) newClientV6() (client, error) {
 	}
 	c, err := elasticsearch6.NewClient(elasticsearch6.Config{
 		Addresses: a.URLs,
+		Header:    a.clientHeaders(),
 		Transport: transport,
 		// Telegraf owns write retries; replaying a bulk request can duplicate documents.
 		DisableRetry:       true,

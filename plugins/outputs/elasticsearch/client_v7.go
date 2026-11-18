@@ -29,6 +29,7 @@ func (a *Elasticsearch) newClientV7() (client, error) {
 	transport.bypassProductCheck = true
 	c, err := elasticsearch7.NewClient(elasticsearch7.Config{
 		Addresses: a.URLs,
+		Header:    a.clientHeaders(),
 		Transport: transport,
 		// Telegraf owns write retries; replaying a bulk request can duplicate documents.
 		DisableRetry:        true,

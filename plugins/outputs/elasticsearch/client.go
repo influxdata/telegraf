@@ -14,6 +14,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	elasticsearch5 "github.com/elastic/go-elasticsearch/v5"
+	esapi5 "github.com/elastic/go-elasticsearch/v5/esapi"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -33,7 +34,7 @@ type roundTripper struct {
 
 func (a *Elasticsearch) newRoundTripper() (roundTripper, error) {
 	transport := roundTripper{
-		headers:     a.httpHeaders,
+		headers:     a.authorizationHeaders(),
 		httpClient:  a.httpClient,
 		bearerToken: a.AuthBearerToken,
 	}
@@ -71,12 +72,9 @@ func (t roundTripper) RoundTrip(original *http.Request) (*http.Response, error) 
 		}
 		return nil, err
 	}
-	// TODO: Revisit the existing bearer-token override of configured headers.
-	if t.bearerToken.Empty() {
-		for name, values := range t.headers {
-			for _, value := range values {
-				req.Header.Add(name, value)
-			}
+	for name, values := range t.headers {
+		for _, value := range values {
+			req.Header.Add(name, value)
 		}
 	}
 	res, err := t.httpClient.Do(req)
@@ -117,6 +115,30 @@ func (t roundTripper) setAuth(req *http.Request) error {
 	return nil
 }
 
+// clientHeaders returns configured headers without Authorization for the SDK clients.
+func (a *Elasticsearch) clientHeaders() http.Header {
+	// TODO: Revisit the existing bearer-token override of configured headers.
+	if !a.AuthBearerToken.Empty() {
+		return nil
+	}
+	headers := a.httpHeaders.Clone()
+	headers.Del("Authorization")
+	return headers
+}
+
+// authorizationHeaders keeps configured Authorization values after Basic authentication.
+func (a *Elasticsearch) authorizationHeaders() http.Header {
+	// See the bearer-token override TODO in clientHeaders.
+	if !a.AuthBearerToken.Empty() {
+		return nil
+	}
+	headers := make(http.Header, 1)
+	for _, value := range a.httpHeaders.Values("Authorization") {
+		headers.Add("Authorization", value)
+	}
+	return headers
+}
+
 func (a *Elasticsearch) probeVersion(ctx context.Context) (string, uint64, error) {
 	transport, err := a.newRoundTripper()
 	if err != nil {
@@ -129,7 +151,8 @@ func (a *Elasticsearch) probeVersion(ctx context.Context) (string, uint64, error
 	if err != nil {
 		return "", 0, fmt.Errorf("creating ES client failed: %w", err)
 	}
-	res, err := probe.Info(probe.Info.WithContext(ctx))
+	request := esapi5.InfoRequest{Header: a.clientHeaders()}
+	res, err := request.Do(ctx, probe)
 	if err != nil {
 		return "", 0, fmt.Errorf("checking ES version failed: %w", err)
 	}

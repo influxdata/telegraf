@@ -558,9 +558,11 @@ func TestWrite(t *testing.T) {
 			name:            "auth bearer token",
 			value:           1,
 			authBearerToken: "0123456789abcdef",
+			headers:         map[string]any{"X-Custom": "value"},
 			expected:        msgBulk,
 			expectedHeaders: map[string][]string{
 				"Authorization": {"Bearer 0123456789abcdef"},
+				"X-Custom":      nil,
 			},
 		},
 		{
@@ -615,6 +617,30 @@ func TestWrite(t *testing.T) {
 				"X-Debug-Tags":  {"performance", "security", "monitoring"},
 				"X-With-Spaces": {"application/json", "application/xml", "text/plain"},
 				"X-Empty-Array": nil,
+			},
+		},
+		{
+			name:    "multiple header values Elasticsearch v5",
+			version: "5.6.16",
+			value:   1,
+			headers: map[string]any{
+				"X-Multi-Value": []any{"first", "second"},
+			},
+			expected: msgBulk,
+			expectedHeaders: map[string][]string{
+				"X-Multi-Value": {"first", "second"},
+			},
+		},
+		{
+			name:    "multiple header values Elasticsearch v7",
+			version: "7.17.29",
+			value:   1,
+			headers: map[string]any{
+				"X-Multi-Value": []any{"first", "second"},
+			},
+			expected: msgBulkV7,
+			expectedHeaders: map[string][]string{
+				"X-Multi-Value": {"first", "second"},
 			},
 		},
 		{
@@ -734,6 +760,7 @@ func TestWriteAuthentication(t *testing.T) {
 		username    string
 		password    string
 		bearerToken string
+		headers     map[string]any
 		expected    [][]string
 	}{
 		{
@@ -769,6 +796,18 @@ func TestWriteAuthentication(t *testing.T) {
 			password: "@{test:credential}",
 			expected: [][]string{{"Basic Zmlyc3Q6Zmlyc3Q="}, {"Basic c2Vjb25kOnNlY29uZA=="}},
 		},
+		{
+			name:     "basic credentials precede configured authorization",
+			username: "@{test:credential}",
+			password: "@{test:credential}",
+			headers: map[string]any{
+				"Authorization": []any{"Custom first", "Custom second"},
+			},
+			expected: [][]string{
+				{"Basic Zmlyc3Q6Zmlyc3Q=", "Custom first", "Custom second"},
+				{"Basic c2Vjb25kOnNlY29uZA==", "Custom first", "Custom second"},
+			},
+		},
 	}
 	for _, version := range []string{"5.6.16", "6.8.23", "7.17.29"} {
 		t.Run(version, func(t *testing.T) {
@@ -788,6 +827,7 @@ func TestWriteAuthentication(t *testing.T) {
 						Username:        config.NewSecret([]byte(tt.username)),
 						Password:        config.NewSecret([]byte(tt.password)),
 						AuthBearerToken: config.NewSecret([]byte(tt.bearerToken)),
+						Headers:         tt.headers,
 						Timeout:         config.Duration(5 * time.Second),
 						Log:             testutil.Logger{},
 					}
