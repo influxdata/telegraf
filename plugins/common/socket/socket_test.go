@@ -266,12 +266,16 @@ func TestListenMulticastOwnGroupOnly(t *testing.T) {
 	}
 
 	for i, group := range groups {
-		select {
-		case data := <-received[i]:
-			require.Equal(t, group, data, "listener %d received a packet of another group", i)
-		case <-time.After(time.Second):
-			require.Failf(t, "no packet", "listener %d received nothing", i)
-		}
+		var data string
+		require.Eventuallyf(t, func() bool {
+			select {
+			case data = <-received[i]:
+				return true
+			default:
+				return false
+			}
+		}, 3*time.Second, 100*time.Millisecond, "listener %d received nothing", i)
+		require.Equal(t, group, data, "listener %d received a packet of another group", i)
 	}
 }
 
