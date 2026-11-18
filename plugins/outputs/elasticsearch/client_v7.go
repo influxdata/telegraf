@@ -41,7 +41,7 @@ func (a *Elasticsearch) newClientV7() (client, error) {
 	}
 	client := &clientV7{client: c, log: a.Log}
 	if a.EnableSniffer {
-		// The v7 connection-pool discovery API accepts no context, so in-flight calls cannot be canceled.
+		// The discovery API accepts no context, so in-flight calls cannot be canceled.
 		ctx, cancel := context.WithCancel(context.Background())
 		client.cancelDiscovery = cancel
 		client.discoveryWG.Go(func() {

@@ -249,7 +249,7 @@ func preserveConnectionPool[Connection, Selector, Pool any](newPool func([]Conne
 	}
 }
 
-// startDiscovery runs node discovery immediately and then every 15 minutes, matching olivere's default.
+// startDiscovery runs a cancellable discovery loop for v6 and v7.
 func startDiscovery(ctx context.Context, discover func() error, log telegraf.Logger) {
 	if err := discover(); err != nil && ctx.Err() == nil {
 		log.Errorf("Discovering Elasticsearch nodes failed: %v", err)
