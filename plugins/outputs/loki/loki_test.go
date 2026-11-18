@@ -436,12 +436,17 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 			name: "success",
 			plugin: &Loki{
 				Domain:       u.String(),
-				ClientID:     "howdy",
-				ClientSecret: "secret",
+				ClientID:     config.NewSecret([]byte("howdy")),
+				ClientSecret: config.NewSecret([]byte("secret")),
 				TokenURL:     u.String() + "/token",
 				Scopes:       []string{"urn:opc:idm:__myscopes__"},
 			},
-			tokenHandler: func(t *testing.T, w http.ResponseWriter, _ *http.Request) {
+			tokenHandler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+				username, password, ok := r.BasicAuth()
+				require.True(t, ok)
+				require.Equal(t, "howdy", username)
+				require.Equal(t, "secret", password)
+
 				w.WriteHeader(http.StatusOK)
 				values := url.Values{}
 				values.Add("access_token", token)

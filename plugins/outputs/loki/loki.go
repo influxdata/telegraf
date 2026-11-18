@@ -41,8 +41,8 @@ type Loki struct {
 	Username           config.Secret     `toml:"username"`
 	Password           config.Secret     `toml:"password"`
 	Headers            map[string]string `toml:"http_headers"`
-	ClientID           string            `toml:"client_id"`
-	ClientSecret       string            `toml:"client_secret"`
+	ClientID           config.Secret     `toml:"client_id"`
+	ClientSecret       config.Secret     `toml:"client_secret"`
 	TokenURL           string            `toml:"token_url"`
 	Scopes             []string          `toml:"scopes"`
 	GZipRequest        bool              `toml:"gzip_request"`
@@ -68,10 +68,22 @@ func (l *Loki) createClient(ctx context.Context) (*http.Client, error) {
 		Timeout: time.Duration(l.Timeout),
 	}
 
-	if l.ClientID != "" && l.ClientSecret != "" && l.TokenURL != "" {
+	if !l.ClientID.Empty() && !l.ClientSecret.Empty() && l.TokenURL != "" {
+		clientID, err := l.ClientID.Get()
+		if err != nil {
+			return nil, fmt.Errorf("getting client ID failed: %w", err)
+		}
+		defer clientID.Destroy()
+
+		clientSecret, err := l.ClientSecret.Get()
+		if err != nil {
+			return nil, fmt.Errorf("getting client secret failed: %w", err)
+		}
+		defer clientSecret.Destroy()
+
 		oauthConfig := clientcredentials.Config{
-			ClientID:     l.ClientID,
-			ClientSecret: l.ClientSecret,
+			ClientID:     clientID.String(),
+			ClientSecret: clientSecret.String(),
 			TokenURL:     l.TokenURL,
 			Scopes:       l.Scopes,
 		}
