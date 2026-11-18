@@ -11,14 +11,14 @@ import (
 
 // Images from https://images.linuxcontainers.org/
 var imagesRPM = []string{
-	"fedora/43",
-	"fedora/42",
+	"fedora/45",
+	"fedora/44",
 	"centos/10-Stream",
 }
 
 var imagesDEB = []string{
 	// LTS
-	"debian/bullseye",
+	"debian/bookworm",
 	// Latest
 	"debian/trixie",
 	// LTS

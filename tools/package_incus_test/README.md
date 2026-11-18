@@ -14,7 +14,7 @@ Any issues or errors will cause the test to fail.
 To test an RPM or DEB with a specific image:
 
 ```sh
-./package-test-lxd --package telegraf_1.21.4-1_amd64.deb --image debian/bullseye
+./package-test-lxd --package telegraf_1.21.4-1_amd64.deb --image debian/bookworm
 ```
 
 To test an RPM or a DEB with a whole set of images:
