@@ -347,7 +347,7 @@ func (a *AzureMonitor) Write(metrics []telegraf.Metric) error {
 			if retryable, err := a.send(buffer.Bytes()); err != nil {
 				writeErr.Err = err
 				if !retryable {
-					writeErr.MetricsReject = append(writeErr.MetricsAccept, batchIndices...)
+					writeErr.MetricsReject = append(writeErr.MetricsReject, batchIndices...)
 				}
 				return writeErr
 			}
@@ -366,7 +366,7 @@ func (a *AzureMonitor) Write(metrics []telegraf.Metric) error {
 	if retryable, err := a.send(buffer.Bytes()); err != nil {
 		writeErr.Err = err
 		if !retryable {
-			writeErr.MetricsReject = append(writeErr.MetricsAccept, batchIndices...)
+			writeErr.MetricsReject = append(writeErr.MetricsReject, batchIndices...)
 		}
 		return writeErr
 	}

@@ -16,6 +16,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
@@ -344,6 +345,56 @@ func TestWrite(t *testing.T) {
 			require.Equal(t, tt.expectedMetrics, metrics.Load())
 		})
 	}
+}
+
+func TestWriteRejectedBatch(t *testing.T) {
+	// Set up a fake environment for Authorizer
+	t.Setenv("AZURE_CLIENT_ID", "fake")
+	t.Setenv("AZURE_USERNAME", "fake")
+	t.Setenv("AZURE_PASSWORD", "fake")
+
+	// Setup a metric outside of the time limits and a valid one
+	tref := time.Now().Truncate(time.Minute)
+	fields := map[string]any{
+		"min":   float64(42),
+		"max":   float64(42),
+		"sum":   float64(42),
+		"count": int64(1),
+	}
+	input := []telegraf.Metric{
+		metric.New("cpu-value", map[string]string{"status": "too old"}, fields, tref.Add(-time.Hour)),
+		metric.New("cpu-value", map[string]string{"status": "valid"}, fields, tref),
+	}
+
+	// Setup test server rejecting all requests as non-retryable
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+	}))
+	defer ts.Close()
+
+	// Setup plugin
+	plugin := AzureMonitor{
+		EndpointURL:          "http://" + ts.Listener.Addr().String(),
+		Region:               "test",
+		ResourceID:           "/test",
+		TimestampLimitPast:   config.Duration(30 * time.Minute),
+		TimestampLimitFuture: config.Duration(5 * time.Minute),
+		Log:                  testutil.Logger{},
+		timeFunc:             func() time.Time { return tref },
+	}
+	require.NoError(t, plugin.Init())
+
+	// Override with testing setup
+	plugin.preparer = autorest.CreatePreparer(autorest.NullAuthorizer{}.WithAuthorization())
+	require.NoError(t, plugin.Connect())
+	defer plugin.Close()
+
+	// Both the metric outside of the time limits and the one in the
+	// rejected batch must be reported as rejected
+	var writeErr *internal.PartialWriteError
+	require.ErrorAs(t, plugin.Write(input), &writeErr)
+	require.Empty(t, writeErr.MetricsAccept)
+	require.Equal(t, []int{0, 1}, writeErr.MetricsReject)
 }
 
 func TestWriteTimelimits(t *testing.T) {
