@@ -65,6 +65,10 @@ func determineConverterScale(inType, byteOrder, outType string, scale float64) (
 		return determineConverterF16Scale(outType, byteOrder, scale)
 	case "FLOAT32":
 		return determineConverterF32Scale(outType, byteOrder, scale)
+	case "DECEXP32":
+		return determineConverterDecExp32Scale(outType, byteOrder, scale, true)
+	case "UDECEXP32":
+		return determineConverterDecExp32Scale(outType, byteOrder, scale, false)
 	case "FLOAT64":
 		return determineConverterF64Scale(outType, byteOrder, scale)
 	}
@@ -97,6 +101,10 @@ func determineConverterNoScale(inType, byteOrder, outType string) (fieldConverte
 		return determineConverterF16(outType, byteOrder)
 	case "FLOAT32":
 		return determineConverterF32(outType, byteOrder)
+	case "DECEXP32":
+		return determineConverterDecExp32(outType, byteOrder, true)
+	case "UDECEXP32":
+		return determineConverterDecExp32(outType, byteOrder, false)
 	case "FLOAT64":
 		return determineConverterF64(outType, byteOrder)
 	}

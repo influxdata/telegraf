@@ -198,3 +198,50 @@ func determineConverterF32Scale(outType, byteOrder string, scale float64) (field
 	}
 	return nil, fmt.Errorf("invalid output data-type: %s", outType)
 }
+
+// DECEXP32 / UDECEXP32 - decade-exponent representation. The 32 bit hold an
+// 8 bit signed exponent (most significant byte) to the base 10 followed by a
+// 24 bit mantissa which is signed (DECEXP32) or unsigned (UDECEXP32). The
+// resulting value is `mantissa * 10^exponent`.
+func decodeDecExp32(raw uint32, signed bool) float64 {
+	exponent := int8(raw >> 24)
+	mantissa := raw & 0x00ffffff
+	var value float64
+	if signed {
+		// Sign-extend the 24 bit two's complement value
+		value = float64(int32(mantissa<<8) >> 8)
+	} else {
+		value = float64(mantissa)
+	}
+	return value * math.Pow10(int(exponent))
+}
+
+func determineConverterDecExp32(outType, byteOrder string, signed bool) (fieldConverterFunc, error) {
+	tohost, err := endiannessConverter32(byteOrder)
+	if err != nil {
+		return nil, err
+	}
+
+	switch outType {
+	case "native", "FLOAT64":
+		return func(b []byte) any {
+			return decodeDecExp32(tohost(b), signed)
+		}, nil
+	}
+	return nil, fmt.Errorf("invalid output data-type: %s", outType)
+}
+
+func determineConverterDecExp32Scale(outType, byteOrder string, scale float64, signed bool) (fieldConverterFunc, error) {
+	tohost, err := endiannessConverter32(byteOrder)
+	if err != nil {
+		return nil, err
+	}
+
+	switch outType {
+	case "native", "FLOAT64":
+		return func(b []byte) any {
+			return decodeDecExp32(tohost(b), signed) * scale
+		}, nil
+	}
+	return nil, fmt.Errorf("invalid output data-type: %s", outType)
+}

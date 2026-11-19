@@ -122,7 +122,7 @@ func (c *configurationPerRequest) check() error {
 				case "":
 				case "INT8L", "INT8H", "INT16", "INT32", "INT64",
 					"UINT8L", "UINT8H", "UINT16", "UINT32", "UINT64",
-					"FLOAT16", "FLOAT32", "FLOAT64":
+					"FLOAT16", "FLOAT32", "FLOAT64", "DECEXP32", "UDECEXP32":
 					if f.Length != 0 {
 						return fmt.Errorf("length option cannot be used for type %q of field %q", f.InputType, f.Name)
 					}
@@ -409,7 +409,7 @@ func determineOutputDatatype(input string) (string, error) {
 		return "INT64", nil
 	case "BIT", "UINT8L", "UINT8H", "UINT16", "UINT32", "UINT64":
 		return "UINT64", nil
-	case "FLOAT16", "FLOAT32", "FLOAT64":
+	case "FLOAT16", "FLOAT32", "FLOAT64", "DECEXP32", "UDECEXP32":
 		return "FLOAT64", nil
 	case "STRING":
 		return "STRING", nil
@@ -424,7 +424,7 @@ func determineFieldLength(input string, length uint16) (uint16, error) {
 		return 1, nil
 	case "INT16", "UINT16", "FLOAT16":
 		return 1, nil
-	case "INT32", "UINT32", "FLOAT32":
+	case "INT32", "UINT32", "FLOAT32", "DECEXP32", "UDECEXP32":
 		return 2, nil
 	case "INT64", "UINT64", "FLOAT64":
 		return 4, nil

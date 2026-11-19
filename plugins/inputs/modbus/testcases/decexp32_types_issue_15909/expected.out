@@ -1,0 +1,1 @@
+modbus,name=modbus,slave_id=1 signed=100,unsigned=110,scaled=60 1729239973009490185
