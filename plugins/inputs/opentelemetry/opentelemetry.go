@@ -33,6 +33,7 @@ type OpenTelemetry struct {
 	MetricsSchema       string          `toml:"metrics_schema"`
 	MaxMsgSize          config.Size     `toml:"max_msg_size"`
 	Timeout             config.Duration `toml:"timeout"`
+	ClientCertTags      []string        `toml:"tls_client_cert_tags"`
 	Log                 telegraf.Logger `toml:"-"`
 	tls.ServerConfig
 
@@ -58,7 +59,7 @@ func (o *OpenTelemetry) Init() error {
 		return fmt.Errorf("invalid metric schema %q", o.MetricsSchema)
 	}
 
-	return nil
+	return checkClientCertTags(o.ClientCertTags)
 }
 
 func (o *OpenTelemetry) Start(acc telegraf.Accumulator) error {
@@ -76,7 +77,7 @@ func (o *OpenTelemetry) Start(acc telegraf.Accumulator) error {
 	}
 
 	logger := &otelLogger{o.Log}
-	influxWriter := &writeToAccumulator{acc}
+	influxWriter := &writeToAccumulator{accumulator: acc, clientCertTags: o.ClientCertTags}
 	o.grpcServer = grpc.NewServer(grpcOptions...)
 
 	traceSvc, err := newTraceService(logger, influxWriter, o.SpanDimensions)
@@ -102,6 +103,8 @@ func (o *OpenTelemetry) Start(acc telegraf.Accumulator) error {
 		return err
 	}
 	pprofileotlp.RegisterProfilesServiceServer(o.grpcServer, profileSvc)
+
+	profileSvc.clientCertTags = o.ClientCertTags
 
 	o.listener, err = net.Listen("tcp", o.ServiceAddress)
 	if err != nil {

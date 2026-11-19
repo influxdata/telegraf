@@ -17,7 +17,8 @@ var (
 )
 
 type writeToAccumulator struct {
-	accumulator telegraf.Accumulator
+	accumulator    telegraf.Accumulator
+	clientCertTags []string
 }
 
 // NewBatch creates a new batch for writing telemetry data.
@@ -27,13 +28,15 @@ func (w *writeToAccumulator) NewBatch() otel2influx.InfluxWriterBatch {
 
 // EnqueuePoint adds a telemetry data point to the accumulator.
 func (w *writeToAccumulator) EnqueuePoint(
-	_ context.Context,
+	ctx context.Context,
 	measurement string,
 	tags map[string]string,
 	fields map[string]any,
 	ts time.Time,
 	vType common.InfluxMetricValueType,
 ) error {
+	tags = addClientCertTags(ctx, w.clientCertTags, tags)
+
 	switch vType {
 	case common.InfluxMetricValueTypeUntyped:
 		w.accumulator.AddFields(measurement, fields, tags, ts)

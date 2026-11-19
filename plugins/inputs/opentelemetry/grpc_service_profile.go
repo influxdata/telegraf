@@ -23,6 +23,8 @@ type profileService struct {
 	acc    telegraf.Accumulator
 	filter filter.Filter
 	logger telegraf.Logger
+
+	clientCertTags []string
 }
 
 func newProfileService(acc telegraf.Accumulator, logger telegraf.Logger, dimensions []string) (*profileService, error) {
@@ -54,7 +56,7 @@ func newProfileService(acc telegraf.Accumulator, logger telegraf.Logger, dimensi
 }
 
 // Export processes and exports the received profile data.
-func (s *profileService) Export(_ context.Context, req *service.ExportProfilesServiceRequest) (*service.ExportProfilesServiceResponse, error) {
+func (s *profileService) Export(ctx context.Context, req *service.ExportProfilesServiceRequest) (*service.ExportProfilesServiceResponse, error) {
 	// Output the received message for debugging
 	buf, err := protojson.Marshal(req)
 	if err != nil {
@@ -321,7 +323,7 @@ func (s *profileService) Export(_ context.Context, req *service.ExportProfilesSe
 								continue
 							}
 							ts := sample.GetTimestampsUnixNano()[validIdx]
-							s.acc.AddFields("profiles", fields, tags, time.Unix(0, int64(ts)))
+							s.acc.AddFields("profiles", fields, addClientCertTags(ctx, s.clientCertTags, tags), time.Unix(0, int64(ts)))
 						}
 					}
 				}
