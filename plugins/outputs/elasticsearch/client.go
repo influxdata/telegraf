@@ -48,17 +48,16 @@ func (t *roundTripper) configureAuth(addresses []string, username, password conf
 	if !username.Empty() && !password.Empty() {
 		t.basicAuth = true
 		t.username, t.password = username, password
+		return nil
 	}
-	if !t.basicAuth {
-		for _, address := range addresses {
-			u, err := url.Parse(address)
-			if err != nil {
-				return fmt.Errorf("parsing URL %q failed: %w", address, err)
-			}
-			if u.User != nil {
-				t.userinfo = u.User
-				break
-			}
+	for _, address := range addresses {
+		u, err := url.Parse(address)
+		if err != nil {
+			return fmt.Errorf("parsing URL %q failed: %w", address, err)
+		}
+		if u.User != nil {
+			t.userinfo = u.User
+			break
 		}
 	}
 	return nil
@@ -132,11 +131,7 @@ func (a *Elasticsearch) authorizationHeaders() http.Header {
 	if !a.AuthBearerToken.Empty() {
 		return nil
 	}
-	headers := make(http.Header, 1)
-	for _, value := range a.httpHeaders.Values("Authorization") {
-		headers.Add("Authorization", value)
-	}
-	return headers
+	return http.Header{"Authorization": a.httpHeaders.Values("Authorization")}
 }
 
 func (a *Elasticsearch) probeVersion(ctx context.Context) (string, uint64, error) {
