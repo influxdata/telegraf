@@ -67,7 +67,7 @@ Defaults!PS !logfile, !syslog, !pam_session
     - sleeping
     - stopped
     - total
-    - zombie
+    - zombies
     - dead
     - wait (freebsd only)
     - idle (bsd and Linux 4+ only)
@@ -94,5 +94,5 @@ Linux  FreeBSD  Darwin  meaning
 ## Example Output
 
 ```text
-processes blocked=8i,running=1i,sleeping=265i,stopped=0i,total=274i,zombie=0i,dead=0i,paging=0i,total_threads=687i 1457478636980905042
+processes blocked=8i,running=1i,sleeping=265i,stopped=0i,total=274i,zombies=0i,dead=0i,paging=0i,total_threads=687i 1457478636980905042
 ```

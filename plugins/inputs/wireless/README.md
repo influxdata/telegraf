@@ -43,12 +43,12 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
     - frag (int64, packets, counter) - fragmented packets
     - retry (int64, packets, counter) - cumulative retry counts
     - misc (int64, packets, counter) - dropped for un-specified reason
-    - missed_beacon (int64, packets, counter) - missed beacon packets
+    - beacon (int64, packets, counter) - missed beacon packets
 
 ## Example Output
 
 This section shows example output in Line Protocol format.
 
 ```text
-wireless,host=example.localdomain,interface=wlan0 misc=0i,frag=0i,link=60i,level=-50i,noise=-256i,nwid=0i,crypt=0i,retry=1525i,missed_beacon=0i,status=0i 1519843022000000000
+wireless,host=example.localdomain,interface=wlan0 misc=0i,frag=0i,link=60i,level=-50i,noise=-256i,nwid=0i,crypt=0i,retry=1525i,beacon=0i,status=0i 1519843022000000000
 ```
