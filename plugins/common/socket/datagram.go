@@ -219,6 +219,9 @@ func (l *packetListener) setupUDP(u *url.URL, ifname string, bufferSize int) err
 			}
 			return fmt.Errorf("listening (udp multicast) failed: %w", err)
 		}
+		if err := ownGroupsOnly(conn, addr.IP.To4() != nil); err != nil {
+			l.Log.Warnf("Restricting %s socket to its own multicast group failed: %v", u.Scheme, err)
+		}
 	} else {
 		conn, err = net.ListenUDP(u.Scheme, addr)
 		if err != nil {
