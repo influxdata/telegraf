@@ -453,7 +453,7 @@ func TestMetadataFailure(t *testing.T) {
 		// Every query is still tried and reports its own error
 		{name: "without role", role: "", expected: []string{"connect", "connect"}},
 		// The queries are not run without knowing the server role
-		{name: "with role", role: "primary", expected: []string{"querying metadata failed"}},
+		{name: "with role", role: "primary", expected: []string{"querying server role failed"}},
 	}
 
 	for _, tt := range tests {

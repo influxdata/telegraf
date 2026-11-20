@@ -310,7 +310,8 @@ CREATE OR REPLACE VIEW public.sessions AS
 
 ## Server role
 
-The server role is read with `pg_is_in_recovery()` on every collection.
+If a query has a role other than `any`, the server role is read with
+`pg_is_in_recovery()` on every collection.
 Queries with `role = "primary"` are only run if the server is not in recovery,
 and queries with `role = "replica"` only if it is. The plugin-level `role`
 option sets the default for all queries.

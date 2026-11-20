@@ -6,7 +6,6 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
-	"slices"
 	"strings"
 	"time"
 
@@ -36,7 +35,8 @@ type Postgresql struct {
 	Log                telegraf.Logger `toml:"-"`
 	postgresql.Config
 
-	service *postgresql.Service
+	service   *postgresql.Service
+	roleInUse bool
 }
 
 type query struct {
@@ -101,6 +101,9 @@ func (p *Postgresql) Init() error {
 		if err := choice.Check(q.Role, roles); err != nil {
 			return fmt.Errorf("query %d: config option 'role': %w", i, err)
 		}
+		if q.Role != "any" {
+			p.roleInUse = true
+		}
 
 		q.additionalTags = make(map[string]bool)
 		if q.Tagvalue != "" {
@@ -127,18 +130,21 @@ func (p *Postgresql) Start(_ telegraf.Accumulator) error {
 }
 
 func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
-	// Retrieving the database version and the server role
-	query := `SELECT setting::integer / 100 AS version, pg_is_in_recovery() FROM pg_settings WHERE name = 'server_version_num'`
+	// Retrieving the database version
+	query := `SELECT setting::integer / 100 AS version FROM pg_settings WHERE name = 'server_version_num'`
 	var dbVersion int
+	if err := p.service.DB.QueryRow(query).Scan(&dbVersion); err != nil {
+		dbVersion = 0
+	}
+
+	// The role is only read when needed, so configurations without a role
+	// do not depend on pg_is_in_recovery() being available on the server
 	var inRecovery bool
-	if err := p.service.DB.QueryRow(query).Scan(&dbVersion, &inRecovery); err != nil {
-		if p.metadataRequired() {
-			acc.AddError(fmt.Errorf("querying metadata failed: %w", err))
+	if p.roleInUse {
+		if err := p.service.DB.QueryRow(`SELECT pg_is_in_recovery()`).Scan(&inRecovery); err != nil {
+			acc.AddError(fmt.Errorf("querying server role failed: %w", err))
 			return nil
 		}
-		// Servers without pg_settings such as the PgBouncer admin console
-		// still run the queries not limited to a version
-		dbVersion = 0
 	}
 
 	// set default timestamp to Now and use for all generated metrics during
@@ -161,13 +167,6 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 
 func (p *Postgresql) Stop() {
 	p.service.Stop()
-}
-
-// metadataRequired tells whether the queries depend on the server information
-func (p *Postgresql) metadataRequired() bool {
-	return slices.ContainsFunc(p.Query, func(q query) bool {
-		return q.Role != "any"
-	})
 }
 
 func (p *Postgresql) gatherMetricsFromQuery(acc telegraf.Accumulator, q query, timestamp time.Time) error {
