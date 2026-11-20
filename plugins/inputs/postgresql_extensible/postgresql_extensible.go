@@ -3,6 +3,7 @@ package postgresql_extensible
 
 import (
 	"bytes"
+	"context"
 	_ "embed"
 	"fmt"
 	"os"
@@ -13,6 +14,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/postgresql"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -27,6 +29,7 @@ type Postgresql struct {
 	Databases          []string        `deprecated:"1.22.4;use the sqlquery option to specify database to use"`
 	Query              []query         `toml:"query"`
 	PreparedStatements bool            `toml:"prepared_statements"`
+	Timeout            config.Duration `toml:"timeout"`
 	Log                telegraf.Logger `toml:"-"`
 	postgresql.Config
 
@@ -34,15 +37,16 @@ type Postgresql struct {
 }
 
 type query struct {
-	Sqlquery    string `toml:"sqlquery"`
-	Script      string `toml:"script"`
-	Version     int    `deprecated:"1.28.0;use minVersion to specify minimal DB version this query supports"`
-	MinVersion  int    `toml:"min_version"`
-	MaxVersion  int    `toml:"max_version"`
-	Withdbname  bool   `deprecated:"1.22.4;use the sqlquery option to specify database to use"`
-	Tagvalue    string `toml:"tagvalue"`
-	Measurement string `toml:"measurement"`
-	Timestamp   string `toml:"timestamp"`
+	Sqlquery    string          `toml:"sqlquery"`
+	Script      string          `toml:"script"`
+	Version     int             `deprecated:"1.28.0;use minVersion to specify minimal DB version this query supports"`
+	MinVersion  int             `toml:"min_version"`
+	MaxVersion  int             `toml:"max_version"`
+	Withdbname  bool            `deprecated:"1.22.4;use the sqlquery option to specify database to use"`
+	Tagvalue    string          `toml:"tagvalue"`
+	Measurement string          `toml:"measurement"`
+	Timestamp   string          `toml:"timestamp"`
+	Timeout     config.Duration `toml:"timeout"`
 
 	additionalTags map[string]bool
 }
@@ -107,10 +111,21 @@ func (p *Postgresql) Start(_ telegraf.Accumulator) error {
 }
 
 func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
+	// A timeout of zero means no limit on the duration of a collection
+	ctx, cancel := context.WithCancel(context.Background())
+	if p.Timeout > 0 {
+		ctx, cancel = context.WithTimeout(context.Background(), time.Duration(p.Timeout))
+	}
+	defer cancel()
+
 	// Retrieving the database version
 	query := `SELECT setting::integer / 100 AS version FROM pg_settings WHERE name = 'server_version_num'`
 	var dbVersion int
-	if err := p.service.DB.QueryRow(query).Scan(&dbVersion); err != nil {
+	if err := p.service.DB.QueryRowContext(ctx, query).Scan(&dbVersion); err != nil {
+		if ctx.Err() != nil {
+			acc.AddError(fmt.Errorf("querying metadata failed: %w", err))
+			return nil
+		}
 		dbVersion = 0
 	}
 
@@ -121,8 +136,12 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	// We loop in order to process each query
 	// Query is not run if Database version does not match the query version.
 	for _, q := range p.Query {
+		// Do not start anything once the collection timed out
+		if ctx.Err() != nil {
+			break
+		}
 		if q.MinVersion <= dbVersion && (q.MaxVersion == 0 || q.MaxVersion > dbVersion) {
-			acc.AddError(p.gatherMetricsFromQuery(acc, q, timestamp))
+			acc.AddError(p.gatherMetricsFromQuery(ctx, acc, q, timestamp))
 		}
 	}
 	return nil
@@ -132,8 +151,31 @@ func (p *Postgresql) Stop() {
 	p.service.Stop()
 }
 
-func (p *Postgresql) gatherMetricsFromQuery(acc telegraf.Accumulator, q query, timestamp time.Time) error {
-	rows, err := p.service.DB.Query(q.Sqlquery)
+func (p *Postgresql) gatherMetricsFromQuery(ctx context.Context, acc telegraf.Accumulator, q query, timestamp time.Time) error {
+	queryCtx := ctx
+	if q.Timeout > 0 {
+		var cancel context.CancelFunc
+		queryCtx, cancel = context.WithTimeout(ctx, time.Duration(q.Timeout))
+		defer cancel()
+	}
+
+	err := p.runQuery(queryCtx, acc, q, timestamp)
+	switch {
+	case err == nil:
+		return nil
+	case ctx.Err() != nil:
+		return fmt.Errorf("collection timeout %s exceeded in database %q: query %q",
+			time.Duration(p.Timeout), p.service.ConnectionDatabase, q.Measurement)
+	case queryCtx.Err() != nil:
+		return fmt.Errorf("database %q: query %q: query timeout %s exceeded",
+			p.service.ConnectionDatabase, q.Measurement, time.Duration(q.Timeout))
+	default:
+		return err
+	}
+}
+
+func (p *Postgresql) runQuery(ctx context.Context, acc telegraf.Accumulator, q query, timestamp time.Time) error {
+	rows, err := p.service.DB.QueryContext(ctx, q.Sqlquery)
 	if err != nil {
 		return err
 	}
@@ -150,6 +192,11 @@ func (p *Postgresql) gatherMetricsFromQuery(acc telegraf.Accumulator, q query, t
 		if err := p.accRow(acc, rows, columns, q, timestamp); err != nil {
 			return err
 		}
+	}
+
+	// A timeout may interrupt the query while its rows are read
+	if ctx.Err() != nil {
+		return rows.Err()
 	}
 	return nil
 }
