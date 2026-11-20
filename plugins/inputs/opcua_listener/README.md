@@ -291,9 +291,9 @@ to use them.
   ## Event nodes support both 'id' string format and individual fields.
   # [[inputs.opcua_listener.events]]
   #   ## Polling interval for data collection
-  #   # sampling_interval = "10s"
+  #   # sampling_interval = "0s"
   #   ## Size of the notification queue
-  #   # queue_size = 10
+  #   # queue_size = 0
   #   ## Node parameter defaults for node definitions below (used when id is not specified)
   #   # namespace = ""
   #   # identifier_type = ""
