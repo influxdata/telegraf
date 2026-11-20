@@ -58,6 +58,29 @@ func TestAddressDefaultPort(t *testing.T) {
 	require.Equal(t, "tcp://localhost:6514", plugin.url.String())
 }
 
+func TestRFC3164EmbeddedNewlinesDisabled(t *testing.T) {
+	// a CR or LF will produce no output and an error
+	msg := []byte("<4>Oct  6 01:30:34 sp02.00.dut kernel: i2c i2c-1: i2c transaction error (0x81000000)\nChannel 0x00000001, addr 0x00000058")
+	plugin := &Syslog{SyslogStandard: "RFC3164", EmbeddedNewlines: false}
+	var acc testutil.Accumulator
+	plugin.createDatagramDataHandler(&acc)(&net.UDPAddr{}, msg, time.Time{})
+	metrics := acc.GetTelegrafMetrics()
+	require.Empty(t, metrics)
+	require.Error(t, acc.FirstError())
+}
+
+func TestRFC3164EmbeddedNewlinesEnabled(t *testing.T) {
+	// with embedded_newlines enabled we get output and no errors
+	msg := []byte("<4>Oct  6 01:30:34 sp02.00.dut kernel: i2c i2c-1: i2c transaction error (0x81000000)\nChannel 0x00000001, addr 0x00000058")
+	plugin := &Syslog{SyslogStandard: "RFC3164", EmbeddedNewlines: true}
+	var acc testutil.Accumulator
+	plugin.createDatagramDataHandler(&acc)(&net.UDPAddr{}, msg, time.Time{})
+	metrics := acc.GetTelegrafMetrics()
+	require.NoError(t, acc.FirstError())
+	require.Len(t, metrics, 1)
+	require.Equal(t, "i2c i2c-1: i2c transaction error (0x81000000)\nChannel 0x00000001, addr 0x00000058", metrics[0].Fields()["message"])
+}
+
 func TestReadTimeoutWarning(t *testing.T) {
 	logger := &testutil.CaptureLogger{}
 	plugin := &Syslog{
