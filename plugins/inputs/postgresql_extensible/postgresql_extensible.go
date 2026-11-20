@@ -111,7 +111,8 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	query := `SELECT setting::integer / 100 AS version FROM pg_settings WHERE name = 'server_version_num'`
 	var dbVersion int
 	if err := p.service.DB.QueryRow(query).Scan(&dbVersion); err != nil {
-		dbVersion = 0
+		dbVersion = -1
+		p.Log.Errorf("Getting database version failed: %v", err)
 	}
 
 	// set default timestamp to Now and use for all generated metrics during
@@ -121,9 +122,17 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	// We loop in order to process each query
 	// Query is not run if Database version does not match the query version.
 	for _, q := range p.Query {
-		if q.MinVersion <= dbVersion && (q.MaxVersion == 0 || q.MaxVersion > dbVersion) {
-			acc.AddError(p.gatherMetricsFromQuery(acc, q, timestamp))
+		// Without a known version we skip version-gated queries as we cannot know if
+		// they can be run or not
+		if dbVersion < 0 {
+			if q.MinVersion != 0 || q.MaxVersion != 0 {
+				p.Log.Tracef("Skipping query %q due to missing version", q.Sqlquery)
+				continue
+			}
+		} else if q.MinVersion > dbVersion || (q.MaxVersion != 0 && q.MaxVersion <= dbVersion) {
+			continue
 		}
+		acc.AddError(p.gatherMetricsFromQuery(acc, q, timestamp))
 	}
 	return nil
 }
