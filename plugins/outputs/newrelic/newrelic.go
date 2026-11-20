@@ -48,36 +48,16 @@ func (nr *NewRelic) Init() error {
 	if nr.InsightsKey == "" {
 		return errors.New("'insights_key' is a required for newrelic")
 	}
-
-	if nr.HTTPProxy == "" && nr.LocalAddress == "" {
-		return nil
-	}
-
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-	if nr.HTTPProxy != "" {
-		proxyURL, err := url.Parse(nr.HTTPProxy)
-		if err != nil {
-			return err
-		}
-		transport.Proxy = http.ProxyURL(proxyURL)
-	}
-
-	if nr.LocalAddress != "" {
-		localAddr, err := internal.ResolveLocalTCPAddress(nr.LocalAddress)
-		if err != nil {
-			return err
-		}
-		dialer := &net.Dialer{LocalAddr: localAddr}
-		transport.DialContext = dialer.DialContext
-	}
-
-	nr.client.Transport = transport
 	return nil
 }
 
 // Connect to the Output
 func (nr *NewRelic) Connect() error {
-	var err error
+	err := nr.initClient()
+	if err != nil {
+		return err
+	}
+
 	nr.harvestor, err = telemetry.NewHarvester(telemetry.ConfigAPIKey(nr.InsightsKey),
 		telemetry.ConfigHarvestPeriod(0),
 		func(cfg *telemetry.Config) {
@@ -183,4 +163,34 @@ func init() {
 			Timeout: config.Duration(time.Second * 15),
 		}
 	})
+}
+
+func (nr *NewRelic) initClient() error {
+	if nr.HTTPProxy == "" && nr.LocalAddress == "" {
+		nr.client = http.Client{}
+		return nil
+	}
+
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	if nr.HTTPProxy != "" {
+		proxyURL, err := url.Parse(nr.HTTPProxy)
+		if err != nil {
+			return err
+		}
+		transport.Proxy = http.ProxyURL(proxyURL)
+	}
+
+	if nr.LocalAddress != "" {
+		localAddr, err := internal.ResolveLocalTCPAddress(nr.LocalAddress)
+		if err != nil {
+			return err
+		}
+		dialer := &net.Dialer{LocalAddr: localAddr}
+		transport.DialContext = dialer.DialContext
+	}
+
+	nr.client = http.Client{
+		Transport: transport,
+	}
+	return nil
 }

@@ -141,13 +141,14 @@ func TestInitMissingInsightsKey(t *testing.T) {
 	require.ErrorContains(t, nr.Init(), "'insights_key' is a required")
 }
 
-func TestInitKeepsDefaultTransportSettings(t *testing.T) {
+func TestConnectKeepsDefaultTransportSettings(t *testing.T) {
 	nr := &NewRelic{
 		InsightsKey:  "12345",
 		HTTPProxy:    "https://my.proxy",
 		LocalAddress: "127.0.0.1",
 	}
 	require.NoError(t, nr.Init())
+	require.NoError(t, nr.Connect())
 
 	transport, ok := nr.client.Transport.(*http.Transport)
 	require.True(t, ok)
@@ -241,5 +242,6 @@ func TestInvalidLocalAddress(t *testing.T) {
 		InsightsKey:  "12345",
 		LocalAddress: "::1",
 	}
-	require.ErrorContains(t, nr.Init(), "invalid local address")
+	require.NoError(t, nr.Init())
+	require.ErrorContains(t, nr.Connect(), "invalid local address")
 }
