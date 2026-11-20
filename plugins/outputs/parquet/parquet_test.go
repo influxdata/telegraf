@@ -12,7 +12,7 @@ import (
 	"github.com/apache/arrow-go/v18/arrow"
 	"github.com/apache/arrow-go/v18/parquet"
 	"github.com/apache/arrow-go/v18/parquet/file"
-	parquetschema "github.com/apache/arrow-go/v18/parquet/schema"
+	"github.com/apache/arrow-go/v18/parquet/schema"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -22,12 +22,16 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func TestGather(t *testing.T) {
+func TestWrite(t *testing.T) {
+	now := time.Date(2026, 11, 14, 17, 4, 15, 123456789, time.UTC)
 	tests := []struct {
-		name       string
-		metrics    []telegraf.Metric
-		numRows    int
-		numColumns int
+		name                 string
+		timestampType        string
+		metrics              []telegraf.Metric
+		numRows              int
+		numColumns           int
+		timestampLogicalType schema.LogicalType
+		timestamp            int64
 	}{
 		{
 			name: "basic single metric",
@@ -38,11 +42,13 @@ func TestGather(t *testing.T) {
 					map[string]any{
 						"value": 1.0,
 					},
-					time.Now(),
+					now,
 				),
 			},
-			numRows:    1,
-			numColumns: 2,
+			numRows:              1,
+			numColumns:           2,
+			timestampLogicalType: schema.NewIntLogicalType(64, true),
+			timestamp:            now.UnixNano(),
 		},
 		{
 			name: "mix of tags and fields",
@@ -55,7 +61,7 @@ func TestGather(t *testing.T) {
 					map[string]any{
 						"value": 1.0,
 					},
-					time.Now(),
+					now,
 				),
 				metric.New(
 					"test",
@@ -65,11 +71,13 @@ func TestGather(t *testing.T) {
 					map[string]any{
 						"value": 2.0,
 					},
-					time.Now(),
+					now,
 				),
 			},
-			numRows:    2,
-			numColumns: 3,
+			numRows:              2,
+			numColumns:           3,
+			timestampLogicalType: schema.NewIntLogicalType(64, true),
+			timestamp:            now.UnixNano(),
 		},
 		{
 			name: "null values",
@@ -82,7 +90,7 @@ func TestGather(t *testing.T) {
 					map[string]any{
 						"value_old": 1.0,
 					},
-					time.Now(),
+					now,
 				),
 				metric.New(
 					"test",
@@ -92,11 +100,13 @@ func TestGather(t *testing.T) {
 					map[string]any{
 						"value_new": 2.0,
 					},
-					time.Now(),
+					now,
 				),
 			},
-			numRows:    2,
-			numColumns: 5,
+			numRows:              2,
+			numColumns:           5,
+			timestampLogicalType: schema.NewIntLogicalType(64, true),
+			timestamp:            now.UnixNano(),
 		},
 		{
 			name: "data types",
@@ -120,11 +130,67 @@ func TestGather(t *testing.T) {
 						"string":  "string",
 						"bool":    true,
 					},
-					time.Now(),
+					now,
 				),
 			},
-			numRows:    1,
-			numColumns: 15,
+			numRows:              1,
+			numColumns:           15,
+			timestampLogicalType: schema.NewIntLogicalType(64, true),
+			timestamp:            now.UnixNano(),
+		},
+		{
+			name:          "timestamp as int64",
+			timestampType: "int64",
+			metrics: []telegraf.Metric{
+				metric.New(
+					"test",
+					map[string]string{},
+					map[string]any{
+						"value": 1.0,
+					},
+					now,
+				),
+			},
+			numRows:              1,
+			numColumns:           2,
+			timestampLogicalType: schema.NewIntLogicalType(64, true),
+			timestamp:            now.UnixNano(),
+		},
+		{
+			name:          "timestamp in microseconds",
+			timestampType: "timestamp_us",
+			metrics: []telegraf.Metric{
+				metric.New(
+					"test",
+					map[string]string{},
+					map[string]any{
+						"value": 1.0,
+					},
+					now,
+				),
+			},
+			numRows:              1,
+			numColumns:           2,
+			timestampLogicalType: schema.NewTimestampLogicalType(true, schema.TimeUnitMicros),
+			timestamp:            now.UnixMicro(),
+		},
+		{
+			name:          "timestamp in nanoseconds",
+			timestampType: "timestamp_ns",
+			metrics: []telegraf.Metric{
+				metric.New(
+					"test",
+					map[string]string{},
+					map[string]any{
+						"value": 1.0,
+					},
+					now,
+				),
+			},
+			numRows:              1,
+			numColumns:           2,
+			timestampLogicalType: schema.NewTimestampLogicalType(true, schema.TimeUnitNanos),
+			timestamp:            now.UnixNano(),
 		},
 	}
 
@@ -134,6 +200,7 @@ func TestGather(t *testing.T) {
 			plugin := &Parquet{
 				Directory:          testDir,
 				TimestampFieldName: defaultTimestampFieldName,
+				TimestampType:      tt.timestampType,
 			}
 			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Connect())
@@ -151,6 +218,18 @@ func TestGather(t *testing.T) {
 			metadata := reader.MetaData()
 			require.Equal(t, tt.numRows, int(metadata.NumRows))
 			require.Equal(t, tt.numColumns, metadata.Schema.NumColumns())
+
+			index := metadata.Schema.ColumnIndexByName(defaultTimestampFieldName)
+			logicalType := metadata.Schema.Column(index).LogicalType()
+			require.Truef(t, tt.timestampLogicalType.Equals(logicalType), "timestamp column has logical type %s", logicalType)
+
+			columnReader, err := reader.RowGroup(0).Column(index)
+			require.NoError(t, err)
+			timestamps := make([]int64, tt.numRows)
+			_, read, err := columnReader.(*file.Int64ColumnChunkReader).ReadBatch(int64(tt.numRows), timestamps, nil, nil)
+			require.NoError(t, err)
+			require.Equal(t, tt.numRows, read)
+			require.Equal(t, slices.Repeat([]int64{tt.timestamp}, tt.numRows), timestamps)
 		})
 	}
 }
@@ -405,9 +484,9 @@ func TestMissingValuesReadBackAsNull(t *testing.T) {
 	require.NoError(t, err)
 	defer reader.Close()
 
-	schema := reader.MetaData().Schema
-	for i := 0; i < schema.NumColumns(); i++ {
-		column := schema.Column(i)
+	fileSchema := reader.MetaData().Schema
+	for i := 0; i < fileSchema.NumColumns(); i++ {
+		column := fileSchema.Column(i)
 		if column.Name() == "timestamp" {
 			continue
 		}
@@ -433,13 +512,13 @@ func TestTimestampFieldNameCollisionKeepsOneColumn(t *testing.T) {
 	require.NoError(t, err)
 	defer reader.Close()
 
-	schema := reader.MetaData().Schema
-	names := make([]string, 0, schema.NumColumns())
-	for i := 0; i < schema.NumColumns(); i++ {
-		names = append(names, schema.Column(i).Name())
+	fileSchema := reader.MetaData().Schema
+	names := make([]string, 0, fileSchema.NumColumns())
+	for i := 0; i < fileSchema.NumColumns(); i++ {
+		names = append(names, fileSchema.Column(i).Name())
 	}
 	require.ElementsMatch(t, []string{"value", "timestamp"}, names)
-	require.Equal(t, parquet.Types.Int64, schema.Column(schema.ColumnIndexByName("timestamp")).PhysicalType())
+	require.Equal(t, parquet.Types.Int64, fileSchema.Column(fileSchema.ColumnIndexByName("timestamp")).PhysicalType())
 }
 
 func TestInvalidFilename(t *testing.T) {
@@ -701,10 +780,10 @@ func TestColumnsSortedByNameWithTimestampLast(t *testing.T) {
 	require.NoError(t, err)
 	defer reader.Close()
 
-	schema := reader.MetaData().Schema
-	names := make([]string, 0, schema.NumColumns())
-	for i := 0; i < schema.NumColumns(); i++ {
-		names = append(names, schema.Column(i).Name())
+	fileSchema := reader.MetaData().Schema
+	names := make([]string, 0, fileSchema.NumColumns())
+	for i := 0; i < fileSchema.NumColumns(); i++ {
+		names = append(names, fileSchema.Column(i).Name())
 	}
 	require.Equal(t, []string{
 		"host", "region", "usage_idle", "usage_iowait", "usage_steal", "usage_system", "usage_user", "timestamp",
@@ -744,8 +823,8 @@ func TestFailedWriterLeavesNoFile(t *testing.T) {
 	defer plugin.Close()
 
 	// Parquet has no representation for month intervals, so creating the writer fails
-	schema := arrow.NewSchema([]arrow.Field{{Name: "value", Type: arrow.FixedWidthTypes.MonthInterval}}, nil)
-	_, _, err := plugin.createWriter("test", schema, time.Now())
+	arrowSchema := arrow.NewSchema([]arrow.Field{{Name: "value", Type: arrow.FixedWidthTypes.MonthInterval}}, nil)
+	_, _, err := plugin.createWriter("test", arrowSchema, time.Now())
 	require.ErrorContains(t, err, "failed to create parquet writer")
 
 	entries, err := os.ReadDir(testDir)
@@ -753,69 +832,7 @@ func TestFailedWriterLeavesNoFile(t *testing.T) {
 	require.Empty(t, entries)
 }
 
-func TestDefaultTimestampTypeStoresPlainNanoseconds(t *testing.T) {
-	sampled := time.Date(2026, 11, 14, 17, 4, 15, 123456789, time.UTC)
-	column, stored := writeTimestampColumn(t, "", sampled)
-
-	require.Equal(t, parquetschema.NewIntLogicalType(64, true), column.LogicalType())
-	require.Equal(t, sampled.UnixNano(), stored)
-}
-
-func TestTimestampTypeStoresAPointInTime(t *testing.T) {
-	sampled := time.Date(2026, 11, 14, 17, 4, 15, 123456789, time.UTC)
-	tests := []struct {
-		timestampType string
-		unit          parquetschema.TimeUnitType
-		stored        int64
-	}{
-		{timestampType: "timestamp_us", unit: parquetschema.TimeUnitMicros, stored: sampled.UnixMicro()},
-		{timestampType: "timestamp_ns", unit: parquetschema.TimeUnitNanos, stored: sampled.UnixNano()},
-	}
-	for _, tt := range tests {
-		t.Run(tt.timestampType, func(t *testing.T) {
-			column, stored := writeTimestampColumn(t, tt.timestampType, sampled)
-
-			logical, ok := column.LogicalType().(parquetschema.TimestampLogicalType)
-			require.Truef(t, ok, "timestamp column has logical type %s", column.LogicalType())
-			require.True(t, logical.IsAdjustedToUTC())
-			require.Equal(t, tt.unit, logical.TimeUnit())
-			require.Equal(t, tt.stored, stored)
-		})
-	}
-}
-
 func TestUnknownTimestampTypeIsRejected(t *testing.T) {
 	p := &Parquet{Directory: t.TempDir(), TimestampType: "timestamp", Log: testutil.Logger{}}
 	require.ErrorContains(t, p.Init(), "timestamp_type")
-}
-
-func writeTimestampColumn(t *testing.T, timestampType string, sampled time.Time) (*parquetschema.Column, int64) {
-	t.Helper()
-
-	dir := t.TempDir()
-	p := &Parquet{Directory: dir, TimestampFieldName: "timestamp", TimestampType: timestampType, Log: testutil.Logger{}}
-	require.NoError(t, p.Init())
-	require.NoError(t, p.Write([]telegraf.Metric{
-		metric.New("demo", nil, map[string]any{"value": int64(1)}, sampled),
-	}))
-	require.NoError(t, p.Close())
-
-	written, err := filepath.Glob(filepath.Join(dir, "*.parquet"))
-	require.NoError(t, err)
-	require.Len(t, written, 1)
-
-	reader, err := file.OpenParquetFile(written[0], false)
-	require.NoError(t, err)
-	defer reader.Close()
-
-	index := reader.MetaData().Schema.ColumnIndexByName("timestamp")
-	columnReader, err := reader.RowGroup(0).Column(index)
-	require.NoError(t, err)
-
-	values := make([]int64, 1)
-	_, read, err := columnReader.(*file.Int64ColumnChunkReader).ReadBatch(1, values, nil, nil)
-	require.NoError(t, err)
-	require.Equal(t, 1, read)
-
-	return reader.MetaData().Schema.Column(index), values[0]
 }
