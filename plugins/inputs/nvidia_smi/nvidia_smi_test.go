@@ -1,9 +1,10 @@
 package nvidia_smi
 
 import (
+	"flag"
+	"io"
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 	"time"
 
@@ -18,36 +19,29 @@ import (
 )
 
 func TestProbe(t *testing.T) {
-	var binPath string
-	var nvidiaSMIArgsPrefix []string
-	if runtime.GOOS == "windows" {
-		binPath = `C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe`
-		nvidiaSMIArgsPrefix = []string{"-Command"}
-	} else {
-		binPath = "/bin/bash"
-		nvidiaSMIArgsPrefix = []string{"-c"}
-	}
+	exe, err := os.Executable()
+	require.NoError(t, err)
 
 	for _, tt := range []struct {
 		name        string
-		args        string
+		args        []string
 		expectError bool
 	}{
 		{
 			name:        "probe success",
-			args:        "exit 0",
+			args:        []string{"-mockInput=" + filepath.Join("testdata", "rtx-3080-v13.xml")},
 			expectError: false,
 		},
 		{
 			name:        "probe error",
-			args:        "exit 1",
+			args:        []string{"-fail"},
 			expectError: true,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			plugin := &NvidiaSMI{
-				BinPath:       binPath,
-				nvidiaSMIArgs: append(nvidiaSMIArgsPrefix, tt.args),
+				BinPath:       exe,
+				nvidiaSMIArgs: tt.args,
 				Log:           &testutil.Logger{},
 				Timeout:       config.Duration(5 * time.Second),
 			}
@@ -1151,4 +1145,36 @@ func TestGatherValidXML(t *testing.T) {
 			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 		})
 	}
+}
+
+// TestMain allows the test binary to act as a mock nvidia-smi executable
+// when called with the "-mockInput" and/or "-fail" flags.
+func TestMain(m *testing.M) {
+	var mockInput string
+	var fail bool
+	flag.StringVar(&mockInput, "mockInput", "", "file containing the mock nvidia-smi output")
+	flag.BoolVar(&fail, "fail", false, "mock a failing nvidia-smi call")
+	flag.Parse()
+
+	if mockInput == "" && !fail {
+		os.Exit(m.Run())
+	}
+
+	if mockInput != "" {
+		file, err := os.Open(mockInput)
+		if err != nil {
+			os.Exit(2) // ENOENT
+		}
+		_, err = io.Copy(os.Stdout, file)
+		file.Close()
+		if err != nil {
+			os.Exit(5) // EIO
+		}
+	}
+	var exitCode int
+	if fail {
+		exitCode = 1
+	}
+
+	os.Exit(exitCode)
 }
