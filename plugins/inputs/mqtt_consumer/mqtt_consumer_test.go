@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -968,6 +969,71 @@ func TestContentEncodingDecodeError(t *testing.T) {
 			require.Empty(t, acc.GetTelegrafMetrics())
 			require.Empty(t, plugin.sem)
 			require.Equal(t, tt.expectedAcked, m.acked)
+		})
+	}
+}
+
+func TestContentEncodingConcurrentMessages(t *testing.T) {
+	// The MQTT client might call the message handler concurrently, so
+	// decoding must not mix up the content of simultaneous messages. Run with
+	// the race detector to also catch unsynchronized decoder access.
+	const count = 20
+
+	for _, encoding := range []string{"gzip", "zlib", "zstd"} {
+		t.Run(encoding, func(t *testing.T) {
+			var handler mqtt.MessageHandler
+			fClient := &fakeClient{
+				connectF:           func() mqtt.Token { return &fakeToken{} },
+				addRouteF:          func(callback mqtt.MessageHandler) { handler = callback },
+				subscribeMultipleF: func() mqtt.Token { return &fakeToken{} },
+				disconnectF:        func() {},
+			}
+			plugin := newMQTTConsumer(func(o *mqtt.ClientOptions) client {
+				fClient.opts = o
+				return fClient
+			})
+			plugin.Log = testutil.Logger{}
+			plugin.Topics = []string{"telegraf"}
+			plugin.ContentEncoding = encoding
+
+			parser := &influx.Parser{}
+			require.NoError(t, parser.Init())
+			plugin.SetParser(parser)
+			require.NoError(t, plugin.Init())
+
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Start(&acc))
+			defer plugin.Stop()
+
+			// All messages decode to the same length, so decoders reusing their
+			// internal buffer (gzip, zlib) write them into the same memory.
+			expected := make([]telegraf.Metric, 0, count)
+			payloads := make([][]byte, 0, count)
+			for i := range count {
+				encoder, err := internal.NewContentEncoder(encoding)
+				require.NoError(t, err)
+				payload, err := encoder.Encode([]byte(fmt.Sprintf("cpu,host=host%02d value=%di", i, i+10)))
+				require.NoError(t, err)
+				payloads = append(payloads, payload)
+
+				expected = append(expected, metric.New(
+					"cpu",
+					map[string]string{"host": fmt.Sprintf("host%02d", i), "topic": "telegraf"},
+					map[string]any{"value": int64(i + 10)},
+					time.Unix(0, 0),
+				))
+			}
+
+			var wg sync.WaitGroup
+			for _, payload := range payloads {
+				wg.Go(func() {
+					handler(nil, &message{topic: "telegraf", payload: payload})
+				})
+			}
+			wg.Wait()
+
+			require.Empty(t, acc.Errors)
+			testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime(), testutil.SortMetrics())
 		})
 	}
 }

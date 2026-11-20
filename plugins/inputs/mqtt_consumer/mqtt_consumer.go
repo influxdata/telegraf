@@ -2,6 +2,7 @@
 package mqtt_consumer
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	"errors"
@@ -55,6 +56,7 @@ type MQTTConsumer struct {
 	tls.ClientConfig
 
 	decoder       internal.ContentDecoder
+	decoderMutex  sync.Mutex
 	parser        telegraf.Parser
 	clientFactory clientFactory
 	client        client
@@ -320,12 +322,26 @@ func (m *MQTTConsumer) onMessage(_ mqtt.Client, msg mqtt.Message) {
 }
 
 func (m *MQTTConsumer) decode(payload []byte) ([]byte, error) {
+	// Uncompressed data needs no decoding, so avoid locking and copying.
 	// Empty payloads, e.g. used to clear retained messages, are no valid
 	// compressed data, so pass them to the parser as without encoding.
-	if len(payload) == 0 {
+	if m.ContentEncoding == "identity" || len(payload) == 0 {
 		return payload, nil
 	}
-	return m.decoder.Decode(payload)
+
+	// The decoders are not safe for concurrent use, but onMessage might be
+	// called concurrently by the MQTT client.
+	m.decoderMutex.Lock()
+	defer m.decoderMutex.Unlock()
+
+	data, err := m.decoder.Decode(payload)
+	if err != nil {
+		return nil, err
+	}
+
+	// Some decoders return their internal buffer which is overwritten by the
+	// next call, so copy the data before releasing the lock.
+	return bytes.Clone(data), nil
 }
 
 func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
