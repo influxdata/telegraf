@@ -115,7 +115,7 @@ func (c *configurationPerMetric) check() error {
 				case "":
 				case "INT8L", "INT8H", "INT16", "INT32", "INT64",
 					"UINT8L", "UINT8H", "UINT16", "UINT32", "UINT64",
-					"FLOAT16", "FLOAT32", "FLOAT64":
+					"FLOAT16", "FLOAT32", "FLOAT64", "FLOAT_DEC_8E24M", "FLOAT_UDEC_8E24M":
 					if f.Length != 0 {
 						return fmt.Errorf("length option cannot be used for type %q of field %q", f.InputType, f.Name)
 					}
@@ -381,7 +381,7 @@ func (*configurationPerMetric) determineOutputDatatype(input string) (string, er
 		return "INT64", nil
 	case "BIT", "UINT8L", "UINT8H", "UINT16", "UINT32", "UINT64":
 		return "UINT64", nil
-	case "FLOAT16", "FLOAT32", "FLOAT64":
+	case "FLOAT16", "FLOAT32", "FLOAT64", "FLOAT_DEC_8E24M", "FLOAT_UDEC_8E24M":
 		return "FLOAT64", nil
 	case "STRING":
 		return "STRING", nil
@@ -396,7 +396,7 @@ func (*configurationPerMetric) determineFieldLength(input string, length uint16)
 		return 1, nil
 	case "INT16", "UINT16", "FLOAT16":
 		return 1, nil
-	case "INT32", "UINT32", "FLOAT32":
+	case "INT32", "UINT32", "FLOAT32", "FLOAT_DEC_8E24M", "FLOAT_UDEC_8E24M":
 		return 2, nil
 	case "INT64", "UINT64", "FLOAT64":
 		return 4, nil
