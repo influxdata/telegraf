@@ -5,6 +5,7 @@ import (
 	"bytes"
 	_ "embed"
 	"fmt"
+	"math"
 	"os"
 	"strings"
 	"time"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/common/postgresql"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -23,28 +25,49 @@ var sampleConfig string
 
 var ignoredColumns = map[string]bool{"stats_reset": true}
 
+// Values accepted by numeric_type
+var numericTypes = []string{"string", "float"}
+
+// Column types that string_columns_as_tags turns into tags
+var textTypes = map[string]bool{"TEXT": true, "VARCHAR": true, "BPCHAR": true, "CHAR": true, "NAME": true}
+
 type Postgresql struct {
-	Databases          []string        `deprecated:"1.22.4;use the sqlquery option to specify database to use"`
-	Query              []query         `toml:"query"`
-	PreparedStatements bool            `toml:"prepared_statements"`
-	Log                telegraf.Logger `toml:"-"`
+	Databases           []string        `deprecated:"1.22.4;use the sqlquery option to specify database to use"`
+	Query               []query         `toml:"query"`
+	PreparedStatements  bool            `toml:"prepared_statements"`
+	StringColumnsAsTags bool            `toml:"string_columns_as_tags"`
+	NumericType         string          `toml:"numeric_type"`
+	Log                 telegraf.Logger `toml:"-"`
 	postgresql.Config
 
 	service *postgresql.Service
 }
 
 type query struct {
-	Sqlquery    string `toml:"sqlquery"`
-	Script      string `toml:"script"`
-	Version     int    `deprecated:"1.28.0;use minVersion to specify minimal DB version this query supports"`
-	MinVersion  int    `toml:"min_version"`
-	MaxVersion  int    `toml:"max_version"`
-	Withdbname  bool   `deprecated:"1.22.4;use the sqlquery option to specify database to use"`
-	Tagvalue    string `toml:"tagvalue"`
-	Measurement string `toml:"measurement"`
-	Timestamp   string `toml:"timestamp"`
+	Sqlquery            string `toml:"sqlquery"`
+	Script              string `toml:"script"`
+	Version             int    `deprecated:"1.28.0;use minVersion to specify minimal DB version this query supports"`
+	MinVersion          int    `toml:"min_version"`
+	MaxVersion          int    `toml:"max_version"`
+	Withdbname          bool   `deprecated:"1.22.4;use the sqlquery option to specify database to use"`
+	Tagvalue            string `toml:"tagvalue"`
+	Measurement         string `toml:"measurement"`
+	Timestamp           string `toml:"timestamp"`
+	StringColumnsAsTags *bool  `toml:"string_columns_as_tags"`
+	NumericType         string `toml:"numeric_type"`
 
 	additionalTags map[string]bool
+	stringTags     bool
+	numericFloat   bool
+}
+
+// resultSet is what the rows of one query result have in common
+type resultSet struct {
+	columns []string
+	// numeric names the columns of the NUMERIC type
+	numeric map[string]bool
+	// text names the columns of the text types
+	text map[string]bool
 }
 
 type scanner interface {
@@ -56,6 +79,13 @@ func (*Postgresql) SampleConfig() string {
 }
 
 func (p *Postgresql) Init() error {
+	if p.NumericType == "" {
+		p.NumericType = "string"
+	}
+	if err := choice.Check(p.NumericType, numericTypes); err != nil {
+		return fmt.Errorf("config option 'numeric_type': %w", err)
+	}
+
 	// Set defaults for the queries
 	for i, q := range p.Query {
 		if q.Sqlquery == "" {
@@ -81,6 +111,18 @@ func (p *Postgresql) Init() error {
 			}
 		}
 		q.Sqlquery += queryAddon
+
+		q.stringTags = p.StringColumnsAsTags
+		if q.StringColumnsAsTags != nil {
+			q.stringTags = *q.StringColumnsAsTags
+		}
+		if q.NumericType == "" {
+			q.NumericType = p.NumericType
+		}
+		if err := choice.Check(q.NumericType, numericTypes); err != nil {
+			return fmt.Errorf("query %d: config option 'numeric_type': %w", i, err)
+		}
+		q.numericFloat = q.NumericType == "float"
 
 		q.additionalTags = make(map[string]bool)
 		if q.Tagvalue != "" {
@@ -145,27 +187,42 @@ func (p *Postgresql) gatherMetricsFromQuery(acc telegraf.Accumulator, q query, t
 	if err != nil {
 		return err
 	}
+	columnTypes, err := rows.ColumnTypes()
+	if err != nil {
+		return err
+	}
+	numeric := make(map[string]bool, len(columnTypes))
+	text := make(map[string]bool, len(columnTypes))
+	for _, ct := range columnTypes {
+		switch typeName := ct.DatabaseTypeName(); {
+		case typeName == "NUMERIC":
+			numeric[ct.Name()] = true
+		case textTypes[typeName]:
+			text[ct.Name()] = true
+		}
+	}
+	rs := &resultSet{columns: columns, numeric: numeric, text: text}
 
 	for rows.Next() {
-		if err := p.accRow(acc, rows, columns, q, timestamp); err != nil {
+		if err := p.accRow(acc, rows, rs, q, timestamp); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (p *Postgresql) accRow(acc telegraf.Accumulator, row scanner, columns []string, q query, timestamp time.Time) error {
+func (p *Postgresql) accRow(acc telegraf.Accumulator, row scanner, rs *resultSet, q query, timestamp time.Time) error {
 	// this is where we'll store the column name with its *any
 	columnMap := make(map[string]*any)
 
-	for _, column := range columns {
+	for _, column := range rs.columns {
 		columnMap[column] = new(any)
 	}
 
 	columnVars := make([]any, 0, len(columnMap))
 	// populate the array of any with the pointers in the right order
 	for i := 0; i < len(columnMap); i++ {
-		columnVars = append(columnVars, columnMap[columns[i]])
+		columnVars = append(columnVars, columnMap[rs.columns[i]])
 	}
 
 	// deconstruct array of variables and send to Scan
@@ -215,6 +272,26 @@ func (p *Postgresql) accRow(acc telegraf.Accumulator, row scanner, columns []str
 				tags[col] = v
 			}
 			continue
+		}
+
+		if q.numericFloat && rs.numeric[col] {
+			v, err := internal.ToFloat64(*val)
+			if err != nil {
+				p.Log.Debugf("Failed to convert numeric column %q: %v", col, err)
+				continue
+			}
+			if math.IsNaN(v) || math.IsInf(v, 0) {
+				continue
+			}
+			fields[col] = v
+			continue
+		}
+
+		if q.stringTags && rs.text[col] {
+			if v, err := internal.ToString(*val); err == nil {
+				tags[col] = v
+				continue
+			}
 		}
 
 		if v, ok := (*val).([]byte); ok {

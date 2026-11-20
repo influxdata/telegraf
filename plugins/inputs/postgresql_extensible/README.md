@@ -53,6 +53,21 @@ to use them.
   ## with pool_mode set to transaction.
   prepared_statements = true
 
+  ## Use the columns of the text types (text, varchar, char and name) as tags
+  ## instead of fields, so they do not have to be listed in tagvalue. Columns
+  ## of other types become tags only when listed in tagvalue or cast to a text
+  ## type in the query.
+  ## Queries may override this.
+  # string_columns_as_tags = false
+
+  ## Field type for columns of the PostgreSQL numeric type, which is what
+  ## avg(), sum() and divisions often return. Available values are
+  ##   string -- report the value as text, keeping the full precision
+  ##   float  -- report the value as a number, so no cast is needed in the
+  ##             query; NaN and Infinity values are skipped
+  ## Queries may override this.
+  # numeric_type = "string"
+
   # Define the toml config where the sql queries are stored
   # The script option can be used to specify the .sql file path.
   # If script and sqlquery options specified at same time, sqlquery will be used
@@ -80,6 +95,9 @@ to use them.
   # 9.6.2 -> 906
   # 15.2 -> 1500
   #
+  # The string_columns_as_tags and numeric_type fields override the
+  # plugin-level settings for this query.
+  #
   # Structure :
   # [[inputs.postgresql_extensible.query]]
   #   measurement string
@@ -89,11 +107,15 @@ to use them.
   #   withdbname boolean
   #   tagvalue string (coma separated)
   #   timestamp string
+  #   string_columns_as_tags boolean
+  #   numeric_type string
   [[inputs.postgresql_extensible.query]]
     measurement="pg_stat_database"
     sqlquery="SELECT * FROM pg_stat_database WHERE datname"
     min_version=901
     tagvalue=""
+    # string_columns_as_tags=false
+    # numeric_type="string"
   [[inputs.postgresql_extensible.query]]
     script="your_sql-filepath.sql"
     min_version=901
@@ -318,3 +340,9 @@ By default, the following format will be used
   * tags:
     * db
     * server
+    * all columns listed in `tagvalue`
+    * all columns of the `text`, `varchar`, `char` and `name` types if
+      `string_columns_as_tags` is set
+  * fields:
+    * all remaining columns; `numeric` columns are converted to floats if
+      `numeric_type` is `"float"`, otherwise they are reported as strings
