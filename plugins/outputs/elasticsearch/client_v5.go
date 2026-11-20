@@ -7,18 +7,19 @@ import (
 	"fmt"
 	"net/http"
 
-	elasticsearch5 "github.com/elastic/go-elasticsearch/v5"
-	esapi5 "github.com/elastic/go-elasticsearch/v5/esapi"
+	"github.com/elastic/go-elasticsearch/v5"
+	"github.com/elastic/go-elasticsearch/v5/esapi"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 )
 
 type clientV5 struct {
-	client  *elasticsearch5.Client
-	log     telegraf.Logger
-	encoder *internal.GzipEncoder
-	headers http.Header
+	client      *elasticsearch.Client
+	log         telegraf.Logger
+	encoder     *internal.GzipEncoder
+	headers     http.Header
+	bodyHeaders http.Header
 }
 
 func (a *Elasticsearch) newClientV5() (client, error) {
@@ -26,15 +27,22 @@ func (a *Elasticsearch) newClientV5() (client, error) {
 	if err != nil {
 		return nil, err
 	}
-	c, err := elasticsearch5.NewClient(elasticsearch5.Config{
+	c, err := elasticsearch.NewClient(elasticsearch.Config{
 		Addresses: a.URLs,
 		Transport: transport,
 	})
 	if err != nil {
 		return nil, err
 	}
-	client := &clientV5{client: c, log: a.Log, headers: a.clientHeaders()}
+	headers := a.clientHeaders()
+	client := &clientV5{client: c, log: a.Log, headers: headers, bodyHeaders: headers}
 	if a.EnableGzip {
+		// Content-Encoding applies only to requests with a compressed body.
+		client.bodyHeaders = headers.Clone()
+		if client.bodyHeaders == nil {
+			client.bodyHeaders = make(http.Header)
+		}
+		client.bodyHeaders.Set("Content-Encoding", "gzip")
 		encoder, err := internal.NewGzipEncoder()
 		if err != nil {
 			return nil, fmt.Errorf("setting up gzip encoder failed: %w", err)
@@ -46,40 +54,20 @@ func (a *Elasticsearch) newClientV5() (client, error) {
 
 func (*clientV5) close() {}
 
-func (c *clientV5) compressRequestBodyIfEnabled(body []byte) (*bytes.Reader, map[string]string, error) {
-	if c.encoder == nil {
-		return bytes.NewReader(body), nil, nil
-	}
-	data, err := c.encoder.Encode(body)
-	if err != nil {
-		return nil, nil, err
-	}
-	return bytes.NewReader(data), map[string]string{"Content-Encoding": "gzip"}, nil
-}
-
-func (c *clientV5) requestHeaders(additional map[string]string) http.Header {
-	headers := make(http.Header, len(c.headers)+len(additional))
-	for name, value := range additional {
-		headers.Add(name, value)
-	}
-	for name, values := range c.headers {
-		for _, value := range values {
-			headers.Add(name, value)
-		}
-	}
-	return headers
-}
-
 func (c *clientV5) bulk(ctx context.Context, documents []document) error {
 	body, err := encodeBulk(documents, "metrics")
 	if err != nil {
 		return fmt.Errorf("error sending bulk request to Elasticsearch: %w", err)
 	}
-	requestBody, headers, err := c.compressRequestBodyIfEnabled(body.Bytes())
-	if err != nil {
-		return fmt.Errorf("error sending bulk request to Elasticsearch: %w", err)
+	requestBody := bytes.NewReader(body.Bytes())
+	if c.encoder != nil {
+		data, err := c.encoder.Encode(body.Bytes())
+		if err != nil {
+			return fmt.Errorf("error sending bulk request to Elasticsearch: %w", err)
+		}
+		requestBody = bytes.NewReader(data)
 	}
-	request := esapi5.BulkRequest{Body: requestBody, Header: c.requestHeaders(headers)}
+	request := esapi.BulkRequest{Body: requestBody, Header: c.bodyHeaders.Clone()}
 	res, err := request.Do(ctx, c.client)
 	if err != nil {
 		return fmt.Errorf("error sending bulk request to Elasticsearch: %w", err)
@@ -89,7 +77,7 @@ func (c *clientV5) bulk(ctx context.Context, documents []document) error {
 }
 
 func (c *clientV5) templateExists(ctx context.Context, name string) (bool, error) {
-	request := esapi5.IndicesExistsTemplateRequest{Name: []string{name}, Header: c.requestHeaders(nil)}
+	request := esapi.IndicesExistsTemplateRequest{Name: []string{name}, Header: c.headers.Clone()}
 	res, err := request.Do(ctx, c.client)
 	if err != nil {
 		return false, err
@@ -105,11 +93,15 @@ func (c *clientV5) templateExists(ctx context.Context, name string) (bool, error
 }
 
 func (c *clientV5) putTemplate(ctx context.Context, name, body string) error {
-	requestBody, headers, err := c.compressRequestBodyIfEnabled([]byte(body))
-	if err != nil {
-		return err
+	requestBody := bytes.NewReader([]byte(body))
+	if c.encoder != nil {
+		data, err := c.encoder.Encode([]byte(body))
+		if err != nil {
+			return err
+		}
+		requestBody = bytes.NewReader(data)
 	}
-	request := esapi5.IndicesPutTemplateRequest{Name: name, Body: requestBody, Header: c.requestHeaders(headers)}
+	request := esapi.IndicesPutTemplateRequest{Name: name, Body: requestBody, Header: c.bodyHeaders.Clone()}
 	res, err := request.Do(ctx, c.client)
 	if err != nil {
 		return err
