@@ -16,8 +16,6 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-const timeBetweenSteps = time.Second
-
 func TestCases(t *testing.T) {
 	folders, err := os.ReadDir("testcases")
 	require.NoError(t, err)
@@ -54,13 +52,19 @@ func TestCases(t *testing.T) {
 			plugin := cfg.Inputs[0].Input.(*Powercap)
 			require.NoError(t, plugin.Init())
 
+			steps, err := filepath.Glob(filepath.Join(testcasePath, "step*"))
+			require.NoError(t, err)
+			if len(steps) == 0 {
+				steps = []string{testcasePath}
+			}
+
 			var acc testutil.Accumulator
 			stepTime := time.Unix(0, 0)
 			plugin.timeFunc = func() time.Time { return stepTime }
-			for _, step := range stepsOf(t, testcasePath) {
+			for _, step := range steps {
 				t.Setenv("HOST_SYS", filepath.Join(step, "sys"))
 				require.NoError(t, plugin.Gather(&acc))
-				stepTime = stepTime.Add(timeBetweenSteps)
+				stepTime = stepTime.Add(time.Second)
 			}
 
 			actualErrors := make([]string, 0, len(acc.Errors))
@@ -71,13 +75,4 @@ func TestCases(t *testing.T) {
 			testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.SortMetrics())
 		})
 	}
-}
-
-func stepsOf(t *testing.T, testcasePath string) []string {
-	steps, err := filepath.Glob(filepath.Join(testcasePath, "step*"))
-	require.NoError(t, err)
-	if len(steps) == 0 {
-		return []string{testcasePath}
-	}
-	return steps
 }

@@ -48,9 +48,7 @@ func (p *Powercap) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for _, energyFile := range energyFiles {
-		if err := p.gatherZone(acc, filepath.Dir(energyFile)); err != nil {
-			acc.AddError(err)
-		}
+		acc.AddError(p.gatherZone(acc, filepath.Dir(energyFile)))
 	}
 	return nil
 }
