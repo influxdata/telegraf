@@ -30,6 +30,8 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 The plugin reads the zones in `/sys/class/powercap`. Set the `HOST_SYS`
 environment variable to read them from another location, for example when
 Telegraf runs in a container with the host's `/sys` mounted at `/hostfs/sys`.
+If the plugin finds no zones there, for example in a virtual machine, it
+reports an error at every collection.
 
 ### Permissions
 

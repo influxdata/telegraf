@@ -63,7 +63,7 @@ func TestCases(t *testing.T) {
 			plugin.timeFunc = func() time.Time { return stepTime }
 			for _, step := range steps {
 				t.Setenv("HOST_SYS", filepath.Join(step, "sys"))
-				require.NoError(t, plugin.Gather(&acc))
+				acc.AddError(plugin.Gather(&acc))
 				stepTime = stepTime.Add(time.Second)
 			}
 

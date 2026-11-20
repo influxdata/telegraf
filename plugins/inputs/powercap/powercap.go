@@ -42,9 +42,13 @@ func (p *Powercap) Init() error {
 }
 
 func (p *Powercap) Gather(acc telegraf.Accumulator) error {
-	energyFiles, err := filepath.Glob(filepath.Join(internal.GetSysPath(), "class", "powercap", "*", "energy_uj"))
+	powercapPath := filepath.Join(internal.GetSysPath(), "class", "powercap")
+	energyFiles, err := filepath.Glob(filepath.Join(powercapPath, "*", "energy_uj"))
 	if err != nil {
 		return fmt.Errorf("finding power zones failed: %w", err)
+	}
+	if len(energyFiles) == 0 {
+		return fmt.Errorf("no power zones found in %q", powercapPath)
 	}
 
 	for _, energyFile := range energyFiles {
