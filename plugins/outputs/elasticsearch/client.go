@@ -86,6 +86,13 @@ func (t roundTripper) RoundTrip(original *http.Request) (*http.Response, error) 
 }
 
 func (t roundTripper) setAuth(req *http.Request) error {
+	if err := t.setAuthBasic(req); err != nil {
+		return err
+	}
+	return t.setAuthBearer(req)
+}
+
+func (t roundTripper) setAuthBasic(req *http.Request) error {
 	if t.basicAuth {
 		username, err := t.username.Get()
 		if err != nil {
@@ -103,6 +110,10 @@ func (t roundTripper) setAuth(req *http.Request) error {
 		password, _ := t.userinfo.Password()
 		req.SetBasicAuth(t.userinfo.Username(), password)
 	}
+	return nil
+}
+
+func (t roundTripper) setAuthBearer(req *http.Request) error {
 	if !t.bearerToken.Empty() {
 		token, err := t.bearerToken.Get()
 		if err != nil {
