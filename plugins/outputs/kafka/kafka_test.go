@@ -675,6 +675,10 @@ func TestWriteUnknownTopicWithBroker(t *testing.T) {
 	require.NoError(t, err)
 	defer func() { require.NoError(t, producer.Close()) }()
 
+	// Make sure we are connected by sending a single message for warming up the broker
+	_, _, err = producer.SendMessage(&sarama.ProducerMessage{Topic: "existing", Value: sarama.StringEncoder("warmup")})
+	require.NoError(t, err)
+
 	serializer := &influx.Serializer{}
 	require.NoError(t, serializer.Init())
 	plugin := &Kafka{
