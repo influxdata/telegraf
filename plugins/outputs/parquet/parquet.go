@@ -47,6 +47,7 @@ type Parquet struct {
 	metricGroups        map[string]*metricGroup
 	root                *os.Root
 	timestampColumnType arrow.DataType
+	timestampValue      func(time.Time) any
 }
 
 func (*Parquet) SampleConfig() string {
@@ -68,10 +69,13 @@ func (p *Parquet) Init() error {
 	switch p.TimestampType {
 	case "", "int64":
 		p.timestampColumnType = arrow.PrimitiveTypes.Int64
+		p.timestampValue = func(t time.Time) any { return t.UnixNano() }
 	case "timestamp_us":
 		p.timestampColumnType = arrow.FixedWidthTypes.Timestamp_us
+		p.timestampValue = func(t time.Time) any { return arrow.Timestamp(t.UnixMicro()) }
 	case "timestamp_ns":
 		p.timestampColumnType = arrow.FixedWidthTypes.Timestamp_ns
+		p.timestampValue = func(t time.Time) any { return arrow.Timestamp(t.UnixNano()) }
 	default:
 		return fmt.Errorf("invalid timestamp_type %q, expected \"int64\", \"timestamp_us\" or \"timestamp_ns\"", p.TimestampType)
 	}
@@ -465,17 +469,6 @@ func (p *Parquet) createSchema(metrics []telegraf.Metric) (*arrow.Schema, error)
 	}
 
 	return arrow.NewSchema(fields, nil), nil
-}
-
-func (p *Parquet) timestampValue(t time.Time) any {
-	switch p.timestampColumnType {
-	case arrow.FixedWidthTypes.Timestamp_us:
-		return arrow.Timestamp(t.UnixMicro())
-	case arrow.FixedWidthTypes.Timestamp_ns:
-		return arrow.Timestamp(t.UnixNano())
-	default:
-		return t.UnixNano()
-	}
 }
 
 func (p *Parquet) createWriter(name string, schema *arrow.Schema, now time.Time) (*pqarrow.FileWriter, string, error) {
