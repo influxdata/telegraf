@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -61,17 +62,26 @@ func (g *LinuxCPU) Init() error {
 		return errors.New("no metrics selected")
 	}
 
+	return nil
+}
+
+func (g *LinuxCPU) Start(telegraf.Accumulator) error {
+	// The sysfs properties are missing on some systems, e.g. inside virtual
+	// machines without cpufreq support. Report this as a startup error so
+	// the 'startup_error_behavior' setting can be used to keep Telegraf running.
 	cpus, err := g.discoverCpus()
 	if err != nil {
-		return err
+		return &internal.StartupError{Err: err}
 	} else if len(cpus) == 0 {
 		// Although the user has specified metrics to collect, `discoverCpus` failed to find the required metrics
-		return errors.New("no CPUs detected to track")
+		return &internal.StartupError{Err: errors.New("no CPUs detected to track")}
 	}
 	g.cpus = cpus
 
 	return nil
 }
+
+func (*LinuxCPU) Stop() {}
 
 func (g *LinuxCPU) Gather(acc telegraf.Accumulator) error {
 	for _, cpu := range g.cpus {
