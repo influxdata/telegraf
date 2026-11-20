@@ -14,6 +14,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/choice"
 	"github.com/influxdata/telegraf/plugins/common/postgresql"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -23,14 +24,19 @@ var sampleConfig string
 
 var ignoredColumns = map[string]bool{"stats_reset": true}
 
+// Values accepted by role
+var roles = []string{"any", "primary", "replica"}
+
 type Postgresql struct {
 	Databases          []string        `deprecated:"1.22.4;use the sqlquery option to specify database to use"`
 	Query              []query         `toml:"query"`
 	PreparedStatements bool            `toml:"prepared_statements"`
+	Role               string          `toml:"role"`
 	Log                telegraf.Logger `toml:"-"`
 	postgresql.Config
 
-	service *postgresql.Service
+	service   *postgresql.Service
+	roleInUse bool
 }
 
 type query struct {
@@ -43,6 +49,7 @@ type query struct {
 	Tagvalue    string `toml:"tagvalue"`
 	Measurement string `toml:"measurement"`
 	Timestamp   string `toml:"timestamp"`
+	Role        string `toml:"role"`
 
 	additionalTags map[string]bool
 }
@@ -56,6 +63,13 @@ func (*Postgresql) SampleConfig() string {
 }
 
 func (p *Postgresql) Init() error {
+	if p.Role == "" {
+		p.Role = "any"
+	}
+	if err := choice.Check(p.Role, roles); err != nil {
+		return fmt.Errorf("config option 'role': %w", err)
+	}
+
 	// Set defaults for the queries
 	for i, q := range p.Query {
 		if q.Sqlquery == "" {
@@ -81,6 +95,15 @@ func (p *Postgresql) Init() error {
 			}
 		}
 		q.Sqlquery += queryAddon
+		if q.Role == "" {
+			q.Role = p.Role
+		}
+		if err := choice.Check(q.Role, roles); err != nil {
+			return fmt.Errorf("query %d: config option 'role': %w", i, err)
+		}
+		if q.Role != "any" {
+			p.roleInUse = true
+		}
 
 		q.additionalTags = make(map[string]bool)
 		if q.Tagvalue != "" {
@@ -114,6 +137,16 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 		dbVersion = 0
 	}
 
+	// The role is only read when needed, so configurations without a role
+	// do not depend on pg_is_in_recovery() being available on the server
+	var inRecovery bool
+	if p.roleInUse {
+		if err := p.service.DB.QueryRow(`SELECT pg_is_in_recovery()`).Scan(&inRecovery); err != nil {
+			acc.AddError(fmt.Errorf("querying server role failed: %w", err))
+			return nil
+		}
+	}
+
 	// set default timestamp to Now and use for all generated metrics during
 	// the same Gather call
 	timestamp := time.Now()
@@ -122,6 +155,10 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	// Query is not run if Database version does not match the query version.
 	for _, q := range p.Query {
 		if q.MinVersion <= dbVersion && (q.MaxVersion == 0 || q.MaxVersion > dbVersion) {
+			if !matchesRole(q.Role, inRecovery) {
+				p.Log.Debugf("Skipping query %q as the server role does not match %q", q.Measurement, q.Role)
+				continue
+			}
 			acc.AddError(p.gatherMetricsFromQuery(acc, q, timestamp))
 		}
 	}
@@ -225,6 +262,17 @@ func (p *Postgresql) accRow(acc telegraf.Accumulator, row scanner, columns []str
 	}
 	acc.AddFields(q.Measurement, fields, tags, timestamp)
 	return nil
+}
+
+func matchesRole(role string, inRecovery bool) bool {
+	switch role {
+	case "primary":
+		return !inRecovery
+	case "replica":
+		return inRecovery
+	default:
+		return true
+	}
 }
 
 func init() {

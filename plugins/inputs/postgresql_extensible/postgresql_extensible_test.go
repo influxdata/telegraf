@@ -10,8 +10,20 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/testutil"
 )
+
+func newPlugin() *Postgresql {
+	return &Postgresql{
+		Log:                testutil.Logger{},
+		Address:            config.NewSecret(nil),
+		OutputAddress:      "server",
+		MaxIdle:            1,
+		MaxOpen:            1,
+		PreparedStatements: true,
+	}
+}
 
 func queryRunner(t *testing.T, q []query) *testutil.Accumulator {
 	servicePort := "5432"
@@ -341,4 +353,130 @@ func (f fakeRow) Scan(dest ...any) error {
 		}
 	}
 	return nil
+}
+
+// TestInitDefaults checks the values Init fills in for a plugin created by its
+// registered factory, as Telegraf does for a configuration without the new
+// options, and for a query inheriting from the plugin or overriding it
+func TestInitDefaults(t *testing.T) {
+	creator, found := inputs.Inputs["postgresql_extensible"]
+	require.True(t, found)
+	p, ok := creator().(*Postgresql)
+	require.True(t, ok)
+	p.Log = testutil.Logger{}
+	p.Address = config.NewSecret(nil)
+	p.Query = []query{{Sqlquery: "SELECT 1"}}
+	require.NoError(t, p.Init())
+
+	require.Equal(t, "any", p.Role)
+	require.Equal(t, "any", p.Query[0].Role)
+
+	// A query takes the settings of the plugin unless it sets its own
+	p = newPlugin()
+	p.Role = "primary"
+	p.Query = []query{
+		{Sqlquery: "SELECT 1"},
+		{Sqlquery: "SELECT 2", Role: "replica"},
+	}
+	require.NoError(t, p.Init())
+
+	require.Equal(t, "primary", p.Query[0].Role)
+	require.Equal(t, "replica", p.Query[1].Role)
+}
+
+func TestInitErrors(t *testing.T) {
+	tests := []struct {
+		name     string
+		plugin   *Postgresql
+		expected string
+	}{
+		{
+			name: "invalid plugin role",
+			plugin: func() *Postgresql {
+				p := newPlugin()
+				p.Role = "master"
+				return p
+			}(),
+			expected: "config option 'role': unknown choice master",
+		},
+		{
+			name: "invalid query role",
+			plugin: func() *Postgresql {
+				p := newPlugin()
+				p.Query = []query{{Sqlquery: "SELECT 1", Role: "standby"}}
+				return p
+			}(),
+			expected: "query 0: config option 'role': unknown choice standby",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.plugin.Init()
+			require.ErrorContains(t, err, tt.expected)
+		})
+	}
+}
+
+func TestMatchesRole(t *testing.T) {
+	require.True(t, matchesRole("any", false))
+	require.True(t, matchesRole("any", true))
+	require.True(t, matchesRole("primary", false))
+	require.False(t, matchesRole("primary", true))
+	require.False(t, matchesRole("replica", false))
+	require.True(t, matchesRole("replica", true))
+}
+
+func TestRoleFilterIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	// The container is always a primary
+	acc := queryRunner(t, []query{
+		{Measurement: "primary_only", Sqlquery: "SELECT 1 AS value", Role: "primary"},
+		{Measurement: "replica_only", Sqlquery: "SELECT 1 AS value", Role: "replica"},
+		{Measurement: "everywhere", Sqlquery: "SELECT 1 AS value"},
+	})
+
+	require.True(t, acc.HasMeasurement("primary_only"))
+	require.False(t, acc.HasMeasurement("replica_only"))
+	require.True(t, acc.HasMeasurement("everywhere"))
+}
+
+func TestMetadataFailure(t *testing.T) {
+	tests := []struct {
+		name     string
+		role     string
+		expected []string
+	}{
+		// Every query is still tried and reports its own error
+		{name: "without role", role: "", expected: []string{"connect", "connect"}},
+		// The queries are not run without knowing the server role
+		{name: "with role", role: "primary", expected: []string{"querying server role failed"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Nothing listens on this port, so reading the server information fails
+			p := newPlugin()
+			p.Address = config.NewSecret([]byte("host=127.0.0.1 port=1 user=postgres sslmode=disable connect_timeout=5"))
+			p.Query = []query{
+				{Measurement: "role", Sqlquery: "SELECT 1 AS value", Role: tt.role},
+				{Measurement: "everywhere", Sqlquery: "SELECT 1 AS value"},
+			}
+			require.NoError(t, p.Init())
+
+			var acc testutil.Accumulator
+			require.NoError(t, p.Start(&acc))
+			defer p.Stop()
+			require.NoError(t, p.Gather(&acc))
+
+			require.Len(t, acc.Errors, len(tt.expected))
+			for i, expected := range tt.expected {
+				require.ErrorContains(t, acc.Errors[i], expected)
+			}
+			require.Empty(t, acc.GetTelegrafMetrics())
+		})
+	}
 }

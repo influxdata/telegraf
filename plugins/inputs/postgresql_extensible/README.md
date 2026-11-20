@@ -2,7 +2,8 @@
 
 This plugin queries a [PostgreSQL][postgres] server and provides metrics for
 the returned result. This is useful when using PostgreSQL extensions to collect
-additional metrics.
+additional metrics. The queries can be restricted to the primary or replica
+role.
 
 > [!TIP]
 > Please also check the more generic [sql input plugin][inputs_sql].
@@ -53,6 +54,14 @@ to use them.
   ## with pool_mode set to transaction.
   prepared_statements = true
 
+  ## Run the queries only if the server has the given role, so the same
+  ## configuration works on a primary and on its replicas. Available values are
+  ##   any     -- run the queries on every server
+  ##   primary -- run them only if the server is not in recovery
+  ##   replica -- run them only if the server is in recovery
+  ## Queries may override this.
+  # role = "any"
+
   # Define the toml config where the sql queries are stored
   # The script option can be used to specify the .sql file path.
   # If script and sqlquery options specified at same time, sqlquery will be used
@@ -80,6 +89,8 @@ to use them.
   # 9.6.2 -> 906
   # 15.2 -> 1500
   #
+  # The role field overrides the plugin-level setting for this query.
+  #
   # Structure :
   # [[inputs.postgresql_extensible.query]]
   #   measurement string
@@ -89,16 +100,19 @@ to use them.
   #   withdbname boolean
   #   tagvalue string (coma separated)
   #   timestamp string
+  #   role string
   [[inputs.postgresql_extensible.query]]
     measurement="pg_stat_database"
     sqlquery="SELECT * FROM pg_stat_database WHERE datname"
     min_version=901
     tagvalue=""
+    # role="any"
   [[inputs.postgresql_extensible.query]]
     script="your_sql-filepath.sql"
     min_version=901
     max_version=1300
     tagvalue=""
+    role="primary"
 ```
 
 The system can be easily extended using homemade metrics collection tools or
@@ -293,6 +307,14 @@ CREATE OR REPLACE VIEW public.sessions AS
     stat_activity stat
   WHERE proc.pid = stat.pid;
 ```
+
+## Server role
+
+If a query has a role other than `any`, the server role is read with
+`pg_is_in_recovery()` on every collection.
+Queries with `role = "primary"` are only run if the server is not in recovery,
+and queries with `role = "replica"` only if it is. The plugin-level `role`
+option sets the default for all queries.
 
 ## Example Output
 
