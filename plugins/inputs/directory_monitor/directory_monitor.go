@@ -92,8 +92,10 @@ func (monitor *DirectoryMonitor) Init() error {
 		monitor.FileAction = defaultFileAction
 	}
 
-	if err := choice.Check(monitor.FileAction, []string{"move", "delete"}); err != nil {
-		return fmt.Errorf("config option file_action: %w", err)
+	switch monitor.FileAction {
+	case "move", "delete":
+	default:
+		return fmt.Errorf("invalid file_action %q", monitor.FileAction)
 	}
 
 	if monitor.FileAction == "move" && monitor.FinishedDirectory == "" {

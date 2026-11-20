@@ -46,6 +46,8 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Action to take on a file after it has been processed successfully.
   ## "move" copies the file to finished_directory and then removes it from the monitored directory.
   ## "delete" removes the file from the monitored directory without copying it.
+  ## The file is removed once it is parsed, not once the outputs wrote the
+  ## metrics, so metrics still buffered when Telegraf stops are lost.
   # file_action = "move"
   #
   ## Setting recursive to true will make the plugin recursively walk the directory and process all sub-directories.
