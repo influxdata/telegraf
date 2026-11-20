@@ -64,6 +64,39 @@ func TestGatherIncompleteResponse(t *testing.T) {
 	require.Empty(t, acc.GetTelegrafMetrics())
 }
 
+func TestGatherNoMetrics(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	defer listener.Close()
+
+	// Answer the request like a server that is not part of a quorum
+	go func() {
+		conn, err := listener.Accept()
+		if err != nil {
+			return
+		}
+		defer conn.Close()
+
+		if _, err := bufio.NewReader(conn).ReadString('\n'); err != nil {
+			return
+		}
+		if _, err := conn.Write([]byte("This ZooKeeper instance is not currently serving requests\n")); err != nil {
+			return
+		}
+	}()
+
+	plugin := &Zookeeper{
+		Servers: []string{listener.Addr().String()},
+		Timeout: config.Duration(time.Second),
+		Log:     testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.ErrorContains(t, acc.GatherError(plugin.Gather), "no metrics in mntr response")
+	require.Empty(t, acc.GetTelegrafMetrics())
+}
+
 func TestParseMntrSkipsQuantileLines(t *testing.T) {
 	mntr := "zk_version	3.6.3\n" +
 		"zk_avg_latency	0\n" +
@@ -117,6 +150,7 @@ func TestZookeeperGeneratesMetricsIntegration(t *testing.T) {
 				Servers: []string{
 					fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort]),
 				},
+				Log: testutil.Logger{},
 			},
 		},
 		{
@@ -125,6 +159,7 @@ func TestZookeeperGeneratesMetricsIntegration(t *testing.T) {
 				Servers: []string{
 					fmt.Sprintf("%s:%s", container.Address, container.Ports[servicePort]),
 				},
+				Log:         testutil.Logger{},
 				ParseFloats: "float",
 			},
 		},

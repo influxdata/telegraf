@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/tls"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -102,6 +103,9 @@ func (z *Zookeeper) gatherServer(ctx context.Context, address string, acc telegr
 	fields, zookeeperState, err := z.parseMntr(rdr)
 	if err != nil {
 		return err
+	}
+	if len(fields) == 0 {
+		return errors.New("no metrics in mntr response")
 	}
 
 	srv := "localhost"
