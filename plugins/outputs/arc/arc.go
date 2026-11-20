@@ -35,6 +35,13 @@ type Arc struct {
 
 	client *http.Client
 	cancel context.CancelFunc
+
+	// Reused across writes; Write is never called concurrently. The payload
+	// buffer is not reused, as the HTTP transport may still read the request
+	// body after the response arrived.
+	gzipWriter      *gzip.Writer
+	lastPayloadSize int
+	nils            []byte
 }
 
 func (*Arc) SampleConfig() string {
@@ -54,6 +61,9 @@ func (a *Arc) Init() error {
 	default:
 		return fmt.Errorf("unknown content encoding %q", a.ContentEncoding)
 	}
+
+	// Run of MessagePack nil markers (0xc0) to fill absent cells of sparse columns
+	a.nils = bytes.Repeat([]byte{0xc0}, 512)
 
 	return nil
 }
@@ -86,72 +96,82 @@ func (a *Arc) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
-	// Group metrics by measurement name for columnar format
-	groups := make(map[string]*group)
+	// Group metrics by measurement name for the columnar format, keeping the
+	// order of first appearance so the payload is deterministic.
+	var groups []*group
+	index := make(map[string]int)
 	for _, m := range metrics {
 		name := m.Name()
-		if _, found := groups[name]; !found {
-			numCols := len(m.FieldList()) + len(m.TagList()) + 1
-			groups[name] = &group{name: name, columns: make(map[string][]any, numCols)}
+		idx, found := index[name]
+		if !found {
+			idx = len(groups)
+			index[name] = idx
+			groups = append(groups, &group{name: name})
 		}
-		groups[name].add(m)
+		groups[idx].metrics = append(groups[idx].metrics, m)
 	}
 
-	// Extract the output messages from the groups
-	messages := make([]map[string]any, 0, len(groups))
+	// Build the column layout of each group, skipping the ones that cannot be
+	// encoded. This must happen before anything is written, as the number of
+	// remaining groups decides the shape of the payload.
+	valid := groups[:0]
 	for _, g := range groups {
-		msg, err := g.produceMessage()
-		if err != nil {
-			a.Log.Error(err)
+		if err := g.prepare(); err != nil {
+			a.Log.Errorf("Dropping %d metrics: %v", len(g.metrics), err)
 			continue
 		}
-		messages = append(messages, msg)
+		valid = append(valid, g)
 	}
-
-	// Prepare the data for serialization
-	var data any
-	switch len(messages) {
-	case 0:
-		// If no valid message was produced, drop all metrics
+	if len(valid) == 0 {
+		// If no valid group remains, drop all metrics
 		return nil
-	case 1:
-		// Single measurement should be sent directly as a map
-		data = messages[0]
-	default:
-		// Multiple measurements should be sent as an array
-		data = messages
 	}
 
-	var payload bytes.Buffer
-	var writer io.Writer = &payload
+	payload := bytes.NewBuffer(make([]byte, 0, a.lastPayloadSize))
+	var writer io.Writer = payload
 
 	// Wrap with gzip writer if compression is enabled
-	var gzipWriter *gzip.Writer
 	if a.ContentEncoding == "gzip" {
-		gzipWriter = gzip.NewWriter(&payload)
-		writer = gzipWriter
+		if a.gzipWriter == nil {
+			a.gzipWriter = gzip.NewWriter(payload)
+		} else {
+			a.gzipWriter.Reset(payload)
+		}
+		writer = a.gzipWriter
 	}
 
-	// Write MessagePack data directly to the writer (gzipped or not)
+	// Stream the MessagePack data directly to the writer (gzipped or not).
+	// A single measurement is sent as a map, multiple measurements as an array
+	// of maps.
 	msgpWriter := msgp.NewWriter(writer)
-	if err := msgpWriter.WriteIntf(data); err != nil {
-		return fmt.Errorf("marshalling message failed: %w", err)
+	if len(valid) > 1 {
+		if err := msgpWriter.WriteArrayHeader(uint32(len(valid))); err != nil {
+			return fmt.Errorf("marshalling message failed: %w", err)
+		}
+	}
+	for _, g := range valid {
+		if err := g.encode(msgpWriter, a.nils); err != nil {
+			return fmt.Errorf("marshalling message failed: %w", err)
+		}
 	}
 	if err := msgpWriter.Flush(); err != nil {
 		return fmt.Errorf("failed to flush MessagePack writer: %w", err)
 	}
 
-	// Close gzip writer before reading the buffer
-	if gzipWriter != nil {
-		if err := gzipWriter.Close(); err != nil {
+	// Close gzip writer before reading the buffer and release the buffer
+	if a.ContentEncoding == "gzip" {
+		err := a.gzipWriter.Close()
+		a.gzipWriter.Reset(io.Discard)
+		if err != nil {
 			return fmt.Errorf("failed to close gzip writer: %w", err)
 		}
 	}
+	a.lastPayloadSize = payload.Len()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(a.Timeout))
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, "POST", a.URL, &payload)
+	req, err := http.NewRequestWithContext(ctx, "POST", a.URL, payload)
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
