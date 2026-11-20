@@ -2366,8 +2366,8 @@ github.com/spiffe/go-spiffe/v2 v2.8.1/go.mod h1:47Q0Q9/AqGha8QLHp+kxpH4Wca7X7EnO
 github.com/spkg/bom v0.0.0-20160624110644-59b7046e48ad/go.mod h1:qLr4V1qq6nMqFKkMo8ZTx3f+BZEkzsRUY10Xsm2mwU0=
 github.com/srebhan/cborquery v1.0.5 h1:RUui8vcw9sxeNuFLm+NmhyMBrlZKQG/5HWNRozJBv9k=
 github.com/srebhan/cborquery v1.0.5/go.mod h1:ccI9DBeq+a2IkjjmGiGbrPaI9wsNiZigp9/HUYID/9Q=
-github.com/srebhan/protobufquery v1.0.4 h1:MLMo7nS02HSwux538Id3SCkf/FShA4MK3pppc9U/acY=
-github.com/srebhan/protobufquery v1.0.4/go.mod h1:qMuAoKJAsVFYmyLE4H0dQ8F9+gBBHw+LBMqAZ326uA4=
+github.com/srebhan/protobufquery v1.0.5 h1:I8WgS4EIa+O7uBRZL1GaKucj+UdOGzzWBQ9T2dS1s7I=
+github.com/srebhan/protobufquery v1.0.5/go.mod h1:gEeK1W80BHIOPWD/vL8JelqNb/28txPdk1x5NyxCEt0=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.1.1/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.4.0/go.mod h1:YvHI0jy2hoMjB+UWwv71VJQ9isScKT/TqJzVSSt89Yw=
