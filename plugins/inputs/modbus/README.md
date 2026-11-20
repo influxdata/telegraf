@@ -115,6 +115,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##               INT16, UINT16, INT32, UINT32, INT64, UINT64,
   ##               FLOAT16-IEEE, FLOAT32-IEEE, FLOAT64-IEEE (IEEE 754 binary representation)
   ##               FIXED, UFIXED (fixed-point representation on input)
+  ##               FLOAT_DEC_8E24M, FLOAT_UDEC_8E24M (8-bit exponent, 24-bit mantissa)
   ##               STRING (byte-sequence converted to string)
   ## bit         - (optional) bit of the register, ONLY valid for BIT type
   ## scale       - the final numeric variable representation
@@ -190,8 +191,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ##                  INT8L, INT8H, UINT8L, UINT8H (low and high byte variants)
     ##                  INT16, UINT16, INT32, UINT32, INT64, UINT64 and
     ##                  FLOAT16, FLOAT32, FLOAT64 (IEEE 754 binary representation)
-    ##                  DECEXP32, UDECEXP32 (32 bit decade-exponent representation,
-    ##                                       see the README for details)
+    ##                  FLOAT_DEC_8E24M, FLOAT_UDEC_8E24M (8-bit exponent, 24-bit mantissa)
     ##                  STRING (byte-sequence converted to string)
     ## length *1,2    - (optional) number of registers, ONLY valid for STRING type
     ## bit *1,2       - (optional) bit of the register, ONLY valid for BIT type
@@ -304,8 +304,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ##                 INT8L, INT8H, UINT8L, UINT8H (low and high byte variants)
     ##                 INT16, UINT16, INT32, UINT32, INT64, UINT64 and
     ##                 FLOAT16, FLOAT32, FLOAT64 (IEEE 754 binary representation)
-    ##                 DECEXP32, UDECEXP32 (32 bit decade-exponent representation,
-    ##                                      see the README for details)
+    ##                 FLOAT_DEC_8E24M, FLOAT_UDEC_8E24M (8-bit exponent, 24-bit mantissa)
     ##                 STRING (byte-sequence converted to string)
     ## length *1   - (optional) number of registers, ONLY valid for STRING type
     ## bit *1,2    - (optional) bit of the register, ONLY valid for BIT type
@@ -480,6 +479,19 @@ Select the type `FIXED` when the input type is declared to hold signed integer
 values. Your documentation of the modbus device should indicate this with a term
 like 'int32 containing fixed-point representation with N decimal places'.
 
+##### Decade-exponent Floating Point: `FLOAT_DEC_8E24M`, `FLOAT_UDEC_8E24M`
+
+The `FLOAT_DEC_8E24M` and `FLOAT_UDEC_8E24M` datatypes decode a 32-bit
+non-standard float value with an 8-bit signed exponent in the most significant
+byte and a 24-bit mantissa to the base 10. The resulting value is
+`mantissa * 10^exponent` decoded into an IEEE 64-bit floating point value. The
+mantissa is a two's complement signed integer for `FLOAT_DEC_8E24M` and an
+unsigned integer for `FLOAT_UDEC_8E24M`.
+
+For example, the registers `0xFD01 0xE240` decode to `123456 * 10^-3 = 123.456`
+for both types, while `0xFDFE 0x1DC0` decodes to `-123456 * 10^-3 = -123.456`
+for `FLOAT_DEC_8E24M`. These types occupy two registers.
+
 ##### String: `STRING`
 
 This type is used to query the number of registers specified in the `address`
@@ -608,9 +620,9 @@ register and `H` is the higher byte.
 Furthermore, the types `INT16`, `UINT16`, `INT32`, `UINT32`, `INT64` or `UINT64`
 for integer types or `FLOAT16`, `FLOAT32` and `FLOAT64` for IEEE 754 binary
 representations of floating point values exist. `FLOAT16` denotes a
-half-precision float with a 16-bit representation. The types `DECEXP32` and
-`UDECEXP32` denote a 32-bit decade-exponent representation, see
-[below](#decade-exponent-decexp32-udecexp32).
+half-precision float with a 16-bit representation. The types `FLOAT_DEC_8E24M`
+and `FLOAT_UDEC_8E24M` denote a non-standard 32-bit float representation, see
+[above](#decade-exponent-floating-point-float_dec_8e24m-float_udec_8e24m).
 Usually the datatype of the register is listed in the datasheet of your modbus
 device in relation to the `address` described above.
 
@@ -623,26 +635,6 @@ be used for this `type`.
 This setting is ignored if the field's `omit` is set to `true` or if the
 `register` type is a bit-type (`coil` or `discrete`) and can be omitted in
 these cases.
-
-###### Decade-exponent: `DECEXP32`, `UDECEXP32`
-
-These types decode a 32-bit value consisting of an 8-bit signed exponent to the
-base 10 in the most significant byte followed by a 24-bit mantissa. The
-resulting value is `mantissa * 10^exponent` and is always output as `FLOAT64`.
-The mantissa is a two's complement signed integer for `DECEXP32` and an
-unsigned integer for `UDECEXP32`. Both types occupy two registers and honor the
-`byte_order` setting (the layout below is given for the default `ABCD`).
-
-```text
-| byte A          | bytes B, C, D                  |
-| exponent (int8) | mantissa (int24 or uint24)     |
-```
-
-For example, the registers `0xFD01 0xE240` decode to `123456 * 10^-3 = 123.456`
-for both types, while `0xFDFE 0x1DC0` decodes to `-123456 * 10^-3 = -123.456`
-for `DECEXP32`. Additionally specifying `scale` multiplies the decoded value.
-
-These types are available for the `request` and `metric` configuration styles.
 
 ##### scaling
 
@@ -795,9 +787,9 @@ register and `H` is the higher byte.
 Furthermore, the types `INT16`, `UINT16`, `INT32`, `UINT32`, `INT64` or `UINT64`
 for integer types or `FLOAT16`, `FLOAT32` and `FLOAT64` for IEEE 754 binary
 representations of floating point values exist. `FLOAT16` denotes a
-half-precision float with a 16-bit representation. The types `DECEXP32` and
-`UDECEXP32` denote a 32-bit decade-exponent representation, see
-[below](#decade-exponent-decexp32-udecexp32).
+half-precision float with a 16-bit representation. The types `FLOAT_DEC_8E24M`
+and `FLOAT_UDEC_8E24M` denote a non-standard 32-bit float representation, see
+[above](#decade-exponent-floating-point-float_dec_8e24m-float_udec_8e24m).
 Usually the datatype of the register is listed in the datasheet of your modbus
 device in relation to the `address` described above.
 

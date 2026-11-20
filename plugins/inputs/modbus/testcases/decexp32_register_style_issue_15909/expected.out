@@ -1,0 +1,1 @@
+modbus,name=Device,slave_id=1,type=holding_register signed=100,unsigned=55 1729239973009490185

@@ -199,9 +199,9 @@ func determineConverterF32Scale(outType, byteOrder string, scale float64) (field
 	return nil, fmt.Errorf("invalid output data-type: %s", outType)
 }
 
-// DECEXP32 / UDECEXP32 - decade-exponent representation. The 32 bit hold an
+// FLOAT_DEC_8E24M / FLOAT_UDEC_8E24M - decade-exponent representation. The 32 bit hold an
 // 8 bit signed exponent (most significant byte) to the base 10 followed by a
-// 24 bit mantissa which is signed (DECEXP32) or unsigned (UDECEXP32). The
+// 24 bit mantissa which is signed (FLOAT_DEC_8E24M) or unsigned (FLOAT_UDEC_8E24M). The
 // resulting value is `mantissa * 10^exponent`.
 func decodeDecExp32(raw uint32, signed bool) float64 {
 	exponent := int8(raw >> 24)
