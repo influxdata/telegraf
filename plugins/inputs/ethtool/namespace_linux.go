@@ -67,7 +67,10 @@ func (n *namespaceGoroutine) interfaces() ([]namespacedInterface, error) {
 		return namespacedInterfaces, nil
 	})
 
-	return interfaces.([]namespacedInterface), err
+	if interfaces != nil {
+		return interfaces.([]namespacedInterface), err
+	}
+	return nil, err
 }
 
 func (n *namespaceGoroutine) driverName(intf namespacedInterface) (string, error) {
@@ -140,6 +143,10 @@ func (n *namespaceGoroutine) start() error {
 			started <- err
 			return
 		}
+		// The handle is only needed for the comparison and switch below; close
+		// it on every return path so a start() that fails (for example without
+		// CAP_SYS_ADMIN) does not leak one descriptor per namespace per gather.
+		defer initialNamespace.Close()
 		if !initialNamespace.Equal(n.handle) {
 			if err := netns.Set(n.handle); err != nil {
 				n.log.Errorf("Could not switch to namespace %q: %s", n.namespaceName, err.Error())
