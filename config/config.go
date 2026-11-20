@@ -71,6 +71,11 @@ var (
 	// List of (redacted) configuration Sources
 	sources   []string
 	sourcesMu sync.Mutex
+
+	// Last-Modified header of the last successful fetch of each remote
+	// configuration, keyed by the configuration URL as given by the user
+	remoteLastModified   = make(map[string]string)
+	remoteLastModifiedMu sync.Mutex
 )
 
 const EmptySourcePath string = ""
@@ -869,10 +874,13 @@ func LoadConfigFileWithRetries(config string, urlRetryAttempts int) ([]byte, boo
 
 		switch u.Scheme {
 		case "https", "http":
-			data, err := fetchConfig(u, urlRetryAttempts)
+			data, lastModified, err := fetchConfig(u, urlRetryAttempts)
 			if err != nil {
 				return nil, true, err
 			}
+			remoteLastModifiedMu.Lock()
+			remoteLastModified[config] = lastModified
+			remoteLastModifiedMu.Unlock()
 			sourcesMu.Lock()
 			sources = append(sources, u.Redacted())
 			sourcesMu.Unlock()
@@ -899,6 +907,15 @@ func LoadConfigFileWithRetries(config string, urlRetryAttempts int) ([]byte, boo
 	return buffer, false, nil
 }
 
+// RemoteConfigLastModified returns the Last-Modified header sent with the
+// last successfully loaded content of the given remote configuration URL or
+// an empty string if the header was missing or the URL was never loaded.
+func RemoteConfigLastModified(configURL string) string {
+	remoteLastModifiedMu.Lock()
+	defer remoteLastModifiedMu.Unlock()
+	return remoteLastModified[configURL]
+}
+
 // GetSources returns the redacted list of configuration sources
 func GetSources() []string {
 	sourcesMu.Lock()
@@ -906,10 +923,10 @@ func GetSources() []string {
 	return slices.Clone(sources)
 }
 
-func fetchConfig(u *url.URL, urlRetryAttempts int) ([]byte, error) {
+func fetchConfig(u *url.URL, urlRetryAttempts int) ([]byte, string, error) {
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	if v, exists := os.LookupEnv("TELEGRAF_CONTROLLER_TOKEN"); exists {
@@ -929,19 +946,19 @@ func fetchConfig(u *url.URL, urlRetryAttempts int) ([]byte, error) {
 	} else if urlRetryAttempts > 0 {
 		totalAttempts = urlRetryAttempts
 	} else {
-		return nil, fmt.Errorf("invalid number of attempts: %d", urlRetryAttempts)
+		return nil, "", fmt.Errorf("invalid number of attempts: %d", urlRetryAttempts)
 	}
 
 	attempt := 0
 	for {
-		body, err := requestURLConfig(req)
+		body, lastModified, err := requestURLConfig(req)
 		if err == nil {
-			return body, nil
+			return body, lastModified, nil
 		}
 
 		log.Printf("Error getting HTTP config (attempt %d of %d): %s", attempt, totalAttempts, err)
 		if urlRetryAttempts != -1 && attempt >= totalAttempts {
-			return nil, err
+			return nil, "", err
 		}
 
 		time.Sleep(httpLoadConfigRetryInterval)
@@ -949,23 +966,23 @@ func fetchConfig(u *url.URL, urlRetryAttempts int) ([]byte, error) {
 	}
 }
 
-func requestURLConfig(req *http.Request) ([]byte, error) {
+func requestURLConfig(req *http.Request) ([]byte, string, error) {
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to HTTP config server: %w", err)
+		return nil, "", fmt.Errorf("failed to connect to HTTP config server: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to fetch HTTP config: %s", resp.Status)
+		return nil, "", fmt.Errorf("failed to fetch HTTP config: %s", resp.Status)
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response body: %w", err)
+		return nil, "", fmt.Errorf("failed to read response body: %w", err)
 	}
 
-	return body, nil
+	return body, resp.Header.Get("Last-Modified"), nil
 }
 
 // parseConfig loads a TOML configuration from a provided path and
