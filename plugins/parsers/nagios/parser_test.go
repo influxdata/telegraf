@@ -578,3 +578,16 @@ func BenchmarkParsing(b *testing.B) {
 		plugin.Parse([]byte(benchmarkData))
 	}
 }
+
+func FuzzParserNagios(f *testing.F) {
+	f.Add([]byte(benchmarkData))
+	f.Add([]byte("CRITICAL - x|time=0.5s;1;2;0;3 size=10KB;;;;\nmore text|a=1\n"))
+
+	parser := &Parser{Log: testutil.Logger{}}
+	require.NoError(f, parser.Init())
+
+	f.Fuzz(func(_ *testing.T, input []byte) {
+		//nolint:errcheck // fuzz testing can give lots of errors, but we just want to test for crashes
+		parser.Parse(input)
+	})
+}

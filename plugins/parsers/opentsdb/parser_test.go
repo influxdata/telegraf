@@ -356,3 +356,15 @@ func BenchmarkParsing(b *testing.B) {
 		plugin.Parse([]byte(benchmarkData))
 	}
 }
+
+func FuzzParserOpenTSDB(f *testing.F) {
+	f.Add([]byte(benchmarkData))
+	f.Add([]byte("put sys.cpu.user 1356998400 42.5 host=webserver01 cpu=0\n"))
+
+	parser := &Parser{Log: testutil.Logger{}}
+
+	f.Fuzz(func(_ *testing.T, input []byte) {
+		//nolint:errcheck // fuzz testing can give lots of errors, but we just want to test for crashes
+		parser.Parse(input)
+	})
+}

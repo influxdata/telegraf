@@ -226,3 +226,19 @@ func BenchmarkParsing(b *testing.B) {
 		plugin.Parse([]byte(benchmarkData))
 	}
 }
+
+func FuzzParserFormUrlencoded(f *testing.F) {
+	f.Add([]byte(benchmarkData))
+	f.Add([]byte("a=1&b=2.5&c=%20x&tag=t1&tag=t2&empty="))
+
+	parser := &Parser{
+		MetricName: "fuzz",
+		TagKeys:    []string{"source", "tag"},
+	}
+	require.NoError(f, parser.Init())
+
+	f.Fuzz(func(_ *testing.T, input []byte) {
+		//nolint:errcheck // fuzz testing can give lots of errors, but we just want to test for crashes
+		parser.Parse(input)
+	})
+}
