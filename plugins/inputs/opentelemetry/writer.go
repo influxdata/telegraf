@@ -3,6 +3,7 @@ package opentelemetry
 import (
 	"context"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/influxdata/influxdb-observability/common"
@@ -17,7 +18,8 @@ var (
 )
 
 type writeToAccumulator struct {
-	accumulator telegraf.Accumulator
+	accumulator    telegraf.Accumulator
+	clientCertTags []string
 }
 
 // NewBatch creates a new batch for writing telemetry data.
@@ -27,13 +29,24 @@ func (w *writeToAccumulator) NewBatch() otel2influx.InfluxWriterBatch {
 
 // EnqueuePoint adds a telemetry data point to the accumulator.
 func (w *writeToAccumulator) EnqueuePoint(
-	_ context.Context,
+	ctx context.Context,
 	measurement string,
 	tags map[string]string,
 	fields map[string]any,
 	ts time.Time,
 	vType common.InfluxMetricValueType,
 ) error {
+	// Tags derived from the certificate take precedence over attributes with
+	// the same name as those are controlled by the sender.
+	if certTags := clientCertTags(ctx, w.clientCertTags); len(certTags) > 0 {
+		tags = maps.Clone(tags)
+		if tags == nil {
+			tags = certTags
+		} else {
+			maps.Copy(tags, certTags)
+		}
+	}
+
 	switch vType {
 	case common.InfluxMetricValueTypeUntyped:
 		w.accumulator.AddFields(measurement, fields, tags, ts)

@@ -23,6 +23,8 @@ type profileService struct {
 	acc    telegraf.Accumulator
 	filter filter.Filter
 	logger telegraf.Logger
+
+	clientCertTags []string
 }
 
 func newProfileService(acc telegraf.Accumulator, logger telegraf.Logger, dimensions []string) (*profileService, error) {
@@ -54,7 +56,7 @@ func newProfileService(acc telegraf.Accumulator, logger telegraf.Logger, dimensi
 }
 
 // Export processes and exports the received profile data.
-func (s *profileService) Export(_ context.Context, req *service.ExportProfilesServiceRequest) (*service.ExportProfilesServiceResponse, error) {
+func (s *profileService) Export(ctx context.Context, req *service.ExportProfilesServiceRequest) (*service.ExportProfilesServiceResponse, error) {
 	// Output the received message for debugging
 	buf, err := protojson.Marshal(req)
 	if err != nil {
@@ -70,6 +72,10 @@ func (s *profileService) Export(_ context.Context, req *service.ExportProfilesSe
 		if rp == nil {
 			continue
 		}
+
+		// Tags derived from the client certificate take precedence over
+		// attributes of the same name as those are controlled by the sender.
+		certTags := clientCertTags(ctx, s.clientCertTags)
 
 		// Extract the requested attributes that should be added as tags
 		attrtags := make(map[string]string)
@@ -281,6 +287,7 @@ func (s *profileService) Export(_ context.Context, req *service.ExportProfilesSe
 								"address":          "0x" + strconv.FormatUint(loc.Address, 16),
 							}
 							maps.Copy(tags, attrtags)
+							maps.Copy(tags, certTags)
 							fields := map[string]any{
 								"start_time_unix_nano": int64(p.TimeUnixNano),
 								"end_time_unix_nano":   int64(p.TimeUnixNano + p.DurationNano),
