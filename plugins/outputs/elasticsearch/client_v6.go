@@ -8,17 +8,18 @@ import (
 	"net/http"
 	"sync"
 
-	elasticsearch6 "github.com/elastic/go-elasticsearch/v6"
-	estransport6 "github.com/elastic/go-elasticsearch/v6/estransport"
+	"github.com/elastic/go-elasticsearch/v6"
+	"github.com/elastic/go-elasticsearch/v6/estransport"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 )
 
 type clientV6 struct {
-	client          *elasticsearch6.Client
+	client          *elasticsearch.Client
 	log             telegraf.Logger
 	encoder         *internal.GzipEncoder
+	bodyHeaders     map[string]string
 	cancelDiscovery context.CancelFunc
 	discoveryWG     sync.WaitGroup
 }
@@ -28,19 +29,20 @@ func (a *Elasticsearch) newClientV6() (client, error) {
 	if err != nil {
 		return nil, err
 	}
-	c, err := elasticsearch6.NewClient(elasticsearch6.Config{
+	c, err := elasticsearch.NewClient(elasticsearch.Config{
 		Addresses: a.URLs,
 		Header:    a.clientHeaders(),
 		Transport: transport,
 		// Telegraf owns write retries; replaying a bulk request can duplicate documents.
 		DisableRetry:       true,
-		ConnectionPoolFunc: preserveConnectionPool(estransport6.NewConnectionPool),
+		ConnectionPoolFunc: preserveConnectionPool(estransport.NewConnectionPool),
 	})
 	if err != nil {
 		return nil, err
 	}
 	client := &clientV6{client: c, log: a.Log}
 	if a.EnableGzip {
+		client.bodyHeaders = map[string]string{"Content-Encoding": "gzip"}
 		encoder, err := internal.NewGzipEncoder()
 		if err != nil {
 			return nil, fmt.Errorf("setting up gzip encoder failed: %w", err)
@@ -65,30 +67,23 @@ func (c *clientV6) close() {
 	}
 }
 
-func (c *clientV6) compressRequestBodyIfEnabled(body []byte) (*bytes.Reader, map[string]string, error) {
-	if c.encoder == nil {
-		return bytes.NewReader(body), nil, nil
-	}
-	data, err := c.encoder.Encode(body)
-	if err != nil {
-		return nil, nil, err
-	}
-	return bytes.NewReader(data), map[string]string{"Content-Encoding": "gzip"}, nil
-}
-
 func (c *clientV6) bulk(ctx context.Context, documents []document) error {
 	body, err := encodeBulk(documents, "metrics")
 	if err != nil {
 		return fmt.Errorf("error sending bulk request to Elasticsearch: %w", err)
 	}
-	requestBody, headers, err := c.compressRequestBodyIfEnabled(body.Bytes())
-	if err != nil {
-		return fmt.Errorf("error sending bulk request to Elasticsearch: %w", err)
+	requestBody := bytes.NewReader(body.Bytes())
+	if c.encoder != nil {
+		data, err := c.encoder.Encode(body.Bytes())
+		if err != nil {
+			return fmt.Errorf("error sending bulk request to Elasticsearch: %w", err)
+		}
+		requestBody = bytes.NewReader(data)
 	}
 	res, err := c.client.Bulk(
 		requestBody,
 		c.client.Bulk.WithContext(ctx),
-		c.client.Bulk.WithHeader(headers),
+		c.client.Bulk.WithHeader(c.bodyHeaders),
 	)
 	if err != nil {
 		return fmt.Errorf("error sending bulk request to Elasticsearch: %w", err)
@@ -113,15 +108,19 @@ func (c *clientV6) templateExists(ctx context.Context, name string) (bool, error
 }
 
 func (c *clientV6) putTemplate(ctx context.Context, name, body string) error {
-	requestBody, headers, err := c.compressRequestBodyIfEnabled([]byte(body))
-	if err != nil {
-		return err
+	requestBody := bytes.NewReader([]byte(body))
+	if c.encoder != nil {
+		data, err := c.encoder.Encode([]byte(body))
+		if err != nil {
+			return err
+		}
+		requestBody = bytes.NewReader(data)
 	}
 	res, err := c.client.Indices.PutTemplate(
 		name,
 		requestBody,
 		c.client.Indices.PutTemplate.WithContext(ctx),
-		c.client.Indices.PutTemplate.WithHeader(headers),
+		c.client.Indices.PutTemplate.WithHeader(c.bodyHeaders),
 	)
 	if err != nil {
 		return err
