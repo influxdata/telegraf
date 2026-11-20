@@ -2,6 +2,7 @@
 package opentelemetry
 
 import (
+	"crypto/x509"
 	_ "embed"
 	"fmt"
 	"net"
@@ -33,7 +34,7 @@ type OpenTelemetry struct {
 	MetricsSchema       string          `toml:"metrics_schema"`
 	MaxMsgSize          config.Size     `toml:"max_msg_size"`
 	Timeout             config.Duration `toml:"timeout"`
-	ClientCertTags      []string        `toml:"tls_client_cert_tags"`
+	ClientCertTags      []string        `toml:"tls_client_certificate_tags"`
 	Log                 telegraf.Logger `toml:"-"`
 	tls.ServerConfig
 
@@ -59,7 +60,12 @@ func (o *OpenTelemetry) Init() error {
 		return fmt.Errorf("invalid metric schema %q", o.MetricsSchema)
 	}
 
-	return checkClientCertTags(o.ClientCertTags)
+	// Validate the requested certificate attributes
+	if _, err := tls.CertificateTags(&x509.Certificate{}, o.ClientCertTags); err != nil {
+		return fmt.Errorf("invalid client certificate tags: %w", err)
+	}
+
+	return nil
 }
 
 func (o *OpenTelemetry) Start(acc telegraf.Accumulator) error {

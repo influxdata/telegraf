@@ -3,6 +3,7 @@ package opentelemetry
 import (
 	"context"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/influxdata/influxdb-observability/common"
@@ -35,7 +36,16 @@ func (w *writeToAccumulator) EnqueuePoint(
 	ts time.Time,
 	vType common.InfluxMetricValueType,
 ) error {
-	tags = addClientCertTags(ctx, w.clientCertTags, tags)
+	// Tags derived from the certificate take precedence over attributes with
+	// the same name as those are controlled by the sender.
+	if certTags := clientCertTags(ctx, w.clientCertTags); len(certTags) > 0 {
+		tags = maps.Clone(tags)
+		if tags == nil {
+			tags = certTags
+		} else {
+			maps.Copy(tags, certTags)
+		}
+	}
 
 	switch vType {
 	case common.InfluxMetricValueTypeUntyped:

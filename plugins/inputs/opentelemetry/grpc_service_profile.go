@@ -73,6 +73,10 @@ func (s *profileService) Export(ctx context.Context, req *service.ExportProfiles
 			continue
 		}
 
+		// Tags derived from the client certificate take precedence over
+		// attributes of the same name as those are controlled by the sender.
+		certTags := clientCertTags(ctx, s.clientCertTags)
+
 		// Extract the requested attributes that should be added as tags
 		attrtags := make(map[string]string)
 		for _, attr := range rp.GetResource().GetAttributes() {
@@ -283,6 +287,7 @@ func (s *profileService) Export(ctx context.Context, req *service.ExportProfiles
 								"address":          "0x" + strconv.FormatUint(loc.Address, 16),
 							}
 							maps.Copy(tags, attrtags)
+							maps.Copy(tags, certTags)
 							fields := map[string]any{
 								"start_time_unix_nano": int64(p.TimeUnixNano),
 								"end_time_unix_nano":   int64(p.TimeUnixNano + p.DurationNano),
@@ -323,7 +328,7 @@ func (s *profileService) Export(ctx context.Context, req *service.ExportProfiles
 								continue
 							}
 							ts := sample.GetTimestampsUnixNano()[validIdx]
-							s.acc.AddFields("profiles", fields, addClientCertTags(ctx, s.clientCertTags, tags), time.Unix(0, int64(ts)))
+							s.acc.AddFields("profiles", fields, tags, time.Unix(0, int64(ts)))
 						}
 					}
 				}

@@ -7,7 +7,6 @@ import (
 	"crypto/x509/pkix"
 	"math/big"
 	"net"
-	"net/url"
 	"testing"
 	"time"
 
@@ -31,53 +30,58 @@ func peerContext(cert *x509.Certificate) context.Context {
 }
 
 func TestClientCertTagsInvalid(t *testing.T) {
-	plugin := &OpenTelemetry{ClientCertTags: []string{"common_name", "foo"}}
-	require.ErrorContains(t, plugin.Init(), `invalid client certificate tag "foo"`)
+	plugin := &OpenTelemetry{ClientCertTags: []string{"cn", "foo"}}
+	require.ErrorContains(t, plugin.Init(), `invalid certificate attribute "foo"`)
 }
 
 func TestClientCertTags(t *testing.T) {
-	u, err := url.Parse("spiffe://example.org/ns/prod")
-	require.NoError(t, err)
 	cert := &x509.Certificate{
 		SerialNumber: big.NewInt(255),
-		Subject: pkix.Name{
-			CommonName:         "client-1",
-			Organization:       []string{"Org"},
-			OrganizationalUnit: []string{"Unit1", "Unit2"},
-		},
-		Issuer:         pkix.Name{CommonName: "My CA"},
-		DNSNames:       []string{"a.example.org", "b.example.org"},
-		EmailAddresses: []string{"user@example.org"},
-		IPAddresses:    []net.IP{net.ParseIP("10.0.0.1")},
-		URIs:           []*url.URL{u},
+		Subject:      pkix.Name{CommonName: "client-1"},
+		Issuer:       pkix.Name{CommonName: "My CA"},
+		DNSNames:     []string{"a.example.org"},
 	}
 
-	all := append([]string{}, clientCertTagNames...)
+	// Tags are prefixed and only the requested ones are returned
 	expected := map[string]string{
-		"tls_client_common_name":         "client-1",
-		"tls_client_organization":        "Org",
-		"tls_client_organizational_unit": "Unit1,Unit2",
-		"tls_client_issuer_common_name":  "My CA",
-		"tls_client_serial_number":       "ff",
-		"tls_client_san_dns":             "a.example.org,b.example.org",
-		"tls_client_san_email":           "user@example.org",
-		"tls_client_san_ip":              "10.0.0.1",
-		"tls_client_san_uri":             "spiffe://example.org/ns/prod",
+		"tls_client_cn":     "client-1",
+		"tls_client_issuer": "My CA",
+		"tls_client_sn":     "ff",
+		"tls_client_dns":    "a.example.org",
 	}
-	require.Equal(t, expected, clientCertTags(peerContext(cert), all))
-
-	// Only the requested tags and spoofed attributes get overridden
-	tags := map[string]string{"tls_client_common_name": "spoofed", "other": "x"}
-	got := addClientCertTags(peerContext(cert), []string{"common_name"}, tags)
-	require.Equal(t, map[string]string{"tls_client_common_name": "client-1", "other": "x"}, got)
+	require.Equal(t, expected, clientCertTags(peerContext(cert), []string{"cn", "issuer", "sn", "dns"}))
+	require.Equal(t, map[string]string{"tls_client_cn": "client-1"}, clientCertTags(peerContext(cert), []string{"cn"}))
 
 	// Nothing without options, peer, TLS or client certificate
 	require.Nil(t, clientCertTags(peerContext(cert), nil))
-	require.Nil(t, clientCertTags(context.Background(), all))
-	require.Nil(t, clientCertTags(peerContext(nil), all))
-	require.Equal(t, map[string]string{"other": "x"}, addClientCertTags(peerContext(nil), all, map[string]string{"other": "x"}))
+	require.Nil(t, clientCertTags(context.Background(), []string{"cn"}))
+	require.Nil(t, clientCertTags(peerContext(nil), []string{"cn"}))
+	plain := peer.NewContext(context.Background(), &peer.Peer{})
+	require.Nil(t, clientCertTags(plain, []string{"cn"}))
 }
 
+func TestClientCertTagsOverrideAttributes(t *testing.T) {
+	cert := &x509.Certificate{Subject: pkix.Name{CommonName: "client-1"}}
+	var acc testutil.Accumulator
+	w := &writeToAccumulator{accumulator: &acc, clientCertTags: []string{"cn"}}
+
+	// The tag derived from the certificate wins over the one sent by the client
+	require.NoError(t, w.EnqueuePoint(
+		peerContext(cert), "test",
+		map[string]string{"tls_client_cn": "spoofed", "other": "x"},
+		map[string]any{"value": 1}, time.Unix(0, 0), 0,
+	))
+	// Also works if the sender did not provide any tags
+	require.NoError(t, w.EnqueuePoint(
+		peerContext(cert), "test", nil,
+		map[string]any{"value": 2}, time.Unix(0, 0), 0,
+	))
+
+	metrics := acc.GetTelegrafMetrics()
+	require.Len(t, metrics, 2)
+	require.Equal(t, map[string]string{"tls_client_cn": "client-1", "other": "x"}, metrics[0].Tags())
+	require.Equal(t, map[string]string{"tls_client_cn": "client-1"}, metrics[1].Tags())
+}
 func TestClientCertTagsMTLS(t *testing.T) {
 	pki := testutil.NewPKI("../../../testutil/pki")
 	serverCfg := pki.TLSServerConfig()
@@ -88,7 +92,7 @@ func TestClientCertTagsMTLS(t *testing.T) {
 	plugin := &OpenTelemetry{
 		ServerConfig:   *serverCfg,
 		ServiceAddress: "127.0.0.1:0",
-		ClientCertTags: []string{"common_name", "san_dns", "issuer_common_name"},
+		ClientCertTags: []string{"cn", "dns", "issuer"},
 	}
 	require.NoError(t, plugin.Init())
 
@@ -127,7 +131,7 @@ func TestClientCertTagsMTLS(t *testing.T) {
 	actual := acc.GetTelegrafMetrics()
 	require.Len(t, actual, 1)
 	tags := actual[0].Tags()
-	require.Equal(t, "localhost", tags["tls_client_common_name"])
-	require.Equal(t, "localhost", tags["tls_client_san_dns"])
-	require.Equal(t, "Telegraf Test CA", tags["tls_client_issuer_common_name"])
+	require.Equal(t, "localhost", tags["tls_client_cn"])
+	require.Equal(t, "localhost", tags["tls_client_dns"])
+	require.Equal(t, "Telegraf Test CA", tags["tls_client_issuer"])
 }
