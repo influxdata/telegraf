@@ -314,7 +314,7 @@ func processLine(line string) (string, []string) {
 	var prefix string
 	if strings.ContainsAny(string(line[0]), "*#o+x.-") {
 		prefix = string(line[0])
-		line = strings.TrimLeft(line, "*#o+x.-")
+		line = line[1:]
 	}
 	line = reBrackets.ReplaceAllString(line, "")
 

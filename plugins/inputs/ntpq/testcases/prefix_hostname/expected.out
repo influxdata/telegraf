@@ -1,0 +1,2 @@
+ntpq,remote=x.ns.gin.ntt.n,state_prefix=*,refid=.GPS.,stratum=1,type=u when=34i,poll=64i,reach=377i,delay=5.012,offset=-0.321,jitter=0.201 0
+ntpq,remote=ox.example.org,state_prefix=+,refid=192.0.2.1,stratum=2,type=u when=12i,poll=64i,reach=377i,delay=10.5,offset=0.15,jitter=0.09 0
