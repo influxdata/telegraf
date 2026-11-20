@@ -8,14 +8,14 @@ import (
 	"strings"
 	"sync"
 
-	elasticsearch7 "github.com/elastic/go-elasticsearch/v7"
-	estransport7 "github.com/elastic/go-elasticsearch/v7/estransport"
+	"github.com/elastic/go-elasticsearch/v7"
+	"github.com/elastic/go-elasticsearch/v7/estransport"
 
 	"github.com/influxdata/telegraf"
 )
 
 type clientV7 struct {
-	client          *elasticsearch7.Client
+	client          *elasticsearch.Client
 	log             telegraf.Logger
 	cancelDiscovery context.CancelFunc
 	discoveryWG     sync.WaitGroup
@@ -27,14 +27,14 @@ func (a *Elasticsearch) newClientV7() (client, error) {
 		return nil, err
 	}
 	transport.bypassProductCheck = true
-	c, err := elasticsearch7.NewClient(elasticsearch7.Config{
+	c, err := elasticsearch.NewClient(elasticsearch.Config{
 		Addresses: a.URLs,
 		Header:    a.clientHeaders(),
 		Transport: transport,
 		// Telegraf owns write retries; replaying a bulk request can duplicate documents.
 		DisableRetry:        true,
 		CompressRequestBody: a.EnableGzip,
-		ConnectionPoolFunc:  preserveConnectionPool(estransport7.NewConnectionPool),
+		ConnectionPoolFunc:  preserveConnectionPool(estransport.NewConnectionPool),
 	})
 	if err != nil {
 		return nil, err
