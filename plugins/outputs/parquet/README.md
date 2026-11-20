@@ -42,6 +42,13 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Field name to use to store the timestamp. If set to an empty string, then
   ## the timestamp is omitted.
   # timestamp_field_name = "timestamp"
+
+  ## Timestamp type
+  ## "int64" stores the metric time as nanoseconds since the Unix epoch.
+  ## "timestamp_ns" types it as nanoseconds adjusted to UTC.
+  ## "timestamp_us" reduces precision to microseconds, but is better supported
+  ## by legacy readers.
+  # timestamp_type = "int64"
 ```
 
 ## Building Parquet Files
