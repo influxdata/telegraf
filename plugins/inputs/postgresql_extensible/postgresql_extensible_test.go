@@ -219,32 +219,18 @@ func TestPostgresqlFieldOutputIntegration(t *testing.T) {
 	}
 }
 
-func TestPostgresqlSqlScript(t *testing.T) {
+func TestPostgresqlSqlScriptIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	q := []query{{
 		Script:     "testdata/test.sql",
 		MinVersion: 901,
 		Withdbname: false,
 		Tagvalue:   "",
 	}}
-
-	addr := fmt.Sprintf(
-		"host=%s user=postgres sslmode=disable",
-		testutil.GetLocalHost(),
-	)
-
-	p := &Postgresql{
-		Log:         testutil.Logger{},
-		Address:     config.NewSecret([]byte(addr)),
-		IsPgBouncer: false,
-		Databases:   []string{"postgres"},
-		Query:       q,
-	}
-	require.NoError(t, p.Init())
-
-	var acc testutil.Accumulator
-	require.NoError(t, p.Start(&acc))
-	defer p.Stop()
-	require.NoError(t, acc.GatherError(p.Gather))
+	queryRunner(t, q)
 }
 
 func TestPostgresqlIgnoresUnwantedColumnsIntegration(t *testing.T) {
@@ -252,21 +238,7 @@ func TestPostgresqlIgnoresUnwantedColumnsIntegration(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	addr := fmt.Sprintf(
-		"host=%s user=postgres sslmode=disable",
-		testutil.GetLocalHost(),
-	)
-
-	p := &Postgresql{
-		Log:     testutil.Logger{},
-		Address: config.NewSecret([]byte(addr)),
-	}
-	require.NoError(t, p.Init())
-
-	var acc testutil.Accumulator
-	require.NoError(t, p.Start(&acc))
-	defer p.Stop()
-	require.NoError(t, acc.GatherError(p.Gather))
+	acc := queryRunner(t, nil)
 
 	require.NotEmpty(t, ignoredColumns)
 	for col := range ignoredColumns {
