@@ -104,6 +104,10 @@ func (b *bridge) processTemperatures(ctx context.Context, acc telegraf.Accumulat
 	}
 	responseData := getTemperaturesResponse.JSON200.Data
 	for _, temperature := range responseData {
+		report := temperature.Temperature.TemperatureReport
+		if report == nil || report.Temperature == nil {
+			continue
+		}
 		temperatureName := b.resolveDeviceName(temperature.Id)
 		tags := map[string]string{
 			"bridge_id": b.resolvedClient.Bridge().BridgeId,
@@ -129,6 +133,10 @@ func (b *bridge) processLightLevels(ctx context.Context, acc telegraf.Accumulato
 	}
 	responseData := getLightLevelsResponse.JSON200.Data
 	for _, lightLevel := range responseData {
+		report := lightLevel.Light.LightLevelReport
+		if report == nil || report.LightLevel == nil {
+			continue
+		}
 		lightLevelName := b.resolveDeviceName(lightLevel.Id)
 		tags := map[string]string{
 			"bridge_id": b.resolvedClient.Bridge().BridgeId,
@@ -155,6 +163,10 @@ func (b *bridge) processMotionSensors(ctx context.Context, acc telegraf.Accumula
 	}
 	responseData := getMotionSensorsResponse.JSON200.Data
 	for _, motionSensor := range responseData {
+		report := motionSensor.Motion.MotionReport
+		if report == nil || report.Motion == nil {
+			continue
+		}
 		motionSensorName := b.resolveDeviceName(motionSensor.Id)
 		tags := map[string]string{
 			"bridge_id": b.resolvedClient.Bridge().BridgeId,
