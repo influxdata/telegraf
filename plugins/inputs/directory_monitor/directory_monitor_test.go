@@ -27,9 +27,167 @@ func TestCreator(t *testing.T) {
 		DirectoryDurationThreshold: defaultDirectoryDurationThreshold,
 		FileQueueSize:              defaultFileQueueSize,
 		ParseMethod:                defaultParseMethod,
+		FileAction:                 defaultFileAction,
 	}
 
 	require.Equal(t, expected, creator())
+}
+
+func TestDeleteFileAfterProcessing(t *testing.T) {
+	acc := testutil.Accumulator{}
+	testCsvFile := "test.csv"
+
+	// Establish process, finished, and error directories.
+	// Finished is configured so we can prove delete mode does not write a copy there.
+	processDirectory := t.TempDir()
+	finishedDirectory := t.TempDir()
+	errorDirectory := t.TempDir()
+
+	// Init plugin in delete mode.
+	r := DirectoryMonitor{
+		Directory:          processDirectory,
+		FinishedDirectory:  finishedDirectory,
+		ErrorDirectory:     errorDirectory,
+		FileAction:         "delete",
+		MaxBufferedMetrics: defaultMaxBufferedMetrics,
+		FileQueueSize:      defaultFileQueueSize,
+		ParseMethod:        defaultParseMethod,
+	}
+	require.NoError(t, r.Init())
+
+	r.SetParserFunc(func() (telegraf.Parser, error) {
+		parser := csv.Parser{
+			HeaderRowCount: 1,
+		}
+		err := parser.Init()
+		return &parser, err
+	})
+	r.Log = testutil.Logger{}
+
+	// Write a valid csv file into the monitored directory.
+	require.NoError(t, os.WriteFile(filepath.Join(processDirectory, testCsvFile), []byte("thing,color\nsky,blue\ngrass,green\n"), 0640))
+
+	// Start plugin and process the file.
+	require.NoError(t, r.Start(&acc))
+	require.NoError(t, r.Gather(&acc))
+	acc.Wait(2)
+	r.Stop()
+
+	// Both data rows should have been parsed.
+	require.Len(t, acc.Metrics, 2)
+
+	// The original file is removed so it will not be scanned again.
+	require.NoFileExists(t, filepath.Join(processDirectory, testCsvFile))
+
+	// Delete mode does not copy the file into the finished directory.
+	require.NoFileExists(t, filepath.Join(finishedDirectory, testCsvFile))
+
+	// A successful file is not moved to the error directory either.
+	require.NoFileExists(t, filepath.Join(errorDirectory, testCsvFile))
+}
+
+func TestDeleteModeMovesFailedFile(t *testing.T) {
+	acc := testutil.Accumulator{}
+	testJSONFile := "broken.json"
+
+	// Establish process and error directories. Finished is set but unused for failures.
+	processDirectory := t.TempDir()
+	finishedDirectory := t.TempDir()
+	errorDirectory := t.TempDir()
+
+	// Init plugin in delete mode with an error directory.
+	r := DirectoryMonitor{
+		Directory:          processDirectory,
+		FinishedDirectory:  finishedDirectory,
+		ErrorDirectory:     errorDirectory,
+		FileAction:         "delete",
+		MaxBufferedMetrics: defaultMaxBufferedMetrics,
+		FileQueueSize:      defaultFileQueueSize,
+		ParseMethod:        defaultParseMethod,
+	}
+	require.NoError(t, r.Init())
+
+	r.SetParserFunc(func() (telegraf.Parser, error) {
+		p := &json.Parser{NameKey: "Name"}
+		err := p.Init()
+		return p, err
+	})
+	r.Log = testutil.Logger{}
+
+	// Write JSON that the parser cannot consume.
+	require.NoError(t, os.WriteFile(filepath.Join(processDirectory, testJSONFile), []byte("this is not json"), 0640))
+
+	// Start plugin and attempt to process the file.
+	// Parsing fails, so no metrics arrive. Wait until the file is moved aside.
+	require.NoError(t, r.Start(&acc))
+	require.NoError(t, r.Gather(&acc))
+	require.Eventually(t, func() bool {
+		_, statErr := os.Stat(filepath.Join(errorDirectory, testJSONFile))
+		return statErr == nil
+	}, 5*time.Second, 10*time.Millisecond)
+	r.Stop()
+
+	// Nothing was ingested.
+	require.Empty(t, acc.Metrics)
+
+	// The original is removed from the monitored directory.
+	require.NoFileExists(t, filepath.Join(processDirectory, testJSONFile))
+
+	// Failed files are still copied to the error directory.
+	require.FileExists(t, filepath.Join(errorDirectory, testJSONFile))
+
+	// Failures are not copied to the finished directory.
+	require.NoFileExists(t, filepath.Join(finishedDirectory, testJSONFile))
+}
+
+func TestDeleteModeDoesNotRequireFinishedDirectory(t *testing.T) {
+	// Delete mode ignores finished_directory, so it may be left empty.
+	r := DirectoryMonitor{
+		Directory:          t.TempDir(),
+		FileAction:         "delete",
+		MaxBufferedMetrics: defaultMaxBufferedMetrics,
+		FileQueueSize:      defaultFileQueueSize,
+		ParseMethod:        defaultParseMethod,
+	}
+	require.NoError(t, r.Init())
+}
+
+func TestInitFileActionFail(t *testing.T) {
+	tests := []struct {
+		name     string
+		plugin   *DirectoryMonitor
+		expected string
+	}{
+		{
+			// The default action is move, which still needs a destination directory.
+			name: "move without finished directory",
+			plugin: &DirectoryMonitor{
+				Directory:          t.TempDir(),
+				MaxBufferedMetrics: defaultMaxBufferedMetrics,
+				FileQueueSize:      defaultFileQueueSize,
+				ParseMethod:        defaultParseMethod,
+			},
+			expected: "missing required config option: finished_directory",
+		},
+		{
+			name: "unknown action",
+			plugin: &DirectoryMonitor{
+				Directory:          t.TempDir(),
+				FinishedDirectory:  t.TempDir(),
+				FileAction:         "archive",
+				MaxBufferedMetrics: defaultMaxBufferedMetrics,
+				FileQueueSize:      defaultFileQueueSize,
+				ParseMethod:        defaultParseMethod,
+			},
+			expected: `invalid file_action "archive"`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.ErrorContains(t, tt.plugin.Init(), tt.expected)
+		})
+	}
 }
 
 func TestCSVGZImport(t *testing.T) {
