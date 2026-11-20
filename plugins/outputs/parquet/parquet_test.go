@@ -1,6 +1,7 @@
 package parquet
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -12,6 +13,7 @@ import (
 	"github.com/apache/arrow-go/v18/arrow"
 	"github.com/apache/arrow-go/v18/parquet"
 	"github.com/apache/arrow-go/v18/parquet/file"
+	"github.com/apache/arrow-go/v18/parquet/pqarrow"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -615,7 +617,7 @@ func TestRotationIgnoresExternalModifications(t *testing.T) {
 	write(1.0)
 
 	stale := time.Now().Add(-2 * time.Hour)
-	require.NoError(t, os.Chtimes(filepath.Join(testDir, plugin.metricGroups["test"].filename), stale, stale))
+	require.NoError(t, os.Chtimes(filepath.Join(testDir, inProgressName(plugin.metricGroups["test"].filename)), stale, stale))
 
 	write(2.0)
 	require.NoError(t, plugin.Close())
@@ -651,7 +653,7 @@ func TestDeletedFileReappearsOnlyOnRotation(t *testing.T) {
 	write(1.0)
 
 	group := plugin.metricGroups["test"]
-	require.NoError(t, os.Remove(filepath.Join(testDir, group.filename)))
+	require.NoError(t, os.Remove(filepath.Join(testDir, inProgressName(group.filename))))
 
 	write(2.0)
 	files, err := os.ReadDir(testDir)
@@ -750,4 +752,116 @@ func TestFailedWriterLeavesNoFile(t *testing.T) {
 	entries, err := os.ReadDir(testDir)
 	require.NoError(t, err)
 	require.Empty(t, entries)
+}
+
+func TestFileIsUnpublishedUntilClosed(t *testing.T) {
+	testDir := t.TempDir()
+	plugin := &Parquet{
+		Directory:          testDir,
+		TimestampFieldName: defaultTimestampFieldName,
+		Log:                testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+	require.NoError(t, plugin.Write([]telegraf.Metric{
+		metric.New("test", map[string]string{}, map[string]any{"value": 1.0}, time.Now()),
+	}))
+
+	published, err := filepath.Glob(filepath.Join(testDir, "*.parquet"))
+	require.NoError(t, err)
+	require.Empty(t, published)
+
+	require.NoError(t, plugin.Close())
+
+	published, err = filepath.Glob(filepath.Join(testDir, "*.parquet"))
+	require.NoError(t, err)
+	require.Len(t, published, 1)
+	reader, err := file.OpenParquetFile(published[0], false)
+	require.NoError(t, err)
+	defer reader.Close()
+	require.Equal(t, 1, int(reader.MetaData().NumRows))
+}
+
+func TestRotationPublishesTheClosedFile(t *testing.T) {
+	testDir := t.TempDir()
+	plugin := &Parquet{
+		Directory:          testDir,
+		RotationInterval:   config.Duration(time.Hour),
+		TimestampFieldName: defaultTimestampFieldName,
+		Log:                testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+	defer plugin.Close()
+
+	write := func(value float64) {
+		require.NoError(t, plugin.Write([]telegraf.Metric{
+			metric.New("test", map[string]string{}, map[string]any{"value": value}, time.Now()),
+		}))
+	}
+
+	write(1.0)
+	group := plugin.metricGroups["test"]
+	closed := group.filename
+	group.created = group.created.Add(-2 * time.Hour)
+	write(2.0)
+
+	published, err := filepath.Glob(filepath.Join(testDir, "*.parquet"))
+	require.NoError(t, err)
+	require.Equal(t, []string{filepath.Join(testDir, closed)}, published)
+	require.FileExists(t, filepath.Join(testDir, inProgressName(group.filename)))
+}
+
+type diskThatFillsAfterFirstWrite struct {
+	written bool
+}
+
+func (d *diskThatFillsAfterFirstWrite) Write(data []byte) (int, error) {
+	if d.written {
+		return 0, errors.New("no space left on device")
+	}
+	d.written = true
+	return len(data), nil
+}
+
+func TestFileThatFailsToCloseStaysUnpublished(t *testing.T) {
+	testDir := t.TempDir()
+	plugin := &Parquet{
+		Directory:          testDir,
+		RotationInterval:   config.Duration(time.Hour),
+		TimestampFieldName: defaultTimestampFieldName,
+		Log:                testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+
+	write := func(value float64) {
+		require.NoError(t, plugin.Write([]telegraf.Metric{
+			metric.New("test", map[string]string{}, map[string]any{"value": value}, time.Now()),
+		}))
+	}
+
+	write(1.0)
+	group := plugin.metricGroups["test"]
+	unfinished := group.filename
+	diskWriter := group.writer
+	t.Cleanup(func() { require.NoError(t, diskWriter.Close()) })
+	fullWriter, err := pqarrow.NewFileWriter(group.schema, &diskThatFillsAfterFirstWrite{}, parquet.NewWriterProperties(), pqarrow.DefaultWriterProps())
+	require.NoError(t, err)
+	group.writer = fullWriter
+	group.created = group.created.Add(-2 * time.Hour)
+
+	write(2.0)
+	write(3.0)
+	require.NoError(t, plugin.Close())
+
+	published, err := filepath.Glob(filepath.Join(testDir, "*.parquet"))
+	require.NoError(t, err)
+	require.Len(t, published, 1)
+	require.NotEqual(t, filepath.Join(testDir, unfinished), published[0])
+	reader, err := file.OpenParquetFile(published[0], false)
+	require.NoError(t, err)
+	defer reader.Close()
+	require.Equal(t, 2, int(reader.MetaData().NumRows))
+	require.FileExists(t, filepath.Join(testDir, inProgressName(unfinished)))
 }
