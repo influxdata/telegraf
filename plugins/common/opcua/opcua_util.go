@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -385,6 +386,21 @@ func (o *OpcUAClient) generateClientOpts(endpoints []*ua.EndpointDescription) ([
 	if secMode != ua.MessageSecurityModeNone && cert != nil && pk != nil {
 		opts = append(opts, opcua.PrivateKey(pk), opcua.Certificate(cert))
 	}
+
+	// The library takes the first user token of the requested type and encrypts
+	// the credentials with that token's policy (gopcua/opcua#912). Servers often
+	// list a legacy policy first, which caps the server key size and fails for
+	// larger certificates, so move the tokens matching the channel policy to
+	// the front. An empty token policy inherits the channel policy.
+	matches := func(t *ua.UserTokenPolicy) int {
+		if t.TokenType == authMode && (t.SecurityPolicyURI == secPolicy || t.SecurityPolicyURI == "") {
+			return 1
+		}
+		return 0
+	}
+	slices.SortStableFunc(serverEndpoint.UserIdentityTokens, func(a, b *ua.UserTokenPolicy) int {
+		return matches(b) - matches(a)
+	})
 
 	opts = append(opts, opcua.SecurityFromEndpoint(serverEndpoint, authMode))
 
