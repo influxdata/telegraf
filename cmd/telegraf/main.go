@@ -146,7 +146,15 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 		},
 	}
 
-	mainFlags := append(configHandlingFlags, cliFlags()...)
+	// Include Windows options when generating the reference on any host.
+	generateDocs := len(args) == 2 && args[1] == "--generate-cli-docs"
+	serviceFlags := cliFlags()
+	serviceCommands := getServiceCommands(outputBuffer)
+	if generateDocs {
+		serviceFlags = windowsServiceFlags()
+		serviceCommands = windowsServiceCommands(windowsServiceActions{})
+	}
+	mainFlags := append(configHandlingFlags, serviceFlags...)
 
 	// This function is used when Telegraf is run with only flags
 	action := func(cCtx *cli.Context) error {
@@ -288,7 +296,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 		getSecretStoreCommands(m)...,
 	)
 	commands = append(commands, getPluginCommands(outputBuffer)...)
-	commands = append(commands, getServiceCommands(outputBuffer)...)
+	commands = append(commands, serviceCommands...)
 
 	app := &cli.App{
 		Name:   "Telegraf",
@@ -432,6 +440,10 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 				},
 			},
 		}, commands...),
+	}
+
+	if generateDocs {
+		return writeCLIReference(outputBuffer, app)
 	}
 
 	// Make sure we safely erase secrets

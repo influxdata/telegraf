@@ -76,7 +76,7 @@ help:
 	@echo '  all          - download dependencies and compile telegraf binary'
 	@echo '  config       - generate the config from current repo state'
 	@echo '  deps         - download dependencies'
-	@echo '  docs         - embed sample-configurations into READMEs'
+	@echo '  docs         - generate CLI documentation and embed sample-configurations into READMEs'
 	@echo '  telegraf     - compile telegraf binary'
 	@echo '  test         - run short unit tests'
 	@echo '  fmt          - format source files'
@@ -124,7 +124,15 @@ config:
 	$(HOSTGO) run ./cmd/telegraf config > etc/telegraf.conf
 
 .PHONY: docs
-docs: build_tools embed_readme_common embed_readme_inputs embed_readme_outputs embed_readme_processors embed_readme_aggregators embed_readme_secretstores
+docs: build_tools embed_readme_common embed_readme_inputs embed_readme_outputs embed_readme_processors embed_readme_aggregators embed_readme_secretstores docs-cli
+
+.PHONY: docs-cli
+docs-cli:
+	@tmp=$$(mktemp docs/COMMANDS_AND_FLAGS.md.XXXXXX) && \
+	trap 'rm -f "$$tmp"' 0 && \
+	$(HOSTGO) run -tags custom ./cmd/telegraf --generate-cli-docs > "$$tmp" && \
+	chmod 644 "$$tmp" && \
+	mv "$$tmp" docs/COMMANDS_AND_FLAGS.md
 
 .PHONY: build
 build:
