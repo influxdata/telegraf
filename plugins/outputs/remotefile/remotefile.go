@@ -136,6 +136,12 @@ func (f *File) Connect() error {
 		return fmt.Errorf("cannot find remote type %q: %w", parsed.Name, err)
 	}
 
+	// rclone interprets the first unquoted colon as the start of the path.
+	if info.Name == "s3" &&
+		(parsed.Config["server_side_encryption"] == "aws" || parsed.Config["sse_kms_key_id"] == "arn") {
+		return errors.New("quote S3 option values containing colons, such as 'aws:kms' and the KMS key ARN")
+	}
+
 	// Setup the remote virtual filesystem
 	ctx, cancel := context.WithCancel(context.Background())
 	rootfs, err := info.NewFs(ctx, parsed.Name, parsed.Path, fs.ConfigMap(info.Prefix, info.Options, parsed.Name, parsed.Config))
