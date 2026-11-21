@@ -36,6 +36,10 @@ func (p *Parser) extractMetricsV1(prommetrics *dto.MetricFamily) []telegraf.Metr
 		switch metricType {
 		case dto.MetricType_SUMMARY:
 			summary := pm.GetSummary()
+			if summary == nil {
+				// The sample could not be decoded completely
+				continue
+			}
 
 			// Collect the fields
 			fields := make(map[string]any, len(summary.Quantile)+2)
@@ -50,6 +54,10 @@ func (p *Parser) extractMetricsV1(prommetrics *dto.MetricFamily) []telegraf.Metr
 			metrics = append(metrics, metric.New(metricName, tags, fields, t, telegraf.Summary))
 		case dto.MetricType_HISTOGRAM:
 			histogram := pm.GetHistogram()
+			if histogram == nil {
+				// The sample could not be decoded completely
+				continue
+			}
 
 			// Collect the fields
 			fields := make(map[string]any, len(histogram.Bucket)+2)

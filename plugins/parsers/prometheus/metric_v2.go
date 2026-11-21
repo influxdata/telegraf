@@ -35,6 +35,10 @@ func (p *Parser) extractMetricsV2(prommetrics *dto.MetricFamily) []telegraf.Metr
 		switch metricType {
 		case dto.MetricType_SUMMARY:
 			summary := pm.GetSummary()
+			if summary == nil {
+				// The sample could not be decoded completely
+				continue
+			}
 
 			// Add an overall metric containing the number of samples and and its sum
 			summaryFields := make(map[string]any)
@@ -54,6 +58,10 @@ func (p *Parser) extractMetricsV2(prommetrics *dto.MetricFamily) []telegraf.Metr
 			}
 		case dto.MetricType_HISTOGRAM:
 			histogram := pm.GetHistogram()
+			if histogram == nil {
+				// The sample could not be decoded completely
+				continue
+			}
 
 			// Add an overall metric containing the number of samples and and its sum
 			histFields := make(map[string]any)
