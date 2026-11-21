@@ -675,6 +675,18 @@ func TestParseTimestamp(t *testing.T) {
 			expected:  rfc3339("2019-09-13T01:30:08.000000500+12:00"),
 		},
 		{
+			name:      "timestamp with timezone seconds default location is utc",
+			format:    "timestamp_tz",
+			timestamp: "1568338208",
+			expected:  rfc3339("2019-09-13T01:30:08Z"),
+		},
+		{
+			name:      "timestamp with timezone milliseconds default location is utc",
+			format:    "timestamp_tz_ms",
+			timestamp: int64(1568338208500),
+			expected:  rfc3339("2019-09-13T01:30:08.500Z"),
+		},
+		{
 			name:      "rfc339 test",
 			format:    "RFC3339",
 			timestamp: "2018-10-26T13:30:33Z",
