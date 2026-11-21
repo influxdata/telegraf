@@ -2,7 +2,8 @@
 
 This plugin queries a [PostgreSQL][postgres] server and provides metrics for
 the returned result. This is useful when using PostgreSQL extensions to collect
-additional metrics.
+additional metrics. The queries can be run in many databases of the server and
+executed concurrently.
 
 > [!TIP]
 > Please also check the more generic [sql input plugin][inputs_sql].
@@ -33,266 +34,226 @@ to use them.
 ## Configuration
 
 ```toml @sample.conf
-# Read metrics from one or many postgresql servers
+# Read metrics from one or many postgresql servers and databases
 [[inputs.postgresql_extensible]]
-  # specify address via a url matching:
-  # postgres://[pqgotest[:password]]@host:port[/dbname]?sslmode=...&statement_timeout=...
-  # or a simple string:
-  #   host=localhost port=5432 user=pqgotest password=... sslmode=... dbname=app_production
-  #
-  # All connection parameters are optional.
-  # Without the dbname parameter, the driver will default to a database
-  # with the same name as the user. This dbname is just for instantiating a
-  # connection with the server and doesn't restrict the databases we are trying
-  # to grab metrics for.
-  #
+  ## Specify address via a url matching:
+  ##   postgres://[pqgotest[:password]]@host:port[/dbname]?sslmode=...
+  ## or a simple string:
+  ##   host=localhost port=5432 user=pqgotest password=... sslmode=... dbname=app_production
+  ##
+  ## All connection parameters are optional. Without the dbname parameter,
+  ## the driver will default to a database with the same name as the user.
   address = "host=localhost user=postgres sslmode=disable"
 
-  ## Whether to use prepared statements when connecting to the database.
-  ## This should be set to false when connecting through a PgBouncer instance
-  ## with pool_mode set to transaction.
-  prepared_statements = true
+  ## Whether to use prepared statements. Each new connection prepares the
+  ## queries again, which costs at least one extra round trip per query. With
+  ## keep_idle_connections = false that happens needlessly on every collection,
+  ## so it makes sense to set this to false.
+  ##
+  ## Also set this to false when connecting through a PgBouncer with pool_mode
+  ## set to transaction, unless its max_prepared_statements is above zero
+  ## (available since PgBouncer 1.21, the default since 1.24).
+  # prepared_statements = true
 
-  # Define the toml config where the sql queries are stored
-  # The script option can be used to specify the .sql file path.
-  # If script and sqlquery options specified at same time, sqlquery will be used
-  #
-  # the measurement field defines measurement name for metrics produced
-  # by the query. Default is "postgresql".
-  #
-  # the tagvalue field is used to define custom tags (separated by comas).
-  # the query is expected to return columns which match the names of the
-  # defined tags. The values in these columns must be of a string-type,
-  # a number-type or a blob-type.
-  #
-  # The timestamp field is used to override the data points timestamp value. By
-  # default, all rows inserted with current time. By setting a timestamp column,
-  # the row will be inserted with that column's value.
-  #
-  # The min_version field specifies minimal database version this query
-  # will run on.
-  #
-  # The max_version field when set specifies maximal database version
-  # this query will NOT run on.
-  #
-  # Database version in `minversion` and `maxversion` is represented as
-  # a single integer without last component, for example:
-  # 9.6.2 -> 906
-  # 15.2 -> 1500
-  #
-  # Structure :
-  # [[inputs.postgresql_extensible.query]]
-  #   measurement string
-  #   sqlquery string
-  #   min_version int
-  #   max_version int
-  #   withdbname boolean
-  #   tagvalue string (coma separated)
-  #   timestamp string
+  ## Maximum lifetime of a connection. A connection older than this is closed
+  ## once it is not in use. Zero keeps the connections forever. Note that this
+  ## does not interrupt queries, the lifetime is not enforced while a query is
+  ## running.
+  # max_lifetime = "0s"
+
+  ## Run the queries in all databases matching the filters instead of the
+  ## database of the connection only. Each entry is a glob pattern.
+  # datname_include = []
+  # datname_exclude = []
+
+  ## Interval for refreshing the cached server version and list of databases.
+  ## Zero reads them on every collection.
+  # metadata_refresh_interval = "0s"
+
+  ## Number of databases processed at the same time. Only relevant when the
+  ## datname filters above select more than one database.
+  # max_parallel_databases = 1
+
+  ## Number of queries run at the same time within one database.
+  # max_connections_per_database = 1
+
+  ## Keep the connections open between collections instead of closing them
+  ## once a collection is done. With many databases this may exceed the
+  ## max_connections setting of the server.
+  # keep_idle_connections = true
+
+  ## Queries to run
+  ##
+  ## The sqlquery option contains the SQL text to run, the script option a
+  ## path to a file containing it. If both are given, sqlquery is used.
+  ##
+  ## The measurement option defines the measurement name for the metrics
+  ## produced by the query. Default is "postgresql".
+  ##
+  ## The tagvalue option is a comma separated list of columns to use as tags.
+  ##
+  ## The timestamp option names a column whose value is used as the metric
+  ## timestamp instead of the collection time.
+  ##
+  ## The min_version and max_version options restrict the query to the given
+  ## server versions. The version is the server_version_num divided by 100,
+  ## e.g. 9.6.2 -> 906 and 15.2 -> 1500. The query is not run on max_version.
   [[inputs.postgresql_extensible.query]]
-    measurement="pg_stat_database"
-    sqlquery="SELECT * FROM pg_stat_database WHERE datname"
-    min_version=901
-    tagvalue=""
+    measurement = "pg_stat_database"
+    sqlquery = "SELECT * FROM pg_stat_database"
+    min_version = 901
+    tagvalue = ""
   [[inputs.postgresql_extensible.query]]
-    script="your_sql-filepath.sql"
-    min_version=901
-    max_version=1300
-    tagvalue=""
+    script = "your_sql-filepath.sql"
+    min_version = 901
+    max_version = 1300
 ```
 
-The system can be easily extended using homemade metrics collection tools or
-using the postgresql extensions [pg_stat_statements][pg_stat_statements],
-[pg_proctab][pg_proctab] or [powa][powa].
+### Example with several intervals
 
-[pg_stat_statements]: http://www.postgresql.org/docs/current/static/pgstatstatements.html
-[pg_proctab]: https://github.com/markwkm/pg_proctab
-[powa]: http://dalibo.github.io/powa/
-
-### Sample Queries
-
-* telegraf.conf postgresql_extensible queries (assuming that you have configured
- correctly your connection)
+The following example is not a ready configuration. It shows the basic
+patterns: what can be collected at which interval and how the options work
+together.
 
 ```toml
-[[inputs.postgresql_extensible.query]]
-  sqlquery="SELECT * FROM pg_stat_database"
-  version=901
-  withdbname=false
-  tagvalue=""
-[[inputs.postgresql_extensible.query]]
-  sqlquery="SELECT * FROM pg_stat_bgwriter"
-  version=901
-  withdbname=false
-  tagvalue=""
-[[inputs.postgresql_extensible.query]]
-  sqlquery="select * from sessions"
-  version=901
-  withdbname=false
-  tagvalue="db,username,state"
-[[inputs.postgresql_extensible.query]]
-  sqlquery="""\
-  select setting as max_connections from pg_settings where \
-  name='max_connections'"""
-  version=801
-  withdbname=false
-  tagvalue=""
-[[inputs.postgresql_extensible.query]]
-  sqlquery="select * from pg_stat_kcache"
-  version=901
-  withdbname=false
-  tagvalue=""
-[[inputs.postgresql_extensible.query]]
-  sqlquery="""\
-  select setting as shared_buffers from pg_settings where \
-  name='shared_buffers'"""
-  version=801
-  withdbname=false
-  tagvalue=""
-[[inputs.postgresql_extensible.query]]
-  sqlquery="""\
-  SELECT db, count( distinct blocking_pid ) AS num_blocking_sessions,\
-  count( distinct blocked_pid) AS num_blocked_sessions FROM \
-  public.blocking_procs group by db"""
-  version=901
-  withdbname=false
-  tagvalue="db"
-[[inputs.postgresql_extensible.query]]
-  sqlquery="""
-    SELECT type, (enabled || '') AS enabled, COUNT(*)
-      FROM application_users
-      GROUP BY type, enabled
-  """
-  version=901
-  withdbname=false
-  tagvalue="type,enabled"
+## Collecting general PostgreSQL metrics
+[[inputs.postgresql_extensible]]
+  interval = "60s"
+  address = "host=localhost user=postgres dbname=postgres sslmode=disable"
+
+  ## Keep the connection open between collections
+  keep_idle_connections = true
+
+  ## Replace a kept connection once it is older than this
+  max_lifetime = "1h"
+
+  ## Read the metadata every 10 minutes instead of on every collection: the
+  ## server version and, with the datname filters, the list of databases
+  metadata_refresh_interval = "10m"
+
+  [[inputs.postgresql_extensible.query]]
+    measurement = "pg_stat_database"
+    sqlquery = "SELECT datname, numbackends, xact_commit, xact_rollback, deadlocks FROM pg_stat_database WHERE datname IS NOT NULL"
+
+  [[inputs.postgresql_extensible.query]]
+    measurement = "pg_replication_slots"
+    sqlquery = "SELECT slot_name, active, pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)::bigint AS lag_bytes FROM pg_replication_slots WHERE NOT pg_is_in_recovery()"
+    tagvalue = "slot_name"
+
+  ## Other queries
+  # [[inputs.postgresql_extensible.query]]
+  #   measurement = "..."
+  #   sqlquery = "SELECT ..."
+
+## Collecting the query statistics, requires the pg_stat_statements extension
+[[inputs.postgresql_extensible]]
+  interval = "5m"
+  address = "host=localhost user=postgres dbname=postgres sslmode=disable"
+
+  ## Close the connection after each collection
+  keep_idle_connections = false
+
+  ## Without a kept connection prepared statements only add round trips
+  prepared_statements = false
+
+  metadata_refresh_interval = "10m"
+
+  [[inputs.postgresql_extensible.query]]
+    measurement = "pg_stat_statements"
+    sqlquery = "SELECT userid, dbid, queryid, calls, total_exec_time, rows FROM pg_stat_statements"
+    tagvalue = "userid,dbid,queryid"
+
+## Collecting the tables and indexes of the databases
+[[inputs.postgresql_extensible]]
+  interval = "30m"
+  address = "host=localhost user=postgres dbname=postgres sslmode=disable"
+  prepared_statements = false
+
+  ## Run the queries in every database except postgres, two databases at a
+  ## time and two queries at a time within each database, and close the
+  ## connections of each database once its queries are done
+  datname_include = ["*"]
+  datname_exclude = ["postgres"]
+  max_parallel_databases = 2
+  max_connections_per_database = 2
+  keep_idle_connections = false
+
+  [[inputs.postgresql_extensible.query]]
+    measurement = "pg_stat_user_tables"
+    sqlquery = "SELECT * FROM pg_stat_user_tables"
+    tagvalue = "schemaname,relname"
+
+  [[inputs.postgresql_extensible.query]]
+    measurement = "pg_stat_user_indexes"
+    sqlquery = "SELECT * FROM pg_stat_user_indexes"
+    tagvalue = "schemaname,relname,indexrelname"
+
+  ## A file with the SQL query instead of sqlquery
+  [[inputs.postgresql_extensible.query]]
+    measurement = "pg_invalid_indexes"
+    script = "/etc/telegraf/sql/invalid_indexes.sql"
+    tagvalue = "table_name,index_name"
 ```
 
-### Postgresql Side
+## Databases
 
-postgresql.conf :
+Without `datname_include` and `datname_exclude` all queries are run in the
+database given in the `address` (or the driver default). If any of the
+filters is set, the list of databases is read from `pg_database` and the
+queries are run in every database matching the filters. Template databases
+and databases not accepting connections are never included.
 
-```sql
-shared_preload_libraries = 'pg_stat_statements,pg_stat_kcache'
-```
+Every filter entry is a glob pattern matching the database name, so `app`
+only matches the database `app` while `app_*` matches `app_prod` and
+`app_test`. A database is used if it matches any of the
+`datname_include` entries (or the list is empty) and none of the
+`datname_exclude` entries.
 
-Please follow the requirements to setup those extensions.
+A new database shows up on the next collection, or with
+`metadata_refresh_interval` set, after at most that interval plus one
+collection interval.
 
-In the database (can be a specific monitoring db)
+## Cached server information
 
-```sql
-create extension pg_stat_statements;
-create extension pg_stat_kcache;
-create extension pg_proctab;
-```
+The server version and the list of databases are read together from the
+database of the `address` and cached for `metadata_refresh_interval`. They are
+refreshed on the first collection after each interval boundary on the wall
+clock. A collection between two refreshes uses the cached values and does not
+read the server information again. The default of zero reads them on every
+collection.
 
-(assuming that the extension is installed on the OS Layer)
+## Concurrency
 
-* pg_stat_kcache is available on the postgresql.org yum repo
-* pg_proctab is available at : <https://github.com/markwkm/pg_proctab>
+Concurrency has two independent knobs. `max_parallel_databases` sets how
+many databases are processed at the same time, `max_connections_per_database`
+how many queries run at the same time within one of them. Every query
+occupies one connection, so a collection opens at most the product of the
+two:
 
-### Views
+| `max_parallel_databases` | `max_connections_per_database` | connections |
+|---|---|---|
+| 1 | 1 | 1 |
+| 1 | 5 | 5 |
+| 5 | 1 | 5 |
+| 5 | 2 | 10 |
 
-* Blocking sessions
+Both default to one: a single connection running the queries one after
+another.
 
-```sql
-CREATE OR REPLACE VIEW public.blocking_procs AS
- SELECT a.datname AS db,
-    kl.pid AS blocking_pid,
-    ka.usename AS blocking_user,
-    ka.query AS blocking_query,
-    bl.pid AS blocked_pid,
-    a.usename AS blocked_user,
-    a.query AS blocked_query,
-    to_char(age(now(), a.query_start), 'HH24h:MIm:SSs'::text) AS age
-   FROM pg_locks bl
-     JOIN pg_stat_activity a ON bl.pid = a.pid
-     JOIN pg_locks kl ON bl.locktype = kl.locktype AND NOT bl.database IS
-     DISTINCT FROM kl.database AND NOT bl.relation IS DISTINCT FROM kl.relation
-     AND NOT bl.page IS DISTINCT FROM kl.page AND NOT bl.tuple IS DISTINCT FROM
-     kl.tuple AND NOT bl.virtualxid IS DISTINCT FROM kl.virtualxid AND NOT
-     bl.transactionid IS DISTINCT FROM kl.transactionid AND NOT bl.classid IS
-     DISTINCT FROM kl.classid AND NOT bl.objid IS DISTINCT FROM kl.objid AND
-      NOT bl.objsubid IS DISTINCT FROM kl.objsubid AND bl.pid <> kl.pid
-     JOIN pg_stat_activity ka ON kl.pid = ka.pid
-  WHERE kl.granted AND NOT bl.granted
-  ORDER BY a.query_start;
-```
+One connection comes on top of that product while a collection refreshes
+the server information, and only when the database of the `address` is not
+among the ones queried. Otherwise that
+connection is taken from the pool the queries use anyway.
 
-* Sessions Statistics
+`keep_idle_connections` keeps the connections of every queried database
+open until the next collection. A collection querying many databases then
+holds up to the number of databases times `max_connections_per_database`
+connections, plus one for the database of the `address` if it is not among
+the ones queried, which may exceed the `max_connections` setting of the server.
+Set it to false to close the connections as soon as a collection is done.
 
-```sql
-CREATE OR REPLACE VIEW public.sessions AS
- WITH proctab AS (
-         SELECT pg_proctab.pid,
-                CASE
-                    WHEN pg_proctab.state::text = 'R'::bpchar::text
-                      THEN 'running'::text
-                    WHEN pg_proctab.state::text = 'D'::bpchar::text
-                      THEN 'sleep-io'::text
-                    WHEN pg_proctab.state::text = 'S'::bpchar::text
-                      THEN 'sleep-waiting'::text
-                    WHEN pg_proctab.state::text = 'Z'::bpchar::text
-                      THEN 'zombie'::text
-                    WHEN pg_proctab.state::text = 'T'::bpchar::text
-                      THEN 'stopped'::text
-                    ELSE NULL::text
-                END AS proc_state,
-            pg_proctab.ppid,
-            pg_proctab.utime,
-            pg_proctab.stime,
-            pg_proctab.vsize,
-            pg_proctab.rss,
-            pg_proctab.processor,
-            pg_proctab.rchar,
-            pg_proctab.wchar,
-            pg_proctab.syscr,
-            pg_proctab.syscw,
-            pg_proctab.reads,
-            pg_proctab.writes,
-            pg_proctab.cwrites
-           FROM pg_proctab() pg_proctab(pid, comm, fullcomm, state, ppid, pgrp,
-             session, tty_nr, tpgid, flags, minflt, cminflt, majflt, cmajflt,
-             utime, stime, cutime, cstime, priority, nice, num_threads,
-             itrealvalue, starttime, vsize, rss, exit_signal, processor,
-             rt_priority, policy, delayacct_blkio_ticks, uid, username, rchar,
-             wchar, syscr, syscw, reads, writes, cwrites)
-        ), stat_activity AS (
-         SELECT pg_stat_activity.datname,
-            pg_stat_activity.pid,
-            pg_stat_activity.usename,
-                CASE
-                    WHEN pg_stat_activity.query IS NULL THEN 'no query'::text
-                    WHEN pg_stat_activity.query IS NOT NULL AND
-                    pg_stat_activity.state = 'idle'::text THEN 'no query'::text
-                    ELSE regexp_replace(pg_stat_activity.query, '[\n\r]+'::text,
-                       ' '::text, 'g'::text)
-                END AS query
-           FROM pg_stat_activity
-        )
- SELECT stat.datname::name AS db,
-    stat.usename::name AS username,
-    stat.pid,
-    proc.proc_state::text AS state,
-('"'::text || stat.query) || '"'::text AS query,
-    (proc.utime/1000)::bigint AS session_usertime,
-    (proc.stime/1000)::bigint AS session_systemtime,
-    proc.vsize AS session_virtual_memory_size,
-    proc.rss AS session_resident_memory_size,
-    proc.processor AS session_processor_number,
-    proc.rchar AS session_bytes_read,
-    proc.rchar-proc.reads AS session_logical_bytes_read,
-    proc.wchar AS session_bytes_written,
-    proc.wchar-proc.writes AS session_logical_bytes_writes,
-    proc.syscr AS session_read_io,
-    proc.syscw AS session_write_io,
-    proc.reads AS session_physical_reads,
-    proc.writes AS session_physical_writes,
-    proc.cwrites AS session_cancel_writes
-   FROM proctab proc,
-    stat_activity stat
-  WHERE proc.pid = stat.pid;
-```
+The pool of a database that drops out of the filtered list is closed on the
+next collection.
 
 ## Example Output
 
@@ -316,5 +277,12 @@ By default, the following format will be used
 
 * postgresql
   * tags:
-    * db
-    * server
+    * db - the database the query was run in, or the value of the `datname`
+      column if present
+    * server - the sanitized connection address
+    * all columns listed in `tagvalue`
+  * fields:
+    * all remaining columns
+
+The `stats_reset` column is never reported. To drop further columns use the
+`fieldexclude` and `tagexclude` options every input plugin supports.
