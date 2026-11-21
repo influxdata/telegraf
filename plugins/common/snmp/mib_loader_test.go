@@ -3,6 +3,7 @@ package snmp
 import (
 	"path/filepath"
 	"runtime"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -11,8 +12,9 @@ import (
 )
 
 type TestingMibLoader struct {
-	folders []string
-	files   []string
+	folders          []string
+	files            []string
+	pathsAtFirstLoad []string
 }
 
 func (t *TestingMibLoader) appendPath(path string) {
@@ -20,6 +22,9 @@ func (t *TestingMibLoader) appendPath(path string) {
 }
 
 func (t *TestingMibLoader) loadModule(path string) error {
+	if len(t.files) == 0 {
+		t.pathsAtFirstLoad = slices.Clone(t.folders)
+	}
 	t.files = append(t.files, path)
 	return nil
 }
@@ -66,6 +71,7 @@ func TestFolderLookup(t *testing.T) {
 				folders = append(folders, path)
 			}
 			require.Equal(t, folders, loader.folders)
+			require.Equal(t, folders, loader.pathsAtFirstLoad)
 
 			require.Equal(t, tt.files, loader.files)
 		})
