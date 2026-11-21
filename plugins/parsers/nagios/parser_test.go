@@ -2,6 +2,7 @@ package nagios
 
 import (
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -567,6 +568,18 @@ func TestBenchmarkData(t *testing.T) {
 	actual, err := plugin.Parse([]byte(benchmarkData))
 	require.NoError(t, err)
 	testutil.RequireMetricsEqual(t, expected, actual, testutil.IgnoreTime(), testutil.SortMetrics())
+}
+
+func TestParseLongFirstLine(t *testing.T) {
+	plugin := &Parser{}
+	require.NoError(t, plugin.Init())
+
+	// Longer than bufio.MaxScanTokenSize, with no trailing newline.
+	input := "OK - many ports |" + strings.Repeat(" load=1;;;;", 8000)
+
+	metrics, err := plugin.Parse([]byte(input))
+	require.NoError(t, err)
+	require.Len(t, metrics, 8001)
 }
 
 func BenchmarkParsing(b *testing.B) {

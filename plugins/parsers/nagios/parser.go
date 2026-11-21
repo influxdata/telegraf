@@ -69,6 +69,8 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	ts := p.timeFunc().UTC()
 
 	s := bufio.NewScanner(bytes.NewReader(buf))
+	// buf is already in memory, so allow a line as long as buf itself.
+	s.Buffer(nil, len(buf)+1)
 
 	var msg bytes.Buffer
 	var longmsg bytes.Buffer
