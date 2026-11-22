@@ -2249,8 +2249,8 @@ github.com/riemann/riemann-go-client v0.5.1-0.20211206220514-f58f10cdce16 h1:bGX
 github.com/riemann/riemann-go-client v0.5.1-0.20211206220514-f58f10cdce16/go.mod h1:4rS0vfmzOMwfFPhi6Zve4k/59TsBepqd6WESNULE0ho=
 github.com/rivo/uniseg v0.4.7 h1:WUdvkW8uEhrYfLC4ZzdpI2ztxP1I582+49Oc5Mq64VQ=
 github.com/rivo/uniseg v0.4.7/go.mod h1:FN3SvrM+Zdj16jyLfmOkMNblXMcoc8DfTHruCPUcx88=
-github.com/robbiet480/go.nut v0.0.0-20220219091450-bd8f121e1fa1 h1:YmFqprZILGlF/X3tvMA4Rwn3ySxyE3hGUajBHkkaZbM=
-github.com/robbiet480/go.nut v0.0.0-20220219091450-bd8f121e1fa1/go.mod h1:pL1huxuIlWub46MsMVJg4p7OXkzbPp/APxh9IH0eJjQ=
+github.com/robbiet480/go.nut v0.0.0-20240622015809-60e196249c53 h1:TaG8Gmz2WOhR5KKymFGy9nnECpEZ+z01J9F22aqjuF0=
+github.com/robbiet480/go.nut v0.0.0-20240622015809-60e196249c53/go.mod h1:pL1huxuIlWub46MsMVJg4p7OXkzbPp/APxh9IH0eJjQ=
 github.com/robertkrimen/otto v0.0.0-20191219234010-c382bd3c16ff h1:+6NUiITWwE5q1KO6SAfUX918c+Tab0+tGAM/mtdlUyA=
 github.com/robertkrimen/otto v0.0.0-20191219234010-c382bd3c16ff/go.mod h1:xvqspoSXJTIpemEonrMDFq6XzwHYYgToXWj5eRX1OtY=
 github.com/robfig/cron/v3 v3.0.1 h1:WdRxkvbJztn8LMz/QEvLN5sBU+xKpSqwwUO1Pjr4qDs=

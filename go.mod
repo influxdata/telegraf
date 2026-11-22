@@ -192,7 +192,7 @@ require (
 	github.com/rclone/rclone v1.76.0
 	github.com/redis/go-redis/v9 v9.23.0
 	github.com/riemann/riemann-go-client v0.5.1-0.20211206220514-f58f10cdce16
-	github.com/robbiet480/go.nut v0.0.0-20220219091450-bd8f121e1fa1
+	github.com/robbiet480/go.nut v0.0.0-20240622015809-60e196249c53
 	github.com/robinson/gos7 v0.0.0-20240315073918-1f14519e4846
 	github.com/safchain/ethtool v0.7.0
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1

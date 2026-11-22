@@ -77,6 +77,45 @@ func TestBadServer(t *testing.T) {
 	require.Error(t, plugin.Gather(&acc))
 }
 
+func TestStaleUPS(t *testing.T) {
+	server := &mockServer{}
+	server.init()
+	server.protocol = append(server.protocol,
+		interaction{
+			expected: "LIST VAR fake\n",
+			response: "ERR DATA-STALE\n",
+		},
+		interaction{
+			expected: "LOGOUT\n",
+			response: "OK Goodbye\n",
+		},
+	)
+	ctx, cancel := context.WithCancel(t.Context())
+	addr, err := server.listen(ctx)
+	require.NoError(t, err)
+	defer cancel()
+
+	plugin := &Upsd{
+		Server: addr.IP.String(),
+		Port:   addr.Port,
+		Log:    testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	done := make(chan error, 1)
+	go func() {
+		var acc testutil.Accumulator
+		done <- plugin.Gather(&acc)
+	}()
+
+	select {
+	case err := <-done:
+		require.ErrorContains(t, err, "getupslist")
+	case <-time.After(10 * time.Second):
+		require.Fail(t, "gather did not return for a stale UPS")
+	}
+}
+
 func TestCases(t *testing.T) {
 	// Get all directories in testdata
 	folders, err := os.ReadDir("testcases")
