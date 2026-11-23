@@ -212,7 +212,7 @@ require (
 	github.com/tdrn-org/go-fritzsmarthome v0.1.1
 	github.com/tdrn-org/go-hue v1.2.4
 	github.com/tdrn-org/go-nsdp v0.5.3
-	github.com/tdrn-org/go-tr064 v0.4.0
+	github.com/tdrn-org/go-tr064 v0.4.1
 	github.com/testcontainers/testcontainers-go v0.45.0
 	github.com/testcontainers/testcontainers-go/modules/azure v0.45.0
 	github.com/testcontainers/testcontainers-go/modules/kafka v0.45.0
