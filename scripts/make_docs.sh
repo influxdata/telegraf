@@ -1,8 +1,6 @@
 #!/bin/sh
 
-set -e
-
-make docs
+make docs || exit $?
 
 if [ "$(git status --porcelain | wc -l)" -eq "0" ]; then
   echo "🟢 Git repo is clean."
