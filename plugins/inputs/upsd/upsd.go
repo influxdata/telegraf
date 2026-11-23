@@ -272,17 +272,17 @@ func (u *Upsd) fetchVariables(server string, port int) (map[string][]nut.Variabl
 		}
 	}
 
-	upsList, err := client.GetUPSList()
-	if err != nil {
-		return nil, fmt.Errorf("getupslist: %w", err)
-	}
-
 	defer func() {
 		_, disconnectErr := client.Disconnect()
 		if disconnectErr != nil {
 			err = fmt.Errorf("disconnect: %w", disconnectErr)
 		}
 	}()
+
+	upsList, err := client.GetUPSList()
+	if err != nil {
+		return nil, fmt.Errorf("getupslist: %w", err)
+	}
 
 	result := make(map[string][]nut.Variable)
 	for _, ups := range upsList {
