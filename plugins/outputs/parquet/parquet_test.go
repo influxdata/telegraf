@@ -724,24 +724,27 @@ func TestDeletedFileReappearsOnlyOnRotation(t *testing.T) {
 	require.NoError(t, plugin.Connect())
 	defer plugin.Close()
 
-	write := func(value float64) {
-		require.NoError(t, plugin.Write([]telegraf.Metric{
+	write := func(value float64) error {
+		return plugin.Write([]telegraf.Metric{
 			metric.New("test", map[string]string{}, map[string]any{"value": value}, time.Now()),
-		}))
+		})
 	}
 
-	write(1.0)
+	require.NoError(t, write(1.0))
 
 	group := plugin.metricGroups["test"]
 	require.NoError(t, os.Remove(filepath.Join(testDir, inProgressName(group.filename))))
 
-	write(2.0)
+	require.NoError(t, write(2.0))
 	files, err := os.ReadDir(testDir)
 	require.NoError(t, err)
 	require.Empty(t, files, "the delete goes unnoticed, so the write lands in the removed file")
 
 	group.created = group.created.Add(-2 * time.Hour)
-	write(3.0)
+	var perr *internal.PartialWriteError
+	require.ErrorAs(t, write(3.0), &perr)
+	require.ErrorIs(t, perr.Err, os.ErrNotExist, "the rotation reports that the removed file cannot be published")
+	require.Equal(t, []int{0}, perr.MetricsAccept)
 
 	files, err = os.ReadDir(testDir)
 	require.NoError(t, err)
@@ -897,18 +900,6 @@ func TestRotationPublishesTheClosedFile(t *testing.T) {
 	require.FileExists(t, filepath.Join(testDir, inProgressName(group.filename)))
 }
 
-type diskThatFillsAfterFirstWrite struct {
-	written bool
-}
-
-func (d *diskThatFillsAfterFirstWrite) Write(data []byte) (int, error) {
-	if d.written {
-		return 0, errors.New("no space left on device")
-	}
-	d.written = true
-	return len(data), nil
-}
-
 func TestFileThatFailsToCloseStaysUnpublished(t *testing.T) {
 	testDir := t.TempDir()
 	plugin := &Parquet{
@@ -920,13 +911,13 @@ func TestFileThatFailsToCloseStaysUnpublished(t *testing.T) {
 	require.NoError(t, plugin.Init())
 	require.NoError(t, plugin.Connect())
 
-	write := func(value float64) {
-		require.NoError(t, plugin.Write([]telegraf.Metric{
+	write := func(value float64) error {
+		return plugin.Write([]telegraf.Metric{
 			metric.New("test", map[string]string{}, map[string]any{"value": value}, time.Now()),
-		}))
+		})
 	}
 
-	write(1.0)
+	require.NoError(t, write(1.0))
 	group := plugin.metricGroups["test"]
 	unfinished := group.filename
 	diskWriter := group.writer
@@ -936,8 +927,12 @@ func TestFileThatFailsToCloseStaysUnpublished(t *testing.T) {
 	group.writer = fullWriter
 	group.created = group.created.Add(-2 * time.Hour)
 
-	write(2.0)
-	write(3.0)
+	var perr *internal.PartialWriteError
+	require.ErrorAs(t, write(2.0), &perr)
+	require.ErrorContains(t, perr.Err, "stays unpublished")
+	require.Equal(t, []int{0}, perr.MetricsAccept)
+	require.Empty(t, perr.MetricsReject)
+	require.NoError(t, write(3.0))
 	require.NoError(t, plugin.Close())
 
 	published, err := filepath.Glob(filepath.Join(testDir, "*.parquet"))
@@ -949,4 +944,47 @@ func TestFileThatFailsToCloseStaysUnpublished(t *testing.T) {
 	defer reader.Close()
 	require.Equal(t, 2, int(reader.MetaData().NumRows))
 	require.FileExists(t, filepath.Join(testDir, inProgressName(unfinished)))
+}
+
+func TestPublishingKeepsAFileThatTookTheSameName(t *testing.T) {
+	testDir := t.TempDir()
+	plugin := &Parquet{
+		Directory:          testDir,
+		TimestampFieldName: defaultTimestampFieldName,
+		Log:                testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+	require.NoError(t, plugin.Write([]telegraf.Metric{
+		metric.New("test", map[string]string{}, map[string]any{"value": 1.0}, time.Now()),
+	}))
+
+	squatter := filepath.Join(testDir, plugin.metricGroups["test"].filename)
+	require.NoError(t, os.WriteFile(squatter, []byte("not ours"), 0600))
+	require.NoError(t, plugin.Close())
+
+	content, err := os.ReadFile(squatter)
+	require.NoError(t, err)
+	require.Equal(t, "not ours", string(content))
+
+	published, err := filepath.Glob(filepath.Join(testDir, "*.parquet"))
+	require.NoError(t, err)
+	require.Len(t, published, 2)
+	ours := slices.DeleteFunc(published, func(path string) bool { return path == squatter })
+	reader, err := file.OpenParquetFile(ours[0], false)
+	require.NoError(t, err)
+	defer reader.Close()
+	require.Equal(t, 1, int(reader.MetaData().NumRows))
+}
+
+type diskThatFillsAfterFirstWrite struct {
+	written bool
+}
+
+func (d *diskThatFillsAfterFirstWrite) Write(data []byte) (int, error) {
+	if d.written {
+		return 0, errors.New("no space left on device")
+	}
+	d.written = true
+	return len(data), nil
 }

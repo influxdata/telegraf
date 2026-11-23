@@ -92,7 +92,12 @@ present then the file cannot be read correctly.
 Telegraf writes each file as `.<name>.parquet.inprogress` and renames it to
 `<name>.parquet` only after it writes the footer. Readers that match
 `*.parquet` only see complete files. If Telegraf crashes, the `.inprogress`
-file stays behind and parquet readers cannot open it.
+file stays behind and parquet readers cannot open it. If Telegraf cannot write
+the footer during a rotation, it reports a write error, leaves the
+`.inprogress` file behind, and writes new metrics to a new file.
+
+If another file already has the published name, Telegraf keeps that file and
+publishes under a new name instead.
 
 ## File Rotation
 
@@ -106,9 +111,9 @@ actually get data at each interval.
 
 The `.inprogress` file is not inspected between rotations, so a file removed or
 replaced underneath the agent goes unnoticed and everything written to it is
-lost until the next rotation opens a new file. With `rotation_interval` unset
-there is no next rotation, so those metrics are lost for the lifetime of the
-agent.
+lost until the next rotation reports a write error and opens a new file. With
+`rotation_interval` unset there is no next rotation, so those metrics are lost
+for the lifetime of the agent.
 
 ## Explore Parquet Files
 

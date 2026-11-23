@@ -34,6 +34,7 @@ func inProgressName(filename string) string {
 }
 
 type metricGroup struct {
+	name     string
 	filename string
 	created  time.Time
 	builder  *array.RecordBuilder
@@ -162,6 +163,7 @@ func (p *Parquet) Write(metrics []telegraf.Metric) error {
 				continue
 			}
 			p.metricGroups[name] = &metricGroup{
+				name:     name,
 				builder:  array.NewRecordBuilder(memory.DefaultAllocator, schema),
 				filename: filename,
 				created:  now,
@@ -170,11 +172,17 @@ func (p *Parquet) Write(metrics []telegraf.Metric) error {
 			}
 		}
 
-		if err := p.rotateIfNeeded(name, now); err != nil {
-			perr.MetricsReject = append(perr.MetricsReject, metricIndices[name]...)
-			perr.MetricsRejectErrors = append(perr.MetricsRejectErrors, fmt.Errorf("failed to rotate file %q: %w", p.metricGroups[name].filename, err))
-			perr.Err = fmt.Errorf("failed to rotate file %q: %w", p.metricGroups[name].filename, err)
-			continue
+		if group := p.metricGroups[name]; p.isRotationDue(group, now) {
+			if err := p.publish(group); err != nil {
+				perr.Err = err
+			}
+			if err := p.startNextFile(group, now); err != nil {
+				delete(p.metricGroups, name)
+				perr.MetricsReject = append(perr.MetricsReject, metricIndices[name]...)
+				perr.MetricsRejectErrors = append(perr.MetricsRejectErrors, fmt.Errorf("failed to rotate file %q: %w", group.filename, err))
+				perr.Err = fmt.Errorf("failed to rotate file %q: %w", group.filename, err)
+				continue
+			}
 		}
 
 		record, err := p.createRecordBatch(metrics, p.metricGroups[name].builder, p.metricGroups[name].schema)
@@ -213,18 +221,13 @@ func (p *Parquet) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (p *Parquet) rotateIfNeeded(name string, now time.Time) error {
-	group := p.metricGroups[name]
+func (p *Parquet) isRotationDue(group *metricGroup, now time.Time) bool {
 	interval := time.Duration(p.RotationInterval)
-	if interval == 0 || now.Sub(group.created) < interval {
-		return nil
-	}
+	return interval > 0 && now.Sub(group.created) >= interval
+}
 
-	if err := p.publish(group); err != nil {
-		p.Log.Error(err)
-	}
-
-	writer, filename, err := p.createWriter(name, group.schema, now)
+func (p *Parquet) startNextFile(group *metricGroup, now time.Time) error {
+	writer, filename, err := p.createWriter(group.name, group.schema, now)
 	if err != nil {
 		return fmt.Errorf("failed to create new writer for file %q: %w", group.filename, err)
 	}
@@ -239,10 +242,30 @@ func (p *Parquet) publish(group *metricGroup) error {
 	if err := group.writer.Close(); err != nil {
 		return fmt.Errorf("failed to close file %q, so it stays unpublished: %w", inProgressName(group.filename), err)
 	}
-	if err := p.root.Rename(inProgressName(group.filename), group.filename); err != nil {
-		return fmt.Errorf("failed to rename file %q to %q: %w", inProgressName(group.filename), group.filename, err)
+
+	published := group.filename
+	switch taken, err := p.isTaken(published); {
+	case err != nil:
+		return fmt.Errorf("failed to publish file %q: %w", inProgressName(group.filename), err)
+	case taken:
+		if published, err = newFilename(group.name, group.created); err != nil {
+			return err
+		}
+		p.Log.Warnf("File %q already exists, so publishing as %q instead", group.filename, published)
+	}
+
+	if err := p.root.Rename(inProgressName(group.filename), published); err != nil {
+		return fmt.Errorf("failed to rename file %q to %q: %w", inProgressName(group.filename), published, err)
 	}
 	return nil
+}
+
+func (p *Parquet) isTaken(filename string) (bool, error) {
+	_, err := p.root.Lstat(filename)
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+	return err == nil, err
 }
 
 func (p *Parquet) createRecordBatch(metrics []telegraf.Metric, builder *array.RecordBuilder, schema *arrow.Schema) (arrow.RecordBatch, error) {
@@ -486,18 +509,25 @@ func (p *Parquet) createSchema(metrics []telegraf.Metric) (*arrow.Schema, error)
 	return arrow.NewSchema(fields, nil), nil
 }
 
-func (p *Parquet) createWriter(name string, schema *arrow.Schema, now time.Time) (*pqarrow.FileWriter, string, error) {
+func newFilename(name string, created time.Time) (string, error) {
 	id, err := uuid.NewV6()
 	if err != nil {
-		return nil, "", fmt.Errorf("failed to generate identifier for file %q: %w", name, err)
+		return "", fmt.Errorf("failed to generate identifier for file %q: %w", name, err)
 	}
-	filename := fmt.Sprintf("%s-%s-%s.parquet", name, now.Format("20060102150405"), id)
+	return fmt.Sprintf("%s-%s-%s.parquet", name, created.Format("20060102150405"), id), nil
+}
 
-	switch _, err := p.root.Lstat(filename); {
-	case err == nil:
-		return nil, "", fmt.Errorf("failed to create file %q: %w", filename, os.ErrExist)
-	case !errors.Is(err, os.ErrNotExist):
+func (p *Parquet) createWriter(name string, schema *arrow.Schema, now time.Time) (*pqarrow.FileWriter, string, error) {
+	filename, err := newFilename(name, now)
+	if err != nil {
+		return nil, "", err
+	}
+
+	switch taken, err := p.isTaken(filename); {
+	case err != nil:
 		return nil, "", fmt.Errorf("failed to create file %q: %w", filename, err)
+	case taken:
+		return nil, "", fmt.Errorf("failed to create file %q: %w", filename, os.ErrExist)
 	}
 	f, err := p.root.OpenFile(inProgressName(filename), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0666)
 	if err != nil {
