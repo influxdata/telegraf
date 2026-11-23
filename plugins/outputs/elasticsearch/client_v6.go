@@ -25,10 +25,7 @@ type clientV6 struct {
 }
 
 func (a *Elasticsearch) newClientV6() (client, error) {
-	transport, err := a.newRoundTripper()
-	if err != nil {
-		return nil, err
-	}
+	transport := a.newRoundTripper()
 	c, err := elasticsearch.NewClient(elasticsearch.Config{
 		Addresses: a.URLs,
 		Header:    a.clientHeaders(),

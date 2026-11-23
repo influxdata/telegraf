@@ -11,7 +11,6 @@ import (
 	"math"
 	"net"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -63,7 +62,6 @@ type Elasticsearch struct {
 	client             client
 	httpClient         *http.Client
 	httpHeaders        http.Header
-	userinfo           *url.Userinfo
 	majorReleaseNumber uint64
 	pipelineName       string
 	pipelineTagKeys    []string

@@ -22,10 +22,7 @@ type clientV7 struct {
 }
 
 func (a *Elasticsearch) newClientV7() (client, error) {
-	transport, err := a.newRoundTripper()
-	if err != nil {
-		return nil, err
-	}
+	transport := a.newRoundTripper()
 	transport.bypassProductCheck = true
 	c, err := elasticsearch.NewClient(elasticsearch.Config{
 		Addresses: a.URLs,

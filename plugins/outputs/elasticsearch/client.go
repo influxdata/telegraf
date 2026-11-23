@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -27,33 +26,12 @@ type roundTripper struct {
 	bypassProductCheck bool
 }
 
-func (a *Elasticsearch) newRoundTripper() (roundTripper, error) {
-	if err := a.configureAuth(); err != nil {
-		return roundTripper{}, err
-	}
+func (a *Elasticsearch) newRoundTripper() roundTripper {
 	return roundTripper{
 		setAuth:    a.setAuth,
 		headers:    a.authorizationHeaders(),
 		httpClient: a.httpClient,
-	}, nil
-}
-
-func (a *Elasticsearch) configureAuth() error {
-	a.userinfo = nil
-	if !a.Username.Empty() && !a.Password.Empty() {
-		return nil
 	}
-	for _, address := range a.URLs {
-		u, err := url.Parse(address)
-		if err != nil {
-			return fmt.Errorf("parsing URL %q failed: %w", address, err)
-		}
-		if u.User != nil {
-			a.userinfo = u.User
-			break
-		}
-	}
-	return nil
 }
 
 func (t roundTripper) RoundTrip(original *http.Request) (*http.Response, error) {
@@ -101,9 +79,6 @@ func (a *Elasticsearch) setAuthBasic(req *http.Request) error {
 		req.SetBasicAuth(username.String(), password.String())
 		username.Destroy()
 		password.Destroy()
-	} else if a.userinfo != nil {
-		password, _ := a.userinfo.Password()
-		req.SetBasicAuth(a.userinfo.Username(), password)
 	}
 	return nil
 }
@@ -142,10 +117,7 @@ func (a *Elasticsearch) authorizationHeaders() http.Header {
 }
 
 func (a *Elasticsearch) probeVersion(ctx context.Context) (string, uint64, error) {
-	transport, err := a.newRoundTripper()
-	if err != nil {
-		return "", 0, fmt.Errorf("getting authentication options failed: %w", err)
-	}
+	transport := a.newRoundTripper()
 	probe, err := elasticsearch5.NewClient(elasticsearch5.Config{
 		Addresses: a.URLs,
 		Transport: transport,
