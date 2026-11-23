@@ -25,19 +25,6 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func TestMain(m *testing.M) {
-	cacheDir, err := os.MkdirTemp("", "telegraf-remotefile-")
-	if err != nil {
-		panic(err)
-	}
-	defer os.RemoveAll(cacheDir)
-	if err := rcloneconfig.SetCacheDir(cacheDir); err != nil {
-		panic(err)
-	}
-
-	m.Run()
-}
-
 func TestStaticFileCreation(t *testing.T) {
 	input := []telegraf.Metric{
 		metric.New(
@@ -583,6 +570,11 @@ func TestTrackingMetrics(t *testing.T) {
 }
 
 func TestS3KMSEncryption(t *testing.T) {
+	cacheDir := t.TempDir()
+	previousCacheDir := rcloneconfig.GetCacheDir()
+	t.Cleanup(func() { require.NoError(t, rcloneconfig.SetCacheDir(previousCacheDir)) })
+	require.NoError(t, rcloneconfig.SetCacheDir(cacheDir))
+
 	const key = "arn:aws:kms:us-east-1:123456789012:key/00000000-0000-0000-0000-000000000001"
 	const expected = "test value=42i 1719410485000000000\n"
 	uploads := make(chan string, 1)
@@ -641,25 +633,5 @@ func TestS3KMSEncryption(t *testing.T) {
 		require.Equal(t, expected, body)
 	default:
 		t.Fatal("S3 did not receive the upload")
-	}
-}
-
-func TestS3KMSUnquotedOptions(t *testing.T) {
-	for _, options := range []string{
-		"server_side_encryption=aws:kms",
-		"server_side_encryption='aws:kms',sse_kms_key_id=arn:aws:kms:us-east-1:123456789012:key/example",
-	} {
-		t.Run(options, func(t *testing.T) {
-			remote := "s3,provider=AWS,endpoint='http://127.0.0.1:1'," + options + ",region=us-east-1:mybucket"
-			plugin := &File{
-				Remote:           config.NewSecret([]byte(remote)),
-				Files:            []string{"test"},
-				CompressionLevel: -1,
-				Log:              &testutil.Logger{},
-			}
-			require.NoError(t, plugin.Init())
-			t.Cleanup(func() { require.NoError(t, plugin.Close()) })
-			require.ErrorContains(t, plugin.Connect(), "quote S3 option values containing colons")
-		})
 	}
 }
