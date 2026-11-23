@@ -619,7 +619,8 @@ func TestS3KMSEncryption(t *testing.T) {
 	}
 	plugin.SetSerializerFunc(func() (telegraf.Serializer, error) {
 		serializer := &influx.Serializer{}
-		return serializer, serializer.Init()
+		err := serializer.Init()
+		return serializer, err
 	})
 	require.NoError(t, plugin.Init())
 	t.Cleanup(func() { require.NoError(t, plugin.Close()) })
