@@ -3,6 +3,8 @@ package mqtt_consumer
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -173,6 +175,7 @@ type message struct {
 	qos      byte
 	retained bool
 	acked    bool
+	payload  []byte
 }
 
 func (*message) Duplicate() bool {
@@ -195,7 +198,10 @@ func (*message) MessageID() uint16 {
 	panic("not implemented")
 }
 
-func (*message) Payload() []byte {
+func (m *message) Payload() []byte {
+	if m.payload != nil {
+		return m.payload
+	}
 	return []byte("cpu time_idle=42i")
 }
 
@@ -751,6 +757,360 @@ func TestOmitRetainedWithFullWindow(t *testing.T) {
 		}
 	}, time.Second, 10*time.Millisecond)
 	require.Len(t, plugin.sem, 1)
+}
+
+func TestContentEncoding(t *testing.T) {
+	single := []telegraf.Metric{
+		metric.New(
+			"cpu",
+			map[string]string{"topic": "telegraf"},
+			map[string]any{"time_idle": 42},
+			time.Unix(0, 0),
+		),
+	}
+
+	// Multiple messages must be decoded by the same decoder independently
+	multipleMessages := []string{"cpu,host=first value=1i", "cpu,host=other value=2i"}
+	multiple := []telegraf.Metric{
+		metric.New(
+			"cpu",
+			map[string]string{"host": "first", "topic": "telegraf"},
+			map[string]any{"value": 1},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"cpu",
+			map[string]string{"host": "other", "topic": "telegraf"},
+			map[string]any{"value": 2},
+			time.Unix(0, 0),
+		),
+	}
+
+	// An empty message is sent as an empty payload without encoding, like
+	// used to clear retained messages, and must not cause a decoding error.
+	// Messages creating metrics keep their undelivered slot (expectedSem) as
+	// the metrics are never delivered in this test.
+	tests := []struct {
+		name        string
+		encoding    string
+		messages    []string
+		expected    []telegraf.Metric
+		expectedSem int
+	}{
+		{
+			name:        "default",
+			messages:    []string{"cpu time_idle=42i"},
+			expected:    single,
+			expectedSem: 1,
+		},
+		{
+			name:        "identity",
+			encoding:    "identity",
+			messages:    []string{"cpu time_idle=42i"},
+			expected:    single,
+			expectedSem: 1,
+		},
+		{
+			name:        "gzip",
+			encoding:    "gzip",
+			messages:    []string{"cpu time_idle=42i"},
+			expected:    single,
+			expectedSem: 1,
+		},
+		{
+			name:        "zlib",
+			encoding:    "zlib",
+			messages:    []string{"cpu time_idle=42i"},
+			expected:    single,
+			expectedSem: 1,
+		},
+		{
+			name:        "zstd",
+			encoding:    "zstd",
+			messages:    []string{"cpu time_idle=42i"},
+			expected:    single,
+			expectedSem: 1,
+		},
+		{
+			name:        "gzip multiple messages",
+			encoding:    "gzip",
+			messages:    multipleMessages,
+			expected:    multiple,
+			expectedSem: 2,
+		},
+		{
+			name:        "zlib multiple messages",
+			encoding:    "zlib",
+			messages:    multipleMessages,
+			expected:    multiple,
+			expectedSem: 2,
+		},
+		{
+			name:        "zstd multiple messages",
+			encoding:    "zstd",
+			messages:    multipleMessages,
+			expected:    multiple,
+			expectedSem: 2,
+		},
+		{
+			name:     "gzip empty payload",
+			encoding: "gzip",
+			messages: []string{""},
+		},
+		{
+			name:     "zlib empty payload",
+			encoding: "zlib",
+			messages: []string{""},
+		},
+		{
+			name:     "zstd empty payload",
+			encoding: "zstd",
+			messages: []string{""},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var handler mqtt.MessageHandler
+			fClient := &fakeClient{
+				connectF:           func() mqtt.Token { return &fakeToken{} },
+				addRouteF:          func(callback mqtt.MessageHandler) { handler = callback },
+				subscribeMultipleF: func() mqtt.Token { return &fakeToken{} },
+				disconnectF:        func() {},
+			}
+			plugin := newMQTTConsumer(func(o *mqtt.ClientOptions) client {
+				fClient.opts = o
+				return fClient
+			})
+			plugin.Log = testutil.Logger{}
+			plugin.Topics = []string{"telegraf"}
+			plugin.ContentEncoding = tt.encoding
+
+			parser := &influx.Parser{}
+			require.NoError(t, parser.Init())
+			plugin.SetParser(parser)
+			require.NoError(t, plugin.Init())
+
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Start(&acc))
+			defer plugin.Stop()
+
+			for _, msg := range tt.messages {
+				payload := make([]byte, 0)
+				if msg != "" {
+					// Use a new encoder per message as encoders may reuse
+					// their internal buffer
+					encoder, err := internal.NewContentEncoder(tt.encoding)
+					require.NoError(t, err)
+					payload, err = encoder.Encode([]byte(msg))
+					require.NoError(t, err)
+				}
+				handler(nil, &message{topic: "telegraf", payload: payload})
+			}
+
+			require.Empty(t, acc.Errors)
+			testutil.RequireMetricsEqual(t, tt.expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
+			require.Len(t, plugin.sem, tt.expectedSem)
+		})
+	}
+}
+
+func TestContentEncodingDecodeError(t *testing.T) {
+	// Payload whose decoded size exceeds the configured limit
+	largePayload := `cpu value="` + strings.Repeat("x", 128*1024) + `"`
+
+	tests := []struct {
+		name              string
+		encoding          string
+		maxSize           config.Size
+		payload           string
+		compress          bool
+		persistentSession bool
+		expectedAcked     bool
+	}{
+		{
+			name:     "gzip invalid payload",
+			encoding: "gzip",
+			payload:  "cpu time_idle=42i",
+		},
+		{
+			name:              "gzip invalid payload with persistent session",
+			encoding:          "gzip",
+			payload:           "cpu time_idle=42i",
+			persistentSession: true,
+			expectedAcked:     true,
+		},
+		{
+			name:     "zlib invalid payload",
+			encoding: "zlib",
+			payload:  "cpu time_idle=42i",
+		},
+		{
+			name:     "zstd invalid payload",
+			encoding: "zstd",
+			payload:  "cpu time_idle=42i",
+		},
+		{
+			name:     "gzip exceeding max decompression size",
+			encoding: "gzip",
+			maxSize:  config.Size(64 * 1024),
+			payload:  largePayload,
+			compress: true,
+		},
+		{
+			name:     "zlib exceeding max decompression size",
+			encoding: "zlib",
+			maxSize:  config.Size(64 * 1024),
+			payload:  largePayload,
+			compress: true,
+		},
+		{
+			name:     "zstd exceeding max decompression size",
+			encoding: "zstd",
+			maxSize:  config.Size(64 * 1024),
+			payload:  largePayload,
+			compress: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var handler mqtt.MessageHandler
+			fClient := &fakeClient{
+				connectF:           func() mqtt.Token { return &fakeToken{} },
+				addRouteF:          func(callback mqtt.MessageHandler) { handler = callback },
+				subscribeMultipleF: func() mqtt.Token { return &fakeToken{} },
+				disconnectF:        func() {},
+			}
+			plugin := newMQTTConsumer(func(o *mqtt.ClientOptions) client {
+				fClient.opts = o
+				return fClient
+			})
+			plugin.Log = testutil.Logger{}
+			plugin.Topics = []string{"telegraf"}
+			plugin.ContentEncoding = tt.encoding
+			plugin.MaxDecompressionSize = tt.maxSize
+			plugin.PersistentSession = tt.persistentSession
+			if tt.persistentSession {
+				plugin.ClientID = "test"
+			}
+
+			parser := &influx.Parser{}
+			require.NoError(t, parser.Init())
+			plugin.SetParser(parser)
+			require.NoError(t, plugin.Init())
+
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Start(&acc))
+			defer plugin.Stop()
+
+			payload := []byte(tt.payload)
+			if tt.compress {
+				encoder, err := internal.NewContentEncoder(tt.encoding)
+				require.NoError(t, err)
+				payload, err = encoder.Encode(payload)
+				require.NoError(t, err)
+			}
+			m := &message{topic: "telegraf", payload: payload}
+			handler(nil, m)
+
+			require.Len(t, acc.Errors, 1)
+			require.ErrorContains(t, acc.Errors[0], "decoding payload")
+			require.Empty(t, acc.GetTelegrafMetrics())
+			require.Empty(t, plugin.sem)
+			require.Equal(t, tt.expectedAcked, m.acked)
+		})
+	}
+}
+
+func TestContentEncodingConcurrentMessages(t *testing.T) {
+	// The MQTT client might call the message handler concurrently, so
+	// decoding must not mix up the content of simultaneous messages. Run with
+	// the race detector to also catch unsynchronized decoder access.
+	const count = 20
+
+	for _, encoding := range []string{"gzip", "zlib", "zstd"} {
+		t.Run(encoding, func(t *testing.T) {
+			var handler mqtt.MessageHandler
+			fClient := &fakeClient{
+				connectF:           func() mqtt.Token { return &fakeToken{} },
+				addRouteF:          func(callback mqtt.MessageHandler) { handler = callback },
+				subscribeMultipleF: func() mqtt.Token { return &fakeToken{} },
+				disconnectF:        func() {},
+			}
+			plugin := newMQTTConsumer(func(o *mqtt.ClientOptions) client {
+				fClient.opts = o
+				return fClient
+			})
+			plugin.Log = testutil.Logger{}
+			plugin.Topics = []string{"telegraf"}
+			plugin.ContentEncoding = encoding
+
+			parser := &influx.Parser{}
+			require.NoError(t, parser.Init())
+			plugin.SetParser(parser)
+			require.NoError(t, plugin.Init())
+
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Start(&acc))
+			defer plugin.Stop()
+
+			// All messages decode to the same length, so decoders reusing their
+			// internal buffer (gzip, zlib) write them into the same memory.
+			expected := make([]telegraf.Metric, 0, count)
+			payloads := make([][]byte, 0, count)
+			for i := range count {
+				encoder, err := internal.NewContentEncoder(encoding)
+				require.NoError(t, err)
+				payload, err := encoder.Encode([]byte(fmt.Sprintf("cpu,host=host%02d value=%di", i, i+10)))
+				require.NoError(t, err)
+				payloads = append(payloads, payload)
+
+				expected = append(expected, metric.New(
+					"cpu",
+					map[string]string{"host": fmt.Sprintf("host%02d", i), "topic": "telegraf"},
+					map[string]any{"value": int64(i + 10)},
+					time.Unix(0, 0),
+				))
+			}
+
+			var wg sync.WaitGroup
+			for _, payload := range payloads {
+				wg.Go(func() {
+					handler(nil, &message{topic: "telegraf", payload: payload})
+				})
+			}
+			wg.Wait()
+
+			require.Empty(t, acc.Errors)
+			testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime(), testutil.SortMetrics())
+		})
+	}
+}
+
+func TestInvalidContentEncoding(t *testing.T) {
+	tests := []struct {
+		encoding string
+		expected string
+	}{
+		{
+			encoding: "auto",
+			expected: `content_encoding "auto" is not supported for MQTT`,
+		},
+		{
+			encoding: "bzip2",
+			expected: `creating decoder for content_encoding "bzip2" failed: invalid value for content_encoding`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.encoding, func(t *testing.T) {
+			plugin := newMQTTConsumer(nil)
+			plugin.Log = testutil.Logger{}
+			plugin.ContentEncoding = tt.encoding
+			require.EqualError(t, plugin.Init(), tt.expected)
+		})
+	}
 }
 
 func TestAddRouteCalledForEachTopic(t *testing.T) {

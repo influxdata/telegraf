@@ -2,6 +2,7 @@
 package mqtt_consumer
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	"errors"
@@ -49,9 +50,13 @@ type MQTTConsumer struct {
 	PersistentSession      bool                 `toml:"persistent_session"`
 	ClientTrace            bool                 `toml:"client_trace"`
 	ClientID               string               `toml:"client_id"`
+	ContentEncoding        string               `toml:"content_encoding"`
+	MaxDecompressionSize   config.Size          `toml:"max_decompression_size"`
 	Log                    telegraf.Logger      `toml:"-"`
 	tls.ClientConfig
 
+	decoder       internal.ContentDecoder
+	decoderMutex  sync.Mutex
 	parser        telegraf.Parser
 	clientFactory clientFactory
 	client        client
@@ -103,6 +108,25 @@ func (m *MQTTConsumer) Init() error {
 	if time.Duration(m.ConnectionTimeout) < 1*time.Second {
 		return fmt.Errorf("connection_timeout must be greater than 1s: %s", time.Duration(m.ConnectionTimeout))
 	}
+	switch m.ContentEncoding {
+	case "":
+		m.ContentEncoding = "identity"
+	case "auto":
+		// The "auto" mode detects the encoding from a message header, but
+		// MQTT v3 messages carry no such information.
+		return errors.New(`content_encoding "auto" is not supported for MQTT`)
+	}
+	var options []internal.DecodingOption
+	if m.MaxDecompressionSize > 0 {
+		maxSize := int64(m.MaxDecompressionSize)
+		options = append(options, internal.WithMaxDecompressionSize(maxSize))
+	}
+	decoder, err := internal.NewContentDecoder(m.ContentEncoding, options...)
+	if err != nil {
+		return fmt.Errorf("creating decoder for content_encoding %q failed: %w", m.ContentEncoding, err)
+	}
+	m.decoder = decoder
+
 	m.topicTagParse = "topic"
 	if m.TopicTag != nil {
 		m.topicTagParse = *m.TopicTag
@@ -248,7 +272,19 @@ func (m *MQTTConsumer) onMessage(_ mqtt.Client, msg mqtt.Message) {
 	m.payloadSize.Incr(int64(payloadBytes))
 	m.messagesRecv.Incr(1)
 
-	metrics, err := m.parser.Parse(msg.Payload())
+	payload, err := m.decode(msg.Payload())
+	if err != nil {
+		// A payload that fails to decode will never succeed, so acknowledge
+		// it to prevent the broker from redelivering it forever.
+		if m.PersistentSession {
+			msg.Ack()
+		}
+		m.acc.AddError(fmt.Errorf("decoding payload on topic %q failed: %w", msg.Topic(), err))
+		<-m.sem
+		return
+	}
+
+	metrics, err := m.parser.Parse(payload)
 	if err != nil || len(metrics) == 0 {
 		if len(metrics) == 0 {
 			once.Do(func() {
@@ -283,6 +319,29 @@ func (m *MQTTConsumer) onMessage(_ mqtt.Client, msg mqtt.Message) {
 	id := m.acc.AddTrackingMetricGroup(metrics)
 	m.messages[id] = msg
 	m.messagesMutex.Unlock()
+}
+
+func (m *MQTTConsumer) decode(payload []byte) ([]byte, error) {
+	// Uncompressed data needs no decoding, so avoid locking and copying.
+	// Empty payloads, e.g. used to clear retained messages, are no valid
+	// compressed data, so pass them to the parser as without encoding.
+	if m.ContentEncoding == "identity" || len(payload) == 0 {
+		return payload, nil
+	}
+
+	// The decoders are not safe for concurrent use, but onMessage might be
+	// called concurrently by the MQTT client.
+	m.decoderMutex.Lock()
+	defer m.decoderMutex.Unlock()
+
+	data, err := m.decoder.Decode(payload)
+	if err != nil {
+		return nil, err
+	}
+
+	// Some decoders return their internal buffer which is overwritten by the
+	// next call, so copy the data before releasing the lock.
+	return bytes.Clone(data), nil
 }
 
 func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
