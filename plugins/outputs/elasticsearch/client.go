@@ -65,6 +65,8 @@ func (t *roundTripper) configureAuth(addresses []string, username, password conf
 
 func (t roundTripper) RoundTrip(original *http.Request) (*http.Response, error) {
 	req := original.Clone(original.Context())
+	// Per-request secret authentication must remain in the transport because
+	// v6/v7 discovery requests bypass the client methods.
 	if err := t.setAuth(req); err != nil {
 		if req.Body != nil {
 			req.Body.Close()
