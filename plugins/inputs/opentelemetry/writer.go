@@ -38,26 +38,24 @@ func (w *writeToAccumulator) EnqueuePoint(
 ) error {
 	// Tags derived from the certificate take precedence over attributes with
 	// the same name as those are controlled by the sender.
+	mergedTags := tags
 	if certTags := clientCertTags(ctx, w.clientCertTags); len(certTags) > 0 {
-		tags = maps.Clone(tags)
-		if tags == nil {
-			tags = certTags
-		} else {
-			maps.Copy(tags, certTags)
-		}
+		mergedTags = make(map[string]string, len(tags)+len(certTags))
+		maps.Copy(mergedTags, tags)
+		maps.Copy(mergedTags, certTags)
 	}
 
 	switch vType {
 	case common.InfluxMetricValueTypeUntyped:
-		w.accumulator.AddFields(measurement, fields, tags, ts)
+		w.accumulator.AddFields(measurement, fields, mergedTags, ts)
 	case common.InfluxMetricValueTypeGauge:
-		w.accumulator.AddGauge(measurement, fields, tags, ts)
+		w.accumulator.AddGauge(measurement, fields, mergedTags, ts)
 	case common.InfluxMetricValueTypeSum:
-		w.accumulator.AddCounter(measurement, fields, tags, ts)
+		w.accumulator.AddCounter(measurement, fields, mergedTags, ts)
 	case common.InfluxMetricValueTypeHistogram:
-		w.accumulator.AddHistogram(measurement, fields, tags, ts)
+		w.accumulator.AddHistogram(measurement, fields, mergedTags, ts)
 	case common.InfluxMetricValueTypeSummary:
-		w.accumulator.AddSummary(measurement, fields, tags, ts)
+		w.accumulator.AddSummary(measurement, fields, mergedTags, ts)
 	default:
 		return fmt.Errorf("unrecognized InfluxMetricValueType %q", vType)
 	}

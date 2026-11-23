@@ -2,7 +2,7 @@
 package opentelemetry
 
 import (
-	"crypto/x509"
+	"context"
 	_ "embed"
 	"fmt"
 	"net"
@@ -16,6 +16,7 @@ import (
 	pprofileotlp "go.opentelemetry.io/proto/otlp/collector/profiles/v1development"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/peer"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -61,7 +62,7 @@ func (o *OpenTelemetry) Init() error {
 	}
 
 	// Validate the requested certificate attributes
-	if _, err := tls.CertificateTags(&x509.Certificate{}, o.ClientCertTags); err != nil {
+	if err := tls.ValidateTagNames(o.ClientCertTags); err != nil {
 		return fmt.Errorf("invalid client certificate tags: %w", err)
 	}
 
@@ -137,6 +138,26 @@ func (o *OpenTelemetry) Stop() {
 	o.listener = nil
 
 	o.wg.Wait()
+}
+
+// clientCertTags returns the requested tags, prefixed with "tls_client_",
+// derived from the certificate the client presented during the (mutual) TLS
+// handshake. It returns nil if there is no such certificate, e.g. for
+// plain-text or server-only TLS connections. The names must be validated
+// beforehand, see Init().
+func clientCertTags(ctx context.Context, names []string) map[string]string {
+	if len(names) == 0 {
+		return nil
+	}
+	p, ok := peer.FromContext(ctx)
+	if !ok {
+		return nil
+	}
+	info, ok := p.AuthInfo.(credentials.TLSInfo)
+	if !ok || len(info.State.PeerCertificates) == 0 {
+		return nil
+	}
+	return tls.CertificateTags(info.State.PeerCertificates[0], names, "tls_client_")
 }
 
 func init() {

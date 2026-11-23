@@ -2,6 +2,10 @@ package opentelemetry
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"math/big"
 	"net"
 	"os"
 	"path/filepath"
@@ -25,7 +29,9 @@ import (
 	profiles "go.opentelemetry.io/proto/otlp/profiles/v1development"
 	resource "go.opentelemetry.io/proto/otlp/resource/v1"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/peer"
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/influxdata/telegraf"
@@ -411,6 +417,150 @@ func TestMalformedProfileExportDoesntPanic(t *testing.T) {
 
 // profileRequest creates a valid profile request with all dictionary references
 // resolvable and applies the given modification(s) to break a single reference
+func TestClientCertTagsInvalid(t *testing.T) {
+	plugin := &OpenTelemetry{ClientCertTags: []string{"cn", "foo"}}
+	require.ErrorContains(t, plugin.Init(), `invalid certificate attribute "foo"`)
+}
+
+func TestClientCertTags(t *testing.T) {
+	cert := &x509.Certificate{
+		SerialNumber: big.NewInt(255),
+		Subject:      pkix.Name{CommonName: "client-1"},
+		Issuer:       pkix.Name{CommonName: "My CA"},
+		DNSNames:     []string{"a.example.org"},
+	}
+
+	tests := []struct {
+		name     string
+		ctx      context.Context
+		names    []string
+		expected map[string]string
+	}{
+		{
+			name:  "requested attributes are prefixed",
+			ctx:   peerContext(cert),
+			names: []string{"cn", "issuer", "sn", "dns"},
+			expected: map[string]string{
+				"tls_client_cn":     "client-1",
+				"tls_client_issuer": "My CA",
+				"tls_client_sn":     "ff",
+				"tls_client_dns":    "a.example.org",
+			},
+		},
+		{
+			name:     "single attribute",
+			ctx:      peerContext(cert),
+			names:    []string{"cn"},
+			expected: map[string]string{"tls_client_cn": "client-1"},
+		},
+		{
+			name: "no attributes requested",
+			ctx:  peerContext(cert),
+		},
+		{
+			name:  "no peer",
+			ctx:   context.Background(),
+			names: []string{"cn"},
+		},
+		{
+			name:  "no TLS",
+			ctx:   peer.NewContext(context.Background(), &peer.Peer{}),
+			names: []string{"cn"},
+		},
+		{
+			name:  "no client certificate",
+			ctx:   peerContext(nil),
+			names: []string{"cn"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.expected, clientCertTags(tt.ctx, tt.names))
+		})
+	}
+}
+
+func TestClientCertTagsOverrideAttributes(t *testing.T) {
+	cert := &x509.Certificate{Subject: pkix.Name{CommonName: "client-1"}}
+	var acc testutil.Accumulator
+	w := &writeToAccumulator{accumulator: &acc, clientCertTags: []string{"cn"}}
+
+	// The tag derived from the certificate wins over the one sent by the client
+	sent := map[string]string{"tls_client_cn": "spoofed", "other": "x"}
+	require.NoError(t, w.EnqueuePoint(
+		peerContext(cert), "test", sent,
+		map[string]any{"value": 1}, time.Unix(0, 0), 0,
+	))
+	// The tags of the sender must not be modified
+	require.Equal(t, map[string]string{"tls_client_cn": "spoofed", "other": "x"}, sent)
+
+	// Also works if the sender did not provide any tags
+	require.NoError(t, w.EnqueuePoint(
+		peerContext(cert), "test", nil,
+		map[string]any{"value": 2}, time.Unix(0, 0), 0,
+	))
+
+	metrics := acc.GetTelegrafMetrics()
+	require.Len(t, metrics, 2)
+	require.Equal(t, map[string]string{"tls_client_cn": "client-1", "other": "x"}, metrics[0].Tags())
+	require.Equal(t, map[string]string{"tls_client_cn": "client-1"}, metrics[1].Tags())
+}
+
+func TestClientCertTagsMTLS(t *testing.T) {
+	pki := testutil.NewPKI("../../../testutil/pki")
+	serverCfg := pki.TLSServerConfig()
+	serverCfg.TLSCipherSuites = nil
+	serverCfg.TLSMinVersion = ""
+	serverCfg.TLSMaxVersion = ""
+
+	plugin := &OpenTelemetry{
+		ServerConfig:   *serverCfg,
+		ServiceAddress: "127.0.0.1:0",
+		ClientCertTags: []string{"cn", "dns", "issuer"},
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	clientTLS, err := pki.TLSClientConfig().TLSConfig()
+	require.NoError(t, err)
+	clientTLS.ServerName = "localhost"
+
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+	exporter, err := otlpmetricgrpc.New(ctx,
+		otlpmetricgrpc.WithTLSCredentials(credentials.NewTLS(clientTLS)),
+		otlpmetricgrpc.WithDialOption(
+			grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) {
+				return net.Dial("tcp", plugin.listener.Addr().String())
+			})),
+	)
+	require.NoError(t, err)
+	defer exporter.Shutdown(ctx) //nolint:errcheck // nothing to do on failure
+
+	reader := sdkmetric.NewManualReader()
+	defer reader.Shutdown(ctx) //nolint:errcheck // nothing to do on failure
+	meter := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader)).Meter("lib")
+	counter, err := meter.Int64Counter("mtls-counter")
+	require.NoError(t, err)
+	counter.Add(ctx, 1)
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(ctx, &rm))
+	require.NoError(t, exporter.Export(ctx, &rm))
+
+	require.Empty(t, acc.Errors)
+	actual := acc.GetTelegrafMetrics()
+	require.Len(t, actual, 1)
+	tags := actual[0].Tags()
+	require.Equal(t, "localhost", tags["tls_client_cn"])
+	require.Equal(t, "localhost", tags["tls_client_dns"])
+	require.Equal(t, "Telegraf Test CA", tags["tls_client_issuer"])
+}
+
 func profileRequest(modify ...func(*otlpprofiles.ExportProfilesServiceRequest)) *otlpprofiles.ExportProfilesServiceRequest {
 	req := &otlpprofiles.ExportProfilesServiceRequest{
 		ResourceProfiles: []*profiles.ResourceProfiles{
@@ -460,4 +610,12 @@ func profileRequest(modify ...func(*otlpprofiles.ExportProfilesServiceRequest)) 
 	}
 
 	return req
+}
+
+func peerContext(cert *x509.Certificate) context.Context {
+	info := credentials.TLSInfo{}
+	if cert != nil {
+		info.State = tls.ConnectionState{PeerCertificates: []*x509.Certificate{cert}}
+	}
+	return peer.NewContext(context.Background(), &peer.Peer{AuthInfo: info})
 }
