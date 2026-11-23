@@ -25,13 +25,13 @@ import (
 func TestWrite(t *testing.T) {
 	now := time.Date(2026, 11, 14, 17, 4, 15, 123456789, time.UTC)
 	tests := []struct {
-		name                 string
-		timestampType        string
-		metrics              []telegraf.Metric
-		numRows              int
-		numColumns           int
-		timestampLogicalType schema.LogicalType
-		timestamp            int64
+		name                  string
+		timestampType         string
+		metrics               []telegraf.Metric
+		numRows               int
+		numColumns            int
+		expectedTimestampType schema.LogicalType
+		timestamp             int64
 	}{
 		{
 			name: "basic single metric",
@@ -45,10 +45,10 @@ func TestWrite(t *testing.T) {
 					now,
 				),
 			},
-			numRows:              1,
-			numColumns:           2,
-			timestampLogicalType: schema.NewIntLogicalType(64, true),
-			timestamp:            now.UnixNano(),
+			numRows:               1,
+			numColumns:            2,
+			expectedTimestampType: schema.NewIntLogicalType(64, true),
+			timestamp:             now.UnixNano(),
 		},
 		{
 			name: "mix of tags and fields",
@@ -74,10 +74,10 @@ func TestWrite(t *testing.T) {
 					now,
 				),
 			},
-			numRows:              2,
-			numColumns:           3,
-			timestampLogicalType: schema.NewIntLogicalType(64, true),
-			timestamp:            now.UnixNano(),
+			numRows:               2,
+			numColumns:            3,
+			expectedTimestampType: schema.NewIntLogicalType(64, true),
+			timestamp:             now.UnixNano(),
 		},
 		{
 			name: "null values",
@@ -103,10 +103,10 @@ func TestWrite(t *testing.T) {
 					now,
 				),
 			},
-			numRows:              2,
-			numColumns:           5,
-			timestampLogicalType: schema.NewIntLogicalType(64, true),
-			timestamp:            now.UnixNano(),
+			numRows:               2,
+			numColumns:            5,
+			expectedTimestampType: schema.NewIntLogicalType(64, true),
+			timestamp:             now.UnixNano(),
 		},
 		{
 			name: "data types",
@@ -133,10 +133,10 @@ func TestWrite(t *testing.T) {
 					now,
 				),
 			},
-			numRows:              1,
-			numColumns:           15,
-			timestampLogicalType: schema.NewIntLogicalType(64, true),
-			timestamp:            now.UnixNano(),
+			numRows:               1,
+			numColumns:            15,
+			expectedTimestampType: schema.NewIntLogicalType(64, true),
+			timestamp:             now.UnixNano(),
 		},
 		{
 			name:          "timestamp as int64",
@@ -151,10 +151,10 @@ func TestWrite(t *testing.T) {
 					now,
 				),
 			},
-			numRows:              1,
-			numColumns:           2,
-			timestampLogicalType: schema.NewIntLogicalType(64, true),
-			timestamp:            now.UnixNano(),
+			numRows:               1,
+			numColumns:            2,
+			expectedTimestampType: schema.NewIntLogicalType(64, true),
+			timestamp:             now.UnixNano(),
 		},
 		{
 			name:          "timestamp in microseconds",
@@ -169,10 +169,10 @@ func TestWrite(t *testing.T) {
 					now,
 				),
 			},
-			numRows:              1,
-			numColumns:           2,
-			timestampLogicalType: schema.NewTimestampLogicalType(true, schema.TimeUnitMicros),
-			timestamp:            now.UnixMicro(),
+			numRows:               1,
+			numColumns:            2,
+			expectedTimestampType: schema.NewTimestampLogicalType(true, schema.TimeUnitMicros),
+			timestamp:             now.UnixMicro(),
 		},
 		{
 			name:          "timestamp in nanoseconds",
@@ -187,10 +187,10 @@ func TestWrite(t *testing.T) {
 					now,
 				),
 			},
-			numRows:              1,
-			numColumns:           2,
-			timestampLogicalType: schema.NewTimestampLogicalType(true, schema.TimeUnitNanos),
-			timestamp:            now.UnixNano(),
+			numRows:               1,
+			numColumns:            2,
+			expectedTimestampType: schema.NewTimestampLogicalType(true, schema.TimeUnitNanos),
+			timestamp:             now.UnixNano(),
 		},
 	}
 
@@ -221,7 +221,7 @@ func TestWrite(t *testing.T) {
 
 			index := metadata.Schema.ColumnIndexByName(defaultTimestampFieldName)
 			logicalType := metadata.Schema.Column(index).LogicalType()
-			require.Truef(t, tt.timestampLogicalType.Equals(logicalType), "timestamp column has logical type %s", logicalType)
+			require.Truef(t, tt.expectedTimestampType.Equals(logicalType), "timestamp column has logical type %s", logicalType)
 
 			columnReader, err := reader.RowGroup(0).Column(index)
 			require.NoError(t, err)
