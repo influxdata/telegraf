@@ -5,7 +5,6 @@ import (
 	_ "embed"
 	"fmt"
 	"net/url"
-	"strings"
 
 	"github.com/kolo/xmlrpc"
 
@@ -156,11 +155,11 @@ func (s *Supervisor) parseInstanceData(status supervisorInfo) (map[string]string
 // Function to get only address and port from URL
 func beautifyServerString(rawurl string) ([]string, error) {
 	parsedURL, err := url.Parse(rawurl)
-	splittedURL := strings.Split(parsedURL.Host, ":")
 	if err != nil {
 		return nil, err
 	}
-	if len(splittedURL) < 2 {
+	splittedURL := []string{parsedURL.Hostname(), parsedURL.Port()}
+	if splittedURL[1] == "" {
 		if parsedURL.Scheme == "https" {
 			splittedURL[1] = "443"
 		} else {
