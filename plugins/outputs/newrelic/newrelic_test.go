@@ -225,6 +225,22 @@ func TestLocalAddress(t *testing.T) {
 	require.Equal(t, "127.0.0.2", host)
 }
 
+func TestConnectKeepsDefaultTransportSettings(t *testing.T) {
+	nr := &NewRelic{
+		InsightsKey:  "12345",
+		HTTPProxy:    "https://my.proxy",
+		LocalAddress: "127.0.0.1",
+	}
+	require.NoError(t, nr.Connect())
+
+	transport, ok := nr.client.Transport.(*http.Transport)
+	require.True(t, ok)
+	defaults := http.DefaultTransport.(*http.Transport)
+	require.Equal(t, defaults.IdleConnTimeout, transport.IdleConnTimeout)
+	require.Equal(t, defaults.TLSHandshakeTimeout, transport.TLSHandshakeTimeout)
+	require.True(t, transport.ForceAttemptHTTP2)
+}
+
 func TestInvalidLocalAddress(t *testing.T) {
 	nr := &NewRelic{
 		InsightsKey:  "12345",

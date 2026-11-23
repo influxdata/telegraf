@@ -167,10 +167,7 @@ func (nr *NewRelic) initClient() error {
 		return nil
 	}
 
-	transport := &http.Transport{
-		Proxy: http.ProxyFromEnvironment,
-	}
-
+	transport := http.DefaultTransport.(*http.Transport).Clone()
 	if nr.HTTPProxy != "" {
 		proxyURL, err := url.Parse(nr.HTTPProxy)
 		if err != nil {
