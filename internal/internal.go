@@ -280,6 +280,9 @@ func ParseTimestamp(format string, timestamp any, location *time.Location, separ
 		if err != nil {
 			return t, err
 		}
+		if location == nil {
+			location = time.UTC
+		}
 		_, offset := t.In(location).Zone()
 		return t.Add(-time.Duration(offset) * time.Second), nil
 	default:
