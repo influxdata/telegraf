@@ -32,6 +32,8 @@ func TestParseText(t *testing.T) {
 		{name: "unknown_header", input: input, header: http.Header{"Content-Type": {"application/octet-stream"}}},
 		{name: "invalid_value", input: "metric invalid", wantErr: true},
 		{name: "incomplete_label", input: "metric{label=\"unfinished", wantErr: true},
+		{name: "invalid_summary_value", input: "# TYPE s summary\ns{quantile=\"0.5\"} invalid\n", wantErr: true},
+		{name: "invalid_histogram_value", input: "# TYPE h histogram\nh_bucket{le=\"1\"} invalid\n", wantErr: true},
 	}
 
 	for _, version := range []int{0, 1, 2} {
