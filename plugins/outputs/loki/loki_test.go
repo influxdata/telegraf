@@ -405,6 +405,49 @@ func TestBasicAuth(t *testing.T) {
 	}
 }
 
+func TestBearerToken(t *testing.T) {
+	ts := httptest.NewServer(http.NotFoundHandler())
+	defer ts.Close()
+
+	u, err := url.Parse("http://" + ts.Listener.Addr().String())
+	require.NoError(t, err)
+
+	tests := []struct {
+		name     string
+		token    string
+		expected string
+	}{
+		{
+			name: "no token",
+		},
+		{
+			name:     "with token",
+			token:    "abc",
+			expected: "Bearer abc",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if auth := r.Header.Get("Authorization"); auth != tt.expected {
+					w.WriteHeader(http.StatusInternalServerError)
+					t.Errorf("Not equal, expected: %q, actual: %q", tt.expected, auth)
+					return
+				}
+				w.WriteHeader(http.StatusOK)
+			})
+
+			plugin := &Loki{
+				Domain: u.String(),
+				Token:  config.NewSecret([]byte(tt.token)),
+			}
+			require.NoError(t, plugin.Connect())
+			require.NoError(t, plugin.Write([]telegraf.Metric{getMetric()}))
+		})
+	}
+}
+
 type TestHandlerFunc func(t *testing.T, w http.ResponseWriter, r *http.Request)
 
 func TestOAuthClientCredentialsGrant(t *testing.T) {
@@ -436,17 +479,12 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 			name: "success",
 			plugin: &Loki{
 				Domain:       u.String(),
-				ClientID:     config.NewSecret([]byte("howdy")),
-				ClientSecret: config.NewSecret([]byte("secret")),
+				ClientID:     "howdy",
+				ClientSecret: "secret",
 				TokenURL:     u.String() + "/token",
 				Scopes:       []string{"urn:opc:idm:__myscopes__"},
 			},
-			tokenHandler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
-				username, password, ok := r.BasicAuth()
-				require.True(t, ok)
-				require.Equal(t, "howdy", username)
-				require.Equal(t, "secret", password)
-
+			tokenHandler: func(t *testing.T, w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 				values := url.Values{}
 				values.Add("access_token", token)

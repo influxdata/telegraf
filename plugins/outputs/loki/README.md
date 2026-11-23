@@ -22,8 +22,8 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 
 ## Secret store support
 
-This plugin supports secrets from secret stores for the `username`, `password`,
-`client_id`, and `client_secret` options.
+This plugin supports secrets from secret stores for the `username`, `password`
+and `token` option.
 See the [secret store documentation][SECRETSTORE] for more details on how
 to use them.
 
@@ -46,6 +46,9 @@ to use them.
   ## Basic auth credential
   # username = "loki"
   # password = "pass"
+
+  ## Bearer token for authentication
+  # token = ""
 
   ## Additional HTTP headers
   # http_headers = {"X-Scope-OrgID" = "1"}
