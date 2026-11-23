@@ -44,11 +44,15 @@ func (*NewRelic) SampleConfig() string {
 	return sampleConfig
 }
 
-// Connect to the Output
-func (nr *NewRelic) Connect() error {
+func (nr *NewRelic) Init() error {
 	if nr.InsightsKey == "" {
 		return errors.New("'insights_key' is a required for newrelic")
 	}
+	return nil
+}
+
+// Connect to the Output
+func (nr *NewRelic) Connect() error {
 	err := nr.initClient()
 	if err != nil {
 		return err
