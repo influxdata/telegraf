@@ -17,46 +17,39 @@ import (
 	esapi5 "github.com/elastic/go-elasticsearch/v5/esapi"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/config"
 )
 
 // roundTripper applies per-request authentication and headers through the configured HTTP client.
 type roundTripper struct {
-	basicAuth          bool
-	userinfo           *url.Userinfo
-	username           config.Secret
-	password           config.Secret
-	bearerToken        config.Secret
+	setAuth            func(*http.Request) error
 	headers            http.Header
 	httpClient         *http.Client
 	bypassProductCheck bool
 }
 
 func (a *Elasticsearch) newRoundTripper() (roundTripper, error) {
-	transport := roundTripper{
-		headers:     a.authorizationHeaders(),
-		httpClient:  a.httpClient,
-		bearerToken: a.AuthBearerToken,
-	}
-	if err := transport.configureAuth(a.URLs, a.Username, a.Password); err != nil {
+	if err := a.configureAuth(); err != nil {
 		return roundTripper{}, err
 	}
-	return transport, nil
+	return roundTripper{
+		setAuth:    a.setAuth,
+		headers:    a.authorizationHeaders(),
+		httpClient: a.httpClient,
+	}, nil
 }
 
-func (t *roundTripper) configureAuth(addresses []string, username, password config.Secret) error {
-	if !username.Empty() && !password.Empty() {
-		t.basicAuth = true
-		t.username, t.password = username, password
+func (a *Elasticsearch) configureAuth() error {
+	a.userinfo = nil
+	if !a.Username.Empty() && !a.Password.Empty() {
 		return nil
 	}
-	for _, address := range addresses {
+	for _, address := range a.URLs {
 		u, err := url.Parse(address)
 		if err != nil {
 			return fmt.Errorf("parsing URL %q failed: %w", address, err)
 		}
 		if u.User != nil {
-			t.userinfo = u.User
+			a.userinfo = u.User
 			break
 		}
 	}
@@ -87,20 +80,20 @@ func (t roundTripper) RoundTrip(original *http.Request) (*http.Response, error) 
 	return res, err
 }
 
-func (t roundTripper) setAuth(req *http.Request) error {
-	if err := t.setAuthBasic(req); err != nil {
+func (a *Elasticsearch) setAuth(req *http.Request) error {
+	if err := a.setAuthBasic(req); err != nil {
 		return err
 	}
-	return t.setAuthBearer(req)
+	return a.setAuthBearer(req)
 }
 
-func (t roundTripper) setAuthBasic(req *http.Request) error {
-	if t.basicAuth {
-		username, err := t.username.Get()
+func (a *Elasticsearch) setAuthBasic(req *http.Request) error {
+	if !a.Username.Empty() && !a.Password.Empty() {
+		username, err := a.Username.Get()
 		if err != nil {
 			return fmt.Errorf("getting username failed: %w", err)
 		}
-		password, err := t.password.Get()
+		password, err := a.Password.Get()
 		if err != nil {
 			username.Destroy()
 			return fmt.Errorf("getting password failed: %w", err)
@@ -108,16 +101,16 @@ func (t roundTripper) setAuthBasic(req *http.Request) error {
 		req.SetBasicAuth(username.String(), password.String())
 		username.Destroy()
 		password.Destroy()
-	} else if t.userinfo != nil {
-		password, _ := t.userinfo.Password()
-		req.SetBasicAuth(t.userinfo.Username(), password)
+	} else if a.userinfo != nil {
+		password, _ := a.userinfo.Password()
+		req.SetBasicAuth(a.userinfo.Username(), password)
 	}
 	return nil
 }
 
-func (t roundTripper) setAuthBearer(req *http.Request) error {
-	if !t.bearerToken.Empty() {
-		token, err := t.bearerToken.Get()
+func (a *Elasticsearch) setAuthBearer(req *http.Request) error {
+	if !a.AuthBearerToken.Empty() {
+		token, err := a.AuthBearerToken.Get()
 		if err != nil {
 			return fmt.Errorf("getting token failed: %w", err)
 		}
