@@ -451,6 +451,49 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 	}
 }
 
+func TestOAuthTokenRequestTimeout(t *testing.T) {
+	done := make(chan struct{})
+	ts := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/token" {
+			<-done
+		}
+	}))
+	defer ts.Close()
+	defer close(done)
+
+	plugin := &httpplugin.HTTP{
+		URLs:         []string{ts.URL + "/write"},
+		ClientID:     "howdy",
+		ClientSecret: "secret",
+		TokenURL:     ts.URL + "/token",
+		Log:          testutil.Logger{},
+	}
+	plugin.Timeout = config.Duration(100 * time.Millisecond)
+	plugin.SetParserFunc(func() (telegraf.Parser, error) {
+		p := &value.Parser{
+			MetricName: "metric",
+			DataType:   "string",
+		}
+		err := p.Init()
+		return p, err
+	})
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	gathered := make(chan error, 1)
+	go func() {
+		gathered <- plugin.Gather(&acc)
+	}()
+
+	select {
+	case err := <-gathered:
+		require.NoError(t, err)
+	case <-time.After(5 * time.Second):
+		require.FailNow(t, "gather did not finish after the token request timed out")
+	}
+	require.Len(t, acc.Errors, 1)
+}
+
 func TestHTTPWithCSVFormat(t *testing.T) {
 	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/endpoint" {
