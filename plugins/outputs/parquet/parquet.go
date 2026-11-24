@@ -41,10 +41,13 @@ type Parquet struct {
 	Directory          string          `toml:"directory"`
 	RotationInterval   config.Duration `toml:"rotation_interval"`
 	TimestampFieldName string          `toml:"timestamp_field_name"`
+	TimestampType      string          `toml:"timestamp_type"`
 	Log                telegraf.Logger `toml:"-"`
 
-	metricGroups map[string]*metricGroup
-	root         *os.Root
+	metricGroups        map[string]*metricGroup
+	root                *os.Root
+	timestampColumnType arrow.DataType
+	timestampValue      func(time.Time) any
 }
 
 func (*Parquet) SampleConfig() string {
@@ -62,6 +65,20 @@ func (p *Parquet) Init() error {
 		return fmt.Errorf("getting absolute path for directory %q failed: %w", p.Directory, err)
 	}
 	p.Directory = d
+
+	switch p.TimestampType {
+	case "", "int64":
+		p.timestampColumnType = arrow.PrimitiveTypes.Int64
+		p.timestampValue = func(t time.Time) any { return t.UnixNano() }
+	case "timestamp_us":
+		p.timestampColumnType = arrow.FixedWidthTypes.Timestamp_us
+		p.timestampValue = func(t time.Time) any { return arrow.Timestamp(t.UnixMicro()) }
+	case "timestamp_ns":
+		p.timestampColumnType = arrow.FixedWidthTypes.Timestamp_ns
+		p.timestampValue = func(t time.Time) any { return arrow.Timestamp(t.UnixNano()) }
+	default:
+		return fmt.Errorf("invalid timestamp_type %q, expected \"int64\", \"timestamp_us\" or \"timestamp_ns\"", p.TimestampType)
+	}
 
 	// Create the directory if it doesn't exist and check it actually is a directory
 	stat, err := os.Stat(p.Directory)
@@ -229,7 +246,9 @@ func (p *Parquet) createRecordBatch(metrics []telegraf.Metric, builder *array.Re
 			arrow.PrimitiveTypes.Float32,
 			arrow.PrimitiveTypes.Float64,
 			arrow.BinaryTypes.String,
-			arrow.FixedWidthTypes.Boolean:
+			arrow.FixedWidthTypes.Boolean,
+			arrow.FixedWidthTypes.Timestamp_us,
+			arrow.FixedWidthTypes.Timestamp_ns:
 		default:
 			// Return the error directly as all metrics will fail here
 			return nil, fmt.Errorf("unsupported column type %q for column %q", col.Type.Name(), col.Name)
@@ -257,7 +276,7 @@ func (p *Parquet) createRecordBatch(metrics []telegraf.Metric, builder *array.Re
 		}
 
 		if p.TimestampFieldName != "" {
-			row[p.TimestampFieldName] = m.Time().UnixNano()
+			row[p.TimestampFieldName] = p.timestampValue(m.Time())
 		}
 
 		// Check if the row values do match the corresponding schema column type
@@ -313,6 +332,10 @@ func (p *Parquet) createRecordBatch(metrics []telegraf.Metric, builder *array.Re
 				}
 			case bool:
 				if ctype != arrow.FixedWidthTypes.Boolean {
+					err = fmt.Errorf("invalid value %v (%T) for column %q (%s)", value, value, name, ctype.Name())
+				}
+			case arrow.Timestamp:
+				if _, isTimestamp := ctype.(*arrow.TimestampType); !isTimestamp {
 					err = fmt.Errorf("invalid value %v (%T) for column %q (%s)", value, value, name, ctype.Name())
 				}
 			default:
@@ -388,6 +411,8 @@ func (p *Parquet) createRecordBatch(metrics []telegraf.Metric, builder *array.Re
 				builder.Field(index).(*array.StringBuilder).Append(value.(string))
 			case arrow.FixedWidthTypes.Boolean:
 				builder.Field(index).(*array.BooleanBuilder).Append(value.(bool))
+			case arrow.FixedWidthTypes.Timestamp_us, arrow.FixedWidthTypes.Timestamp_ns:
+				builder.Field(index).(*array.TimestampBuilder).Append(value.(arrow.Timestamp))
 			}
 		}
 		perr.MetricsAccept = append(perr.MetricsAccept, i)
@@ -439,7 +464,7 @@ func (p *Parquet) createSchema(metrics []telegraf.Metric) (*arrow.Schema, error)
 	if p.TimestampFieldName != "" {
 		fields = append(fields, arrow.Field{
 			Name: p.TimestampFieldName,
-			Type: arrow.PrimitiveTypes.Int64,
+			Type: p.timestampColumnType,
 		})
 	}
 
