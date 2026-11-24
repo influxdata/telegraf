@@ -1,7 +1,7 @@
 package shim
 
 import (
-	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"sync"
@@ -27,12 +27,6 @@ func (s *Shim) AddOutput(output telegraf.Output) error {
 }
 
 func (s *Shim) RunOutput() error {
-	// Create a parser for receiving the metrics in line-protocol format
-	parser := influx.Parser{}
-	if err := parser.Init(); err != nil {
-		return fmt.Errorf("failed to create new parser: %w", err)
-	}
-
 	// Connect the output
 	if err := s.Output.Connect(); err != nil {
 		return fmt.Errorf("failed to start processor: %w", err)
@@ -87,13 +81,19 @@ func (s *Shim) RunOutput() error {
 	}
 
 	// Start the processing loop
-	scanner := bufio.NewScanner(s.stdin)
-	for scanner.Scan() {
-		// Read metrics from stdin
-		m, err := parser.ParseLine(scanner.Text())
+	parser := influx.NewStreamParser(s.stdin)
+	for {
+		m, err := parser.Next()
 		if err != nil {
-			fmt.Fprintf(s.stderr, "Failed to parse metric: %s\n", err)
-			continue
+			if errors.Is(err, influx.EOF) {
+				break
+			}
+			if parseErr, ok := errors.AsType[*influx.ParseError](err); ok {
+				fmt.Fprintf(s.stderr, "Failed to parse metric: %s\n", parseErr)
+				continue
+			}
+			fmt.Fprintf(s.stderr, "Failed to read metrics: %s\n", err)
+			break
 		}
 		mu.Lock()
 		metrics = append(metrics, m)

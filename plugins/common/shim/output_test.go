@@ -1,7 +1,9 @@
 package shim
 
 import (
+	"bytes"
 	"io"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -165,6 +167,24 @@ func TestOutputShimWithFlushTimeout(t *testing.T) {
 	require.NoError(t, stdinWriter.Close())
 	wg.Wait()
 	testutil.RequireMetricsEqual(t, expected, o.MetricsWritten)
+}
+
+func TestOutputShimLongLine(t *testing.T) {
+	o := &testOutput{}
+
+	serializer := &influx.Serializer{}
+	require.NoError(t, serializer.Init())
+	long := metric.New("thing", map[string]string{}, map[string]any{"v": strings.Repeat("x", 70*1024)}, time.Unix(0, 0))
+	short := metric.New("thing", map[string]string{}, map[string]any{"v": 1}, time.Unix(0, 0))
+	payload, err := serializer.SerializeBatch([]telegraf.Metric{long, short})
+	require.NoError(t, err)
+
+	s := New()
+	s.stdin = bytes.NewReader(payload)
+	require.NoError(t, s.AddOutput(o))
+	require.NoError(t, s.RunOutput())
+
+	testutil.RequireMetricsEqual(t, []telegraf.Metric{long, short}, o.MetricsWritten)
 }
 
 type testOutput struct {
