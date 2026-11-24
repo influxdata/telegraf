@@ -243,7 +243,9 @@ func TestReconnectIntegration(t *testing.T) {
 			}
 
 			// Check for the first attempt to reconnect
-			if msg.Level == testutil.LevelError && strings.Contains(msg.Text, "AMQP reconnection failed") {
+			if msg.Level == testutil.LevelError &&
+				strings.Contains(msg.Text, "AMQP reconnection failed") &&
+				strings.Contains(msg.Text, "could not connect to any broker") {
 				firstAttempt = true
 			}
 		}

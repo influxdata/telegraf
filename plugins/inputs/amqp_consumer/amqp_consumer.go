@@ -257,24 +257,26 @@ func (a *AMQPConsumer) connect() (<-chan amqp.Delivery, error) {
 
 	//nolint:gosec // False-positive for G404 as we don't need strong random numbers
 	p := rand.Perm(len(brokers))
+	var conn *amqp.Connection
 	for _, n := range p {
 		broker := brokers[n]
 		a.Log.Debugf("Connecting to %q", broker)
-		conn, err := amqp.DialConfig(broker, *amqpConf)
+		c, err := amqp.DialConfig(broker, *amqpConf)
 		if err == nil {
-			a.conn = conn
+			conn = c
 			a.Log.Debugf("Connected to %q", broker)
 			break
 		}
 		a.Log.Errorf("Error connecting to %q: %s", broker, err)
 	}
 
-	if a.conn == nil {
+	if conn == nil {
 		return nil, &internal.StartupError{
 			Err:   errors.New("could not connect to any broker"),
 			Retry: true,
 		}
 	}
+	a.conn = conn
 
 	ch, err := a.conn.Channel()
 	if err != nil {
