@@ -862,12 +862,17 @@ func TestStartupErrorBehaviorRetryIntegration(t *testing.T) {
 	require.ErrorIs(t, model.Gather(&acc), internal.ErrNotConnected)
 	require.Equal(t, int64(2), model.StartupErrors.Get())
 
-	// Unpause the container, now writes should succeed
+	// Unpause the container and restore the default timeouts. The short
+	// timeouts are only required to quickly fail the connection attempts
+	// above. For the actual consumer session they are too short, e.g. the
+	// default fetch long-poll (Consumer.MaxWaitTime=500ms) exceeds the 100ms
+	// read timeout causing the broker connection to be dropped repeatedly.
 	_, err = provider.Client().ContainerUnpause(t.Context(), containerID, client.ContainerUnpauseOptions{})
 	require.NoError(t, err)
-	require.NoError(t, model.Gather(&acc))
-	defer model.Stop()
-	require.Equal(t, int64(2), model.StartupErrors.Get())
+	defaults := sarama.NewConfig()
+	plugin.config.Net.DialTimeout = defaults.Net.DialTimeout
+	plugin.config.Net.WriteTimeout = defaults.Net.WriteTimeout
+	plugin.config.Net.ReadTimeout = defaults.Net.ReadTimeout
 
 	// Setup a writer
 	creator := outputs.Outputs["kafka"]
@@ -885,7 +890,11 @@ func TestStartupErrorBehaviorRetryIntegration(t *testing.T) {
 	require.NoError(t, output.Connect())
 	defer output.Close()
 
-	// Send some data to the broker so we have something to receive
+	// Send some data to the broker before the consumer joins the group. This
+	// makes sure the topic exists including its partitions when the consumer
+	// session is established, otherwise the consumer might claim no partitions
+	// and only notice the new partitions after the metadata refresh interval.
+	// As the consumer starts at the oldest offset it will receive the message.
 	metrics := []telegraf.Metric{
 		metric.New(
 			"test",
@@ -896,9 +905,14 @@ func TestStartupErrorBehaviorRetryIntegration(t *testing.T) {
 	}
 	require.NoError(t, output.Write(metrics))
 
+	// Now the plugin should be able to connect
+	require.NoError(t, model.Gather(&acc))
+	defer model.Stop()
+	require.Equal(t, int64(2), model.StartupErrors.Get())
+
 	// Verify that the metrics were actually written
 	require.Eventually(t, func() bool {
 		return acc.NMetrics() >= 1
-	}, 3*time.Second, 100*time.Millisecond)
+	}, 15*time.Second, 100*time.Millisecond)
 	testutil.RequireMetricsEqual(t, metrics, acc.GetTelegrafMetrics())
 }
