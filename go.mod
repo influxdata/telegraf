@@ -43,7 +43,7 @@ require (
 	github.com/antchfx/jsonquery v1.3.8
 	github.com/antchfx/xmlquery v1.5.2
 	github.com/antchfx/xpath v1.3.9
-	github.com/apache/arrow-go/v18 v18.8.0
+	github.com/apache/arrow-go/v18 v18.9.0
 	github.com/apache/inlong/inlong-sdk/dataproxy-sdk-twins/dataproxy-sdk-golang v1.0.8
 	github.com/apache/iotdb-client-go v1.3.7
 	github.com/apache/thrift v0.25.0
@@ -306,7 +306,7 @@ require (
 	github.com/Microsoft/go-winio v0.6.3 // indirect
 	github.com/adrg/xdg v0.5.3 // indirect
 	github.com/alecthomas/participle v0.4.1 // indirect
-	github.com/andybalholm/brotli v1.2.7 // indirect
+	github.com/andybalholm/brotli v1.2.8 // indirect
 	github.com/antithesishq/antithesis-sdk-go v0.9.0-default-no-op // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
 	github.com/apache/arrow/go/v15 v15.0.2 // indirect
@@ -467,7 +467,7 @@ require (
 	github.com/jpillora/backoff v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/jzelinskie/whirlpool v0.0.0-20201016144138-0675e54bb004 // indirect
-	github.com/klauspost/cpuid/v2 v2.4.0 // indirect
+	github.com/klauspost/cpuid/v2 v2.4.2 // indirect
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/lanrat/extsort v1.5.0 // indirect
