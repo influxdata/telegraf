@@ -2,7 +2,6 @@ package main
 
 import (
 	_ "embed"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -19,44 +18,43 @@ import (
 var reference string
 
 type section struct {
-	Heading, Path string
-	Command       *cli.Command
+	Path    string
+	Level   int
+	Command *cli.Command
 }
 
 func sections(commands []*cli.Command) []section {
 	var result []section
-	var walk func(string, string, []*cli.Command)
-	walk = func(parent, heading string, items []*cli.Command) {
+	var walk func(string, int, []*cli.Command)
+	walk = func(parent string, level int, items []*cli.Command) {
 		for _, command := range items {
 			path := parent + " " + command.Name
-			result = append(result, section{heading, path, command})
-			walk(path, heading+"#", command.VisibleCommands())
+			result = append(result, section{Path: path, Level: level, Command: command})
+			walk(path, level+1, command.VisibleCommands())
 		}
 	}
-	walk("telegraf", "##", commands)
+	walk("telegraf", 2, commands)
 	return result
 }
+
 func writeCLIReference(w io.Writer) error {
-	tmpl, err := template.New("reference").Funcs(template.FuncMap{"flags": formatFlags, "sections": sections}).Parse(reference)
+	tmpl, err := template.New("reference").Funcs(template.FuncMap{
+		"flags":    formatFlags,
+		"repeat":   strings.Repeat,
+		"sections": sections,
+	}).Parse(reference)
 	if err != nil {
 		return err
 	}
 	return tmpl.Execute(w, commands.AvailableCommands())
 }
-func generateCLIReference(path string) error {
-	file, err := os.CreateTemp(filepath.Dir(path), ".cli-flags-*")
-	if err != nil {
-		return err
-	}
-	defer os.Remove(file.Name())
 
-	writeErr := writeCLIReference(file)
-	modeErr := file.Chmod(0o644)
-	closeErr := file.Close()
-	if err := errors.Join(writeErr, modeErr, closeErr); err != nil {
+func generateCLIReference(path string) error {
+	var output strings.Builder
+	if err := writeCLIReference(&output); err != nil {
 		return err
 	}
-	return os.Rename(file.Name(), path)
+	return os.WriteFile(path, []byte(output.String()), 0o644)
 }
 
 func main() {

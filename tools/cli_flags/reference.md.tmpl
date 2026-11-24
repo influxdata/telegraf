@@ -12,7 +12,7 @@ The service command and service-related flags are Windows only.
 
 ## Global options
 {{ flags .VisibleFlags }}{{ range sections .VisibleCommands }}
-{{ .Heading }} {{ .Path }}
+{{ repeat "#" .Level }} {{ .Path }}
 
 {{ .Command.Usage }}
 {{ if .Command.ArgsUsage }}
