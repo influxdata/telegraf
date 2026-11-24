@@ -1,9 +1,9 @@
 package nagios
 
 import (
-	"bufio"
 	"bytes"
 	"errors"
+	"iter"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -68,7 +68,13 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	ts := p.timeFunc().UTC()
 
-	s := bufio.NewScanner(bytes.NewReader(buf))
+	next, stop := iter.Pull(bytes.Lines(buf))
+	defer stop()
+	nextLine := func() ([]byte, bool) {
+		line, ok := next()
+		line = bytes.TrimSuffix(line, []byte{'\n'})
+		return bytes.TrimSuffix(line, []byte{'\r'}), ok
+	}
 
 	var msg bytes.Buffer
 	var longmsg bytes.Buffer
@@ -76,10 +82,8 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	metrics := make([]telegraf.Metric, 0)
 
 	// Scan the first line.
-	if !s.Scan() && s.Err() != nil {
-		return nil, s.Err()
-	}
-	parts := bytes.Split(s.Bytes(), []byte{'|'})
+	line, _ := nextLine()
+	parts := bytes.Split(line, []byte{'|'})
 	switch len(parts) {
 	case 2:
 		ms, err := parsePerfData(string(parts[1]), ts)
@@ -95,9 +99,9 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	}
 
 	// Read long output.
-	for s.Scan() {
-		if bytes.Contains(s.Bytes(), []byte{'|'}) {
-			parts := bytes.Split(s.Bytes(), []byte{'|'})
+	for line, ok := nextLine(); ok; line, ok = nextLine() {
+		if bytes.Contains(line, []byte{'|'}) {
+			parts := bytes.Split(line, []byte{'|'})
 			if longmsg.Len() != 0 {
 				longmsg.WriteByte('\n')
 			}
@@ -113,20 +117,16 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		if longmsg.Len() != 0 {
 			longmsg.WriteByte('\n')
 		}
-		longmsg.Write(bytes.TrimSpace(s.Bytes()))
+		longmsg.Write(bytes.TrimSpace(line))
 	}
 
 	// Parse extra performance data.
-	for s.Scan() {
-		ms, err := parsePerfData(s.Text(), ts)
+	for line, ok := nextLine(); ok; line, ok = nextLine() {
+		ms, err := parsePerfData(string(line), ts)
 		if err != nil {
 			p.Log.Errorf("Failed to parse performance data: %s\n", err.Error())
 		}
 		metrics = append(metrics, ms...)
-	}
-
-	if s.Err() != nil {
-		p.Log.Debugf("Unexpected io error: %s\n", s.Err())
 	}
 
 	// Create nagios state.
