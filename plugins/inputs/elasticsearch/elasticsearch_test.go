@@ -288,6 +288,28 @@ func TestGatherClusterIndicesStats(t *testing.T) {
 		map[string]string{"index_name": "twitter"})
 }
 
+func TestDefaultIndicesInclude(t *testing.T) {
+	es := newElasticsearch()
+	require.Equal(t, []string{"_all"}, es.IndicesInclude,
+		"indices_include must default to all indices as documented in sample.conf")
+}
+
+func TestGatherClusterIndicesStatsDefault(t *testing.T) {
+	es := newElasticsearchWithClient()
+	es.Servers = []string{"http://example.com:9200"}
+	es.client.Transport = newTransportMock(clusterIndicesResponse)
+	es.serverInfo = make(map[string]serverInfo)
+	es.serverInfo["http://example.com:9200"] = defaultServerInfo()
+	require.NoError(t, es.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, acc.GatherError(es.Gather))
+
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indices_stats_primaries",
+		clusterIndicesExpected,
+		map[string]string{"index_name": "twitter"})
+}
+
 func TestGatherDateStampedIndicesStats(t *testing.T) {
 	es := newElasticsearchWithClient()
 	es.IndicesInclude = []string{"twitter*", "influx*", "penguins"}

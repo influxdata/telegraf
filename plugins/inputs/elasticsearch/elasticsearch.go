@@ -766,6 +766,7 @@ func newElasticsearch() *Elasticsearch {
 	return &Elasticsearch{
 		ClusterStatsOnlyFromMaster: true,
 		ClusterHealthLevel:         "indices",
+		IndicesInclude:             []string{"_all"},
 		Timeout:                    config.Duration(5 * time.Second),
 		ResponseHeaderTimeout:      config.Duration(5 * time.Second),
 	}
