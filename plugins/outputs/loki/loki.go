@@ -40,6 +40,7 @@ type Loki struct {
 	Timeout            config.Duration   `toml:"timeout"`
 	Username           config.Secret     `toml:"username"`
 	Password           config.Secret     `toml:"password"`
+	Token              config.Secret     `toml:"token"`
 	Headers            map[string]string `toml:"http_headers"`
 	ClientID           string            `toml:"client_id"`
 	ClientSecret       string            `toml:"client_secret"`
@@ -179,6 +180,15 @@ func (l *Loki) writeMetrics(s Streams) error {
 		req.SetBasicAuth(username.String(), password.String())
 		username.Destroy()
 		password.Destroy()
+	}
+
+	if !l.Token.Empty() {
+		token, err := l.Token.Get()
+		if err != nil {
+			return fmt.Errorf("getting token failed: %w", err)
+		}
+		req.Header.Set("Authorization", "Bearer "+token.String())
+		token.Destroy()
 	}
 
 	for k, v := range l.Headers {
