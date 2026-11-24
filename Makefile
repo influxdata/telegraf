@@ -131,11 +131,7 @@ tools/cli_flags/cli_flags$(EXEEXT): $(wildcard tools/cli_flags/*.go tools/cli_fl
 	$(HOSTGO) build -o $@ ./tools/cli_flags
 
 docs-cli: tools/cli_flags/cli_flags$(EXEEXT)
-	@tmp=$$(mktemp docs/COMMANDS_AND_FLAGS.md.XXXXXX) && \
-	trap 'rm -f "$$tmp"' 0 && \
-	./tools/cli_flags/cli_flags$(EXEEXT) > "$$tmp" && \
-	chmod 644 "$$tmp" && \
-	mv "$$tmp" docs/COMMANDS_AND_FLAGS.md
+	./tools/cli_flags/cli_flags$(EXEEXT) docs/COMMANDS_AND_FLAGS.md
 
 .PHONY: build
 build:

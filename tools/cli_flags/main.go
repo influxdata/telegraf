@@ -2,9 +2,11 @@ package main
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"text/template"
 
@@ -41,12 +43,33 @@ func writeCLIReference(w io.Writer) error {
 	}
 	return tmpl.Execute(w, commands.AvailableCommands())
 }
+func generateCLIReference(path string) error {
+	file, err := os.CreateTemp(filepath.Dir(path), ".cli-flags-*")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(file.Name())
+
+	writeErr := writeCLIReference(file)
+	modeErr := file.Chmod(0o644)
+	closeErr := file.Close()
+	if err := errors.Join(writeErr, modeErr, closeErr); err != nil {
+		return err
+	}
+	return os.Rename(file.Name(), path)
+}
+
 func main() {
-	if err := writeCLIReference(os.Stdout); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+	if len(os.Args) != 2 {
+		fmt.Fprintf(os.Stderr, "Usage: %s <output-path>\n", filepath.Base(os.Args[0]))
+		os.Exit(1)
+	}
+	if err := generateCLIReference(os.Args[1]); err != nil {
+		fmt.Fprintf(os.Stderr, "generate CLI reference %q: %v\n", os.Args[1], err)
 		os.Exit(1)
 	}
 }
+
 func formatFlags(flags []cli.Flag) string {
 	var doc strings.Builder
 	if len(flags) == 0 {
