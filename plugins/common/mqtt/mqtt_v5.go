@@ -2,6 +2,7 @@ package mqtt
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"time"
@@ -127,12 +128,44 @@ func (m *mqttv5Client) Connect() (bool, error) {
 		m.options.Errors = log
 	}
 
-	client, err := mqttv5auto.NewConnection(context.Background(), m.options)
+	// The connection manager retries forever, so give up once every broker
+	// failed once, like the v3 client does
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	failures := make(chan error, len(m.options.BrokerUrls))
+	opts := m.options
+	onConnectError := m.options.OnConnectError
+	opts.OnConnectError = func(err error) {
+		if onConnectError != nil {
+			onConnectError(err)
+		}
+		select {
+		case failures <- err:
+		default:
+		}
+		if len(failures) == cap(failures) {
+			cancel()
+		}
+	}
+
+	client, err := mqttv5auto.NewConnection(context.Background(), opts)
 	if err != nil {
 		return false, err
 	}
 	m.client = client
-	return false, client.AwaitConnection(context.Background())
+
+	if client.AwaitConnection(ctx) == nil {
+		return false, nil
+	}
+
+	// Stop the connection manager so a retried Connect does not leak it
+	client.Disconnect(context.Background())
+	close(failures)
+	errs := make([]error, 0, len(failures))
+	for err := range failures {
+		errs = append(errs, err)
+	}
+	return false, errors.Join(errs...)
 }
 
 func (m *mqttv5Client) Publish(topic string, body []byte) error {
