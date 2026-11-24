@@ -33,7 +33,6 @@ following works:
 - github.com/BurntSushi/toml [MIT License](https://github.com/BurntSushi/toml/blob/master/COPYING)
 - github.com/ClickHouse/ch-go [Apache License 2.0](https://github.com/ClickHouse/ch-go/blob/main/LICENSE)
 - github.com/ClickHouse/clickhouse-go [Apache License 2.0](https://github.com/ClickHouse/clickhouse-go/blob/master/LICENSE)
-- github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp [Apache License 2.0](https://github.com/GoogleCloudPlatform/opentelemetry-operations-go/blob/main/LICENSE)
 - github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric [Apache License 2.0](https://github.com/GoogleCloudPlatform/opentelemetry-operations-go/blob/main/LICENSE)
 - github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping [Apache License 2.0](https://github.com/GoogleCloudPlatform/opentelemetry-operations-go/blob/main/LICENSE)
 - github.com/IBM/go-sdk-core [Apache License 2.0](https://github.com/IBM/go-sdk-core/blob/main/LICENSE)
