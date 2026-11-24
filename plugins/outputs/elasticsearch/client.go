@@ -107,7 +107,8 @@ func (a *Elasticsearch) clientHeaders() http.Header {
 }
 
 // authorizationHeaders returns configured Authorization values unless bearer authentication
-// is set. RoundTrip adds them after Basic authentication for backward compatibility.
+// is set. They are kept out of the SDK client headers because SetBasicAuth in RoundTrip
+// would replace them; RoundTrip adds them after Basic authentication instead.
 func (a *Elasticsearch) authorizationHeaders() http.Header {
 	// See the bearer-token override TODO in clientHeaders.
 	if !a.AuthBearerToken.Empty() {
