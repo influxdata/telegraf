@@ -141,7 +141,7 @@ require (
 	github.com/jackc/pgio v1.0.0
 	github.com/jackc/pgx/v5 v5.13.0
 	github.com/jaypipes/ghw v0.27.0
-	github.com/jedib0t/go-pretty/v6 v6.9.1
+	github.com/jedib0t/go-pretty/v6 v6.9.2
 	github.com/jeremywohl/flatten/v2 v2.0.0-20211013061545-07e4a09fb8e4
 	github.com/jmespath/go-jmespath v0.4.0
 	github.com/karrick/godirwalk v1.16.2
