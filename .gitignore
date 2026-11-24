@@ -6,6 +6,8 @@
 /telegraf.gz
 /telegraf-*.jsonl
 /tools/package_lxd_test/package_lxd_test
+/tools/cli_flags/cli_flags
+/tools/cli_flags/cli_flags.exe
 /tools/license_checker/license_checker*
 /tools/readme_config_includer/generator
 /tools/readme_config_includer/generator.exe

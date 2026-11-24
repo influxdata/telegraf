@@ -1,13 +1,13 @@
-package main
+package commands
 
 import "github.com/urfave/cli/v2"
 
-type windowsServiceActions struct {
-	install   cli.ActionFunc
-	uninstall cli.ActionFunc
-	start     cli.ActionFunc
-	stop      cli.ActionFunc
-	status    cli.ActionFunc
+type ServiceActions struct {
+	Install   cli.ActionFunc
+	Uninstall cli.ActionFunc
+	Start     cli.ActionFunc
+	Stop      cli.ActionFunc
+	Status    cli.ActionFunc
 }
 
 func windowsServiceFlags() []cli.Flag {
@@ -42,7 +42,7 @@ func windowsServiceFlags() []cli.Flag {
 	}
 }
 
-func windowsServiceCommands(actions windowsServiceActions) []*cli.Command {
+func windowsServiceCommands(actions ServiceActions) []*cli.Command {
 	return []*cli.Command{
 		{
 			Name:  "service",
@@ -85,7 +85,7 @@ services with different configurations use
 							Usage: "enable automatic service restart on failure",
 						},
 					},
-					Action: actions.install,
+					Action: actions.Install,
 				},
 				{
 					Name:  "uninstall",
@@ -100,7 +100,7 @@ In case you specified a custom service-name during install use
 
 > telegraf --service-name telegraf-machine service uninstall
 `,
-					Action: actions.uninstall,
+					Action: actions.Uninstall,
 				},
 				{
 					Name:  "start",
@@ -115,7 +115,7 @@ In case you specified a custom service-name during install use
 
 > telegraf --service-name telegraf-machine service start
 `,
-					Action: actions.start,
+					Action: actions.Start,
 				},
 				{
 					Name:  "stop",
@@ -131,7 +131,7 @@ In case you specified a custom service-name during install use
 
 > telegraf --service-name telegraf-machine service stop
 `,
-					Action: actions.stop,
+					Action: actions.Stop,
 				},
 				{
 					Name:  "status",
@@ -146,7 +146,7 @@ In case you specified a custom service-name during install use
 
 > telegraf --service-name telegraf-machine service status
 `,
-					Action: actions.status,
+					Action: actions.Status,
 				},
 			},
 		},

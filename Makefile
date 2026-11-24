@@ -107,7 +107,7 @@ deps:
 version:
 	@echo $(version)-$(commit)
 
-build_tools:
+build_tools: tools/cli_flags/cli_flags$(EXEEXT)
 	$(HOSTGO) build -o ./tools/custom_builder/custom_builder$(EXEEXT) ./tools/custom_builder
 	$(HOSTGO) build -o ./tools/license_checker/license_checker$(EXEEXT) ./tools/license_checker
 	$(HOSTGO) build -o ./tools/readme_config_includer/generator$(EXEEXT) ./tools/readme_config_includer/generator.go
@@ -127,10 +127,13 @@ config:
 docs: build_tools embed_readme_common embed_readme_inputs embed_readme_outputs embed_readme_processors embed_readme_aggregators embed_readme_secretstores docs-cli
 
 .PHONY: docs-cli
-docs-cli:
+tools/cli_flags/cli_flags$(EXEEXT): $(wildcard tools/cli_flags/*.go tools/cli_flags/*.tmpl cmd/telegraf/commands/*.go) go.mod go.sum
+	$(HOSTGO) build -o $@ ./tools/cli_flags
+
+docs-cli: tools/cli_flags/cli_flags$(EXEEXT)
 	@tmp=$$(mktemp docs/COMMANDS_AND_FLAGS.md.XXXXXX) && \
 	trap 'rm -f "$$tmp"' 0 && \
-	$(HOSTGO) run -tags custom ./cmd/telegraf --generate-cli-docs > "$$tmp" && \
+	./tools/cli_flags/cli_flags$(EXEEXT) > "$$tmp" && \
 	chmod 644 "$$tmp" && \
 	mv "$$tmp" docs/COMMANDS_AND_FLAGS.md
 
@@ -236,6 +239,7 @@ clean:
 	rm -rf build
 	rm -rf cmd/telegraf/resource.syso
 	rm -rf cmd/telegraf/versioninfo.json
+	rm -f tools/cli_flags/cli_flags tools/cli_flags/cli_flags.exe
 	rm -rf tools/config_includer/generator
 	rm -rf tools/config_includer/generator.exe
 	rm -rf tools/custom_builder/custom_builder

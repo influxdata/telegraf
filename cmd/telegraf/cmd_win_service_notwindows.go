@@ -5,13 +5,7 @@ package main
 import (
 	"io"
 
-	"github.com/urfave/cli/v2"
+	"github.com/influxdata/telegraf/cmd/telegraf/commands"
 )
 
-func cliFlags() []cli.Flag {
-	return make([]cli.Flag, 0)
-}
-
-func getServiceCommands(io.Writer) []*cli.Command {
-	return nil
-}
+func getServiceActions(io.Writer) commands.ServiceActions { return commands.ServiceActions{} }

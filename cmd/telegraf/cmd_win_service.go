@@ -10,15 +10,13 @@ import (
 
 	"github.com/urfave/cli/v2"
 	"golang.org/x/sys/windows"
+
+	"github.com/influxdata/telegraf/cmd/telegraf/commands"
 )
 
-func cliFlags() []cli.Flag {
-	return windowsServiceFlags()
-}
-
-func getServiceCommands(outputBuffer io.Writer) []*cli.Command {
-	return windowsServiceCommands(windowsServiceActions{
-		install: func(cCtx *cli.Context) error {
+func getServiceActions(outputBuffer io.Writer) commands.ServiceActions {
+	return commands.ServiceActions{
+		Install: func(cCtx *cli.Context) error {
 			cfg := &serviceConfig{
 				displayName:  cCtx.String("display-name"),
 				restartDelay: cCtx.String("restart-delay"),
@@ -34,7 +32,7 @@ func getServiceCommands(outputBuffer io.Writer) []*cli.Command {
 			fmt.Fprintf(outputBuffer, "Successfully installed service %q\n", name)
 			return nil
 		},
-		uninstall: func(cCtx *cli.Context) error {
+		Uninstall: func(cCtx *cli.Context) error {
 			name := cCtx.String("service-name")
 			if err := uninstallService(name); err != nil {
 				return err
@@ -42,7 +40,7 @@ func getServiceCommands(outputBuffer io.Writer) []*cli.Command {
 			fmt.Fprintf(outputBuffer, "Successfully uninstalled service %q\n", name)
 			return nil
 		},
-		start: func(cCtx *cli.Context) error {
+		Start: func(cCtx *cli.Context) error {
 			name := cCtx.String("service-name")
 			if err := startService(name); err != nil {
 				return err
@@ -50,7 +48,7 @@ func getServiceCommands(outputBuffer io.Writer) []*cli.Command {
 			fmt.Fprintf(outputBuffer, "Successfully started service %q\n", name)
 			return nil
 		},
-		stop: func(cCtx *cli.Context) error {
+		Stop: func(cCtx *cli.Context) error {
 			name := cCtx.String("service-name")
 			if err := stopService(name); err != nil {
 				if errors.Is(err, windows.ERROR_SERVICE_NOT_ACTIVE) {
@@ -62,7 +60,7 @@ func getServiceCommands(outputBuffer io.Writer) []*cli.Command {
 			fmt.Fprintf(outputBuffer, "Successfully stopped service %q\n", name)
 			return nil
 		},
-		status: func(cCtx *cli.Context) error {
+		Status: func(cCtx *cli.Context) error {
 			name := cCtx.String("service-name")
 			status, err := queryService(name)
 			if err != nil {
@@ -71,5 +69,5 @@ func getServiceCommands(outputBuffer io.Writer) []*cli.Command {
 			fmt.Fprintf(outputBuffer, "Service %q is in %q state\n", name, status)
 			return nil
 		},
-	})
+	}
 }

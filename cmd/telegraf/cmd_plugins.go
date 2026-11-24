@@ -9,6 +9,7 @@ import (
 
 	"github.com/urfave/cli/v2"
 
+	"github.com/influxdata/telegraf/cmd/telegraf/commands"
 	"github.com/influxdata/telegraf/plugins/aggregators"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -27,166 +28,84 @@ func pluginNames[M ~map[string]V, V any](m M, prefix string) []byte {
 	return []byte(strings.Join(names, ""))
 }
 
-func getPluginCommands(outputBuffer io.Writer) []*cli.Command {
-	return []*cli.Command{
-		{
-			Name:  "plugins",
-			Usage: "commands for printing available plugins",
-			Flags: []cli.Flag{
-				&cli.BoolFlag{
-					Name:  "deprecated",
-					Usage: "print only deprecated plugins",
-				},
-			},
-			Action: func(cCtx *cli.Context) error {
-				if cCtx.Bool("deprecated") {
-					outputBuffer.Write(pluginNames(inputs.Deprecations, "inputs"))
-					outputBuffer.Write(pluginNames(outputs.Deprecations, "outputs"))
-					outputBuffer.Write(pluginNames(processors.Deprecations, "processors"))
-					outputBuffer.Write(pluginNames(aggregators.Deprecations, "aggregators"))
-					outputBuffer.Write(pluginNames(secretstores.Deprecations, "secretstores"))
-					outputBuffer.Write(pluginNames(parsers.Deprecations, "parsers"))
-					outputBuffer.Write(pluginNames(serializers.Deprecations, "serializers"))
-				} else {
-					outputBuffer.Write(pluginNames(inputs.Inputs, "inputs"))
-					outputBuffer.Write(pluginNames(outputs.Outputs, "outputs"))
-					outputBuffer.Write(pluginNames(processors.Processors, "processors"))
-					outputBuffer.Write(pluginNames(aggregators.Aggregators, "aggregators"))
-					outputBuffer.Write(pluginNames(secretstores.SecretStores, "secretstores"))
-					outputBuffer.Write(pluginNames(parsers.Parsers, "parsers"))
-					outputBuffer.Write(pluginNames(serializers.Serializers, "serializers"))
-				}
+func getPluginActions(outputBuffer io.Writer) commands.PluginActions {
+	return commands.PluginActions{
+		Plugins: func(cCtx *cli.Context) error {
+			if cCtx.Bool("deprecated") {
+				outputBuffer.Write(pluginNames(inputs.Deprecations, "inputs"))
+				outputBuffer.Write(pluginNames(outputs.Deprecations, "outputs"))
+				outputBuffer.Write(pluginNames(processors.Deprecations, "processors"))
+				outputBuffer.Write(pluginNames(aggregators.Deprecations, "aggregators"))
+				outputBuffer.Write(pluginNames(secretstores.Deprecations, "secretstores"))
+				outputBuffer.Write(pluginNames(parsers.Deprecations, "parsers"))
+				outputBuffer.Write(pluginNames(serializers.Deprecations, "serializers"))
+			} else {
+				outputBuffer.Write(pluginNames(inputs.Inputs, "inputs"))
+				outputBuffer.Write(pluginNames(outputs.Outputs, "outputs"))
+				outputBuffer.Write(pluginNames(processors.Processors, "processors"))
+				outputBuffer.Write(pluginNames(aggregators.Aggregators, "aggregators"))
+				outputBuffer.Write(pluginNames(secretstores.SecretStores, "secretstores"))
+				outputBuffer.Write(pluginNames(parsers.Parsers, "parsers"))
+				outputBuffer.Write(pluginNames(serializers.Serializers, "serializers"))
+			}
 
-				return nil
-			},
-			Subcommands: []*cli.Command{
-				{
-					Name:  "inputs",
-					Usage: "Print available input plugins",
-					Flags: []cli.Flag{
-						&cli.BoolFlag{
-							Name:  "deprecated",
-							Usage: "print only deprecated plugins",
-						},
-					},
-					Action: func(cCtx *cli.Context) error {
-						if cCtx.Bool("deprecated") {
-							outputBuffer.Write(pluginNames(inputs.Deprecations, "inputs"))
-						} else {
-							outputBuffer.Write(pluginNames(inputs.Inputs, "inputs"))
-						}
-						return nil
-					},
-				},
-				{
-					Name:  "outputs",
-					Usage: "Print available output plugins",
-					Flags: []cli.Flag{
-						&cli.BoolFlag{
-							Name:  "deprecated",
-							Usage: "print only deprecated plugins",
-						},
-					},
-					Action: func(cCtx *cli.Context) error {
-						if cCtx.Bool("deprecated") {
-							outputBuffer.Write(pluginNames(outputs.Deprecations, "outputs"))
-						} else {
-							outputBuffer.Write(pluginNames(outputs.Outputs, "outputs"))
-						}
-						return nil
-					},
-				},
-				{
-					Name:  "processors",
-					Usage: "Print available processor plugins",
-					Flags: []cli.Flag{
-						&cli.BoolFlag{
-							Name:  "deprecated",
-							Usage: "print only deprecated plugins",
-						},
-					},
-					Action: func(cCtx *cli.Context) error {
-						if cCtx.Bool("deprecated") {
-							outputBuffer.Write(pluginNames(processors.Deprecations, "processors"))
-						} else {
-							outputBuffer.Write(pluginNames(processors.Processors, "processors"))
-						}
-						return nil
-					},
-				},
-				{
-					Name:  "aggregators",
-					Usage: "Print available aggregator plugins",
-					Flags: []cli.Flag{
-						&cli.BoolFlag{
-							Name:  "deprecated",
-							Usage: "print only deprecated plugins",
-						},
-					},
-					Action: func(cCtx *cli.Context) error {
-						if cCtx.Bool("deprecated") {
-							outputBuffer.Write(pluginNames(aggregators.Deprecations, "aggregators"))
-						} else {
-							outputBuffer.Write(pluginNames(aggregators.Aggregators, "aggregators"))
-						}
-						return nil
-					},
-				},
-				{
-					Name:  "secretstores",
-					Usage: "Print available secretstore plugins",
-					Flags: []cli.Flag{
-						&cli.BoolFlag{
-							Name:  "deprecated",
-							Usage: "print only deprecated plugins",
-						},
-					},
-					Action: func(cCtx *cli.Context) error {
-						if cCtx.Bool("deprecated") {
-							outputBuffer.Write(pluginNames(secretstores.Deprecations, "secretstores"))
-						} else {
-							outputBuffer.Write(pluginNames(secretstores.SecretStores, "secretstores"))
-						}
-						return nil
-					},
-				},
-				{
-					Name:  "parsers",
-					Usage: "Print available parser plugins",
-					Flags: []cli.Flag{
-						&cli.BoolFlag{
-							Name:  "deprecated",
-							Usage: "print only deprecated plugins",
-						},
-					},
-					Action: func(cCtx *cli.Context) error {
-						if cCtx.Bool("deprecated") {
-							outputBuffer.Write(pluginNames(parsers.Deprecations, "parsers"))
-						} else {
-							outputBuffer.Write(pluginNames(parsers.Parsers, "parsers"))
-						}
-						return nil
-					},
-				},
-				{
-					Name:  "serializers",
-					Usage: "Print available serializer plugins",
-					Flags: []cli.Flag{
-						&cli.BoolFlag{
-							Name:  "deprecated",
-							Usage: "print only deprecated plugins",
-						},
-					},
-					Action: func(cCtx *cli.Context) error {
-						if cCtx.Bool("deprecated") {
-							outputBuffer.Write(pluginNames(serializers.Deprecations, "serializers"))
-						} else {
-							outputBuffer.Write(pluginNames(serializers.Serializers, "serializers"))
-						}
-						return nil
-					},
-				},
-			},
+			return nil
+		},
+		Inputs: func(cCtx *cli.Context) error {
+			if cCtx.Bool("deprecated") {
+				outputBuffer.Write(pluginNames(inputs.Deprecations, "inputs"))
+			} else {
+				outputBuffer.Write(pluginNames(inputs.Inputs, "inputs"))
+			}
+			return nil
+		},
+		Outputs: func(cCtx *cli.Context) error {
+			if cCtx.Bool("deprecated") {
+				outputBuffer.Write(pluginNames(outputs.Deprecations, "outputs"))
+			} else {
+				outputBuffer.Write(pluginNames(outputs.Outputs, "outputs"))
+			}
+			return nil
+		},
+		Processors: func(cCtx *cli.Context) error {
+			if cCtx.Bool("deprecated") {
+				outputBuffer.Write(pluginNames(processors.Deprecations, "processors"))
+			} else {
+				outputBuffer.Write(pluginNames(processors.Processors, "processors"))
+			}
+			return nil
+		},
+		Aggregators: func(cCtx *cli.Context) error {
+			if cCtx.Bool("deprecated") {
+				outputBuffer.Write(pluginNames(aggregators.Deprecations, "aggregators"))
+			} else {
+				outputBuffer.Write(pluginNames(aggregators.Aggregators, "aggregators"))
+			}
+			return nil
+		},
+		Secretstores: func(cCtx *cli.Context) error {
+			if cCtx.Bool("deprecated") {
+				outputBuffer.Write(pluginNames(secretstores.Deprecations, "secretstores"))
+			} else {
+				outputBuffer.Write(pluginNames(secretstores.SecretStores, "secretstores"))
+			}
+			return nil
+		},
+		Parsers: func(cCtx *cli.Context) error {
+			if cCtx.Bool("deprecated") {
+				outputBuffer.Write(pluginNames(parsers.Deprecations, "parsers"))
+			} else {
+				outputBuffer.Write(pluginNames(parsers.Parsers, "parsers"))
+			}
+			return nil
+		},
+		Serializers: func(cCtx *cli.Context) error {
+			if cCtx.Bool("deprecated") {
+				outputBuffer.Write(pluginNames(serializers.Deprecations, "serializers"))
+			} else {
+				outputBuffer.Write(pluginNames(serializers.Serializers, "serializers"))
+			}
+			return nil
 		},
 	}
 }
