@@ -2,7 +2,9 @@
 package opentelemetry
 
 import (
+	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"net"
 	"sync"
@@ -15,6 +17,7 @@ import (
 	pprofileotlp "go.opentelemetry.io/proto/otlp/collector/profiles/v1development"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/peer"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -25,6 +28,8 @@ import (
 //go:embed sample.conf
 var sampleConfig string
 
+const clientCertTagPrefix = "tls_client_"
+
 type OpenTelemetry struct {
 	ServiceAddress      string          `toml:"service_address"`
 	SpanDimensions      []string        `toml:"span_dimensions"`
@@ -33,6 +38,7 @@ type OpenTelemetry struct {
 	MetricsSchema       string          `toml:"metrics_schema"`
 	MaxMsgSize          config.Size     `toml:"max_msg_size"`
 	Timeout             config.Duration `toml:"timeout"`
+	ClientCertTags      []string        `toml:"tls_client_certificate_tags"`
 	Log                 telegraf.Logger `toml:"-"`
 	tls.ServerConfig
 
@@ -58,6 +64,14 @@ func (o *OpenTelemetry) Init() error {
 		return fmt.Errorf("invalid metric schema %q", o.MetricsSchema)
 	}
 
+	// Validate the requested certificate attributes
+	if err := tls.ValidateTagNames(o.ClientCertTags); err != nil {
+		return fmt.Errorf("invalid client certificate tags: %w", err)
+	}
+	if len(o.ClientCertTags) > 0 && len(o.TLSAllowedCACerts) == 0 {
+		return errors.New("'tls_client_certificate_tags' requires 'tls_allowed_cacerts' to be set as client certificates are only requested for mutual TLS")
+	}
+
 	return nil
 }
 
@@ -76,7 +90,7 @@ func (o *OpenTelemetry) Start(acc telegraf.Accumulator) error {
 	}
 
 	logger := &otelLogger{o.Log}
-	influxWriter := &writeToAccumulator{acc}
+	influxWriter := &writeToAccumulator{accumulator: acc, clientCertTags: o.ClientCertTags}
 	o.grpcServer = grpc.NewServer(grpcOptions...)
 
 	traceSvc, err := newTraceService(logger, influxWriter, o.SpanDimensions)
@@ -103,6 +117,8 @@ func (o *OpenTelemetry) Start(acc telegraf.Accumulator) error {
 	}
 	pprofileotlp.RegisterProfilesServiceServer(o.grpcServer, profileSvc)
 
+	profileSvc.clientCertTags = o.ClientCertTags
+
 	o.listener, err = net.Listen("tcp", o.ServiceAddress)
 	if err != nil {
 		return err
@@ -128,6 +144,36 @@ func (o *OpenTelemetry) Stop() {
 	o.listener = nil
 
 	o.wg.Wait()
+}
+
+// clientCertTags returns the requested tags, prefixed with "tls_client_",
+// derived from the certificate the client presented during the (mutual) TLS
+// handshake. It returns nil if there is no such certificate, e.g. for
+// plain-text or server-only TLS connections. The names must be validated
+// beforehand, see Init().
+func clientCertTags(ctx context.Context, names []string) map[string]string {
+	if len(names) == 0 {
+		return nil
+	}
+	p, ok := peer.FromContext(ctx)
+	if !ok {
+		return nil
+	}
+	info, ok := p.AuthInfo.(credentials.TLSInfo)
+	if !ok || len(info.State.PeerCertificates) == 0 {
+		return nil
+	}
+	return tls.CertificateTags(info.State.PeerCertificates[0], names, clientCertTagPrefix)
+}
+
+// removeClientCertTags removes all tags the plugin might derive from the client
+// certificate for the given names. This must be done for all names, not only
+// the ones with a value in the certificate, to prevent the sender from
+// providing the tags itself.
+func removeClientCertTags(tags map[string]string, names []string) {
+	for _, name := range names {
+		delete(tags, clientCertTagPrefix+name)
+	}
 }
 
 func init() {
