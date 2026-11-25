@@ -122,7 +122,8 @@ func (c *configurationPerRequest) check() error {
 				case "":
 				case "INT8L", "INT8H", "INT16", "INT32", "INT64",
 					"UINT8L", "UINT8H", "UINT16", "UINT32", "UINT64",
-					"FLOAT16", "FLOAT32", "FLOAT64", "FLOAT_DEC_8E24M", "FLOAT_UDEC_8E24M":
+					"FLOAT16", "FLOAT32", "FLOAT64", "FLOAT_DEC_8E24M", "FLOAT_UDEC_8E24M",
+					"BCD16", "BCD32", "BCD64":
 					if f.Length != 0 {
 						return fmt.Errorf("length option cannot be used for type %q of field %q", f.InputType, f.Name)
 					}
@@ -407,7 +408,7 @@ func determineOutputDatatype(input string) (string, error) {
 	switch input {
 	case "INT8L", "INT8H", "INT16", "INT32", "INT64":
 		return "INT64", nil
-	case "BIT", "UINT8L", "UINT8H", "UINT16", "UINT32", "UINT64":
+	case "BIT", "UINT8L", "UINT8H", "UINT16", "UINT32", "UINT64", "BCD16", "BCD32", "BCD64":
 		return "UINT64", nil
 	case "FLOAT16", "FLOAT32", "FLOAT64", "FLOAT_DEC_8E24M", "FLOAT_UDEC_8E24M":
 		return "FLOAT64", nil
@@ -422,11 +423,11 @@ func determineFieldLength(input string, length uint16) (uint16, error) {
 	switch input {
 	case "BIT", "INT8L", "INT8H", "UINT8L", "UINT8H":
 		return 1, nil
-	case "INT16", "UINT16", "FLOAT16":
+	case "INT16", "UINT16", "FLOAT16", "BCD16":
 		return 1, nil
-	case "INT32", "UINT32", "FLOAT32", "FLOAT_DEC_8E24M", "FLOAT_UDEC_8E24M":
+	case "INT32", "UINT32", "FLOAT32", "FLOAT_DEC_8E24M", "FLOAT_UDEC_8E24M", "BCD32":
 		return 2, nil
-	case "INT64", "UINT64", "FLOAT64":
+	case "INT64", "UINT64", "FLOAT64", "BCD64":
 		return 4, nil
 	case "STRING":
 		return length, nil

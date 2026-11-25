@@ -33,7 +33,8 @@ func normalizeInputDatatype(dataType string) (string, error) {
 	switch dataType {
 	case "BIT", "INT8L", "INT8H", "UINT8L", "UINT8H",
 		"INT16", "UINT16", "INT32", "UINT32", "INT64", "UINT64",
-		"FLOAT16", "FLOAT32", "FLOAT64", "FLOAT_DEC_8E24M", "FLOAT_UDEC_8E24M", "STRING":
+		"FLOAT16", "FLOAT32", "FLOAT64", "FLOAT_DEC_8E24M", "FLOAT_UDEC_8E24M",
+		"BCD16", "BCD32", "BCD64", "STRING":
 		return dataType, nil
 	}
 	return "unknown", fmt.Errorf("unknown input type %q", dataType)

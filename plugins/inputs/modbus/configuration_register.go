@@ -220,7 +220,7 @@ func validateFieldDefinitions(fieldDefs []fieldDefinition, registerType string) 
 			case "INT8L", "INT8H", "UINT8L", "UINT8H",
 				"UINT16", "INT16", "UINT32", "INT32", "UINT64", "INT64",
 				"FLOAT16-IEEE", "FLOAT32-IEEE", "FLOAT64-IEEE", "FLOAT32", "FIXED", "UFIXED",
-				"FLOAT_DEC_8E24M", "FLOAT_UDEC_8E24M":
+				"FLOAT_DEC_8E24M", "FLOAT_UDEC_8E24M", "BCD16", "BCD32", "BCD64":
 				// Check scale
 				if item.Scale == 0.0 {
 					return fmt.Errorf("invalid scale '%f' in %q - %q", item.Scale, registerType, item.Name)
@@ -262,11 +262,11 @@ func validateFieldDefinitions(fieldDefs []fieldDefinition, registerType string) 
 			// Check for the request size corresponding to the data-type
 			var requiredAddresses int
 			switch item.DataType {
-			case "INT8L", "INT8H", "UINT8L", "UINT8H", "UINT16", "INT16", "FLOAT16-IEEE":
+			case "INT8L", "INT8H", "UINT8L", "UINT8H", "UINT16", "INT16", "FLOAT16-IEEE", "BCD16":
 				requiredAddresses = 1
-			case "UINT32", "INT32", "FLOAT32-IEEE", "FLOAT_DEC_8E24M", "FLOAT_UDEC_8E24M":
+			case "UINT32", "INT32", "FLOAT32-IEEE", "FLOAT_DEC_8E24M", "FLOAT_UDEC_8E24M", "BCD32":
 				requiredAddresses = 2
-			case "UINT64", "INT64", "FLOAT64-IEEE":
+			case "UINT64", "INT64", "FLOAT64-IEEE", "BCD64":
 				requiredAddresses = 4
 			}
 			if requiredAddresses > 0 && len(item.Address) != requiredAddresses {

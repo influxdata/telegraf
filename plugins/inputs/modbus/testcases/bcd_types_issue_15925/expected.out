@@ -1,0 +1,1 @@
+modbus,name=modbus,slave_id=1 bcd16=1234u,bcd32=2511u,bcd64=42u,scaled=61.5 1729239973009490185

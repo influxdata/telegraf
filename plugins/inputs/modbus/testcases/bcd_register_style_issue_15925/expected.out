@@ -1,0 +1,1 @@
+modbus,name=Device,slave_id=1,type=holding_register bcd16=1234u,bcd32=2511u,scaled=246u 1729239973009490185
