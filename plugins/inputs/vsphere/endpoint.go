@@ -1491,7 +1491,7 @@ func (e *endpoint) getExtraProperty(entity any, fieldPath string) any {
 		v = v.Elem()
 	}
 
-	for _, field := range strings.Split(fieldPath, ".") {
+	for field := range strings.Split(fieldPath, ".") {
 		field = strings.ToUpper(field[:1]) + field[1:]
 		if v.Kind() != reflect.Struct {
 			e.parent.Log.Warnf("Field %s in %s of %s not struct %s. Skipping", field, fieldPath, reflect.TypeOf(entity), v.Kind())
