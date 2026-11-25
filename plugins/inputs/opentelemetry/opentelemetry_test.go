@@ -1,12 +1,15 @@
 package opentelemetry
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"io"
 	"math/big"
 	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -33,6 +36,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -120,7 +124,7 @@ func TestOpenTelemetry(t *testing.T) {
 	testutil.RequireMetricsEqual(t, expected, actual, options...)
 }
 
-func TestCases(t *testing.T) {
+func TestCasesGRPC(t *testing.T) {
 	// Get all directories in testdata
 	folders, err := os.ReadDir("testcases")
 	require.NoError(t, err)
@@ -128,11 +132,10 @@ func TestCases(t *testing.T) {
 	// Register the plugin
 	inputs.Add("opentelemetry", func() telegraf.Input {
 		return &OpenTelemetry{
-			ServiceAddress:      "127.0.0.1:0",
 			SpanDimensions:      otel2influx.DefaultOtelTracesToLineProtocolConfig().SpanDimensions,
 			LogRecordDimensions: otel2influx.DefaultOtelLogsToLineProtocolConfig().LogRecordDimensions,
-			ProfileDimensions:   []string{"host.name"},
 			Timeout:             config.Duration(5 * time.Second),
+			ProfileDimensions:   []string{"host.name"},
 		}
 	})
 
@@ -198,6 +201,7 @@ func TestCases(t *testing.T) {
 
 			// Setup and start the plugin
 			plugin := cfg.Inputs[0].Input.(*OpenTelemetry)
+			plugin.ServiceAddress = "grpc://127.0.0.1:0"
 			require.NoError(t, plugin.Init())
 
 			var acc testutil.Accumulator
@@ -251,6 +255,145 @@ func TestCases(t *testing.T) {
 
 			// Close the plugin to make sure all data is flushed
 			require.NoError(t, grpcClient.Close())
+			plugin.Stop()
+
+			// Check the metrics
+			require.Eventually(t, func() bool {
+				return acc.NMetrics() >= uint64(len(expected))
+			}, 3*time.Second, 100*time.Millisecond)
+			require.Empty(t, acc.Errors)
+
+			actual := acc.GetTelegrafMetrics()
+			testutil.RequireMetricsEqual(t, expected, actual, options...)
+		})
+	}
+}
+
+func TestCasesHTTPProtobuf(t *testing.T) {
+	// Get all directories in testdata
+	folders, err := os.ReadDir("testcases")
+	require.NoError(t, err)
+
+	// Register the plugin
+	inputs.Add("opentelemetry", func() telegraf.Input {
+		return &OpenTelemetry{
+			SpanDimensions:      otel2influx.DefaultOtelTracesToLineProtocolConfig().SpanDimensions,
+			LogRecordDimensions: otel2influx.DefaultOtelLogsToLineProtocolConfig().LogRecordDimensions,
+			Timeout:             config.Duration(5 * time.Second),
+			ProfileDimensions:   []string{"host.name"},
+		}
+	})
+
+	// Prepare the influx parser for expectations
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+
+	for _, f := range folders {
+		// Only handle folders
+		if !f.IsDir() {
+			continue
+		}
+		testcasePath := filepath.Join("testcases", f.Name())
+		configFilename := filepath.Join(testcasePath, "telegraf.conf")
+		inputFiles := filepath.Join(testcasePath, "*.json")
+		expectedFilename := filepath.Join(testcasePath, "expected.out")
+		expectedErrorFilename := filepath.Join(testcasePath, "expected.err")
+
+		// Compare options
+		options := []cmp.Option{
+			testutil.IgnoreTime(),
+			testutil.SortMetrics(),
+			testutil.IgnoreFields("start_time_unix_nano"),
+		}
+
+		t.Run(f.Name(), func(t *testing.T) {
+			// Read the input data
+			inputs := make(map[string][][]byte)
+			matches, err := filepath.Glob(inputFiles)
+			require.NoError(t, err)
+			require.NotEmpty(t, matches)
+			sort.Strings(matches)
+			for _, fn := range matches {
+				buf, err := os.ReadFile(fn)
+				require.NoError(t, err)
+
+				key := strings.TrimSuffix(filepath.Base(fn), ".json")
+				key, _, _ = strings.Cut(key, "_")
+				inputs[key] = append(inputs[key], buf)
+			}
+
+			// Read the expected output if any
+			var expected []telegraf.Metric
+			if _, err := os.Stat(expectedFilename); err == nil {
+				var err error
+				expected, err = testutil.ParseMetricsFromFile(expectedFilename, parser)
+				require.NoError(t, err)
+			}
+
+			// Read the expected output if any
+			var expectedErrors []string
+			if _, err := os.Stat(expectedErrorFilename); err == nil {
+				var err error
+				expectedErrors, err = testutil.ParseLinesFromFile(expectedErrorFilename)
+				require.NoError(t, err)
+				require.NotEmpty(t, expectedErrors)
+			}
+
+			// Configure the plugin
+			cfg := config.NewConfig()
+			require.NoError(t, cfg.LoadConfig(configFilename))
+			require.Len(t, cfg.Inputs, 1)
+
+			// Setup and start the plugin
+			plugin := cfg.Inputs[0].Input.(*OpenTelemetry)
+			plugin.ServiceAddress = "http://127.0.0.1:0"
+			require.NoError(t, plugin.Init())
+
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Start(&acc))
+			defer plugin.Stop()
+
+			// Send all data to the plugin
+			addr := plugin.listener.Addr().String()
+			for msgtype, messages := range inputs {
+				for _, buf := range messages {
+					// Decode the JSON test input and determine the endpoint
+					var msg proto.Message
+					var path string
+					switch msgtype {
+					case "logs":
+						msg = &otlplogs.ExportLogsServiceRequest{}
+						path = "/v1/logs"
+					case "metrics":
+						msg = &otlpmetrics.ExportMetricsServiceRequest{}
+						path = "/v1/metrics"
+					case "profiles":
+						msg = &otlpprofiles.ExportProfilesServiceRequest{}
+						path = "/v1development/profiles"
+					case "traces":
+						msg = &otlptrace.ExportTraceServiceRequest{}
+						path = "/v1/traces"
+					default:
+						require.Failf(t, "unknown message type", "type %q", msgtype)
+					}
+					require.NoError(t, protojson.Unmarshal(buf, msg))
+					body, err := proto.Marshal(msg)
+					require.NoError(t, err)
+
+					// Send the message as binary protobuf via HTTP
+					req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, "http://"+addr+path, bytes.NewReader(body))
+					require.NoError(t, err)
+					req.Header.Set("Content-Type", "application/x-protobuf")
+					resp, err := http.DefaultClient.Do(req)
+					require.NoError(t, err)
+					respBody, err := io.ReadAll(resp.Body)
+					resp.Body.Close()
+					require.NoError(t, err)
+					require.Equal(t, http.StatusOK, resp.StatusCode, string(respBody))
+				}
+			}
+
+			// Close the plugin to make sure all data is flushed
 			plugin.Stop()
 
 			// Check the metrics
