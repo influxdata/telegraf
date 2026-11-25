@@ -109,7 +109,7 @@ type objectRef struct {
 	dcname            string
 	rpname            string
 	customValues      map[string]string
-	customProperties  map[string]interface{}
+	customProperties  map[string]any
 	lookup            map[string]string
 }
 
@@ -929,8 +929,8 @@ func (e *endpoint) loadCustomAttributes(entity mo.ManagedEntity) map[string]stri
 	return cvs
 }
 
-func (e *endpoint) loadCustomProperties(entity interface{}, propertyInclude []string) map[string]interface{} {
-	cvs := make(map[string]interface{}, len(propertyInclude))
+func (e *endpoint) loadCustomProperties(entity any, propertyInclude []string) map[string]any {
+	cvs := make(map[string]any, len(propertyInclude))
 	for _, property := range propertyInclude {
 		value := e.getExtraProperty(entity, property)
 		if value != nil {
@@ -1324,11 +1324,9 @@ func (e *endpoint) collectChunk(
 				bKey := mn + " " + v.Instance + " " + strconv.FormatInt(latestSample.UnixNano(), 10)
 				_, found := buckets[bKey]
 				if !found {
-					fields := map[string]interface{}{fn: true}
+					fields := map[string]any{fn: true}
 					tags := make(map[string]string, len(t)+len(objectRef.customProperties))
-					for k, v := range t {
-						tags[k] = v
-					}
+					maps.Copy(tags, t)
 					for k, v := range objectRef.customProperties {
 						if sv, err := internal.ToString(v); err != nil {
 							e.log.Errorf("conversion error for %v: %s", v, err)
@@ -1481,7 +1479,7 @@ func round(x float64) float64 {
 	return t
 }
 
-func (e *endpoint) getExtraProperty(entity interface{}, fieldPath string) interface{} {
+func (e *endpoint) getExtraProperty(entity any, fieldPath string) any {
 	v := reflect.ValueOf(entity)
 
 	// If it's a pointer, we dereference it.
@@ -1493,8 +1491,7 @@ func (e *endpoint) getExtraProperty(entity interface{}, fieldPath string) interf
 		v = v.Elem()
 	}
 
-	fields := strings.Split(fieldPath, ".")
-	for _, field := range fields {
+	for _, field := range strings.Split(fieldPath, ".") {
 		field = strings.ToUpper(field[:1]) + field[1:]
 		if v.Kind() != reflect.Struct {
 			e.parent.Log.Warnf("Field %s in %s of %s not struct %s. Skipping", field, fieldPath, reflect.TypeOf(entity), v.Kind())
