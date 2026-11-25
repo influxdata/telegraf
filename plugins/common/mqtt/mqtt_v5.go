@@ -134,10 +134,9 @@ func (m *mqttv5Client) Connect() (bool, error) {
 	defer cancel()
 	failures := make(chan error, len(m.options.BrokerUrls))
 	opts := m.options
-	onConnectError := m.options.OnConnectError
 	opts.OnConnectError = func(err error) {
-		if onConnectError != nil {
-			onConnectError(err)
+		if m.options.OnConnectError != nil {
+			m.options.OnConnectError(err)
 		}
 		select {
 		case failures <- err:
