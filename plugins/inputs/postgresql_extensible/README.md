@@ -2,7 +2,7 @@
 
 This plugin queries a [PostgreSQL][postgres] server and provides metrics for
 the returned result. This is useful when using PostgreSQL extensions to collect
-additional metrics.
+additional metrics. The queries can be limited in runtime.
 
 > [!TIP]
 > Please also check the more generic [sql input plugin][inputs_sql].
@@ -53,6 +53,12 @@ to use them.
   ## with pool_mode set to transaction.
   prepared_statements = true
 
+  ## Maximum time for a complete collection cycle, so a slow or unresponsive
+  ## server cannot hold up the collection. When it is exceeded, the running
+  ## queries are cancelled, no further queries are started and an error is
+  ## reported. Zero means no limit. Queries may set their own timeout.
+  # timeout = "0s"
+
   # Define the toml config where the sql queries are stored
   # The script option can be used to specify the .sql file path.
   # If script and sqlquery options specified at same time, sqlquery will be used
@@ -80,6 +86,10 @@ to use them.
   # 9.6.2 -> 906
   # 15.2 -> 1500
   #
+  # The timeout field limits the runtime of this query. When it is exceeded,
+  # the query is cancelled and an error is reported; the other queries still
+  # run.
+  #
   # Structure :
   # [[inputs.postgresql_extensible.query]]
   #   measurement string
@@ -89,11 +99,13 @@ to use them.
   #   withdbname boolean
   #   tagvalue string (coma separated)
   #   timestamp string
+  #   timeout duration
   [[inputs.postgresql_extensible.query]]
     measurement="pg_stat_database"
     sqlquery="SELECT * FROM pg_stat_database WHERE datname"
     min_version=901
     tagvalue=""
+    # timeout="0s"
   [[inputs.postgresql_extensible.query]]
     script="your_sql-filepath.sql"
     min_version=901
@@ -293,6 +305,12 @@ CREATE OR REPLACE VIEW public.sessions AS
     stat_activity stat
   WHERE proc.pid = stat.pid;
 ```
+
+## Timeouts
+
+The plugin-level `timeout` limits a complete collection cycle. Each query
+is run with its own `timeout` if set, or the remaining time of the cycle
+otherwise. The default of zero means no limit.
 
 ## Example Output
 
