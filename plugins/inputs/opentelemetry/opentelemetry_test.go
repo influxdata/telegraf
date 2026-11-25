@@ -415,11 +415,18 @@ func TestMalformedProfileExportDoesntPanic(t *testing.T) {
 	}
 }
 
-// profileRequest creates a valid profile request with all dictionary references
-// resolvable and applies the given modification(s) to break a single reference
 func TestClientCertTagsInvalid(t *testing.T) {
 	plugin := &OpenTelemetry{ClientCertTags: []string{"cn", "foo"}}
 	require.ErrorContains(t, plugin.Init(), `invalid certificate attribute "foo"`)
+}
+
+func TestClientCertTagsRequireMutualTLS(t *testing.T) {
+	plugin := &OpenTelemetry{ClientCertTags: []string{"cn"}}
+	require.ErrorContains(t, plugin.Init(), "requires 'tls_allowed_cacerts'")
+
+	plugin = &OpenTelemetry{ClientCertTags: []string{"cn"}}
+	plugin.TLSAllowedCACerts = []string{"/etc/telegraf/clientca.pem"}
+	require.NoError(t, plugin.Init())
 }
 
 func TestClientCertTags(t *testing.T) {
@@ -482,18 +489,27 @@ func TestClientCertTags(t *testing.T) {
 }
 
 func TestClientCertTagsOverrideAttributes(t *testing.T) {
+	// The certificate only provides the common name
 	cert := &x509.Certificate{Subject: pkix.Name{CommonName: "client-1"}}
 	var acc testutil.Accumulator
-	w := &writeToAccumulator{accumulator: &acc, clientCertTags: []string{"cn"}}
+	w := &writeToAccumulator{accumulator: &acc, clientCertTags: []string{"cn", "org", "email"}}
 
-	// The tag derived from the certificate wins over the one sent by the client
-	sent := map[string]string{"tls_client_cn": "spoofed", "other": "x"}
+	// The tag derived from the certificate wins over the one sent by the
+	// client and attributes not provided by the certificate are dropped
+	sent := map[string]string{
+		"tls_client_cn":    "spoofed",
+		"tls_client_org":   "spoofed-org",
+		"tls_client_email": "spoofed@example.org",
+		"tls_client_dns":   "not-requested.example.org",
+		"other":            "x",
+	}
 	require.NoError(t, w.EnqueuePoint(
 		peerContext(cert), "test", sent,
 		map[string]any{"value": 1}, time.Unix(0, 0), 0,
 	))
 	// The tags of the sender must not be modified
-	require.Equal(t, map[string]string{"tls_client_cn": "spoofed", "other": "x"}, sent)
+	require.Len(t, sent, 5)
+	require.Equal(t, "spoofed-org", sent["tls_client_org"])
 
 	// Also works if the sender did not provide any tags
 	require.NoError(t, w.EnqueuePoint(
@@ -503,8 +519,46 @@ func TestClientCertTagsOverrideAttributes(t *testing.T) {
 
 	metrics := acc.GetTelegrafMetrics()
 	require.Len(t, metrics, 2)
-	require.Equal(t, map[string]string{"tls_client_cn": "client-1", "other": "x"}, metrics[0].Tags())
+	require.Equal(t, map[string]string{
+		"tls_client_cn":  "client-1",
+		"tls_client_dns": "not-requested.example.org",
+		"other":          "x",
+	}, metrics[0].Tags())
 	require.Equal(t, map[string]string{"tls_client_cn": "client-1"}, metrics[1].Tags())
+}
+
+func TestClientCertTagsOverrideProfileAttributes(t *testing.T) {
+	// The certificate only provides the common name
+	cert := &x509.Certificate{Subject: pkix.Name{CommonName: "client-1"}}
+
+	var acc testutil.Accumulator
+	service, err := newProfileService(&acc, &testutil.Logger{Quiet: true}, []string{"tls_client_*", "other"})
+	require.NoError(t, err)
+	service.clientCertTags = []string{"cn", "org"}
+
+	attribute := func(key, value string) *common.KeyValue {
+		return &common.KeyValue{Key: key, Value: &common.AnyValue{Value: &common.AnyValue_StringValue{StringValue: value}}}
+	}
+	req := profileRequest(func(r *otlpprofiles.ExportProfilesServiceRequest) {
+		r.ResourceProfiles[0].Resource = &resource.Resource{Attributes: []*common.KeyValue{
+			attribute("tls_client_cn", "spoofed"),
+			attribute("tls_client_org", "spoofed-org"),
+			attribute("tls_client_dns", "not-requested.example.org"),
+			attribute("other", "x"),
+		}}
+	})
+	_, err = service.Export(peerContext(cert), req)
+	require.NoError(t, err)
+
+	metrics := acc.GetTelegrafMetrics()
+	require.NotEmpty(t, metrics)
+	for _, m := range metrics {
+		tags := m.Tags()
+		require.Equal(t, "client-1", tags["tls_client_cn"])
+		require.NotContains(t, tags, "tls_client_org")
+		require.Equal(t, "not-requested.example.org", tags["tls_client_dns"])
+		require.Equal(t, "x", tags["other"])
+	}
 }
 
 func TestClientCertTagsMTLS(t *testing.T) {
@@ -561,6 +615,8 @@ func TestClientCertTagsMTLS(t *testing.T) {
 	require.Equal(t, "Telegraf Test CA", tags["tls_client_issuer"])
 }
 
+// profileRequest creates a valid profile request with all dictionary references
+// resolvable and applies the given modification(s) to break a single reference
 func profileRequest(modify ...func(*otlpprofiles.ExportProfilesServiceRequest)) *otlpprofiles.ExportProfilesServiceRequest {
 	req := &otlpprofiles.ExportProfilesServiceRequest{
 		ResourceProfiles: []*profiles.ResourceProfiles{

@@ -75,6 +75,8 @@ func (s *profileService) Export(ctx context.Context, req *service.ExportProfiles
 
 		// Tags derived from the client certificate take precedence over
 		// attributes of the same name as those are controlled by the sender.
+		// Attributes the certificate does not provide must not be settable by
+		// the sender either, so remove all potential certificate tags.
 		certTags := clientCertTags(ctx, s.clientCertTags)
 
 		// Extract the requested attributes that should be added as tags
@@ -84,6 +86,7 @@ func (s *profileService) Export(ctx context.Context, req *service.ExportProfiles
 				attrtags[attr.Key] = attr.GetValue().GetStringValue()
 			}
 		}
+		removeClientCertTags(attrtags, s.clientCertTags)
 
 		for _, sp := range rp.GetScopeProfiles() {
 			if sp == nil {

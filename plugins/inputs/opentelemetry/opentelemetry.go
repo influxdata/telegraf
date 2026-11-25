@@ -4,6 +4,7 @@ package opentelemetry
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"net"
 	"sync"
@@ -26,6 +27,8 @@ import (
 
 //go:embed sample.conf
 var sampleConfig string
+
+const clientCertTagPrefix = "tls_client_"
 
 type OpenTelemetry struct {
 	ServiceAddress      string          `toml:"service_address"`
@@ -64,6 +67,9 @@ func (o *OpenTelemetry) Init() error {
 	// Validate the requested certificate attributes
 	if err := tls.ValidateTagNames(o.ClientCertTags); err != nil {
 		return fmt.Errorf("invalid client certificate tags: %w", err)
+	}
+	if len(o.ClientCertTags) > 0 && len(o.TLSAllowedCACerts) == 0 {
+		return errors.New("'tls_client_certificate_tags' requires 'tls_allowed_cacerts' to be set as client certificates are only requested for mutual TLS")
 	}
 
 	return nil
@@ -157,7 +163,17 @@ func clientCertTags(ctx context.Context, names []string) map[string]string {
 	if !ok || len(info.State.PeerCertificates) == 0 {
 		return nil
 	}
-	return tls.CertificateTags(info.State.PeerCertificates[0], names, "tls_client_")
+	return tls.CertificateTags(info.State.PeerCertificates[0], names, clientCertTagPrefix)
+}
+
+// removeClientCertTags removes all tags the plugin might derive from the client
+// certificate for the given names. This must be done for all names, not only
+// the ones with a value in the certificate, to prevent the sender from
+// providing the tags itself.
+func removeClientCertTags(tags map[string]string, names []string) {
+	for _, name := range names {
+		delete(tags, clientCertTagPrefix+name)
+	}
 }
 
 func init() {

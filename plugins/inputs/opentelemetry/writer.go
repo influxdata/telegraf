@@ -37,12 +37,15 @@ func (w *writeToAccumulator) EnqueuePoint(
 	vType common.InfluxMetricValueType,
 ) error {
 	// Tags derived from the certificate take precedence over attributes with
-	// the same name as those are controlled by the sender.
+	// the same name as those are controlled by the sender. Attributes that
+	// the certificate does not provide must not be settable by the sender
+	// either, so remove all potential certificate tags first.
 	mergedTags := tags
-	if certTags := clientCertTags(ctx, w.clientCertTags); len(certTags) > 0 {
-		mergedTags = make(map[string]string, len(tags)+len(certTags))
+	if len(w.clientCertTags) > 0 {
+		mergedTags = make(map[string]string, len(tags)+len(w.clientCertTags))
 		maps.Copy(mergedTags, tags)
-		maps.Copy(mergedTags, certTags)
+		removeClientCertTags(mergedTags, w.clientCertTags)
+		maps.Copy(mergedTags, clientCertTags(ctx, w.clientCertTags))
 	}
 
 	switch vType {
