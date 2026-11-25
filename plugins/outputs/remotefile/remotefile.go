@@ -137,6 +137,7 @@ func (f *File) Connect() error {
 	}
 
 	// Setup the remote virtual filesystem
+	f.Log.Debugf("Parsed remote path %q", parsed.Path)
 	ctx, cancel := context.WithCancel(context.Background())
 	rootfs, err := info.NewFs(ctx, parsed.Name, parsed.Path, fs.ConfigMap(info.Prefix, info.Options, parsed.Name, parsed.Config))
 	if err != nil {
@@ -151,9 +152,8 @@ func (f *File) Connect() error {
 		return err
 	}
 	total, used, free := f.root.Statfs()
-	f.Log.Debugf("Connected to %s at path %q with %s total, %s used and %s free!",
+	f.Log.Debugf("Connected to %s with %s total, %s used and %s free!",
 		f.root.Fs().String(),
-		parsed.Path,
 		humanize.Bytes(uint64(total)),
 		humanize.Bytes(uint64(used)),
 		humanize.Bytes(uint64(free)),
