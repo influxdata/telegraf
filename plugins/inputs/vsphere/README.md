@@ -987,7 +987,10 @@ For example :
   resource_pool_property_include = ["overallStatus"]
 ```
 
-All that tag will be added to "internal" metric that always contain "1".
+The <entity>_property_include settings allow to collect additional properties of the configured
+entity into an additional _properties metric. The properties are added as fields with the
+tag-set being identical to the one of the entity metrics.
+
 It is recommended to use it with `processors.enum` to convert as numeric fields.
 
 For example :
