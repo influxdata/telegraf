@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	_ "embed"
 	"fmt"
 	"io"
@@ -14,58 +15,31 @@ import (
 	"github.com/influxdata/telegraf/cmd/telegraf/commands"
 )
 
-//go:embed reference.md.tmpl
+//go:embed COMMANDS_AND_FLAGS.tmpl
 var reference string
 
 type section struct {
-	Path    string
-	Level   int
-	Command *cli.Command
+	Path      string
+	Level     int
+	Usage     string
+	ArgsUsage string
+	Flags     string
 }
 
-func sections(commands []*cli.Command) []section {
+func sections(parent string, level int, commands []*cli.Command) []section {
 	var result []section
-	var walk func(string, int, []*cli.Command)
-	walk = func(parent string, level int, items []*cli.Command) {
-		for _, command := range items {
-			path := parent + " " + command.Name
-			result = append(result, section{Path: path, Level: level, Command: command})
-			walk(path, level+1, command.VisibleCommands())
-		}
+	for _, command := range commands {
+		path := parent + " " + command.Name
+		result = append(result, section{
+			Path:      path,
+			Level:     level,
+			Usage:     command.Usage,
+			ArgsUsage: command.ArgsUsage,
+			Flags:     formatFlags(command.VisibleFlags()),
+		})
+		result = append(result, sections(path, level+1, command.VisibleCommands())...)
 	}
-	walk("telegraf", 2, commands)
 	return result
-}
-
-func writeCLIReference(w io.Writer) error {
-	tmpl, err := template.New("reference").Funcs(template.FuncMap{
-		"flags":    formatFlags,
-		"repeat":   strings.Repeat,
-		"sections": sections,
-	}).Parse(reference)
-	if err != nil {
-		return err
-	}
-	return tmpl.Execute(w, commands.AvailableCommands())
-}
-
-func generateCLIReference(path string) error {
-	var output strings.Builder
-	if err := writeCLIReference(&output); err != nil {
-		return err
-	}
-	return os.WriteFile(path, []byte(output.String()), 0o644)
-}
-
-func main() {
-	if len(os.Args) != 2 {
-		fmt.Fprintf(os.Stderr, "Usage: %s <output-path>\n", filepath.Base(os.Args[0]))
-		os.Exit(1)
-	}
-	if err := generateCLIReference(os.Args[1]); err != nil {
-		fmt.Fprintf(os.Stderr, "generate CLI reference %q: %v\n", os.Args[1], err)
-		os.Exit(1)
-	}
 }
 
 func formatFlags(flags []cli.Flag) string {
@@ -100,4 +74,36 @@ func formatFlags(flags []cli.Flag) string {
 		doc.WriteString(line + "\n")
 	}
 	return doc.String()
+}
+
+func writeCLIReference(w io.Writer) error {
+	root := commands.AvailableCommands()
+	data := struct {
+		GlobalFlags string
+		Sections    []section
+	}{
+		GlobalFlags: formatFlags(root.VisibleFlags()),
+		Sections:    sections(root.Name, 2, root.VisibleCommands()),
+	}
+	tmpl, err := template.New("reference").Funcs(template.FuncMap{"repeat": strings.Repeat}).Parse(reference)
+	if err != nil {
+		return err
+	}
+	return tmpl.Execute(w, data)
+}
+
+func main() {
+	if len(os.Args) != 2 {
+		fmt.Fprintf(os.Stderr, "Usage: %s <output-path>\n", filepath.Base(os.Args[0]))
+		os.Exit(1)
+	}
+	var output bytes.Buffer
+	if err := writeCLIReference(&output); err != nil {
+		fmt.Fprintf(os.Stderr, "generate CLI reference: %v\n", err)
+		os.Exit(1)
+	}
+	if err := os.WriteFile(os.Args[1], output.Bytes(), 0o644); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 }

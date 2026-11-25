@@ -1,24 +1,42 @@
 package commands
 
-import "github.com/urfave/cli/v2"
+import (
+	"errors"
+	"fmt"
+	"os"
+	"sort"
 
-type SecretStoreActions struct {
-	List   cli.ActionFunc
-	Get    cli.ActionFunc
-	Set    cli.ActionFunc
-	Remove cli.ActionFunc
+	"github.com/awnumar/memguard"
+	"github.com/urfave/cli/v2"
+	"golang.org/x/term"
+
+	"github.com/influxdata/telegraf"
+)
+
+// SecretStores provides access to the stores in the active configuration.
+type SecretStores interface {
+	ListSecretStores() ([]string, error)
+	GetSecretStore(string) (telegraf.SecretStore, error)
 }
 
-func secretstoreCommands(actions SecretStoreActions) []*cli.Command {
-	return []*cli.Command{
-		{
-			Name:  "secrets",
-			Usage: "commands for listing, adding and removing secrets on all known secret stores",
-			Subcommands: []*cli.Command{
-				{
-					Name:  "list",
-					Usage: "list known secrets and secret stores",
-					Description: `
+func secretListFlags() []cli.Flag {
+	return []cli.Flag{
+		&cli.BoolFlag{
+			Name:  "reveal-secret",
+			Usage: "also print the secret value",
+		},
+	}
+}
+
+func secretstoreCommand(openStores func(*cli.Context) SecretStores) *cli.Command {
+	return &cli.Command{
+		Name:  "secrets",
+		Usage: "commands for listing, adding and removing secrets on all known secret stores",
+		Subcommands: []*cli.Command{
+			{
+				Name:  "list",
+				Usage: "list known secrets and secret stores",
+				Description: `
 The 'list' command requires passing in your configuration file
 containing the secret store definitions you want to access. To get a
 list of available secret store plugins, please have a look at
@@ -40,19 +58,56 @@ To get the keys of all known secrets in a particular store, you can run
 To also reveal the actual secret, i.e. the value, you can pass the
 '--reveal-secret' flag.
 `,
-					ArgsUsage: "[secret store ID]...[secret store ID]",
-					Flags: []cli.Flag{
-						&cli.BoolFlag{
-							Name:  "reveal-secret",
-							Usage: "also print the secret value",
-						},
-					},
-					Action: actions.List,
+				ArgsUsage: "[secret store ID]...[secret store ID]",
+				Flags:     secretListFlags(),
+				Action: func(cCtx *cli.Context) error {
+					stores := openStores(cCtx)
+
+					args := cCtx.Args()
+					var storeIDs []string
+					if args.Present() {
+						storeIDs = args.Slice()
+					} else {
+						ids, err := stores.ListSecretStores()
+						if err != nil {
+							return fmt.Errorf("unable to determine secret store IDs: %w", err)
+						}
+						storeIDs = ids
+					}
+					sort.Strings(storeIDs)
+
+					reveal := cCtx.Bool("reveal-secret")
+					for _, storeID := range storeIDs {
+						store, err := stores.GetSecretStore(storeID)
+						if err != nil {
+							return fmt.Errorf("unable to get secret store %q: %w", storeID, err)
+						}
+						keys, err := store.List()
+						if err != nil {
+							return fmt.Errorf("unable to get secrets from store %q: %w", storeID, err)
+						}
+						sort.Strings(keys)
+
+						fmt.Printf("Known secrets for store %q:\n", storeID)
+						for _, k := range keys {
+							var v []byte
+							if reveal {
+								if v, err = store.Get(k); err != nil {
+									return fmt.Errorf("unable to get value of secret %q from store %q: %w", k, storeID, err)
+								}
+							}
+							fmt.Printf("    %-30s  %s\n", k, string(v))
+							memguard.WipeBytes(v)
+						}
+					}
+
+					return nil
 				},
-				{
-					Name:  "get",
-					Usage: "retrieves value of given secret from given store",
-					Description: `
+			},
+			{
+				Name:  "get",
+				Usage: "retrieves value of given secret from given store",
+				Description: `
 The 'get' command requires passing in your configuration file
 containing the secret store definitions you want to access. To get a
 list of available secret store plugins, please have a look at
@@ -72,13 +127,35 @@ available stores
 This will fetch the secret with the key 'mysecretkey' from the secret store
 with the ID 'mystore'.
 `,
-					ArgsUsage: "<secret store ID> <secret key>",
-					Action:    actions.Get,
+				ArgsUsage: "<secret store ID> <secret key>",
+				Action: func(cCtx *cli.Context) error {
+					stores := openStores(cCtx)
+
+					args := cCtx.Args()
+					if !args.Present() || args.Len() != 2 {
+						return errors.New("invalid number of arguments")
+					}
+
+					storeID := args.First()
+					key := args.Get(1)
+
+					store, err := stores.GetSecretStore(storeID)
+					if err != nil {
+						return fmt.Errorf("unable to get secret store: %w", err)
+					}
+					value, err := store.Get(key)
+					if err != nil {
+						return fmt.Errorf("unable to get secret: %w", err)
+					}
+					fmt.Printf("%s:%s = %s\n", storeID, key, value)
+
+					return nil
 				},
-				{
-					Name:  "set",
-					Usage: "create or modify a secret in the given store",
-					Description: `
+			},
+			{
+				Name:  "set",
+				Usage: "create or modify a secret in the given store",
+				Description: `
 The 'set' command requires passing in your configuration file
 containing the secret store definitions you want to access. To get a
 list of available secret store plugins, please have a look at
@@ -104,13 +181,49 @@ When you leave out the value of the secret like
 
 you will be prompted to enter the value of the secret.
 `,
-					ArgsUsage: "<secret store ID> <secret key>",
-					Action:    actions.Set,
+				ArgsUsage: "<secret store ID> <secret key>",
+				Action: func(cCtx *cli.Context) error {
+					stores := openStores(cCtx)
+
+					args := cCtx.Args()
+					if !args.Present() || args.Len() < 2 {
+						return errors.New("invalid number of arguments")
+					}
+
+					storeID := args.First()
+					key := args.Get(1)
+					value := args.Get(2)
+
+					store, err := stores.GetSecretStore(storeID)
+					if err != nil {
+						return fmt.Errorf("unable to get secret store: %w", err)
+					}
+					editor, ok := store.(telegraf.SecretStoreEditor)
+					if !ok {
+						return fmt.Errorf("secret store %q does not support setting secrets", storeID)
+					}
+
+					if value == "" {
+						fmt.Printf("Enter secret value: ")
+						b, err := term.ReadPassword(int(os.Stdin.Fd()))
+						if err != nil {
+							return err
+						}
+						fmt.Println()
+						value = string(b)
+					}
+
+					if err := editor.Set(key, value); err != nil {
+						return fmt.Errorf("unable to set secret: %w", err)
+					}
+
+					return nil
 				},
-				{
-					Name:  "remove",
-					Usage: "remove a secret from the given store",
-					Description: `
+			},
+			{
+				Name:  "remove",
+				Usage: "remove a secret from the given store",
+				Description: `
 The 'remove' command requires passing in your configuration file
 containing the secret store definitions you want to access. To get a
 list of available secret store plugins, please have a look at
@@ -129,8 +242,32 @@ This will remove the secret with the key 'mysecretkey' from the secret
 store with the ID 'mystore'. Removing a key that does not exist in that
 store results in an error.
 `,
-					ArgsUsage: "<secret store ID> <secret key>",
-					Action:    actions.Remove,
+				ArgsUsage: "<secret store ID> <secret key>",
+				Action: func(cCtx *cli.Context) error {
+					stores := openStores(cCtx)
+
+					args := cCtx.Args()
+					if !args.Present() || args.Len() != 2 {
+						return errors.New("invalid number of arguments")
+					}
+
+					storeID := args.First()
+					key := args.Get(1)
+
+					store, err := stores.GetSecretStore(storeID)
+					if err != nil {
+						return fmt.Errorf("unable to get secret store: %w", err)
+					}
+					editor, ok := store.(telegraf.SecretStoreEditor)
+					if !ok {
+						return fmt.Errorf("secret store %q does not support removing secrets", storeID)
+					}
+
+					if err := editor.Remove(key); err != nil {
+						return fmt.Errorf("unable to remove secret: %w", err)
+					}
+
+					return nil
 				},
 			},
 		},

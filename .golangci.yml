@@ -500,7 +500,7 @@ linters:
     # Excluding configuration per-path, per-linter, per-text and per-source.
     rules:
       # errcheck
-      - path: cmd/telegraf/(main|printer|cmd_plugins).go
+      - path: cmd/telegraf/(main|printer).go
         text: "Error return value of `outputBuffer.Write` is not checked"
 
       - path: plugins/inputs/win_perf_counters/pdh.go

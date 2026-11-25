@@ -238,18 +238,37 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 		return m.Run()
 	}
 
-	app := commands.NewApp(runtime.GOOS, commands.Actions{
-		Root: action,
-		Version: func(*cli.Context) error {
-			fmt.Fprintln(outputBuffer, internal.FormatFullVersion())
-			return nil
-		},
-		Config:  getConfigActions(outputBuffer),
-		Plugins: getPluginActions(outputBuffer),
-		Secrets: getSecretStoreActions(m),
-		Service: getServiceActions(outputBuffer),
-	})
-	app.Writer = outputBuffer
+	printConfig := func(ctx *cli.Context) error {
+		printSampleConfig(outputBuffer, processFilterFlags(ctx))
+		return nil
+	}
+	openStores := func(ctx *cli.Context) commands.SecretStores {
+		filters := Filters{
+			section:     []string{"inputs", "outputs", "processors", "aggregators"},
+			input:       []string{"-"},
+			output:      []string{"-"},
+			processor:   []string{"-"},
+			aggregator:  []string{"-"},
+			secretstore: processFilterFlags(ctx).secretstore,
+		}
+		g := GlobalFlags{
+			config:     ctx.StringSlice("config"),
+			configDir:  ctx.StringSlice("config-directory"),
+			plugindDir: ctx.String("plugin-directory"),
+			password:   ctx.String("password"),
+			debug:      ctx.Bool("debug"),
+		}
+		m.Init(nil, filters, g, WindowFlags{})
+		return m
+	}
+	app := &cli.App{
+		Name:     "Telegraf",
+		Usage:    "The plugin-driven server agent for collecting & reporting metrics.",
+		Writer:   outputBuffer,
+		Flags:    commands.RootFlags(runtime.GOOS),
+		Commands: commands.Subcommands(runtime.GOOS, printConfig, openStores),
+		Action:   action,
+	}
 	// Make sure we safely erase secrets
 	defer memguard.Purge()
 	defer logger.CloseLogging()

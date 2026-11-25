@@ -2,7 +2,7 @@ package commands
 
 import "github.com/urfave/cli/v2"
 
-type ServiceActions struct {
+type serviceActions struct {
 	Install   cli.ActionFunc
 	Uninstall cli.ActionFunc
 	Start     cli.ActionFunc
@@ -42,17 +42,35 @@ func windowsServiceFlags() []cli.Flag {
 	}
 }
 
-func windowsServiceCommands(actions ServiceActions) []*cli.Command {
-	return []*cli.Command{
-		{
-			Name:  "service",
-			Usage: "commands for operate on the Windows service",
-			Flags: nil,
-			Subcommands: []*cli.Command{
-				{
-					Name:  "install",
-					Usage: "install Telegraf as a Windows service",
-					Description: `
+func serviceInstallFlags() []cli.Flag {
+	return []cli.Flag{
+		&cli.StringFlag{
+			Name:  "display-name",
+			Value: "Telegraf Data Collector Service",
+			Usage: "service name as displayed in the service manager",
+		},
+		&cli.StringFlag{
+			Name:  "restart-delay",
+			Value: "5m",
+			Usage: "duration for delaying the service restart on failure",
+		},
+		&cli.BoolFlag{
+			Name:  "auto-restart",
+			Usage: "enable automatic service restart on failure",
+		},
+	}
+}
+
+func serviceCommand() *cli.Command {
+	actions := getServiceActions()
+	return &cli.Command{
+		Name:  "service",
+		Usage: "commands for operate on the Windows service",
+		Subcommands: []*cli.Command{
+			{
+				Name:  "install",
+				Usage: "install Telegraf as a Windows service",
+				Description: `
 The 'install' command with create a Windows service for automatically starting
 Telegraf with the specified configuration and service parameters. If no
 configuration(s) is specified the service will use the file in
@@ -69,28 +87,13 @@ services with different configurations use
 > telegraf --config "C:\Program Files\Telegraf\telegraf-machine.conf" --service-name telegraf-machine service install
 > telegraf --config "C:\Program Files\Telegraf\telegraf-service.conf" --service-name telegraf-service service install
 `,
-					Flags: []cli.Flag{
-						&cli.StringFlag{
-							Name:  "display-name",
-							Value: "Telegraf Data Collector Service",
-							Usage: "service name as displayed in the service manager",
-						},
-						&cli.StringFlag{
-							Name:  "restart-delay",
-							Value: "5m",
-							Usage: "duration for delaying the service restart on failure",
-						},
-						&cli.BoolFlag{
-							Name:  "auto-restart",
-							Usage: "enable automatic service restart on failure",
-						},
-					},
-					Action: actions.Install,
-				},
-				{
-					Name:  "uninstall",
-					Usage: "remove the Telegraf Windows service",
-					Description: `
+				Flags:  serviceInstallFlags(),
+				Action: actions.Install,
+			},
+			{
+				Name:  "uninstall",
+				Usage: "remove the Telegraf Windows service",
+				Description: `
 The 'uninstall' command removes the Telegraf service with the given name. To
 remove a service use
 
@@ -100,12 +103,12 @@ In case you specified a custom service-name during install use
 
 > telegraf --service-name telegraf-machine service uninstall
 `,
-					Action: actions.Uninstall,
-				},
-				{
-					Name:  "start",
-					Usage: "start the Telegraf Windows service",
-					Description: `
+				Action: actions.Uninstall,
+			},
+			{
+				Name:  "start",
+				Usage: "start the Telegraf Windows service",
+				Description: `
 The 'start' command triggers the start of the Windows service with the given
 name. To start the service either use the Windows service manager or run
 
@@ -115,12 +118,12 @@ In case you specified a custom service-name during install use
 
 > telegraf --service-name telegraf-machine service start
 `,
-					Action: actions.Start,
-				},
-				{
-					Name:  "stop",
-					Usage: "stop the Telegraf Windows service",
-					Description: `
+				Action: actions.Start,
+			},
+			{
+				Name:  "stop",
+				Usage: "stop the Telegraf Windows service",
+				Description: `
 The 'stop' command triggers the stop of the Windows service with the given
 name and will wait until the service is actually stopped. To stop the service
 either use the Windows service manager or run
@@ -131,12 +134,12 @@ In case you specified a custom service-name during install use
 
 > telegraf --service-name telegraf-machine service stop
 `,
-					Action: actions.Stop,
-				},
-				{
-					Name:  "status",
-					Usage: "query the Telegraf Windows service status",
-					Description: `
+				Action: actions.Stop,
+			},
+			{
+				Name:  "status",
+				Usage: "query the Telegraf Windows service status",
+				Description: `
 The 'status' command queries the current state of the Windows service with the
 given name. To query the service either check the Windows service manager or run
 
@@ -146,8 +149,7 @@ In case you specified a custom service-name during install use
 
 > telegraf --service-name telegraf-machine service status
 `,
-					Action: actions.Status,
-				},
+				Action: actions.Status,
 			},
 		},
 	}

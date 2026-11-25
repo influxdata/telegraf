@@ -125,10 +125,9 @@ config:
 	$(HOSTGO) run ./cmd/telegraf config > etc/telegraf.conf
 
 .PHONY: docs
-docs: build_tools embed_readme_common embed_readme_inputs embed_readme_outputs embed_readme_processors embed_readme_aggregators embed_readme_secretstores docs-cli
+docs: build_tools embed_readme_common embed_readme_inputs embed_readme_outputs embed_readme_processors embed_readme_aggregators embed_readme_secretstores cli_flags
 
-.PHONY: docs-cli
-docs-cli: build_tools
+cli_flags: build_tools
 	./tools/cli_flags/cli_flags$(EXEEXT) docs/COMMANDS_AND_FLAGS.md
 
 .PHONY: build

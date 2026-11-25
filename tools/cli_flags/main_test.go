@@ -17,5 +17,5 @@ func TestCLIReference(t *testing.T) {
 
 	reference, err := os.ReadFile("../../docs/COMMANDS_AND_FLAGS.md")
 	require.NoError(t, err)
-	require.Equal(t, string(reference), output.String(), "run make docs-cli to update the reference")
+	require.Equal(t, string(reference), output.String(), "run make cli_flags to update the reference")
 }

@@ -11,10 +11,10 @@ Pass `--help` or `-h` after any command to see its usage.
 The service command and service-related flags are Windows only.
 
 ## Global options
-{{ flags .VisibleFlags }}{{ range sections .VisibleCommands }}
+{{ .GlobalFlags }}{{ range .Sections }}
 {{ repeat "#" .Level }} {{ .Path }}
 
-{{ .Command.Usage }}
-{{ if .Command.ArgsUsage }}
-`{{ .Path }} {{ .Command.ArgsUsage }}`
-{{ end }}{{ flags .Command.VisibleFlags }}{{ end -}}
+{{ .Usage }}
+{{ if .ArgsUsage }}
+`{{ .Path }} {{ .ArgsUsage }}`
+{{ end }}{{ .Flags }}{{ end -}}
