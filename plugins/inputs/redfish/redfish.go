@@ -15,7 +15,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -147,10 +146,7 @@ func (r *Redfish) Start(_ telegraf.Accumulator) error {
 	}
 	c, err := gofish.Connect(gofishConfig)
 	if err != nil {
-		return &internal.StartupError{
-			Err:   fmt.Errorf("connecting to %q failed: %w", r.Address, err),
-			Retry: true,
-		}
+		return fmt.Errorf("connecting to %q failed: %w", r.Address, err)
 	}
 
 	// Retrieve the service root

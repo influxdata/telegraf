@@ -14,7 +14,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
@@ -1007,12 +1006,7 @@ func TestParseErrorIncludesContext(t *testing.T) {
 	require.NoError(t, plugin.Init())
 
 	var acc testutil.Accumulator
-	err := plugin.Start(&acc)
-
-	var serr *internal.StartupError
-	require.ErrorAs(t, err, &serr)
-	require.True(t, serr.Retry)
-	require.ErrorContains(t, err, fmt.Sprintf("connecting to %q failed", ts.URL))
+	require.ErrorContains(t, plugin.Start(&acc), fmt.Sprintf("connecting to %q failed", ts.URL))
 }
 
 func TestUnknownComputerSystemID(t *testing.T) {
