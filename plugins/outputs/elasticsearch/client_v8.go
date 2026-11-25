@@ -32,12 +32,17 @@ func (a *Elasticsearch) newClientV8() (client, error) {
 		Transport:             roundTripper{httpClient: a.httpClient},
 		DisableRetry:          true,
 		CompressRequestBody:   a.EnableGzip,
-		DiscoverNodesOnStart:  a.EnableSniffer,
 		DiscoverNodesInterval: discoveryInterval,
 		Interceptors:          []elastictransport.InterceptorFunc{a.authInterceptor()},
 	})
 	if err != nil {
 		return nil, err
+	}
+	if a.EnableSniffer {
+		// DiscoverNodesOnStart starts a goroutine that BaseClient.Close does not wait for.
+		if err := c.DiscoverNodes(); err != nil {
+			a.Log.Errorf("Discovering Elasticsearch nodes failed: %v", err)
+		}
 	}
 	return &clientV8{client: c, log: a.Log}, nil
 }
