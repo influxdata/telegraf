@@ -15,6 +15,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -137,22 +138,25 @@ func (r *Redfish) Start(_ telegraf.Accumulator) error {
 	password.Destroy()
 
 	gofishConfig := gofish.ClientConfig{
-		Endpoint:  r.Address,
-		Username:  user,
-		Password:  pass,
-		BasicAuth: true,
+		Endpoint:         r.Address,
+		Username:         user,
+		Password:         pass,
+		BasicAuth:        true,
+		HTTPClient:       &r.client,
+		ReuseConnections: true,
 	}
 	c, err := gofish.Connect(gofishConfig)
 	if err != nil {
-		return fmt.Errorf("error parsing input from %s. Response in text/html:%w",
-			r.Address+"/redfish/v1/Systems/"+r.ComputerSystemID,
-			err)
+		return &internal.StartupError{
+			Err:   fmt.Errorf("connecting to %q failed: %w", r.Address, err),
+			Retry: true,
+		}
 	}
 
 	// Retrieve the service root
 	r.gf = c.Service
 
-	return err
+	return nil
 }
 
 func (*Redfish) Stop() {}
@@ -198,9 +202,9 @@ func (r *Redfish) Gather(acc telegraf.Accumulator) error {
 				}
 			}
 		}
-		break
+		return nil
 	}
-	return nil
+	return fmt.Errorf("computer system %q not found", r.ComputerSystemID)
 }
 
 func setChassisTags(chassis *schemas.Chassis) map[string]string {

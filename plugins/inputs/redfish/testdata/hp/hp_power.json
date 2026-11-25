@@ -43,7 +43,6 @@
       "PowerConsumedWatts": 221,
       "PowerMetrics": {
         "AverageConsumedWatts": 221,
-        "IntervalInMin": 20,
         "MaxConsumedWatts": 252,
         "MinConsumedWatts": 220
       }

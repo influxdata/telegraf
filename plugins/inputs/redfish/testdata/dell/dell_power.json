@@ -63,7 +63,7 @@
       ],
       "InputRanges@odata.count": 1,
       "LastPowerOutputWatts": null,
-      "LineInputVoltage": 206,
+      "LineInputVoltage": 229.9,
       "LineInputVoltageType": "AC240V",
       "Manufacturer": "Dell",
       "MemberId": "PSU.Slot.1",

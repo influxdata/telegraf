@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
+	"strconv"
 
 	"github.com/stmcginnis/gofish/schemas"
 
@@ -51,15 +52,17 @@ func (r *Redfish) gatherPower(acc telegraf.Accumulator, system *schemas.Computer
 		}
 
 		fields := map[string]any{
-			"power_allocated_watts":  j.PowerAllocatedWatts,
-			"power_available_watts":  j.PowerAvailableWatts,
-			"power_capacity_watts":   j.PowerCapacityWatts,
-			"power_consumed_watts":   j.PowerConsumedWatts,
+			"power_allocated_watts":  toFloat64(j.PowerAllocatedWatts),
+			"power_available_watts":  toFloat64(j.PowerAvailableWatts),
+			"power_capacity_watts":   toFloat64(j.PowerCapacityWatts),
+			"power_consumed_watts":   toFloat64(j.PowerConsumedWatts),
 			"power_requested_watts":  j.PowerRequestedWatts,
-			"average_consumed_watts": j.PowerMetrics.AverageConsumedWatts,
-			"interval_in_min":        int64(*j.PowerMetrics.IntervalInMin),
-			"max_consumed_watts":     j.PowerMetrics.MaxConsumedWatts,
-			"min_consumed_watts":     j.PowerMetrics.MinConsumedWatts,
+			"average_consumed_watts": toFloat64(j.PowerMetrics.AverageConsumedWatts),
+			"max_consumed_watts":     toFloat64(j.PowerMetrics.MaxConsumedWatts),
+			"min_consumed_watts":     toFloat64(j.PowerMetrics.MinConsumedWatts),
+		}
+		if j.PowerMetrics.IntervalInMin != nil {
+			fields["interval_in_min"] = int64(*j.PowerMetrics.IntervalInMin)
 		}
 
 		acc.AddFields("redfish_power_powercontrol", fields, tags)
@@ -91,11 +94,11 @@ func (r *Redfish) gatherPower(acc telegraf.Accumulator, system *schemas.Computer
 		}
 
 		fields := make(map[string]any)
-		fields["power_input_watts"] = power.PowerSupplies[i].PowerInputWatts
-		fields["power_output_watts"] = power.PowerSupplies[i].PowerOutputWatts
-		fields["line_input_voltage"] = power.PowerSupplies[i].LineInputVoltage
-		fields["last_power_output_watts"] = power.PowerSupplies[i].LastPowerOutputWatts
-		fields["power_capacity_watts"] = power.PowerSupplies[i].PowerCapacityWatts
+		fields["power_input_watts"] = toFloat64(power.PowerSupplies[i].PowerInputWatts)
+		fields["power_output_watts"] = toFloat64(power.PowerSupplies[i].PowerOutputWatts)
+		fields["line_input_voltage"] = toFloat64(power.PowerSupplies[i].LineInputVoltage)
+		fields["last_power_output_watts"] = toFloat64(power.PowerSupplies[i].LastPowerOutputWatts)
+		fields["power_capacity_watts"] = toFloat64(power.PowerSupplies[i].PowerCapacityWatts)
 		acc.AddFields("redfish_power_powersupplies", fields, tags)
 	}
 
@@ -124,13 +127,26 @@ func (r *Redfish) gatherPower(acc telegraf.Accumulator, system *schemas.Computer
 		}
 
 		fields := make(map[string]any)
-		fields["reading_volts"] = j.ReadingVolts
-		fields["upper_threshold_critical"] = j.UpperThresholdCritical
-		fields["upper_threshold_fatal"] = j.UpperThresholdFatal
-		fields["lower_threshold_critical"] = j.LowerThresholdCritical
-		fields["lower_threshold_fatal"] = j.LowerThresholdFatal
+		fields["reading_volts"] = toFloat64(j.ReadingVolts)
+		fields["upper_threshold_critical"] = toFloat64(j.UpperThresholdCritical)
+		fields["upper_threshold_fatal"] = toFloat64(j.UpperThresholdFatal)
+		fields["lower_threshold_critical"] = toFloat64(j.LowerThresholdCritical)
+		fields["lower_threshold_fatal"] = toFloat64(j.LowerThresholdFatal)
 		acc.AddFields("redfish_power_voltages", fields, tags)
 	}
 
 	return nil
+}
+
+// gofish decodes the power values as float32, so convert them with float32
+// precision to get 229.9 instead of 229.89999389648438
+func toFloat64(v *float32) any {
+	if v == nil {
+		return nil
+	}
+	f, err := strconv.ParseFloat(strconv.FormatFloat(float64(*v), 'g', -1, 32), 64)
+	if err != nil {
+		return nil
+	}
+	return f
 }

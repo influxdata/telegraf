@@ -1,6 +1,7 @@
 package redfish
 
 import (
+	"fmt"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -13,7 +14,9 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -376,7 +379,7 @@ func TestDellApis(t *testing.T) {
 				"power_capacity_watts": 750.00,
 				"power_input_watts":    900.0,
 				"power_output_watts":   203.0,
-				"line_input_voltage":   206.00,
+				"line_input_voltage":   229.9,
 			},
 			time.Unix(0, 0),
 		),
@@ -567,7 +570,6 @@ func TestHPApis(t *testing.T) {
 			},
 			map[string]any{
 				"average_consumed_watts": 221.0,
-				"interval_in_min":        int64(20),
 				"max_consumed_watts":     252.0,
 				"min_consumed_watts":     220.0,
 				"power_capacity_watts":   1600.0,
@@ -1007,8 +1009,59 @@ func TestParseErrorIncludesContext(t *testing.T) {
 	var acc testutil.Accumulator
 	err := plugin.Start(&acc)
 
-	require.ErrorContains(t, err, ts.URL+"/redfish/v1/Systems/System.Embedded.1")
-	require.ErrorContains(t, err, "text/html")
+	var serr *internal.StartupError
+	require.ErrorAs(t, err, &serr)
+	require.True(t, serr.Retry)
+	require.ErrorContains(t, err, fmt.Sprintf("connecting to %q failed", ts.URL))
+}
+
+func TestUnknownComputerSystemID(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/redfish/v1/":
+			http.ServeFile(w, r, "testdata/base.json")
+		case "/redfish/v1/Systems/":
+			http.ServeFile(w, r, "testdata/dell/dell_available_systems.json")
+		case "/redfish/v1/Systems/System.Embedded.1":
+			http.ServeFile(w, r, "testdata/dell/dell_systems.json")
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer ts.Close()
+
+	plugin := &Redfish{
+		Address:          ts.URL,
+		Username:         config.NewSecret([]byte("test")),
+		Password:         config.NewSecret([]byte("test")),
+		ComputerSystemID: "System.Embedded.2",
+		IncludeMetrics:   []string{"thermal", "power"},
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	require.ErrorContains(t, plugin.Gather(&acc), `computer system "System.Embedded.2" not found`)
+}
+
+func TestTLSConfigIsUsed(t *testing.T) {
+	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "testdata/base.json")
+	}))
+	defer ts.Close()
+
+	plugin := &Redfish{
+		Address:          ts.URL,
+		Username:         config.NewSecret([]byte("test")),
+		Password:         config.NewSecret([]byte("test")),
+		ComputerSystemID: "System.Embedded.1",
+		IncludeMetrics:   []string{"thermal", "power"},
+		ClientConfig:     tls.ClientConfig{InsecureSkipVerify: true},
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
 }
 
 func TestSkipChassisWithoutThermalAndPowerReference(t *testing.T) {
@@ -1269,7 +1322,6 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 			},
 			map[string]any{
 				"average_consumed_watts": 221.0,
-				"interval_in_min":        int64(20),
 				"max_consumed_watts":     252.0,
 				"min_consumed_watts":     220.0,
 				"power_capacity_watts":   1600.0,
