@@ -6,10 +6,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/plugins/common/postgresql"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -293,6 +295,64 @@ func TestAccRow(t *testing.T) {
 		require.Equal(t, tt.server, metric.Tags["server"])
 		acc.ClearMetrics()
 	}
+}
+
+func TestGatherVersionGatedQueries(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	mock.ExpectQuery("server_version_num").WillReturnRows(sqlmock.NewRows([]string{"version"}).AddRow(1700))
+	mock.ExpectQuery("SELECT 'new'").WillReturnRows(sqlmock.NewRows([]string{"which"}).AddRow("new"))
+	mock.ExpectQuery("SELECT 'any'").WillReturnRows(sqlmock.NewRows([]string{"which"}).AddRow("any"))
+
+	p := Postgresql{
+		Log:     testutil.Logger{},
+		service: &postgresql.Service{DB: db},
+		Query: []query{
+			{Sqlquery: "SELECT 'old' AS which", MaxVersion: 1400, Measurement: "test"},
+			{Sqlquery: "SELECT 'new' AS which", MinVersion: 1400, Measurement: "test"},
+			{Sqlquery: "SELECT 'any' AS which", Measurement: "test"},
+		},
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, p.Gather(&acc))
+	require.Empty(t, acc.Errors)
+	require.NoError(t, mock.ExpectationsWereMet())
+	require.Len(t, acc.Metrics, 2)
+	require.Equal(t, "new", acc.Metrics[0].Fields["which"])
+	require.Equal(t, "any", acc.Metrics[1].Fields["which"])
+}
+
+func TestGatherUnknownVersion(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	// The PgBouncer admin console cannot answer the version query
+	mock.ExpectQuery("server_version_num").WillReturnError(errors.New("version query failed"))
+	mock.ExpectQuery("SHOW LISTS").WillReturnRows(sqlmock.NewRows([]string{"list", "items"}).AddRow("databases", 1))
+
+	logger := &testutil.CaptureLogger{}
+	p := Postgresql{
+		Log:     logger,
+		service: &postgresql.Service{DB: db},
+		Query: []query{
+			{Sqlquery: "SELECT 'old' AS which", MaxVersion: 1400, Measurement: "test"},
+			{Sqlquery: "SELECT 'new' AS which", MinVersion: 1400, Measurement: "test"},
+			{Sqlquery: "SHOW LISTS", Measurement: "lists"},
+		},
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, p.Gather(&acc))
+	require.NoError(t, mock.ExpectationsWereMet())
+	require.Empty(t, acc.Errors)
+	require.Len(t, acc.Metrics, 1)
+	require.Equal(t, "lists", acc.Metrics[0].Measurement)
+	require.Len(t, logger.Errors(), 1)
+	require.Contains(t, logger.Errors()[0], "version query failed")
 }
 
 type fakeRow struct {
