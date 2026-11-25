@@ -55,6 +55,14 @@ func (s *Serializer) Init() error {
 }
 
 func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
+	if s.Transformation == "" {
+		serialized, err := json.Marshal(s.createMetric(metric))
+		if err != nil {
+			return nil, err
+		}
+		return append(serialized, '\n'), nil
+	}
+
 	var obj any
 	obj = s.createObject(metric)
 
@@ -78,6 +86,18 @@ func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 }
 
 func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
+	if s.Transformation == "" {
+		batch := jsonBatch{Metrics: make([]jsonMetric, 0, len(metrics))}
+		for _, metric := range metrics {
+			batch.Metrics = append(batch.Metrics, s.createMetric(metric))
+		}
+		serialized, err := json.Marshal(batch)
+		if err != nil {
+			return nil, err
+		}
+		return append(serialized, '\n'), nil
+	}
+
 	objects := make([]any, 0, len(metrics))
 	for _, metric := range metrics {
 		m := s.createObject(metric)
@@ -108,14 +128,27 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	return serialized, nil
 }
 
-func (s *Serializer) createObject(metric telegraf.Metric) map[string]any {
-	m := make(map[string]any, 4)
+// jsonMetric is one metric. Its fields are in the order that encoding/json
+// writes the keys of the map from createObject, so both give the same output.
+type jsonMetric struct {
+	Fields    map[string]any    `json:"fields"`
+	Name      string            `json:"name"`
+	Tags      map[string]string `json:"tags"`
+	Timestamp any               `json:"timestamp"`
+}
+
+type jsonBatch struct {
+	Metrics []jsonMetric `json:"metrics"`
+}
+
+func (s *Serializer) createMetric(metric telegraf.Metric) jsonMetric {
+	var m jsonMetric
 
 	tags := make(map[string]string, len(metric.TagList()))
 	for _, tag := range metric.TagList() {
 		tags[tag.Key] = tag.Value
 	}
-	m["tags"] = tags
+	m.Tags = tags
 
 	fields := make(map[string]any, len(metric.FieldList()))
 	for _, field := range metric.FieldList() {
@@ -140,15 +173,25 @@ func (s *Serializer) createObject(metric telegraf.Metric) map[string]any {
 		}
 		fields[field.Key] = val
 	}
-	m["fields"] = fields
+	m.Fields = fields
 
-	m["name"] = metric.Name()
+	m.Name = metric.Name()
 	if s.TimestampFormat == "" {
-		m["timestamp"] = metric.Time().UnixNano() / int64(s.TimestampUnits)
+		m.Timestamp = metric.Time().UnixNano() / int64(s.TimestampUnits)
 	} else {
-		m["timestamp"] = metric.Time().UTC().Format(s.TimestampFormat)
+		m.Timestamp = metric.Time().UTC().Format(s.TimestampFormat)
 	}
 	return m
+}
+
+func (s *Serializer) createObject(metric telegraf.Metric) map[string]any {
+	m := s.createMetric(metric)
+	return map[string]any{
+		"tags":      m.Tags,
+		"fields":    m.Fields,
+		"name":      m.Name,
+		"timestamp": m.Timestamp,
+	}
 }
 
 func (s *Serializer) transform(obj any) (any, error) {
