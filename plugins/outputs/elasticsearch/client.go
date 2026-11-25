@@ -21,7 +21,6 @@ import (
 // roundTripper applies per-request authentication and headers through the configured HTTP client.
 type roundTripper struct {
 	setAuth            func(*http.Request) error
-	headers            http.Header
 	httpClient         *http.Client
 	bypassProductCheck bool
 }
@@ -29,24 +28,20 @@ type roundTripper struct {
 func (a *Elasticsearch) newRoundTripper() roundTripper {
 	return roundTripper{
 		setAuth:    a.setAuth,
-		headers:    a.authorizationHeaders(),
 		httpClient: a.httpClient,
 	}
 }
 
 func (t roundTripper) RoundTrip(original *http.Request) (*http.Response, error) {
 	req := original.Clone(original.Context())
-	// Per-request secret authentication must remain in the transport because
-	// v6/v7 discovery requests bypass the client methods.
-	if err := t.setAuth(req); err != nil {
-		if req.Body != nil {
-			req.Body.Close()
-		}
-		return nil, err
-	}
-	for name, values := range t.headers {
-		for _, value := range values {
-			req.Header.Add(name, value)
+	if t.setAuth != nil {
+		// Per-request secret authentication must remain in the transport because
+		// v6/v7 discovery requests bypass the client methods.
+		if err := t.setAuth(req); err != nil {
+			if req.Body != nil {
+				req.Body.Close()
+			}
+			return nil, err
 		}
 	}
 	res, err := t.httpClient.Do(req)
@@ -62,7 +57,13 @@ func (a *Elasticsearch) setAuth(req *http.Request) error {
 	if err := a.setAuthBasic(req); err != nil {
 		return err
 	}
-	return a.setAuthBearer(req)
+	if err := a.setAuthBearer(req); err != nil {
+		return err
+	}
+	for _, value := range a.authorizationHeaders() {
+		req.Header.Add("Authorization", value)
+	}
+	return nil
 }
 
 func (a *Elasticsearch) setAuthBasic(req *http.Request) error {
@@ -107,14 +108,14 @@ func (a *Elasticsearch) clientHeaders() http.Header {
 }
 
 // authorizationHeaders returns configured Authorization values unless bearer authentication
-// is set. They are kept out of the SDK client headers because SetBasicAuth in RoundTrip
-// would replace them; RoundTrip adds them after Basic authentication instead.
-func (a *Elasticsearch) authorizationHeaders() http.Header {
+// is set. They are kept out of the SDK client headers because SetBasicAuth would replace
+// them; setAuth adds them after Basic authentication instead.
+func (a *Elasticsearch) authorizationHeaders() []string {
 	// See the bearer-token override TODO in clientHeaders.
 	if !a.AuthBearerToken.Empty() {
 		return nil
 	}
-	return http.Header{"Authorization": a.httpHeaders.Values("Authorization")}
+	return a.httpHeaders.Values("Authorization")
 }
 
 func (a *Elasticsearch) probeVersion(ctx context.Context) (string, uint64, error) {

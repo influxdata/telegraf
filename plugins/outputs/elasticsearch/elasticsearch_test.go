@@ -65,6 +65,14 @@ func TestConnect(t *testing.T) {
 			expectedOverwrite: true,
 		},
 		{
+			name:              "Elasticsearch v8 template management",
+			version:           "8.19.18",
+			index:             "test-%Y.%m.%d",
+			template:          "telegraf",
+			manageTemplate:    true,
+			expectedOverwrite: true,
+		},
+		{
 			name:              "template management",
 			index:             "test-%Y.%m.%d",
 			template:          "telegraf",
@@ -153,7 +161,7 @@ func TestLocalAddress(t *testing.T) {
 		t.Skip("Binding to 127.0.0.2 requires a loopback alias outside of Linux")
 	}
 
-	for _, version := range []string{"5.6.16", "6.8.23", "7.17.29"} {
+	for _, version := range []string{"5.6.16", "6.8.23", "7.17.29", "8.19.18"} {
 		t.Run(version, func(t *testing.T) {
 			// Setup a mock Elasticsearch endpoint
 			server := startMockServer(t)
@@ -368,6 +376,12 @@ func TestWrite(t *testing.T) {
 			expected: msgBulkV7,
 		},
 		{
+			name:     "Elasticsearch v8",
+			version:  "8.19.18",
+			value:    1,
+			expected: msgBulkV7,
+		},
+		{
 			name:          "float handling drop NaN",
 			value:         math.NaN(),
 			floatHandling: "drop",
@@ -556,6 +570,14 @@ func TestWrite(t *testing.T) {
 			expectedHeaders: gzipHeaders,
 		},
 		{
+			name:            "gzip enabled Elasticsearch v8",
+			version:         "8.19.18",
+			value:           1,
+			enableGzip:      true,
+			expected:        msgBulkV7,
+			expectedHeaders: gzipHeaders,
+		},
+		{
 			name:            "auth bearer token",
 			value:           1,
 			authBearerToken: "0123456789abcdef",
@@ -635,6 +657,18 @@ func TestWrite(t *testing.T) {
 		{
 			name:    "multiple header values Elasticsearch v7",
 			version: "7.17.29",
+			value:   1,
+			headers: map[string]any{
+				"X-Multi-Value": []any{"first", "second"},
+			},
+			expected: msgBulkV7,
+			expectedHeaders: map[string][]string{
+				"X-Multi-Value": {"first", "second"},
+			},
+		},
+		{
+			name:    "multiple header values Elasticsearch v8",
+			version: "8.19.18",
 			value:   1,
 			headers: map[string]any{
 				"X-Multi-Value": []any{"first", "second"},
@@ -810,7 +844,7 @@ func TestWriteAuthentication(t *testing.T) {
 			},
 		},
 	}
-	for _, version := range []string{"5.6.16", "6.8.23", "7.17.29"} {
+	for _, version := range []string{"5.6.16", "6.8.23", "7.17.29", "8.19.18"} {
 		t.Run(version, func(t *testing.T) {
 			for _, tt := range tests {
 				t.Run(tt.name, func(t *testing.T) {
@@ -911,6 +945,7 @@ func TestWriteFail(t *testing.T) {
 func TestWriteBulkFail(t *testing.T) {
 	tests := []struct {
 		name        string
+		version     string
 		metricCount int
 		status      int
 		response    string
@@ -918,6 +953,14 @@ func TestWriteBulkFail(t *testing.T) {
 	}{
 		{
 			name:        "HTTP failure",
+			metricCount: 1,
+			status:      http.StatusServiceUnavailable,
+			response:    `{"error":{"type":"unavailable_shards_exception","reason":"no available shard"}}`,
+			expected:    "no available shard",
+		},
+		{
+			name:        "HTTP failure Elasticsearch v8",
+			version:     "8.19.18",
 			metricCount: 1,
 			status:      http.StatusServiceUnavailable,
 			response:    `{"error":{"type":"unavailable_shards_exception","reason":"no available shard"}}`,
@@ -945,6 +988,9 @@ func TestWriteBulkFail(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			server := startMockServer(t)
+			if tt.version != "" {
+				server.setVersion(tt.version)
+			}
 			server.setBulkResponse(tt.status, tt.response)
 			defer server.close()
 
@@ -1407,6 +1453,16 @@ func TestWriteIntegration(t *testing.T) {
 			expectedType: "_doc",
 		},
 		{
+			name:  "v8",
+			image: "docker.elastic.co/elasticsearch/elasticsearch:8.19.18",
+			env: map[string]string{
+				"discovery.type":         "single-node",
+				"ES_JAVA_OPTS":           "-Xms1g -Xmx1g",
+				"xpack.security.enabled": "false",
+			},
+			waitFor: wait.ForHTTP("/").WithPort(servicePort).WithStartupTimeout(120 * time.Second),
+		},
+		{
 			name:  "OpenSearch v1 compatibility mode",
 			image: "opensearchproject/opensearch:1.1.0",
 			env: map[string]string{
@@ -1485,12 +1541,16 @@ func TestWriteIntegration(t *testing.T) {
 
 			actual, err := io.ReadAll(result.Body)
 			require.NoError(t, err)
+			typeField := ""
+			if tt.expectedType != "" {
+				typeField = fmt.Sprintf(`"_type": %q,`, tt.expectedType)
+			}
 			require.JSONEq(t, fmt.Sprintf(`{
 				"hits": {
 					"hits": [
 						{
 							"_index": "test-2009.11.10",
-							"_type": %q,
+							%s
 							"_source": {
 								"@timestamp": "2009-11-10T23:00:00Z",
 								"measurement_name": "test1",
@@ -1504,7 +1564,7 @@ func TestWriteIntegration(t *testing.T) {
 						}
 					]
 				}
-			}`, tt.expectedType), string(actual))
+			}`, typeField), string(actual))
 		})
 	}
 }
@@ -1517,6 +1577,7 @@ func TestClientDiscovery(t *testing.T) {
 	}{
 		{name: "v6", version: "6.8.23"},
 		{name: "v7", version: "7.17.29"},
+		{name: "v8", version: "8.19.18"},
 		{
 			name:           "v6 initial discovery failure",
 			version:        "6.8.23",
@@ -1531,6 +1592,7 @@ func TestClientDiscovery(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var discoveredWrites, seedWrites, discoveries atomic.Int32
 			target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("X-Elastic-Product", "Elasticsearch")
 				if r.URL.Path == "/_bulk" {
 					discoveredWrites.Add(1)
 				}
@@ -1540,6 +1602,7 @@ func TestClientDiscovery(t *testing.T) {
 			}))
 			defer target.Close()
 			seed := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("X-Elastic-Product", "Elasticsearch")
 				switch r.URL.Path {
 				case "/_nodes/http":
 					discoveries.Add(1)
@@ -1602,6 +1665,7 @@ func TestClientDiscoveryEmpty(t *testing.T) {
 	}{
 		{name: "v6 no nodes", version: "6.8.23", response: `{"nodes":{}}`},
 		{name: "v7 no nodes", version: "7.17.29", response: `{"nodes":{}}`},
+		{name: "v8 no nodes", version: "8.19.18", response: `{"nodes":{}}`},
 		{
 			name:    "v6 separate data and ingest nodes",
 			version: "6.8.23",
@@ -1618,6 +1682,7 @@ func TestClientDiscoveryEmpty(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("X-Elastic-Product", "Elasticsearch")
 				var response string
 				switch r.URL.Path {
 				case "/_nodes/http":
@@ -1648,6 +1713,8 @@ func TestClientDiscoveryEmpty(t *testing.T) {
 				discover = connection.client.DiscoverNodes
 			case *clientV7:
 				discover = connection.client.DiscoverNodes
+			case *clientV8:
+				discover = connection.client.DiscoverNodes
 			default:
 				t.Fatalf("unexpected client type %T", plugin.client)
 			}
@@ -1669,10 +1736,12 @@ func TestClientDiscoveryDisabled(t *testing.T) {
 		{name: "v5 ignores discovery", version: "5.6.16", enableSniffer: true},
 		{name: "v6 sniffer disabled", version: "6.8.23"},
 		{name: "v7 sniffer disabled", version: "7.17.29"},
+		{name: "v8 sniffer disabled", version: "8.19.18"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			var writes, discoveries atomic.Int32
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("X-Elastic-Product", "Elasticsearch")
 				switch r.URL.Path {
 				case "/_nodes/http":
 					discoveries.Add(1)
@@ -1860,6 +1929,7 @@ func startMockServer(t *testing.T) *mockServer {
 	}
 
 	s.server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Elastic-Product", "Elasticsearch")
 		if name, found := strings.CutPrefix(r.URL.Path, "/_template/"); found {
 			switch r.Method {
 			case http.MethodHead:
