@@ -34,7 +34,7 @@ type MongoDB struct {
 	Username            config.Secret   `toml:"username"`
 	Password            config.Secret   `toml:"password"`
 	WriteBatch          bool            `toml:"write_batch"`
-	WriteBatchOrdered   *bool           `toml:"write_batch_ordered"`
+	WriteBatchUnordered bool            `toml:"write_batch_unordered"`
 	MetadataKeys        []string        `toml:"metadata_keys"`
 	MetadataTagStrategy string          `toml:"metadata_tag_strategy"`
 	ServerSelectTimeout config.Duration `toml:"timeout"`
@@ -54,9 +54,6 @@ func (*MongoDB) SampleConfig() string {
 
 func (s *MongoDB) Init() error {
 	// Set defaults
-	if s.WriteBatchOrdered == nil {
-		s.WriteBatchOrdered = new(true)
-	}
 	if s.MetricDatabase == "" {
 		s.MetricDatabase = "telegraf"
 	}
@@ -297,7 +294,7 @@ func (s *MongoDB) writeBatch(ctx context.Context, metrics []telegraf.Metric) err
 		collection := s.client.Database(s.MetricDatabase).Collection(name)
 
 		// Write the batch at once
-		if _, err := collection.InsertMany(ctx, batch, options.InsertMany().SetOrdered(*s.WriteBatchOrdered)); err != nil {
+		if _, err := collection.InsertMany(ctx, batch, options.InsertMany().SetOrdered(!s.WriteBatchUnordered)); err != nil {
 			return fmt.Errorf("inserting metrics into collection %q failed: %w", name, err)
 		}
 	}
