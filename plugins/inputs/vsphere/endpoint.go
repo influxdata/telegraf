@@ -764,15 +764,13 @@ func getHosts(ctx context.Context, e *endpoint, rf *resourceFilter, propertyIncl
 	for i := range resources {
 		r := &resources[i]
 
-		lookup := make(map[string]string)
-
 		m[r.ExtensibleManagedObject.Reference().Value] = &objectRef{
 			name:             r.Name,
 			ref:              r.ExtensibleManagedObject.Reference(),
 			parentRef:        r.Parent,
 			customValues:     e.loadCustomAttributes(r.ManagedEntity),
 			customProperties: e.loadCustomProperties(r, propertyInclude),
-			lookup:           lookup,
+			lookup:           make(map[string]string),
 		}
 	}
 	return m, nil
@@ -803,6 +801,7 @@ func getVMs(ctx context.Context, e *endpoint, rf *resourceFilter, propertyInclud
 	}
 	for i := range resources {
 		r := &resources[i]
+
 		if r.Runtime.PowerState != "poweredOn" {
 			continue
 		}
@@ -1322,19 +1321,9 @@ func (e *endpoint) collectChunk(
 			if len(objectRef.customProperties) != 0 {
 				mn, fn := e.makeMetricIdentifier(prefix, "properties")
 				bKey := mn + " " + v.Instance + " " + strconv.FormatInt(latestSample.UnixNano(), 10)
-				_, found := buckets[bKey]
-				if !found {
-					fields := map[string]any{fn: true}
-					tags := make(map[string]string, len(t)+len(objectRef.customProperties))
-					maps.Copy(tags, t)
-					for k, v := range objectRef.customProperties {
-						if sv, err := internal.ToString(v); err != nil {
-							e.log.Errorf("conversion error for %v: %s", v, err)
-						} else {
-							tags[k] = sv
-						}
-					}
-					bucket := metricEntry{name: mn, ts: latestSample, fields: fields, tags: tags}
+				if _, found := buckets[bKey]; !found {
+					fields := maps.Clone(objectRef.customProperties)
+					bucket := metricEntry{name: mn, ts: latestSample, fields: fields, tags: t}
 					buckets[bKey] = bucket
 				}
 			}
