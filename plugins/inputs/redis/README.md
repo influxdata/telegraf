@@ -185,6 +185,14 @@ and the elapsed time since the last rdb save (rdb\_last\_save\_time\_elapsed).
   - fields:
     - total (int, number)
 
+- redis_io_thread (Redis 8.0 and later)
+  - tags:
+    - io_thread (`0` is the main thread)
+  - fields:
+    - clients (int, number)
+    - reads (int, number)
+    - writes (int, number)
+
 All measurements have the following tags:
 
 - port
@@ -195,6 +203,8 @@ The `redis_keyspace` measurement has an additional `database` tag.
 
 The `redis_cmdstat` and `redis_latency_percentiles_usec` measurements have an
 additional `command` tag.
+
+The `redis_io_thread` measurement has an additional `io_thread` tag.
 
 ## Example Output
 
@@ -221,4 +231,5 @@ redis_keyspace,database=db1,host=host,server=localhost,port=6379,replication_rol
 redis_cmdstat,command=publish,host=host,port=6379,replication_role=master,server=localhost calls=569514i,failed_calls=0i,rejected_calls=0i,usec=9916334i,usec_per_call=17.41 1559227136000000000
 redis_latency_percentiles_usec,command=zadd,host=host,port=6379,replication_role=master,server=localhost p50=9.023,p99=28.031,p99.9=43.007 1559227136000000000
 redis_errorstat,err=MOVED,host=host,port=6379,replication_role=master,server=localhost total=4284 1691119309000000000
+redis_io_thread,io_thread=1,host=host,port=6379,replication_role=master,server=localhost clients=41i,reads=982664i,writes=982651i 1691119309000000000
 ```

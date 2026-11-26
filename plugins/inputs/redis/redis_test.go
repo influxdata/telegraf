@@ -301,6 +301,22 @@ func TestRedis_ParseMetrics(t *testing.T) {
 	errorStatsFields := map[string]any{"total": int64(3628)}
 
 	acc.AssertContainsTaggedFields(t, "redis_errorstat", errorStatsFields, errorStatsTags)
+
+	ioThreadTags := map[string]string{"host": "redis.net", "replication_role": "master", "io_thread": "0"}
+	ioThreadFields := map[string]any{
+		"clients": int64(3),
+		"reads":   int64(1597),
+		"writes":  int64(1580),
+	}
+	acc.AssertContainsTaggedFields(t, "redis_io_thread", ioThreadFields, ioThreadTags)
+
+	ioThreadTags = map[string]string{"host": "redis.net", "replication_role": "master", "io_thread": "2"}
+	ioThreadFields = map[string]any{
+		"clients": int64(40),
+		"reads":   int64(975112),
+		"writes":  int64(975098),
+	}
+	acc.AssertContainsTaggedFields(t, "redis_io_thread", ioThreadFields, ioThreadTags)
 }
 
 func TestRedis_ParseFloatOnInts(t *testing.T) {
@@ -397,6 +413,46 @@ func TestRedis_GatherErrorstatsLine(t *testing.T) {
 	require.Empty(t, acc.Errors)
 }
 
+func TestRedis_GatherThreadsLine(t *testing.T) {
+	var acc testutil.Accumulator
+	globalTags := map[string]string{}
+
+	gatherThreadsLine("io_thread_1", "clients=1,reads,writes=x,foo=bar=baz", &acc, globalTags)
+	require.Empty(t, acc.Errors)
+
+	ioThreadTags := map[string]string{"io_thread": "1"}
+	ioThreadFields := map[string]any{"clients": int64(1)}
+	acc.AssertContainsTaggedFields(t, "redis_io_thread", ioThreadFields, ioThreadTags)
+}
+
+func TestRedis_ParseThreadsSection(t *testing.T) {
+	var acc testutil.Accumulator
+	tags := map[string]string{"host": "redis.net"}
+	rdr := bufio.NewReader(strings.NewReader(`# Threads
+io_thread_0:clients=2,reads=10,writes=9
+other_value:5
+
+# Replication
+role:slave
+`))
+
+	err := gatherInfoOutput(rdr, &acc, tags)
+	require.NoError(t, err)
+
+	ioThreadTags := map[string]string{"host": "redis.net", "replication_role": "slave", "io_thread": "0"}
+	ioThreadFields := map[string]any{
+		"clients": int64(2),
+		"reads":   int64(10),
+		"writes":  int64(9),
+	}
+	acc.AssertContainsTaggedFields(t, "redis_io_thread", ioThreadFields, ioThreadTags)
+
+	value, ok := acc.Get("redis")
+	require.True(t, ok)
+	require.Equal(t, int64(5), value.Fields["other_value"])
+	require.NotContains(t, value.Fields, "io_thread_0")
+}
+
 const testOutput = `# Server
 redis_version:6.0.9
 redis_git_sha1:00000000
@@ -491,6 +547,11 @@ aof_last_write_status:ok
 aof_last_cow_size:0
 module_fork_in_progress:0
 module_fork_last_cow_size:0
+
+# Threads
+io_thread_0:clients=3,reads=1597,writes=1580
+io_thread_1:clients=41,reads=982664,writes=982651
+io_thread_2:clients=40,reads=975112,writes=975098
 
 # Stats
 total_connections_received:2
