@@ -306,8 +306,14 @@ The agent table configures Telegraf and the defaults used across all plugins.
 
 - **logformat**:
   Log format controls the way messages are logged and can be one of "text",
-  "structured" or, on Windows, "eventlog". The output file (if any) is
-  determined by the `logfile` setting.
+  "structured", "syslog" (non-Windows) or, on Windows, "eventlog". The output
+  file (if any) is determined by the `logfile` setting.
+  The "syslog" format sends messages to the local syslog daemon using the
+  `daemon` facility and the agent's instance name (`telegraf`) as tag.
+  Severities are mapped as error to `err`, warn to `warning`, info to `info`
+  and debug or trace to `debug`. The `logfile`, rotation and
+  `log_with_timezone` settings do not apply as syslog adds its own timestamp.
+  Telegraf fails to start if no local syslog daemon is reachable.
 
 - **structured_log_message_key**:
   Message key for structured logs, to override the default of "msg".
@@ -315,7 +321,7 @@ The agent table configures Telegraf and the defaults used across all plugins.
 
 - **logfile**:
   Name of the file to be logged to or stderr if unset or empty. This
-  setting is ignored for the "eventlog" format.
+  setting is ignored for the "eventlog" and "syslog" formats.
 
 - **logfile_rotation_interval**:
   The logfile will be rotated after the time interval specified.  When set to
