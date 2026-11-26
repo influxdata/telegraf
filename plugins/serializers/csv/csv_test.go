@@ -6,10 +6,12 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/influxdata/toml"
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/influxdata/telegraf/testutil/serializers"
@@ -35,6 +37,25 @@ func TestInvalidSeparator(t *testing.T) {
 
 	_, err := s.Serialize(testutil.TestMetric(42.3, "test"))
 	require.EqualError(t, err, "writing data failed: csv: invalid field or comment delimiter")
+}
+
+func TestSerializeKeepsPreviousResults(t *testing.T) {
+	s := Serializer{}
+	require.NoError(t, s.Init())
+	s.writer.UseCRLF = false
+
+	m1 := metric.New("cpu", nil, map[string]any{"value": 123456789}, time.Unix(1700000000, 0))
+	m2 := metric.New("mem", nil, map[string]any{"value": 1}, time.Unix(1700000001, 0))
+
+	// Outputs such as Kafka keep the result of every Serialize call until the
+	// whole batch is sent, so a later call must not change an earlier result.
+	first, err := s.Serialize(m1)
+	require.NoError(t, err)
+	second, err := s.Serialize(m2)
+	require.NoError(t, err)
+
+	require.Equal(t, "1700000000,cpu,123456789\n", string(first))
+	require.Equal(t, "1700000001,mem,1\n", string(second))
 }
 
 func TestSerializeTransformationNonBatch(t *testing.T) {
