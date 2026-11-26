@@ -55,12 +55,14 @@ func (s *Serializer) Init() error {
 }
 
 func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
-	var obj any
-	obj = s.createObject(metric)
+	m := s.createMetric(metric)
 
-	if s.Transformation != "" {
+	var obj any
+	if s.Transformation == "" {
+		obj = m
+	} else {
 		var err error
-		if obj, err = s.transform(obj); err != nil {
+		if obj, err = s.transform(m.toMap()); err != nil {
 			if errors.Is(err, jsonata.ErrUndefined) {
 				return nil, fmt.Errorf("%w (maybe configured for batch mode?)", err)
 			}
@@ -78,20 +80,21 @@ func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 }
 
 func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
-	objects := make([]any, 0, len(metrics))
-	for _, metric := range metrics {
-		m := s.createObject(metric)
-		objects = append(objects, m)
-	}
-
 	var obj any
-	obj = map[string]any{
-		"metrics": objects,
-	}
+	if s.Transformation == "" {
+		batch := jsonBatch{Metrics: make([]jsonMetric, 0, len(metrics))}
+		for _, metric := range metrics {
+			batch.Metrics = append(batch.Metrics, s.createMetric(metric))
+		}
+		obj = batch
+	} else {
+		objects := make([]any, 0, len(metrics))
+		for _, metric := range metrics {
+			objects = append(objects, s.createMetric(metric).toMap())
+		}
 
-	if s.Transformation != "" {
 		var err error
-		if obj, err = s.transform(obj); err != nil {
+		if obj, err = s.transform(map[string]any{"metrics": objects}); err != nil {
 			if errors.Is(err, jsonata.ErrUndefined) {
 				return nil, fmt.Errorf("%w (maybe configured for non-batch mode?)", err)
 			}
@@ -108,14 +111,27 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	return serialized, nil
 }
 
-func (s *Serializer) createObject(metric telegraf.Metric) map[string]any {
-	m := make(map[string]any, 4)
+// jsonMetric is one metric. Its fields are in the order that encoding/json
+// writes the keys of the map from toMap, so both give the same output.
+type jsonMetric struct {
+	Fields    map[string]any    `json:"fields"`
+	Name      string            `json:"name"`
+	Tags      map[string]string `json:"tags"`
+	Timestamp any               `json:"timestamp"`
+}
+
+type jsonBatch struct {
+	Metrics []jsonMetric `json:"metrics"`
+}
+
+func (s *Serializer) createMetric(metric telegraf.Metric) jsonMetric {
+	var m jsonMetric
 
 	tags := make(map[string]string, len(metric.TagList()))
 	for _, tag := range metric.TagList() {
 		tags[tag.Key] = tag.Value
 	}
-	m["tags"] = tags
+	m.Tags = tags
 
 	fields := make(map[string]any, len(metric.FieldList()))
 	for _, field := range metric.FieldList() {
@@ -140,15 +156,25 @@ func (s *Serializer) createObject(metric telegraf.Metric) map[string]any {
 		}
 		fields[field.Key] = val
 	}
-	m["fields"] = fields
+	m.Fields = fields
 
-	m["name"] = metric.Name()
+	m.Name = metric.Name()
 	if s.TimestampFormat == "" {
-		m["timestamp"] = metric.Time().UnixNano() / int64(s.TimestampUnits)
+		m.Timestamp = metric.Time().UnixNano() / int64(s.TimestampUnits)
 	} else {
-		m["timestamp"] = metric.Time().UTC().Format(s.TimestampFormat)
+		m.Timestamp = metric.Time().UTC().Format(s.TimestampFormat)
 	}
 	return m
+}
+
+// toMap returns the metric as a map, for the JSONata transformation.
+func (m jsonMetric) toMap() map[string]any {
+	return map[string]any{
+		"tags":      m.Tags,
+		"fields":    m.Fields,
+		"name":      m.Name,
+		"timestamp": m.Timestamp,
+	}
 }
 
 func (s *Serializer) transform(obj any) (any, error) {
