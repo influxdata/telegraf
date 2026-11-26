@@ -207,6 +207,34 @@ func TestLongLinesForLineProtocol(t *testing.T) {
 	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics())
 }
 
+func TestLongLinesOnStderr(t *testing.T) {
+	exe, err := os.Executable()
+	require.NoError(t, err)
+
+	plugin := &Execd{
+		Command:      []string{exe, "-case", "long-stderr"},
+		Environment:  []string{"PLUGINS_PROCESSORS_EXECD_MODE=application"},
+		RestartDelay: config.Duration(5 * time.Second),
+		Log:          &testutil.CaptureLogger{},
+	}
+
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+	plugin.SetParser(parser)
+
+	serializer := &serializers_influx.Serializer{}
+	require.NoError(t, serializer.Init())
+	plugin.SetSerializer(serializer)
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	require.Eventually(t, func() bool {
+		return acc.NMetrics() >= 1
+	}, 3*time.Second, 100*time.Millisecond)
+}
+
 func TestCases(t *testing.T) {
 	// Get all directories in testcases
 	folders, err := os.ReadDir("testcases")
@@ -398,7 +426,7 @@ func TestTracking(t *testing.T) {
 
 func TestMain(m *testing.M) {
 	var testcase, field string
-	flag.StringVar(&testcase, "case", "", "test-case to mock [multiply, long, pass-through]")
+	flag.StringVar(&testcase, "case", "", "test-case to mock [multiply, long, long-stderr, pass-through]")
 	flag.StringVar(&field, "field", "count", "name of the field to multiply")
 	flag.Parse()
 
@@ -411,6 +439,8 @@ func TestMain(m *testing.M) {
 		os.Exit(runTestCaseMultiply(field))
 	case "long":
 		os.Exit(runTestCaseLong(field))
+	case "long-stderr":
+		os.Exit(runTestCaseLongStderr())
 	case "pass-through":
 		os.Exit(runTestCasePassThrough())
 	}
@@ -496,6 +526,19 @@ func runTestCaseLong(field string) int {
 		}
 		fmt.Fprint(os.Stdout, string(b))
 	}
+}
+
+func runTestCaseLongStderr() int {
+	// One line over the scanner limit, then enough output to fill the pipe
+	fmt.Fprintln(os.Stderr, "I! "+strings.Repeat("a", 70_000))
+	for range 100 {
+		fmt.Fprintln(os.Stderr, "I! "+strings.Repeat("b", 1_000))
+	}
+	fmt.Fprintln(os.Stdout, "test value=1i 0")
+	if _, err := io.Copy(io.Discard, os.Stdin); err != nil {
+		return 1
+	}
+	return 0
 }
 
 func runTestCasePassThrough() int {

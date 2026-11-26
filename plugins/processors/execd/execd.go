@@ -163,10 +163,18 @@ func (e *Execd) cmdReadOutStream(out io.Reader) {
 }
 
 func (e *Execd) cmdReadErr(out io.Reader) {
-	scanner := bufio.NewScanner(out)
+	// A reader that stops on a long line leaves the pipe full and blocks the process.
+	reader := bufio.NewReader(out)
 
-	for scanner.Scan() {
-		msg := scanner.Text()
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil && line == "" {
+			if !errors.Is(err, io.EOF) {
+				e.Log.Errorf("Error reading stderr: %s", err)
+			}
+			return
+		}
+		msg := strings.TrimSuffix(strings.TrimSuffix(line, "\n"), "\r")
 		switch {
 		case strings.HasPrefix(msg, "E! "):
 			e.Log.Error(msg[3:])
@@ -181,10 +189,6 @@ func (e *Execd) cmdReadErr(out io.Reader) {
 		default:
 			e.Log.Errorf("stderr: %q", msg)
 		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		e.Log.Errorf("Error reading stderr: %s", err)
 	}
 }
 
