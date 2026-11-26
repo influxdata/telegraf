@@ -53,27 +53,87 @@ in case Fireboard changes their site, etc.
 If you need to increase the HTTP timeout, you can do so here. You can set this
 value in seconds. The default value is four (4) seconds.
 
+## Rate Limiting
+
+The Fireboard API enforces a **17-call / 5-minute** rate limit. Set your
+collection interval accordingly:
+
+| Interval | Calls per 5 min | Status |
+|----------|-----------------|--------|
+| `30s`    | 10              | ✅ Safe |
+| `15s`    | 20              | ❌ Over limit |
+
 ## Metrics
 
-The Fireboard REST API docs have good examples of the data that is available,
-currently this input only returns the real time temperatures. Temperature
-values are included if they are less than a minute old.
+All four measurements are populated from a single API call to
+`/api/v1/devices.json` — no additional rate-limit cost.
 
 - fireboard
   - tags:
-    - channel
-    - scale (Celcius; Fahrenheit)
-    - title (name of the Fireboard)
-    - uuid (UUID of the Fireboard)
+    - channel (channel number)
+    - channel_name (human-readable probe label; empty string if not found)
+    - scale (`Celcius` or `Fahrenheit`)
+    - title (name of the Fireboard device)
+    - uuid (UUID of the Fireboard device)
   - fields:
-    - temperature (float, unit)
+    - temperature (float)
+
+- fireboard_drive (emitted per device when `last_drivelog` is non-null)
+  - tags:
+    - model (device model, e.g. `FBXPD`)
+    - pel_profile (active pellet profile name, e.g. `Hickory`)
+    - pel_state (pellet grill state machine, e.g. `RUNNING`, `COOLDOWN`)
+    - title
+    - uuid
+  - fields:
+    - current_temp (float)
+    - drive_percent (float) — fan/auger output %
+    - drive_type (int)
+    - fan_speed_target (float)
+    - lid_paused (bool)
+    - mode_type (int)
+    - pid_error_sum (float)
+    - pid_kd (float)
+    - pid_kd_output (float)
+    - pid_ki (float)
+    - pid_ki_output (float)
+    - pid_kp (float)
+    - pid_kp_output (float)
+    - pid_last_error (float)
+    - pid_output (float)
+    - power_mode (int)
+    - setpoint (float) — target temperature
+    - tied_channel (int) — control channel number
+    - vbatt (float) — battery voltage
+
+- fireboard_alert (emitted per alert entry per channel)
+  - tags:
+    - channel
+    - channel_name
+    - scale
+    - title
+    - uuid
+  - fields:
+    - enabled (bool)
+    - temp_max (float, omitted when null)
+    - temp_min (float, omitted when null)
+
+- fireboard_device (emitted per device when `device_log` is non-null)
+  - tags:
+    - model
+    - title
+    - uuid
+  - fields:
+    - onboard_temp (float) — device internal temperature
+    - signal_level (int) — WiFi RSSI in dBm
+    - vbatt (float) — battery voltage
+    - vbatt_percent (float) — battery fraction (0.0–1.0)
 
 ## Example Output
 
-This section shows example output in Line Protocol format.  You can often use
-`telegraf --input-filter <plugin-name> --test` or use the `file` output to get
-this information.
-
 ```text
-fireboard,channel=2,host=patas-mbp,scale=Fahrenheit,title=telegraf-FireBoard,uuid=b55e766c-b308-49b5-93a4-df89fe31efd0 temperature=78.2 1561690040000000000
+fireboard,channel=1,channel_name=Instant\ Probe,host=myhost,scale=Fahrenheit,title=telegraf-FireBoard,uuid=b55e766c-b308-49b5-93a4-df89fe31efd0 temperature=79.9 1561690040000000000
+fireboard_drive,model=FBXPD,pel_state=RUNNING,title=pellet-grill,uuid=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa drive_percent=42.5,setpoint=350,current_temp=348.2,fan_speed_target=60 1561690040000000000
+fireboard_alert,channel=1,channel_name=Instant\ Probe,scale=Fahrenheit,title=telegraf-FireBoard,uuid=b55e766c-b308-49b5-93a4-df89fe31efd0 enabled=true,temp_max=205 1561690040000000000
+fireboard_device,model=FBXPD,title=pellet-grill,uuid=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa onboard_temp=95,signal_level=-65,vbatt=12.3,vbatt_percent=0.85 1561690040000000000
 ```
