@@ -129,7 +129,13 @@ func (m *mqttv5Client) Connect() (bool, error) {
 	}
 
 	// The connection manager retries forever, so give up once every broker
-	// failed once, like the v3 client does
+	// failed once, like the v3 client does. Each round tries the brokers in
+	// the configured order and reports every failed broker to OnConnectError,
+	// so a full channel means all brokers failed. The hook runs in the
+	// manager goroutine and keeps being called on reconnects after a
+	// successful connect, where it only drops the error since the channel is
+	// full and the context is already cancelled. Disconnect waits for that
+	// goroutine, so no send can happen after closing the channel below.
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	failures := make(chan error, len(m.options.BrokerUrls))
