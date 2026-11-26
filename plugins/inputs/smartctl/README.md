@@ -82,7 +82,7 @@ need to use sudo.
 Users need the following in the Telegraf config:
 
 ```toml
-[[inputs.smart_json]]
+[[inputs.smartctl]]
   use_sudo = true
 ```
 
