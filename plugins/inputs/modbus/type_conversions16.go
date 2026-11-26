@@ -185,3 +185,85 @@ func determineConverterF16Scale(outType, byteOrder string, scale float64) (field
 	}
 	return nil, fmt.Errorf("invalid output data-type: %s", outType)
 }
+
+// BCD16 - no scale
+// Values that are not valid BCD return nil, so the field is left out of the metric.
+func determineConverterBCD16(outType, byteOrder string) (fieldConverterFunc, error) {
+	tohost, err := endiannessConverter16(byteOrder)
+	if err != nil {
+		return nil, err
+	}
+
+	switch outType {
+	case "native":
+		return func(b []byte) any {
+			if v, ok := decodeBCD(uint64(tohost(b))); ok {
+				return uint16(v)
+			}
+			return nil
+		}, nil
+	case "INT64":
+		return func(b []byte) any {
+			if v, ok := decodeBCD(uint64(tohost(b))); ok {
+				return int64(v)
+			}
+			return nil
+		}, nil
+	case "UINT64":
+		return func(b []byte) any {
+			if v, ok := decodeBCD(uint64(tohost(b))); ok {
+				return v
+			}
+			return nil
+		}, nil
+	case "FLOAT64":
+		return func(b []byte) any {
+			if v, ok := decodeBCD(uint64(tohost(b))); ok {
+				return float64(v)
+			}
+			return nil
+		}, nil
+	}
+	return nil, fmt.Errorf("invalid output data-type: %s", outType)
+}
+
+// BCD16 - scale
+// Values that are not valid BCD return nil, so the field is left out of the metric.
+func determineConverterBCD16Scale(outType, byteOrder string, scale float64) (fieldConverterFunc, error) {
+	tohost, err := endiannessConverter16(byteOrder)
+	if err != nil {
+		return nil, err
+	}
+
+	switch outType {
+	case "native":
+		return func(b []byte) any {
+			if v, ok := decodeBCD(uint64(tohost(b))); ok {
+				return uint16(float64(v) * scale)
+			}
+			return nil
+		}, nil
+	case "INT64":
+		return func(b []byte) any {
+			if v, ok := decodeBCD(uint64(tohost(b))); ok {
+				return int64(float64(v) * scale)
+			}
+			return nil
+		}, nil
+	case "UINT64":
+		return func(b []byte) any {
+			if v, ok := decodeBCD(uint64(tohost(b))); ok {
+				return uint64(float64(v) * scale)
+			}
+			return nil
+		}, nil
+	case "FLOAT64":
+		return func(b []byte) any {
+			if v, ok := decodeBCD(uint64(tohost(b))); ok {
+				return float64(v) * scale
+			}
+			return nil
+		}, nil
+	}
+	return nil, fmt.Errorf("invalid output data-type: %s", outType)
+}

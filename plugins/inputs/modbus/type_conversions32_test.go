@@ -213,3 +213,93 @@ func TestFloatsFieldProperties(t *testing.T) {
 		})
 	}
 }
+
+func TestBCD32(t *testing.T) {
+	tests := []struct {
+		name      string
+		inType    string
+		outType   string
+		byteOrder string
+		scale     float64
+		data      []byte
+		expected  any
+		// Expected error when creating the converter
+		expectedErr string
+	}{
+		{
+			// Day, month and year of a date as in issue #15925
+			name:     "32-bit native date",
+			inType:   "BCD32",
+			data:     []byte{0x00, 0x25, 0x11, 0x24},
+			expected: uint32(251124),
+		},
+		{
+			name:      "32-bit word swapped",
+			inType:    "BCD32",
+			byteOrder: "CDAB",
+			data:      []byte{0x11, 0x24, 0x00, 0x25},
+			expected:  uint32(251124),
+		},
+		{
+			name:     "output UINT64",
+			inType:   "BCD32",
+			outType:  "UINT64",
+			data:     []byte{0x00, 0x25, 0x11, 0x24},
+			expected: uint64(251124),
+		},
+		{
+			name:     "scale INT64",
+			inType:   "BCD32",
+			outType:  "INT64",
+			scale:    0.01,
+			data:     []byte{0x00, 0x25, 0x11, 0x24},
+			expected: int64(2511),
+		},
+		{
+			name:    "invalid digit INT64",
+			inType:  "BCD32",
+			outType: "INT64",
+			data:    []byte{0x00, 0x25, 0x1f, 0x24},
+		},
+		{
+			name:        "invalid output type with scale",
+			inType:      "BCD32",
+			outType:     "STRING",
+			scale:       0.5,
+			expectedErr: "invalid output data-type",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			order := tt.byteOrder
+			if order == "" {
+				order = "ABCD"
+			}
+			outType := tt.outType
+			if outType == "" {
+				outType = "native"
+			}
+
+			convert, err := determineConverter(tt.inType, order, outType, tt.scale, 0, "")
+			if tt.expectedErr != "" {
+				require.ErrorContains(t, err, tt.expectedErr)
+				return
+			}
+			require.NoError(t, err)
+
+			actual := convert(tt.data)
+			if tt.expected == nil {
+				// Not valid BCD: no value, so the field is left out of the metric
+				require.Nil(t, actual)
+				return
+			}
+			require.IsType(t, tt.expected, actual)
+			if f, ok := tt.expected.(float64); ok {
+				require.InEpsilon(t, f, actual, 1e-9)
+				return
+			}
+			require.Equal(t, tt.expected, actual)
+		})
+	}
+}

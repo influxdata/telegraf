@@ -182,3 +182,85 @@ func determineConverterF64Scale(outType, byteOrder string, scale float64) (field
 	}
 	return nil, fmt.Errorf("invalid output data-type: %s", outType)
 }
+
+// BCD64 - no scale
+// Values that are not valid BCD return nil, so the field is left out of the metric.
+func determineConverterBCD64(outType, byteOrder string) (fieldConverterFunc, error) {
+	tohost, err := endiannessConverter64(byteOrder)
+	if err != nil {
+		return nil, err
+	}
+
+	switch outType {
+	case "native":
+		return func(b []byte) any {
+			if v, ok := decodeBCD(tohost(b)); ok {
+				return v
+			}
+			return nil
+		}, nil
+	case "INT64":
+		return func(b []byte) any {
+			if v, ok := decodeBCD(tohost(b)); ok {
+				return int64(v)
+			}
+			return nil
+		}, nil
+	case "UINT64":
+		return func(b []byte) any {
+			if v, ok := decodeBCD(tohost(b)); ok {
+				return v
+			}
+			return nil
+		}, nil
+	case "FLOAT64":
+		return func(b []byte) any {
+			if v, ok := decodeBCD(tohost(b)); ok {
+				return float64(v)
+			}
+			return nil
+		}, nil
+	}
+	return nil, fmt.Errorf("invalid output data-type: %s", outType)
+}
+
+// BCD64 - scale
+// Values that are not valid BCD return nil, so the field is left out of the metric.
+func determineConverterBCD64Scale(outType, byteOrder string, scale float64) (fieldConverterFunc, error) {
+	tohost, err := endiannessConverter64(byteOrder)
+	if err != nil {
+		return nil, err
+	}
+
+	switch outType {
+	case "native":
+		return func(b []byte) any {
+			if v, ok := decodeBCD(tohost(b)); ok {
+				return uint64(float64(v) * scale)
+			}
+			return nil
+		}, nil
+	case "INT64":
+		return func(b []byte) any {
+			if v, ok := decodeBCD(tohost(b)); ok {
+				return int64(float64(v) * scale)
+			}
+			return nil
+		}, nil
+	case "UINT64":
+		return func(b []byte) any {
+			if v, ok := decodeBCD(tohost(b)); ok {
+				return uint64(float64(v) * scale)
+			}
+			return nil
+		}, nil
+	case "FLOAT64":
+		return func(b []byte) any {
+			if v, ok := decodeBCD(tohost(b)); ok {
+				return float64(v) * scale
+			}
+			return nil
+		}, nil
+	}
+	return nil, fmt.Errorf("invalid output data-type: %s", outType)
+}
