@@ -91,7 +91,7 @@ func TestParseServiceAddressFail(t *testing.T) {
 		{
 			name:     "https without tls",
 			address:  "https://:8080",
-			expected: "TLS settings missing for https",
+			expected: "missing TLS settings for https",
 		},
 		{
 			name:     "unknown scheme",

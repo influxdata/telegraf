@@ -117,7 +117,7 @@ func (o *OpenTelemetry) Init() error {
 		}
 	case "https":
 		if o.TLSCert == "" || o.TLSKey == "" {
-			return errors.New("TLS settings missing for https")
+			return errors.New("missing TLS settings for https")
 		}
 		fallthrough
 	case "http":

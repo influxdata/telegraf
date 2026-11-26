@@ -661,14 +661,25 @@ func TestClientCertTagsOverrideAttributes(t *testing.T) {
 		map[string]any{"value": 2}, time.Unix(0, 0), 0,
 	))
 
-	metrics := acc.GetTelegrafMetrics()
-	require.Len(t, metrics, 2)
-	require.Equal(t, map[string]string{
-		"tls_client_cn":  "client-1",
-		"tls_client_dns": "not-requested.example.org",
-		"other":          "x",
-	}, metrics[0].Tags())
-	require.Equal(t, map[string]string{"tls_client_cn": "client-1"}, metrics[1].Tags())
+	expected := []telegraf.Metric{
+		metric.New(
+			"test",
+			map[string]string{
+				"tls_client_cn":  "client-1",
+				"tls_client_dns": "not-requested.example.org",
+				"other":          "x",
+			},
+			map[string]any{"value": int64(1)},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"test",
+			map[string]string{"tls_client_cn": "client-1"},
+			map[string]any{"value": int64(2)},
+			time.Unix(0, 0),
+		),
+	}
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
 
 func TestClientCertTagsOverrideProfileAttributes(t *testing.T) {
@@ -694,15 +705,35 @@ func TestClientCertTagsOverrideProfileAttributes(t *testing.T) {
 	_, err = service.Export(peerContext(cert), req)
 	require.NoError(t, err)
 
-	metrics := acc.GetTelegrafMetrics()
-	require.NotEmpty(t, metrics)
-	for _, m := range metrics {
-		tags := m.Tags()
-		require.Equal(t, "client-1", tags["tls_client_cn"])
-		require.NotContains(t, tags, "tls_client_org")
-		require.Equal(t, "not-requested.example.org", tags["tls_client_dns"])
-		require.Equal(t, "x", tags["other"])
+	expected := []telegraf.Metric{
+		metric.New(
+			"profiles",
+			map[string]string{
+				"address":          "0x0",
+				"profile_id":       "",
+				"sample":           "0",
+				"sample_name":      "cpu",
+				"sample_type":      "cpu",
+				"sample_type_unit": "nanoseconds",
+				"sample_unit":      "nanoseconds",
+				"tls_client_cn":    "client-1",
+				"tls_client_dns":   "not-requested.example.org",
+				"other":            "x",
+			},
+			map[string]any{
+				"end_time_unix_nano":   int64(0),
+				"file_offset":          uint64(0),
+				"filename":             "main.go",
+				"location":             "main(main.go line 1)",
+				"memory_limit":         uint64(0),
+				"memory_start":         uint64(0),
+				"start_time_unix_nano": int64(0),
+				"value":                int64(42),
+			},
+			time.Unix(0, 0),
+		),
 	}
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
 
 func TestClientCertificateTagsGRPC(t *testing.T) {
