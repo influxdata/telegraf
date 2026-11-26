@@ -2,11 +2,13 @@ package opentelemetry
 
 import (
 	"compress/gzip"
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
 	"mime"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -16,6 +18,8 @@ import (
 	"go.opentelemetry.io/collector/pdata/ptrace/ptraceotlp"
 	pprofileotlp "go.opentelemetry.io/proto/otlp/collector/profiles/v1development"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 
@@ -76,7 +80,7 @@ func (o *OpenTelemetry) handleTraceMessage(service *traceService) http.HandlerFu
 			return
 		}
 
-		resp, err := service.Export(r.Context(), req)
+		resp, err := service.Export(addPeerInfo(r), req)
 		if err != nil {
 			o.writeError(w, r, http.StatusBadRequest, err)
 			return
@@ -125,7 +129,7 @@ func (o *OpenTelemetry) handleMetricMessage(service *metricsService) http.Handle
 			return
 		}
 
-		resp, err := service.Export(r.Context(), req)
+		resp, err := service.Export(addPeerInfo(r), req)
 		if err != nil {
 			o.writeError(w, r, http.StatusBadRequest, err)
 			return
@@ -171,7 +175,7 @@ func (o *OpenTelemetry) handleLogMessage(service *logsService) http.HandlerFunc 
 				return
 			}
 
-			resp, err := service.Export(r.Context(), req)
+			resp, err := service.Export(addPeerInfo(r), req)
 			if err != nil {
 				o.writeError(w, r, http.StatusBadRequest, err)
 				return
@@ -225,7 +229,7 @@ func (o *OpenTelemetry) handleProfileMessage(service *profileService) http.Handl
 			return
 		}
 
-		resp, err := service.Export(r.Context(), &req)
+		resp, err := service.Export(addPeerInfo(r), &req)
 		if err != nil {
 			o.writeError(w, r, http.StatusBadRequest, err)
 			return
@@ -307,4 +311,22 @@ func (o *OpenTelemetry) writeError(w http.ResponseWriter, r *http.Request, code 
 	if _, err := w.Write(buf); err != nil {
 		o.Log.Errorf("Writing error response to %q failed: %v", r.URL.Path, err)
 	}
+}
+
+func addPeerInfo(r *http.Request) context.Context {
+	var p peer.Peer
+
+	if addr, err := net.ResolveTCPAddr("tcp", r.RemoteAddr); err == nil {
+		p.Addr = addr
+	}
+	if v := r.Context().Value(http.LocalAddrContextKey); v != nil {
+		if laddr, ok := v.(net.Addr); ok {
+			p.LocalAddr = laddr
+		}
+	}
+	if r.TLS != nil {
+		p.AuthInfo = credentials.TLSInfo{State: *r.TLS}
+	}
+
+	return peer.NewContext(r.Context(), &p)
 }
