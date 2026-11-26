@@ -340,3 +340,16 @@ func BenchmarkParsing(b *testing.B) {
 		plugin.Parse([]byte(benchmarkData))
 	}
 }
+
+func FuzzParserWavefront(f *testing.F) {
+	f.Add([]byte(benchmarkData))
+	f.Add([]byte("\"cpu.usage\" 1.5 1600000000 source=\"a\" tag=\"b c\"\n"))
+
+	parser := &Parser{Log: testutil.Logger{}}
+	require.NoError(f, parser.Init())
+
+	f.Fuzz(func(_ *testing.T, input []byte) {
+		//nolint:errcheck // fuzz testing can give lots of errors, but we just want to test for crashes
+		parser.Parse(input)
+	})
+}

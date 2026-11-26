@@ -1057,3 +1057,16 @@ func BenchmarkParsing(b *testing.B) {
 		plugin.Parse([]byte(benchmarkData))
 	}
 }
+
+func FuzzParserInflux(f *testing.F) {
+	f.Add([]byte(benchmarkData))
+	f.Add([]byte("cpu,host=a\\,b\\ c usage=1.5,count=3i,ok=true,msg=\"x\\\"y\" 1600000000000000000\n# comment\n"))
+
+	parser := &Parser{}
+	require.NoError(f, parser.Init())
+
+	f.Fuzz(func(_ *testing.T, input []byte) {
+		//nolint:errcheck // fuzz testing can give lots of errors, but we just want to test for crashes
+		parser.Parse(input)
+	})
+}
