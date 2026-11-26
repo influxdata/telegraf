@@ -90,10 +90,52 @@ type BufferStats struct {
 	BufferLimit     selfstat.Stat
 }
 
+const (
+	// DropOldest makes a full buffer discard its oldest metrics to make room
+	// for new ones. This is the default.
+	DropOldest = "drop_oldest"
+	// DropNewest makes a full buffer discard new metrics and keep the ones
+	// that are already buffered.
+	DropNewest = "drop_newest"
+)
+
+type bufferOptions struct {
+	dropStrategy string
+}
+
+// BufferOption customizes the buffer created by NewBuffer.
+type BufferOption func(*bufferOptions)
+
+// WithDropStrategy sets which metrics a full buffer drops, either DropOldest
+// (default) or DropNewest. It only affects buffers with a maximum capacity,
+// i.e. the memory buffer.
+func WithDropStrategy(strategy string) BufferOption {
+	return func(o *bufferOptions) {
+		o.dropStrategy = strategy
+	}
+}
+
+// CheckDropStrategy verifies that the given drop strategy is valid.
+func CheckDropStrategy(strategy string) error {
+	switch strategy {
+	case "", DropOldest, DropNewest:
+		return nil
+	}
+	return fmt.Errorf("invalid buffer drop strategy %q", strategy)
+}
+
 // NewBuffer returns a new empty Buffer with the given capacity.
 //
 //nolint:revive //will move to structs later
-func NewBuffer(name, id, alias string, capacity int, strategy, path string, diskSync bool) (Buffer, error) {
+func NewBuffer(name, id, alias string, capacity int, strategy, path string, diskSync bool, opts ...BufferOption) (Buffer, error) {
+	var options bufferOptions
+	for _, opt := range opts {
+		opt(&options)
+	}
+	if err := CheckDropStrategy(options.dropStrategy); err != nil {
+		return nil, err
+	}
+
 	tags := map[string]string{
 		"_id":    id,
 		"output": name,
@@ -105,7 +147,12 @@ func NewBuffer(name, id, alias string, capacity int, strategy, path string, disk
 
 	switch strategy {
 	case "", "memory":
-		return NewMemoryBuffer(capacity, bs)
+		buf, err := NewMemoryBuffer(capacity, bs)
+		if err != nil {
+			return nil, err
+		}
+		buf.dropNewest = options.dropStrategy == DropNewest
+		return buf, nil
 	case "disk_write_through":
 		return NewDiskBuffer(id, path, bs, diskSync)
 	case "discard":

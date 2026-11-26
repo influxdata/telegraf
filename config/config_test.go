@@ -1910,3 +1910,13 @@ func init() {
 		return &MockupOutputPluginSerializerNew{}
 	})
 }
+
+func TestConfig_BufferDropStrategy(t *testing.T) {
+	c := config.NewConfig()
+	require.NoError(t, c.LoadConfig("testdata/buffer_drop_strategy.toml"))
+	require.Len(t, c.Outputs, 1)
+	require.Equal(t, "drop_newest", c.Outputs[0].Config.BufferDropStrategy)
+
+	c = config.NewConfig()
+	require.ErrorContains(t, c.LoadConfig("testdata/buffer_drop_strategy_invalid.toml"), `invalid buffer drop strategy "unknown"`)
+}

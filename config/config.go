@@ -309,6 +309,10 @@ type AgentConfig struct {
 	// Supported types currently are "memory" and "disk_write_through" (alias: "disk").
 	BufferStrategy string `toml:"buffer_strategy"`
 
+	// BufferDropStrategy selects which metrics a full memory buffer drops.
+	// Supported values are "drop_oldest" (default) and "drop_newest".
+	BufferDropStrategy string `toml:"buffer_drop_strategy"`
+
 	// BufferDirectory is the directory to store buffer files for serialized
 	// to disk metrics when using the "disk_write_through" buffer strategy.
 	BufferDirectory string `toml:"buffer_directory"`
@@ -1768,12 +1772,13 @@ func (c *Config) buildOutput(name, source string, tbl *ast.Table) (*models.Outpu
 	}
 
 	oc := &models.OutputConfig{
-		Name:            name,
-		Source:          source,
-		Filter:          filter,
-		BufferStrategy:  bufferStrategy,
-		BufferDirectory: c.Agent.BufferDirectory,
-		BufferDiskSync:  bufferDiskSync,
+		Name:               name,
+		Source:             source,
+		Filter:             filter,
+		BufferStrategy:     bufferStrategy,
+		BufferDropStrategy: c.Agent.BufferDropStrategy,
+		BufferDirectory:    c.Agent.BufferDirectory,
+		BufferDiskSync:     bufferDiskSync,
 	}
 
 	// TODO: support FieldPass/FieldDrop on outputs
@@ -1796,6 +1801,9 @@ func (c *Config) buildOutput(name, source string, tbl *ast.Table) (*models.Outpu
 	if err := models.CheckBufferSettings(oc.BufferStrategy); err != nil {
 		return nil, err
 	}
+	if err := models.CheckDropStrategy(oc.BufferDropStrategy); err != nil {
+		return nil, err
+	}
 	if c.TestMode {
 		oc.BufferStrategy = "discard"
 	} else if oc.BufferStrategy == "disk_write_through" {
@@ -1811,7 +1819,7 @@ func (c *Config) missingTomlField(_ reflect.Type, key string) error {
 	switch key {
 	// General options to ignore
 	case "alias", "always_include_local_tags",
-		"buffer_strategy", "buffer_directory", "buffer_disk_sync",
+		"buffer_strategy", "buffer_drop_strategy", "buffer_directory", "buffer_disk_sync",
 		"collection_jitter", "collection_offset",
 		"data_format", "delay", "drop", "drop_original",
 		"fielddrop", "fieldexclude", "fieldinclude", "fieldpass", "flush_interval", "flush_jitter",

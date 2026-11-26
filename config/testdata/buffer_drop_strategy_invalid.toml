@@ -1,0 +1,5 @@
+[agent]
+  buffer_drop_strategy = "unknown"
+
+[[outputs.serializer_test_new]]
+  data_format = "json"

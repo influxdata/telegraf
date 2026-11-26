@@ -41,9 +41,10 @@ type OutputConfig struct {
 	NamePrefix   string
 	NameSuffix   string
 
-	BufferStrategy  string
-	BufferDirectory string
-	BufferDiskSync  bool
+	BufferStrategy     string
+	BufferDropStrategy string
+	BufferDirectory    string
+	BufferDiskSync     bool
 
 	LogLevel string
 }
@@ -109,7 +110,11 @@ func NewRunningOutput(output telegraf.Output, config *OutputConfig, batchSize, b
 		batchSize = DefaultMetricBatchSize
 	}
 
-	b, err := NewBuffer(config.Name, config.ID, config.Alias, bufferLimit, config.BufferStrategy, config.BufferDirectory, config.BufferDiskSync)
+	b, err := NewBuffer(
+		config.Name, config.ID, config.Alias, bufferLimit,
+		config.BufferStrategy, config.BufferDirectory, config.BufferDiskSync,
+		WithDropStrategy(config.BufferDropStrategy),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("creating buffer failed: %w", err)
 	}
