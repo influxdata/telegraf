@@ -61,8 +61,7 @@ func serviceInstallFlags() []cli.Flag {
 	}
 }
 
-func serviceCommand() *cli.Command {
-	actions := getServiceActions()
+func serviceCommand(actions serviceActions) *cli.Command {
 	return &cli.Command{
 		Name:  "service",
 		Usage: "commands for operate on the Windows service",

@@ -16,10 +16,12 @@ import (
 	"github.com/coreos/go-systemd/v22/daemon"
 	"github.com/fatih/color"
 	"github.com/influxdata/tail/watch"
+	"github.com/urfave/cli/v2"
 	"gopkg.in/tomb.v1"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/agent"
+	"github.com/influxdata/telegraf/cmd/telegraf/commands"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/logger"
@@ -65,12 +67,10 @@ type WindowFlags struct {
 }
 
 type App interface {
-	Init(<-chan error, Filters, GlobalFlags, WindowFlags)
+	Init(<-chan error, commands.Filters, GlobalFlags, WindowFlags)
 	Run() error
 
-	// Secret store commands
-	ListSecretStores() ([]string, error)
-	GetSecretStore(string) (telegraf.SecretStore, error)
+	commands.SecretStores
 }
 
 type Telegraf struct {
@@ -87,11 +87,11 @@ type Telegraf struct {
 	WindowFlags
 }
 
-func (t *Telegraf) Init(pprofErr <-chan error, f Filters, g GlobalFlags, w WindowFlags) {
+func (t *Telegraf) Init(pprofErr <-chan error, f commands.Filters, g GlobalFlags, w WindowFlags) {
 	t.pprofErr = pprofErr
-	t.inputFilters = f.input
-	t.outputFilters = f.output
-	t.secretstoreFilters = f.secretstore
+	t.inputFilters = f.Input
+	t.outputFilters = f.Output
+	t.secretstoreFilters = f.Secretstore
 	t.GlobalFlags = g
 	t.WindowFlags = w
 
@@ -110,6 +110,25 @@ func (t *Telegraf) Init(pprofErr <-chan error, f Filters, g GlobalFlags, w Windo
 	config.OldEnvVarReplacement = g.oldEnvBehavior
 	config.NonStrictEnvVarHandling = g.nonStrictEnvVars
 	config.PrintPluginConfigSource = g.printPluginConfigSource
+}
+
+func (t *Telegraf) InitSecretStores(ctx *cli.Context) {
+	filters := commands.Filters{
+		Section:     []string{"inputs", "outputs", "processors", "aggregators"},
+		Input:       []string{"-"},
+		Output:      []string{"-"},
+		Processor:   []string{"-"},
+		Aggregator:  []string{"-"},
+		Secretstore: commands.ProcessFilterFlags(ctx).Secretstore,
+	}
+	flags := GlobalFlags{
+		config:     ctx.StringSlice("config"),
+		configDir:  ctx.StringSlice("config-directory"),
+		plugindDir: ctx.String("plugin-directory"),
+		password:   ctx.String("password"),
+		debug:      ctx.Bool("debug"),
+	}
+	t.Init(nil, filters, flags, WindowFlags{})
 }
 
 func (t *Telegraf) ListSecretStores() ([]string, error) {

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	_ "embed"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -76,7 +75,11 @@ func formatFlags(flags []cli.Flag) string {
 	return doc.String()
 }
 
-func writeCLIReference(w io.Writer) error {
+func main() {
+	if len(os.Args) != 2 {
+		fmt.Fprintf(os.Stderr, "Usage: %s <output-path>\n", filepath.Base(os.Args[0]))
+		os.Exit(1)
+	}
 	root := commands.AvailableCommands()
 	data := struct {
 		GlobalFlags string
@@ -87,18 +90,11 @@ func writeCLIReference(w io.Writer) error {
 	}
 	tmpl, err := template.New("reference").Funcs(template.FuncMap{"repeat": strings.Repeat}).Parse(reference)
 	if err != nil {
-		return err
-	}
-	return tmpl.Execute(w, data)
-}
-
-func main() {
-	if len(os.Args) != 2 {
-		fmt.Fprintf(os.Stderr, "Usage: %s <output-path>\n", filepath.Base(os.Args[0]))
+		fmt.Fprintf(os.Stderr, "parse CLI reference template: %v\n", err)
 		os.Exit(1)
 	}
 	var output bytes.Buffer
-	if err := writeCLIReference(&output); err != nil {
+	if err := tmpl.Execute(&output, data); err != nil {
 		fmt.Fprintf(os.Stderr, "generate CLI reference: %v\n", err)
 		os.Exit(1)
 	}

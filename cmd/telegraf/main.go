@@ -8,7 +8,6 @@ import (
 	"os"
 	"runtime"
 	"sort"
-	"strings"
 
 	"github.com/awnumar/memguard"
 	"github.com/fatih/color"
@@ -35,71 +34,6 @@ type TelegrafConfig interface {
 	PrintDeprecationList([]config.PluginDeprecationInfo)
 }
 
-type Filters struct {
-	section     []string
-	input       []string
-	output      []string
-	aggregator  []string
-	processor   []string
-	secretstore []string
-}
-
-func appendFilter(a, b string) string {
-	if a != "" && b != "" {
-		return fmt.Sprintf("%s:%s", a, b)
-	}
-	if a != "" {
-		return a
-	}
-	return b
-}
-
-func processFilterFlags(ctx *cli.Context) Filters {
-	var section, input, output, aggregator, processor, secretstore string
-
-	// Support defining filters before and after the command
-	// The old style was:
-	// ./telegraf --section-filter inputs --input-filter cpu config >test.conf
-	// The new style is:
-	// ./telegraf config --section-filter inputs --input-filter cpu >test.conf
-	// To support the old style, check if the parent context has the filter flags defined
-	if len(ctx.Lineage()) >= 2 {
-		parent := ctx.Lineage()[1] // ancestor contexts in order from child to parent
-		section = parent.String("section-filter")
-		input = parent.String("input-filter")
-		output = parent.String("output-filter")
-		aggregator = parent.String("aggregator-filter")
-		processor = parent.String("processor-filter")
-		secretstore = parent.String("secretstore-filter")
-	}
-
-	// If both the parent and command filters are defined, append them together
-	section = appendFilter(section, ctx.String("section-filter"))
-	input = appendFilter(input, ctx.String("input-filter"))
-	output = appendFilter(output, ctx.String("output-filter"))
-	aggregator = appendFilter(aggregator, ctx.String("aggregator-filter"))
-	processor = appendFilter(processor, ctx.String("processor-filter"))
-	secretstore = appendFilter(secretstore, ctx.String("secretstore-filter"))
-
-	sectionFilters := deleteEmpty(strings.Split(section, ":"))
-	inputFilters := deleteEmpty(strings.Split(input, ":"))
-	outputFilters := deleteEmpty(strings.Split(output, ":"))
-	aggregatorFilters := deleteEmpty(strings.Split(aggregator, ":"))
-	processorFilters := deleteEmpty(strings.Split(processor, ":"))
-	secretstoreFilters := deleteEmpty(strings.Split(secretstore, ":"))
-	return Filters{sectionFilters, inputFilters, outputFilters, aggregatorFilters, processorFilters, secretstoreFilters}
-}
-
-func deleteEmpty(s []string) []string {
-	var r []string
-	for _, str := range s {
-		if str != "" {
-			r = append(r, str)
-		}
-	}
-	return r
-}
-
 // runApp defines all the subcommands and flags for Telegraf
 // this abstraction is used for testing, so outputBuffer and args can be changed
 func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfig, m App) error {
@@ -124,9 +58,9 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 		switch {
 		// print available input plugins
 		case cCtx.Bool("deprecation-list"):
-			filters := processFilterFlags(cCtx)
+			filters := commands.ProcessFilterFlags(cCtx)
 			infos := c.CollectDeprecationInfos(
-				filters.input, filters.output, filters.aggregator, filters.processor,
+				filters.Input, filters.Output, filters.Aggregator, filters.Processor,
 			)
 			outputBuffer.Write([]byte("Deprecated Input Plugins:\n"))
 			c.PrintDeprecationList(infos["inputs"])
@@ -165,8 +99,8 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 			return nil
 		// print usage for a plugin, ie, 'telegraf --usage mysql'
 		case cCtx.String("usage") != "":
-			err := PrintInputConfig(cCtx.String("usage"), outputBuffer)
-			err2 := PrintOutputConfig(cCtx.String("usage"), outputBuffer)
+			err := commands.PrintInputConfig(cCtx.String("usage"), outputBuffer)
+			err2 := commands.PrintOutputConfig(cCtx.String("usage"), outputBuffer)
 			if err != nil && err2 != nil {
 				return fmt.Errorf("%w and %w", err, err2)
 			}
@@ -177,10 +111,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 			return nil
 		// DEPRECATED
 		case cCtx.Bool("sample-config"):
-			filters := processFilterFlags(cCtx)
-
-			printSampleConfig(outputBuffer, filters)
-			return nil
+			return commands.ConfigCreateAction(cCtx)
 		}
 
 		if cCtx.String("pprof-addr") != "" {
@@ -201,7 +132,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 			return err
 		}
 
-		filters := processFilterFlags(cCtx)
+		filters := commands.ProcessFilterFlags(cCtx)
 
 		g := GlobalFlags{
 			config:                  cCtx.StringSlice("config"),
@@ -238,35 +169,12 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 		return m.Run()
 	}
 
-	printConfig := func(ctx *cli.Context) error {
-		printSampleConfig(outputBuffer, processFilterFlags(ctx))
-		return nil
-	}
-	openStores := func(ctx *cli.Context) commands.SecretStores {
-		filters := Filters{
-			section:     []string{"inputs", "outputs", "processors", "aggregators"},
-			input:       []string{"-"},
-			output:      []string{"-"},
-			processor:   []string{"-"},
-			aggregator:  []string{"-"},
-			secretstore: processFilterFlags(ctx).secretstore,
-		}
-		g := GlobalFlags{
-			config:     ctx.StringSlice("config"),
-			configDir:  ctx.StringSlice("config-directory"),
-			plugindDir: ctx.String("plugin-directory"),
-			password:   ctx.String("password"),
-			debug:      ctx.Bool("debug"),
-		}
-		m.Init(nil, filters, g, WindowFlags{})
-		return m
-	}
 	app := &cli.App{
 		Name:     "Telegraf",
 		Usage:    "The plugin-driven server agent for collecting & reporting metrics.",
 		Writer:   outputBuffer,
 		Flags:    commands.RootFlags(runtime.GOOS),
-		Commands: commands.Subcommands(runtime.GOOS, printConfig, openStores),
+		Commands: commands.Subcommands(runtime.GOOS, m),
 		Action:   action,
 	}
 	// Make sure we safely erase secrets

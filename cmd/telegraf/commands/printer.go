@@ -1,4 +1,4 @@
-package main
+package commands
 
 import (
 	_ "embed"
@@ -102,12 +102,12 @@ var serviceInputHeader = `
 
 // printSampleConfig prints the sample config
 func printSampleConfig(outputBuffer io.Writer, filters Filters) {
-	sectionFilters := filters.section
-	inputFilters := filters.input
-	outputFilters := filters.output
-	aggregatorFilters := filters.aggregator
-	processorFilters := filters.processor
-	secretstoreFilters := filters.secretstore
+	sectionFilters := filters.Section
+	inputFilters := filters.Input
+	outputFilters := filters.Output
+	aggregatorFilters := filters.Aggregator
+	processorFilters := filters.Processor
+	secretstoreFilters := filters.Secretstore
 
 	// print headers
 	outputBuffer.Write([]byte(header))

@@ -13,8 +13,8 @@ import (
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/eventlog"
 
+	"github.com/influxdata/telegraf/cmd/telegraf/commands/winservice"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/winservice"
 )
 
 const eventID = 100

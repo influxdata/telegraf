@@ -16,63 +16,56 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
-func pluginsCommand() *cli.Command {
+func pluginsCommand(actions commandActions) *cli.Command {
 	subcommands := []*cli.Command{
 		{
 			Name:   "inputs",
 			Usage:  "Print available input plugins",
 			Flags:  pluginFlags(),
-			Action: listPlugins("inputs", inputs.Inputs, inputs.Deprecations),
+			Action: actions.pluginsInputs,
 		},
 		{
 			Name:   "outputs",
 			Usage:  "Print available output plugins",
 			Flags:  pluginFlags(),
-			Action: listPlugins("outputs", outputs.Outputs, outputs.Deprecations),
+			Action: actions.pluginsOutputs,
 		},
 		{
 			Name:   "processors",
 			Usage:  "Print available processor plugins",
 			Flags:  pluginFlags(),
-			Action: listPlugins("processors", processors.Processors, processors.Deprecations),
+			Action: actions.pluginsProcessors,
 		},
 		{
 			Name:   "aggregators",
 			Usage:  "Print available aggregator plugins",
 			Flags:  pluginFlags(),
-			Action: listPlugins("aggregators", aggregators.Aggregators, aggregators.Deprecations),
+			Action: actions.pluginsAggregators,
 		},
 		{
 			Name:   "secretstores",
 			Usage:  "Print available secretstore plugins",
 			Flags:  pluginFlags(),
-			Action: listPlugins("secretstores", secretstores.SecretStores, secretstores.Deprecations),
+			Action: actions.pluginsSecretstores,
 		},
 		{
 			Name:   "parsers",
 			Usage:  "Print available parser plugins",
 			Flags:  pluginFlags(),
-			Action: listPlugins("parsers", parsers.Parsers, parsers.Deprecations),
+			Action: actions.pluginsParsers,
 		},
 		{
 			Name:   "serializers",
 			Usage:  "Print available serializer plugins",
 			Flags:  pluginFlags(),
-			Action: listPlugins("serializers", serializers.Serializers, serializers.Deprecations),
+			Action: actions.pluginsSerializers,
 		},
 	}
 	return &cli.Command{
-		Name:  "plugins",
-		Usage: "commands for printing available plugins",
-		Flags: pluginFlags(),
-		Action: func(ctx *cli.Context) error {
-			for _, cmd := range subcommands {
-				if err := cmd.Action(ctx); err != nil {
-					return err
-				}
-			}
-			return nil
-		},
+		Name:        "plugins",
+		Usage:       "commands for printing available plugins",
+		Flags:       pluginFlags(),
+		Action:      actions.plugins,
 		Subcommands: subcommands,
 	}
 }
@@ -81,15 +74,13 @@ func pluginFlags() []cli.Flag {
 	return []cli.Flag{&cli.BoolFlag{Name: "deprecated", Usage: "print only deprecated plugins"}}
 }
 
-func listPlugins[V, D any](prefix string, plugins map[string]V, deprecated map[string]D) cli.ActionFunc {
-	return func(ctx *cli.Context) error {
-		if ctx.Bool("deprecated") {
-			_, err := ctx.App.Writer.Write(pluginNames(deprecated, prefix))
-			return err
-		}
-		_, err := ctx.App.Writer.Write(pluginNames(plugins, prefix))
+func listPlugins[V, D any](ctx *cli.Context, prefix string, plugins map[string]V, deprecated map[string]D) error {
+	if ctx.Bool("deprecated") {
+		_, err := ctx.App.Writer.Write(pluginNames(deprecated, prefix))
 		return err
 	}
+	_, err := ctx.App.Writer.Write(pluginNames(plugins, prefix))
+	return err
 }
 
 func pluginNames[M ~map[string]V, V any](m M, prefix string) []byte {
@@ -99,4 +90,45 @@ func pluginNames[M ~map[string]V, V any](m M, prefix string) []byte {
 	}
 	sort.Strings(names)
 	return []byte(strings.Join(names, ""))
+}
+
+func pluginsAction(ctx *cli.Context) error {
+	for _, cmd := range ctx.Command.Subcommands {
+		// urfave/cli adds a help subcommand when it sets up the command.
+		if cmd.Name == "help" {
+			continue
+		}
+		if err := cmd.Action(ctx); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func pluginsInputsAction(ctx *cli.Context) error {
+	return listPlugins(ctx, "inputs", inputs.Inputs, inputs.Deprecations)
+}
+
+func pluginsOutputsAction(ctx *cli.Context) error {
+	return listPlugins(ctx, "outputs", outputs.Outputs, outputs.Deprecations)
+}
+
+func pluginsProcessorsAction(ctx *cli.Context) error {
+	return listPlugins(ctx, "processors", processors.Processors, processors.Deprecations)
+}
+
+func pluginsAggregatorsAction(ctx *cli.Context) error {
+	return listPlugins(ctx, "aggregators", aggregators.Aggregators, aggregators.Deprecations)
+}
+
+func pluginsSecretstoresAction(ctx *cli.Context) error {
+	return listPlugins(ctx, "secretstores", secretstores.SecretStores, secretstores.Deprecations)
+}
+
+func pluginsParsersAction(ctx *cli.Context) error {
+	return listPlugins(ctx, "parsers", parsers.Parsers, parsers.Deprecations)
+}
+
+func pluginsSerializersAction(ctx *cli.Context) error {
+	return listPlugins(ctx, "serializers", serializers.Serializers, serializers.Deprecations)
 }

@@ -26,12 +26,12 @@ func configMigrateFlags() []cli.Flag {
 	)
 }
 
-func configCommand(printConfig cli.ActionFunc) *cli.Command {
+func configCommand(actions commandActions) *cli.Command {
 	return &cli.Command{
 		Name:   "config",
 		Usage:  "commands for generating and migrating configurations",
 		Flags:  getGlobalFlags(),
-		Action: printConfig,
+		Action: actions.configCreate,
 		Subcommands: []*cli.Command{
 			{
 				Name:  "check",
@@ -49,7 +49,7 @@ func configCommand(printConfig cli.ActionFunc) *cli.Command {
 		> telegraf config check --config mysettings.conf
 		`,
 				Flags:  getGlobalFlags(),
-				Action: checkConfig,
+				Action: actions.configCheck,
 			},
 			{
 				Name:  "create",
@@ -69,7 +69,7 @@ InfluxDB v2 output plugin use
 > telegraf config create --section-filter "inputs:outputs" --input-filter "modbus" --output-filter "influxdb_v2"
 `,
 				Flags:  getGlobalFlags(),
-				Action: printConfig,
+				Action: actions.configCreate,
 			},
 			{
 				Name:  "migrate",
@@ -91,13 +91,19 @@ To migrate the file 'mysettings.conf' use
 > telegraf config migrate --config mysettings.conf
 `,
 				Flags:  configMigrateFlags(),
-				Action: migrateConfig,
+				Action: actions.configMigrate,
 			},
 		},
 	}
 }
 
-func checkConfig(cCtx *cli.Context) error {
+// ConfigCreateAction prints a sample configuration with the selected filters.
+func ConfigCreateAction(ctx *cli.Context) error {
+	printSampleConfig(ctx.App.Writer, ProcessFilterFlags(ctx))
+	return nil
+}
+
+func configCheckAction(cCtx *cli.Context) error {
 	// Setup logging
 	logConfig := &logger.Config{Debug: cCtx.Bool("debug")}
 	if err := logger.SetupLogging(logConfig); err != nil {
@@ -148,7 +154,7 @@ func checkConfig(cCtx *cli.Context) error {
 	return ag.InitPlugins()
 }
 
-func migrateConfig(cCtx *cli.Context) error {
+func configMigrateAction(cCtx *cli.Context) error {
 	// Setup logging
 	logConfig := &logger.Config{Debug: cCtx.Bool("debug")}
 	if err := logger.SetupLogging(logConfig); err != nil {

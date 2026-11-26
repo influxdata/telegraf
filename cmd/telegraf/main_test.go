@@ -11,8 +11,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/urfave/cli/v2"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/cmd/telegraf/commands"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -48,7 +50,7 @@ func NewMockTelegraf() *MockTelegraf {
 	return &MockTelegraf{}
 }
 
-func (m *MockTelegraf) Init(_ <-chan error, _ Filters, g GlobalFlags, w WindowFlags) {
+func (m *MockTelegraf) Init(_ <-chan error, _ commands.Filters, g GlobalFlags, w WindowFlags) {
 	m.GlobalFlags = g
 	m.WindowFlags = w
 }
@@ -56,6 +58,8 @@ func (m *MockTelegraf) Init(_ <-chan error, _ Filters, g GlobalFlags, w WindowFl
 func (*MockTelegraf) Run() error {
 	return nil
 }
+
+func (*MockTelegraf) InitSecretStores(*cli.Context) {}
 
 func (*MockTelegraf) ListSecretStores() ([]string, error) {
 	ids := make([]string, 0, len(secrets))
@@ -375,6 +379,13 @@ func TestSecretsRemoveUnsupported(t *testing.T) {
 }
 
 func TestCommandConfig(t *testing.T) {
+	const (
+		outputHeader       = "#                            OUTPUT PLUGINS                                   #"
+		inputHeader        = "#                            INPUT PLUGINS                                    #"
+		aggregatorHeader   = "#                            AGGREGATOR PLUGINS                               #"
+		processorHeader    = "#                            PROCESSOR PLUGINS                                #"
+		serviceInputHeader = "#                            SERVICE INPUT PLUGINS                            #"
+	)
 	tests := []struct {
 		name            string
 		commands        []string
