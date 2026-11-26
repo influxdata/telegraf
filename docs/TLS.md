@@ -31,6 +31,18 @@ For client TLS support we have the following options:
 #
 ```
 
+### System Root Certificates
+
+Without `tls_ca`, server certificates are verified against the system root
+certificates. The `SSL_CERT_FILE` and `SSL_CERT_DIR` environment variables
+override the locations they are loaded from.
+
+Since Telegraf v1.40.0 these variables also apply on Windows and macOS. When
+either is set, Telegraf loads the certificates from the given locations and
+verifies with Go's own verifier instead of the platform certificate store. To
+keep using the platform store, unset the variables or set
+`GODEBUG=x509sslcertoverrideplatform=0`.
+
 ### Server Configuration
 
 The server TLS configuration provides support for TLS mutual authentication:

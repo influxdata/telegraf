@@ -7,6 +7,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -540,4 +542,31 @@ func TestAddTopStats(t *testing.T) {
 			require.True(t, acc.HasInt64Field("mongodb_top_stats", key))
 		}
 	}
+}
+
+func TestStatsTagsDoNotLeak(t *testing.T) {
+	d := newMongodbData(
+		&statLine{
+			DBStatsLines:        []dbStatLine{{Name: "admin"}},
+			ColStatsLines:       []colStatLine{{Name: "foo", DBName: "local"}},
+			ShardHostStatsLines: map[string]shardHostStatLine{"shardA:27018": {}},
+			TopStatLines:        []topStatLine{{CollectionName: "bar"}},
+		},
+		map[string]string{"hostname": "localhost:27017"},
+	)
+
+	var acc testutil.Accumulator
+	d.addDBStats()
+	d.addColStats()
+	d.addShardHostStats()
+	d.addTopStats()
+	d.flush(&acc)
+
+	expected := []telegraf.Metric{
+		metric.New("mongodb_db_stats", map[string]string{"hostname": "localhost:27017", "db_name": "admin"}, nil, time.Unix(0, 0)),
+		metric.New("mongodb_col_stats", map[string]string{"hostname": "localhost:27017", "db_name": "local", "collection": "foo"}, nil, time.Unix(0, 0)),
+		metric.New("mongodb_shard_stats", map[string]string{"hostname": "shardA:27018"}, nil, time.Unix(0, 0)),
+		metric.New("mongodb_top_stats", map[string]string{"hostname": "localhost:27017", "collection": "bar"}, nil, time.Unix(0, 0)),
+	}
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.OnlyTags())
 }

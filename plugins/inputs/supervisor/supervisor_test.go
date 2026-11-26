@@ -155,6 +155,52 @@ func TestShort_SampleData(t *testing.T) {
 	}
 }
 
+func TestSourceAndPortTags(t *testing.T) {
+	tests := []struct {
+		name     string
+		server   string
+		expected map[string]string
+	}{
+		{
+			name:   "http without port",
+			server: "http://example.org/RPC2",
+			expected: map[string]string{
+				"source": "example.org",
+				"port":   "80",
+				"id":     "supervisor",
+			},
+		},
+		{
+			name:   "https without port",
+			server: "https://example.org/RPC2",
+			expected: map[string]string{
+				"source": "example.org",
+				"port":   "443",
+				"id":     "supervisor",
+			},
+		},
+		{
+			name:   "IPv6 with port",
+			server: "http://[::1]:9001/RPC2",
+			expected: map[string]string{
+				"source": "::1",
+				"port":   "9001",
+				"id":     "supervisor",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := &Supervisor{Server: tt.server}
+			require.NoError(t, plugin.Init())
+
+			tags, _, err := plugin.parseInstanceData(supervisorInfo{Ident: "supervisor"})
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, tags)
+		})
+	}
+}
+
 func TestIntegration_BasicGathering(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")

@@ -798,6 +798,34 @@ func TestMeasurement(t *testing.T) {
 				),
 			},
 		},
+		{
+			name: "non-string fields cannot be decoded from base64",
+			converter: &Converter{
+				Fields: &conversion{
+					Base64IEEEFloat32: []string{"*"},
+				},
+			},
+			input: metric.New(
+				"cpu",
+				map[string]string{},
+				map[string]any{
+					"a": "QlAAAA==",
+					"b": int64(54),
+					"c": 1.5,
+				},
+				time.Unix(0, 0),
+			),
+			expected: []telegraf.Metric{
+				metric.New(
+					"cpu",
+					map[string]string{},
+					map[string]any{
+						"a": float32(52),
+					},
+					time.Unix(0, 0),
+				),
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

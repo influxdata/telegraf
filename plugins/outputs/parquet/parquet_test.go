@@ -1,6 +1,7 @@
 package parquet
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -12,6 +13,8 @@ import (
 	"github.com/apache/arrow-go/v18/arrow"
 	"github.com/apache/arrow-go/v18/parquet"
 	"github.com/apache/arrow-go/v18/parquet/file"
+	"github.com/apache/arrow-go/v18/parquet/pqarrow"
+	"github.com/apache/arrow-go/v18/parquet/schema"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -21,12 +24,16 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func TestGather(t *testing.T) {
+func TestWrite(t *testing.T) {
+	now := time.Date(2026, 11, 14, 17, 4, 15, 123456789, time.UTC)
 	tests := []struct {
-		name       string
-		metrics    []telegraf.Metric
-		numRows    int
-		numColumns int
+		name                  string
+		timestampType         string
+		metrics               []telegraf.Metric
+		numRows               int
+		numColumns            int
+		expectedTimestampType schema.LogicalType
+		timestamp             int64
 	}{
 		{
 			name: "basic single metric",
@@ -37,11 +44,13 @@ func TestGather(t *testing.T) {
 					map[string]any{
 						"value": 1.0,
 					},
-					time.Now(),
+					now,
 				),
 			},
-			numRows:    1,
-			numColumns: 2,
+			numRows:               1,
+			numColumns:            2,
+			expectedTimestampType: schema.NewIntLogicalType(64, true),
+			timestamp:             now.UnixNano(),
 		},
 		{
 			name: "mix of tags and fields",
@@ -54,7 +63,7 @@ func TestGather(t *testing.T) {
 					map[string]any{
 						"value": 1.0,
 					},
-					time.Now(),
+					now,
 				),
 				metric.New(
 					"test",
@@ -64,11 +73,13 @@ func TestGather(t *testing.T) {
 					map[string]any{
 						"value": 2.0,
 					},
-					time.Now(),
+					now,
 				),
 			},
-			numRows:    2,
-			numColumns: 3,
+			numRows:               2,
+			numColumns:            3,
+			expectedTimestampType: schema.NewIntLogicalType(64, true),
+			timestamp:             now.UnixNano(),
 		},
 		{
 			name: "null values",
@@ -81,7 +92,7 @@ func TestGather(t *testing.T) {
 					map[string]any{
 						"value_old": 1.0,
 					},
-					time.Now(),
+					now,
 				),
 				metric.New(
 					"test",
@@ -91,11 +102,13 @@ func TestGather(t *testing.T) {
 					map[string]any{
 						"value_new": 2.0,
 					},
-					time.Now(),
+					now,
 				),
 			},
-			numRows:    2,
-			numColumns: 5,
+			numRows:               2,
+			numColumns:            5,
+			expectedTimestampType: schema.NewIntLogicalType(64, true),
+			timestamp:             now.UnixNano(),
 		},
 		{
 			name: "data types",
@@ -119,11 +132,67 @@ func TestGather(t *testing.T) {
 						"string":  "string",
 						"bool":    true,
 					},
-					time.Now(),
+					now,
 				),
 			},
-			numRows:    1,
-			numColumns: 15,
+			numRows:               1,
+			numColumns:            15,
+			expectedTimestampType: schema.NewIntLogicalType(64, true),
+			timestamp:             now.UnixNano(),
+		},
+		{
+			name:          "timestamp as int64",
+			timestampType: "int64",
+			metrics: []telegraf.Metric{
+				metric.New(
+					"test",
+					map[string]string{},
+					map[string]any{
+						"value": 1.0,
+					},
+					now,
+				),
+			},
+			numRows:               1,
+			numColumns:            2,
+			expectedTimestampType: schema.NewIntLogicalType(64, true),
+			timestamp:             now.UnixNano(),
+		},
+		{
+			name:          "timestamp in microseconds",
+			timestampType: "timestamp_us",
+			metrics: []telegraf.Metric{
+				metric.New(
+					"test",
+					map[string]string{},
+					map[string]any{
+						"value": 1.0,
+					},
+					now,
+				),
+			},
+			numRows:               1,
+			numColumns:            2,
+			expectedTimestampType: schema.NewTimestampLogicalType(true, schema.TimeUnitMicros),
+			timestamp:             now.UnixMicro(),
+		},
+		{
+			name:          "timestamp in nanoseconds",
+			timestampType: "timestamp_ns",
+			metrics: []telegraf.Metric{
+				metric.New(
+					"test",
+					map[string]string{},
+					map[string]any{
+						"value": 1.0,
+					},
+					now,
+				),
+			},
+			numRows:               1,
+			numColumns:            2,
+			expectedTimestampType: schema.NewTimestampLogicalType(true, schema.TimeUnitNanos),
+			timestamp:             now.UnixNano(),
 		},
 	}
 
@@ -133,6 +202,7 @@ func TestGather(t *testing.T) {
 			plugin := &Parquet{
 				Directory:          testDir,
 				TimestampFieldName: defaultTimestampFieldName,
+				TimestampType:      tt.timestampType,
 			}
 			require.NoError(t, plugin.Init())
 			require.NoError(t, plugin.Connect())
@@ -150,6 +220,18 @@ func TestGather(t *testing.T) {
 			metadata := reader.MetaData()
 			require.Equal(t, tt.numRows, int(metadata.NumRows))
 			require.Equal(t, tt.numColumns, metadata.Schema.NumColumns())
+
+			index := metadata.Schema.ColumnIndexByName(defaultTimestampFieldName)
+			logicalType := metadata.Schema.Column(index).LogicalType()
+			require.Truef(t, tt.expectedTimestampType.Equals(logicalType), "timestamp column has logical type %s", logicalType)
+
+			columnReader, err := reader.RowGroup(0).Column(index)
+			require.NoError(t, err)
+			timestamps := make([]int64, tt.numRows)
+			_, read, err := columnReader.(*file.Int64ColumnChunkReader).ReadBatch(int64(tt.numRows), timestamps, nil, nil)
+			require.NoError(t, err)
+			require.Equal(t, tt.numRows, read)
+			require.Equal(t, slices.Repeat([]int64{tt.timestamp}, tt.numRows), timestamps)
 		})
 	}
 }
@@ -404,9 +486,9 @@ func TestMissingValuesReadBackAsNull(t *testing.T) {
 	require.NoError(t, err)
 	defer reader.Close()
 
-	schema := reader.MetaData().Schema
-	for i := 0; i < schema.NumColumns(); i++ {
-		column := schema.Column(i)
+	fileSchema := reader.MetaData().Schema
+	for i := 0; i < fileSchema.NumColumns(); i++ {
+		column := fileSchema.Column(i)
 		if column.Name() == "timestamp" {
 			continue
 		}
@@ -432,13 +514,13 @@ func TestTimestampFieldNameCollisionKeepsOneColumn(t *testing.T) {
 	require.NoError(t, err)
 	defer reader.Close()
 
-	schema := reader.MetaData().Schema
-	names := make([]string, 0, schema.NumColumns())
-	for i := 0; i < schema.NumColumns(); i++ {
-		names = append(names, schema.Column(i).Name())
+	fileSchema := reader.MetaData().Schema
+	names := make([]string, 0, fileSchema.NumColumns())
+	for i := 0; i < fileSchema.NumColumns(); i++ {
+		names = append(names, fileSchema.Column(i).Name())
 	}
 	require.ElementsMatch(t, []string{"value", "timestamp"}, names)
-	require.Equal(t, parquet.Types.Int64, schema.Column(schema.ColumnIndexByName("timestamp")).PhysicalType())
+	require.Equal(t, parquet.Types.Int64, fileSchema.Column(fileSchema.ColumnIndexByName("timestamp")).PhysicalType())
 }
 
 func TestInvalidFilename(t *testing.T) {
@@ -615,7 +697,7 @@ func TestRotationIgnoresExternalModifications(t *testing.T) {
 	write(1.0)
 
 	stale := time.Now().Add(-2 * time.Hour)
-	require.NoError(t, os.Chtimes(filepath.Join(testDir, plugin.metricGroups["test"].filename), stale, stale))
+	require.NoError(t, os.Chtimes(filepath.Join(testDir, inProgressName(plugin.metricGroups["test"].filename)), stale, stale))
 
 	write(2.0)
 	require.NoError(t, plugin.Close())
@@ -642,24 +724,27 @@ func TestDeletedFileReappearsOnlyOnRotation(t *testing.T) {
 	require.NoError(t, plugin.Connect())
 	defer plugin.Close()
 
-	write := func(value float64) {
-		require.NoError(t, plugin.Write([]telegraf.Metric{
+	write := func(value float64) error {
+		return plugin.Write([]telegraf.Metric{
 			metric.New("test", map[string]string{}, map[string]any{"value": value}, time.Now()),
-		}))
+		})
 	}
 
-	write(1.0)
+	require.NoError(t, write(1.0))
 
 	group := plugin.metricGroups["test"]
-	require.NoError(t, os.Remove(filepath.Join(testDir, group.filename)))
+	require.NoError(t, os.Remove(filepath.Join(testDir, inProgressName(group.filename))))
 
-	write(2.0)
+	require.NoError(t, write(2.0))
 	files, err := os.ReadDir(testDir)
 	require.NoError(t, err)
 	require.Empty(t, files, "the delete goes unnoticed, so the write lands in the removed file")
 
 	group.created = group.created.Add(-2 * time.Hour)
-	write(3.0)
+	var perr *internal.PartialWriteError
+	require.ErrorAs(t, write(3.0), &perr)
+	require.ErrorIs(t, perr.Err, os.ErrNotExist, "the rotation reports that the removed file cannot be published")
+	require.Equal(t, []int{0}, perr.MetricsAccept)
 
 	files, err = os.ReadDir(testDir)
 	require.NoError(t, err)
@@ -700,10 +785,10 @@ func TestColumnsSortedByNameWithTimestampLast(t *testing.T) {
 	require.NoError(t, err)
 	defer reader.Close()
 
-	schema := reader.MetaData().Schema
-	names := make([]string, 0, schema.NumColumns())
-	for i := 0; i < schema.NumColumns(); i++ {
-		names = append(names, schema.Column(i).Name())
+	fileSchema := reader.MetaData().Schema
+	names := make([]string, 0, fileSchema.NumColumns())
+	for i := 0; i < fileSchema.NumColumns(); i++ {
+		names = append(names, fileSchema.Column(i).Name())
 	}
 	require.Equal(t, []string{
 		"host", "region", "usage_idle", "usage_iowait", "usage_steal", "usage_system", "usage_user", "timestamp",
@@ -743,11 +828,163 @@ func TestFailedWriterLeavesNoFile(t *testing.T) {
 	defer plugin.Close()
 
 	// Parquet has no representation for month intervals, so creating the writer fails
-	schema := arrow.NewSchema([]arrow.Field{{Name: "value", Type: arrow.FixedWidthTypes.MonthInterval}}, nil)
-	_, _, err := plugin.createWriter("test", schema, time.Now())
+	arrowSchema := arrow.NewSchema([]arrow.Field{{Name: "value", Type: arrow.FixedWidthTypes.MonthInterval}}, nil)
+	_, _, err := plugin.createWriter("test", arrowSchema, time.Now())
 	require.ErrorContains(t, err, "failed to create parquet writer")
 
 	entries, err := os.ReadDir(testDir)
 	require.NoError(t, err)
 	require.Empty(t, entries)
+}
+
+func TestUnknownTimestampTypeIsRejected(t *testing.T) {
+	p := &Parquet{Directory: t.TempDir(), TimestampType: "timestamp", Log: testutil.Logger{}}
+	require.ErrorContains(t, p.Init(), "timestamp_type")
+}
+
+func TestFileIsUnpublishedUntilClosed(t *testing.T) {
+	testDir := t.TempDir()
+	plugin := &Parquet{
+		Directory:          testDir,
+		TimestampFieldName: defaultTimestampFieldName,
+		Log:                testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+	require.NoError(t, plugin.Write([]telegraf.Metric{
+		metric.New("test", map[string]string{}, map[string]any{"value": 1.0}, time.Now()),
+	}))
+
+	published, err := filepath.Glob(filepath.Join(testDir, "*.parquet"))
+	require.NoError(t, err)
+	require.Empty(t, published)
+
+	require.NoError(t, plugin.Close())
+
+	published, err = filepath.Glob(filepath.Join(testDir, "*.parquet"))
+	require.NoError(t, err)
+	require.Len(t, published, 1)
+	reader, err := file.OpenParquetFile(published[0], false)
+	require.NoError(t, err)
+	defer reader.Close()
+	require.Equal(t, 1, int(reader.MetaData().NumRows))
+}
+
+func TestRotationPublishesTheClosedFile(t *testing.T) {
+	testDir := t.TempDir()
+	plugin := &Parquet{
+		Directory:          testDir,
+		RotationInterval:   config.Duration(time.Hour),
+		TimestampFieldName: defaultTimestampFieldName,
+		Log:                testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+	defer plugin.Close()
+
+	write := func(value float64) {
+		require.NoError(t, plugin.Write([]telegraf.Metric{
+			metric.New("test", map[string]string{}, map[string]any{"value": value}, time.Now()),
+		}))
+	}
+
+	write(1.0)
+	group := plugin.metricGroups["test"]
+	closed := group.filename
+	group.created = group.created.Add(-2 * time.Hour)
+	write(2.0)
+
+	published, err := filepath.Glob(filepath.Join(testDir, "*.parquet"))
+	require.NoError(t, err)
+	require.Equal(t, []string{filepath.Join(testDir, closed)}, published)
+	require.FileExists(t, filepath.Join(testDir, inProgressName(group.filename)))
+}
+
+func TestFileThatFailsToCloseStaysUnpublished(t *testing.T) {
+	testDir := t.TempDir()
+	plugin := &Parquet{
+		Directory:          testDir,
+		RotationInterval:   config.Duration(time.Hour),
+		TimestampFieldName: defaultTimestampFieldName,
+		Log:                testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+
+	write := func(value float64) error {
+		return plugin.Write([]telegraf.Metric{
+			metric.New("test", map[string]string{}, map[string]any{"value": value}, time.Now()),
+		})
+	}
+
+	require.NoError(t, write(1.0))
+	group := plugin.metricGroups["test"]
+	unfinished := group.filename
+	diskWriter := group.writer
+	t.Cleanup(func() { require.NoError(t, diskWriter.Close()) })
+	fullWriter, err := pqarrow.NewFileWriter(group.schema, &diskThatFillsAfterFirstWrite{}, parquet.NewWriterProperties(), pqarrow.DefaultWriterProps())
+	require.NoError(t, err)
+	group.writer = fullWriter
+	group.created = group.created.Add(-2 * time.Hour)
+
+	var perr *internal.PartialWriteError
+	require.ErrorAs(t, write(2.0), &perr)
+	require.ErrorContains(t, perr.Err, "stays unpublished")
+	require.Equal(t, []int{0}, perr.MetricsAccept)
+	require.Empty(t, perr.MetricsReject)
+	require.NoError(t, write(3.0))
+	require.NoError(t, plugin.Close())
+
+	published, err := filepath.Glob(filepath.Join(testDir, "*.parquet"))
+	require.NoError(t, err)
+	require.Len(t, published, 1)
+	require.NotEqual(t, filepath.Join(testDir, unfinished), published[0])
+	reader, err := file.OpenParquetFile(published[0], false)
+	require.NoError(t, err)
+	defer reader.Close()
+	require.Equal(t, 2, int(reader.MetaData().NumRows))
+	require.FileExists(t, filepath.Join(testDir, inProgressName(unfinished)))
+}
+
+func TestPublishingKeepsAFileThatTookTheSameName(t *testing.T) {
+	testDir := t.TempDir()
+	plugin := &Parquet{
+		Directory:          testDir,
+		TimestampFieldName: defaultTimestampFieldName,
+		Log:                testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+	require.NoError(t, plugin.Write([]telegraf.Metric{
+		metric.New("test", map[string]string{}, map[string]any{"value": 1.0}, time.Now()),
+	}))
+
+	squatter := filepath.Join(testDir, plugin.metricGroups["test"].filename)
+	require.NoError(t, os.WriteFile(squatter, []byte("not ours"), 0600))
+	require.NoError(t, plugin.Close())
+
+	content, err := os.ReadFile(squatter)
+	require.NoError(t, err)
+	require.Equal(t, "not ours", string(content))
+
+	published, err := filepath.Glob(filepath.Join(testDir, "*.parquet"))
+	require.NoError(t, err)
+	require.Len(t, published, 2)
+	ours := slices.DeleteFunc(published, func(path string) bool { return path == squatter })
+	reader, err := file.OpenParquetFile(ours[0], false)
+	require.NoError(t, err)
+	defer reader.Close()
+	require.Equal(t, 1, int(reader.MetaData().NumRows))
+}
+
+type diskThatFillsAfterFirstWrite struct {
+	written bool
+}
+
+func (d *diskThatFillsAfterFirstWrite) Write(data []byte) (int, error) {
+	if d.written {
+		return 0, errors.New("no space left on device")
+	}
+	d.written = true
+	return len(data), nil
 }

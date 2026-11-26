@@ -293,6 +293,9 @@ func (p *Postgresql) writeSequential(tableSources map[tableKey]*TableSource) err
 		}
 	}()
 
+	var accepted, rejected []int
+	var rejectErrs []error
+
 	for _, tableSource := range tableSources {
 		sp := tx
 		if len(tableSources) > 1 {
@@ -312,14 +315,22 @@ func (p *Postgresql) writeSequential(tableSources map[tableKey]*TableSource) err
 			}
 			p.Logger.Errorf("write error (permanent, dropping sub-batch): %v", err)
 			if len(tableSources) == 1 {
-				return nil
+				return &internal.PartialWriteError{
+					Err:                 fmt.Errorf("failed to write %d metric(s): %w", len(tableSource.batchIndices), err),
+					MetricsReject:       tableSource.batchIndices,
+					MetricsRejectErrors: []error{err},
+				}
 			}
 			// drop this one sub-batch and continue trying the rest
 			if err := sp.Rollback(p.dbContext); err != nil {
 				return err
 			}
 			p.tableManager.ClearTableSourceCache(tableSource)
+			rejected = append(rejected, tableSource.batchIndices...)
+			rejectErrs = append(rejectErrs, err)
+			continue
 		}
+		accepted = append(accepted, tableSource.batchIndices...)
 		// savepoints do not need to be committed (released), so save the round trip and skip it
 	}
 
@@ -327,7 +338,15 @@ func (p *Postgresql) writeSequential(tableSources map[tableKey]*TableSource) err
 		return fmt.Errorf("committing transaction: %w", err)
 	}
 	committed = true
-	return nil
+	if len(rejected) == 0 {
+		return nil
+	}
+	return &internal.PartialWriteError{
+		Err:                 fmt.Errorf("failed to write %d metric(s): %w", len(rejected), errors.Join(rejectErrs...)),
+		MetricsAccept:       accepted,
+		MetricsReject:       rejected,
+		MetricsRejectErrors: rejectErrs,
+	}
 }
 
 func (p *Postgresql) writeConcurrent(tableSources map[tableKey]*TableSource) {

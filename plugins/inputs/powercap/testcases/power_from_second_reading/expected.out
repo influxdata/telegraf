@@ -1,0 +1,2 @@
+powercap,zone=intel-rapl-0,name=package-0 energy_uj=1000000u 0
+powercap,zone=intel-rapl-0,name=package-0 energy_uj=2000000u,power_watts=1 1000000000

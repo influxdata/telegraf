@@ -1,6 +1,7 @@
 package kafka
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -16,6 +17,7 @@ import (
 	kafkacontainer "github.com/testcontainers/testcontainers-go/modules/kafka"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/models"
@@ -673,13 +675,17 @@ func TestWriteUnknownTopicWithBroker(t *testing.T) {
 	require.NoError(t, err)
 	defer func() { require.NoError(t, producer.Close()) }()
 
+	// Make sure we are connected by sending a single message for warming up the broker
+	_, _, err = producer.SendMessage(&sarama.ProducerMessage{Topic: "existing", Value: sarama.StringEncoder("warmup")})
+	require.NoError(t, err)
+
 	serializer := &influx.Serializer{}
 	require.NoError(t, serializer.Init())
 	plugin := &Kafka{
 		TopicTag:        "topic",
 		ExcludeTopicTag: true,
 		Log:             testutil.Logger{},
-		producer:        producer,
+		producer:        producer.(sarama.SyncProducerContext),
 		serializer:      serializer,
 	}
 	buffer, err := models.NewBuffer("kafka", t.Name(), "", 10, "memory", "", false)
@@ -738,10 +744,98 @@ func TestWriteUnknownTopicWithBroker(t *testing.T) {
 	require.True(t, delivered[2].Delivered())
 }
 
+func TestDeliveryTimeout(t *testing.T) {
+	s := &influx.Serializer{}
+	require.NoError(t, s.Init())
+
+	// The first producer never finishes a delivery
+	var producers []*mockProducer
+	plugin := &Kafka{
+		Brokers:         []string{"127.0.0.1"},
+		Topic:           "telegraf",
+		DeliveryTimeout: config.Duration(50 * time.Millisecond),
+		Log:             testutil.Logger{},
+		producerFunc: func([]string, *sarama.Config) (sarama.SyncProducer, error) {
+			producers = append(producers, &mockProducer{stuck: len(producers) == 0})
+			return producers[len(producers)-1], nil
+		},
+	}
+	plugin.SetSerializer(s)
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+	defer plugin.Close()
+
+	input := []telegraf.Metric{
+		metric.New("cpu", map[string]string{}, map[string]any{"value": 42.0}, time.Unix(0, 0)),
+	}
+	// Messages without a result are neither accepted nor rejected, so they stay buffered
+	err := plugin.Write(input)
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+	var partial *internal.PartialWriteError
+	require.ErrorAs(t, err, &partial)
+	require.Empty(t, partial.MetricsAccept)
+	require.Empty(t, partial.MetricsReject)
+	require.Eventually(t, producers[0].isClosed, time.Second, 10*time.Millisecond)
+
+	require.NoError(t, plugin.Write(input))
+	require.Len(t, producers, 2)
+	require.Len(t, producers[1].sent, 1)
+}
+
+func TestDeliveryTimeoutMockBroker(t *testing.T) {
+	broker := sarama.NewMockBroker(t, 1)
+	defer broker.Close()
+	broker.SetHandlerByMap(map[string]sarama.MockResponse{
+		"MetadataRequest": sarama.NewMockMetadataResponse(t).
+			SetBroker(broker.Addr(), broker.BrokerID()).
+			SetLeader("telegraf", 0, broker.BrokerID()),
+		"ProduceRequest": sarama.NewMockProduceResponse(t),
+	})
+	broker.SetLatency(200 * time.Millisecond)
+
+	s := &influx.Serializer{}
+	require.NoError(t, s.Init())
+
+	plugin := &Kafka{
+		Brokers:         []string{broker.Addr()},
+		Topic:           "telegraf",
+		DeliveryTimeout: config.Duration(100 * time.Millisecond),
+		WriteConfig:     kafka.WriteConfig{RequiredAcks: -1},
+		Log:             testutil.Logger{},
+		producerFunc:    sarama.NewSyncProducer,
+	}
+	plugin.SetSerializer(s)
+	require.NoError(t, plugin.Init())
+
+	// The mock broker only advertises some of the APIs
+	plugin.saramaConfig.ApiVersionsRequest = false
+	require.NoError(t, plugin.Connect())
+	defer plugin.Close()
+
+	input := []telegraf.Metric{
+		metric.New("cpu", map[string]string{}, map[string]any{"value": 42.0}, time.Unix(0, 0)),
+	}
+	require.ErrorIs(t, plugin.Write(input), context.DeadlineExceeded)
+
+	plugin.DeliveryTimeout = config.Duration(5 * time.Second)
+	require.NoError(t, plugin.Write(input))
+}
+
+func TestDeliveryTimeoutNegative(t *testing.T) {
+	plugin := &Kafka{
+		Brokers:         []string{"127.0.0.1"},
+		DeliveryTimeout: config.Duration(-time.Second),
+		Log:             testutil.Logger{},
+	}
+	require.ErrorContains(t, plugin.Init(), "delivery_timeout must not be negative")
+}
+
 type mockProducer struct {
 	sent      []*sarama.ProducerMessage
 	sendError func([]*sarama.ProducerMessage) error
-	sarama.SyncProducer
+	stuck     bool
+	closed    bool
+	sarama.SyncProducerContext
 	sync.Mutex
 }
 
@@ -766,8 +860,29 @@ func (p *mockProducer) SendMessages(msgs []*sarama.ProducerMessage) error {
 	return nil
 }
 
-func (*mockProducer) Close() error {
+func (p *mockProducer) SendMessagesContext(ctx context.Context, msgs []*sarama.ProducerMessage) error {
+	if !p.stuck {
+		return p.SendMessages(msgs)
+	}
+	<-ctx.Done()
+	errs := make(sarama.ProducerErrors, 0, len(msgs))
+	for _, msg := range msgs {
+		errs = append(errs, &sarama.ProducerError{Msg: msg, Err: ctx.Err()})
+	}
+	return errors.Join(ctx.Err(), errs)
+}
+
+func (p *mockProducer) Close() error {
+	p.Lock()
+	defer p.Unlock()
+	p.closed = true
 	return nil
+}
+
+func (p *mockProducer) isClosed() bool {
+	p.Lock()
+	defer p.Unlock()
+	return p.closed
 }
 
 func TestWriteConfigurationErrorsWithBroker(t *testing.T) {

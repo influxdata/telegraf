@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -226,6 +227,55 @@ func TestListenData(t *testing.T) {
 			actual := acc.GetTelegrafMetrics()
 			testutil.RequireMetricsEqual(t, expected, actual, testutil.SortMetrics())
 		})
+	}
+}
+
+func TestListenMulticastOwnGroupOnly(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Skipping on non-Linux, other systems filter groups per socket already")
+	}
+
+	// Both listeners need the same port
+	reserve, err := net.ListenUDP("udp4", &net.UDPAddr{IP: net.IPv4zero})
+	require.NoError(t, err)
+	port := reserve.LocalAddr().(*net.UDPAddr).Port
+	require.NoError(t, reserve.Close())
+
+	groups := []string{"239.255.0.1", "239.255.0.2"}
+	received := [2]chan string{make(chan string, 2), make(chan string, 2)}
+	for i, group := range groups {
+		cfg := &Config{}
+		sock, err := cfg.NewSocket("udp4://"+group+":"+strconv.Itoa(port), &SplitConfig{}, &testutil.Logger{})
+		require.NoError(t, err)
+		require.NoError(t, sock.Setup())
+		sock.Listen(
+			func(_ net.Addr, data []byte, _ time.Time) { received[i] <- string(data) },
+			func(err error) { t.Error(err) },
+		)
+		t.Cleanup(sock.Close)
+	}
+
+	// Packets from one socket arrive in order, so a packet leaked from the
+	// first group reaches the second listener before its own packet does.
+	client, err := net.ListenUDP("udp4", nil)
+	require.NoError(t, err)
+	defer client.Close()
+	for _, group := range groups {
+		_, err = client.WriteToUDP([]byte(group), &net.UDPAddr{IP: net.ParseIP(group), Port: port})
+		require.NoError(t, err)
+	}
+
+	for i, group := range groups {
+		var data string
+		require.Eventuallyf(t, func() bool {
+			select {
+			case data = <-received[i]:
+				return true
+			default:
+				return false
+			}
+		}, 3*time.Second, 100*time.Millisecond, "listener %d received nothing", i)
+		require.Equal(t, group, data, "listener %d received a packet of another group", i)
 	}
 }
 

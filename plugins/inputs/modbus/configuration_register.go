@@ -219,7 +219,8 @@ func validateFieldDefinitions(fieldDefs []fieldDefinition, registerType string) 
 			switch item.DataType {
 			case "INT8L", "INT8H", "UINT8L", "UINT8H",
 				"UINT16", "INT16", "UINT32", "INT32", "UINT64", "INT64",
-				"FLOAT16-IEEE", "FLOAT32-IEEE", "FLOAT64-IEEE", "FLOAT32", "FIXED", "UFIXED":
+				"FLOAT16-IEEE", "FLOAT32-IEEE", "FLOAT64-IEEE", "FLOAT32", "FIXED", "UFIXED",
+				"FLOAT_DEC_8E24M", "FLOAT_UDEC_8E24M":
 				// Check scale
 				if item.Scale == 0.0 {
 					return fmt.Errorf("invalid scale '%f' in %q - %q", item.Scale, registerType, item.Name)
@@ -263,7 +264,7 @@ func validateFieldDefinitions(fieldDefs []fieldDefinition, registerType string) 
 			switch item.DataType {
 			case "INT8L", "INT8H", "UINT8L", "UINT8H", "UINT16", "INT16", "FLOAT16-IEEE":
 				requiredAddresses = 1
-			case "UINT32", "INT32", "FLOAT32-IEEE":
+			case "UINT32", "INT32", "FLOAT32-IEEE", "FLOAT_DEC_8E24M", "FLOAT_UDEC_8E24M":
 				requiredAddresses = 2
 			case "UINT64", "INT64", "FLOAT64-IEEE":
 				requiredAddresses = 4
@@ -328,7 +329,7 @@ func (*configurationOriginal) normalizeInputDatatype(dataType string, words int)
 func (*configurationOriginal) normalizeOutputDatatype(dataType string) (string, error) {
 	// Handle our special types
 	switch dataType {
-	case "FIXED", "FLOAT32", "UFIXED":
+	case "FIXED", "FLOAT32", "UFIXED", "FLOAT_DEC_8E24M", "FLOAT_UDEC_8E24M":
 		return "FLOAT64", nil
 	}
 	return normalizeOutputDatatype("native")

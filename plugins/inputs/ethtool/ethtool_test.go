@@ -985,3 +985,30 @@ func TestNormalizedKeys(t *testing.T) {
 		acc.AssertContainsTaggedFields(t, pluginName, c.expectedFields, expectedTags)
 	}
 }
+
+// TestNamespaceInterfacesNilResult ensures interfaces() handles a command that
+// returns no result without panicking on a nil type assertion. Its do() closure
+// returns an untyped (nil, err) when net.Interfaces() fails, which is the
+// condition hit once file descriptors are exhausted (GH-20094). driverName() and
+// stats() return the ethtool client's typed values straight through, so their
+// result is never an untyped nil and needs no guard.
+func TestNamespaceInterfacesNilResult(t *testing.T) {
+	n := &namespaceGoroutine{
+		namespaceName: "test",
+		c:             make(chan namespacedAction),
+		log:           testutil.Logger{},
+	}
+	// Mimic the start() command loop, but force the error path so do() returns a
+	// nil result alongside the error.
+	go func() {
+		for command := range n.c {
+			command.result <- namespacedResult{result: nil, err: errors.New("too many open files")}
+			close(command.result)
+		}
+	}()
+	defer close(n.c)
+
+	interfaces, err := n.interfaces()
+	require.Error(t, err)
+	require.Nil(t, interfaces)
+}

@@ -24,9 +24,51 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
+	"github.com/influxdata/telegraf/plugins/parsers/prometheus"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
 	"github.com/influxdata/telegraf/testutil"
 )
+
+func TestHTTPWithPrometheusWithoutFinalNewline(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; version=0.0.4")
+		_, err := io.WriteString(w, "# TYPE xtars_dependency_state gauge\n"+
+			"xtars_dependency_state{dependency=\"postgresql\",state=\"up\"} 1\n"+
+			"# TYPE xtars_reachability_worker_utilization_ratio gauge\n"+
+			"xtars_reachability_worker_utilization_ratio 0")
+		if err != nil {
+			t.Error(err)
+		}
+	}))
+	defer server.Close()
+
+	plugin := &httpplugin.HTTP{URLs: []string{server.URL}, Log: testutil.Logger{}}
+	plugin.SetParserFunc(func() (telegraf.Parser, error) {
+		p := &prometheus.Parser{MetricVersion: 1}
+		err := p.Init()
+		return p, err
+	})
+	require.NoError(t, plugin.Init())
+	defer plugin.Stop()
+
+	var acc testutil.Accumulator
+	require.NoError(t, acc.GatherError(plugin.Gather))
+	expected := []telegraf.Metric{
+		metric.New(
+			"xtars_dependency_state",
+			map[string]string{"dependency": "postgresql", "state": "up", "url": server.URL},
+			map[string]any{"gauge": float64(1)},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"xtars_reachability_worker_utilization_ratio",
+			map[string]string{"url": server.URL},
+			map[string]any{"gauge": float64(0)},
+			time.Unix(0, 0),
+		),
+	}
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime(), testutil.SortMetrics())
+}
 
 func TestHTTPWithJSONFormat(t *testing.T) {
 	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -407,6 +449,49 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
+}
+
+func TestOAuthTokenRequestTimeout(t *testing.T) {
+	done := make(chan struct{})
+	ts := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/token" {
+			<-done
+		}
+	}))
+	defer ts.Close()
+	defer close(done)
+
+	plugin := &httpplugin.HTTP{
+		URLs:         []string{ts.URL + "/write"},
+		ClientID:     "howdy",
+		ClientSecret: "secret",
+		TokenURL:     ts.URL + "/token",
+		Log:          testutil.Logger{},
+	}
+	plugin.Timeout = config.Duration(100 * time.Millisecond)
+	plugin.SetParserFunc(func() (telegraf.Parser, error) {
+		p := &value.Parser{
+			MetricName: "metric",
+			DataType:   "string",
+		}
+		err := p.Init()
+		return p, err
+	})
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	gathered := make(chan error, 1)
+	go func() {
+		gathered <- plugin.Gather(&acc)
+	}()
+
+	select {
+	case err := <-gathered:
+		require.NoError(t, err)
+	case <-time.After(5 * time.Second):
+		require.FailNow(t, "gather did not finish after the token request timed out")
+	}
+	require.Len(t, acc.Errors, 1)
 }
 
 func TestHTTPWithCSVFormat(t *testing.T) {

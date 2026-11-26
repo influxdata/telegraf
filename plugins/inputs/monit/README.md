@@ -82,7 +82,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
     - status_code
     - monitoring_status_code
     - monitoring_mode_code
-    - permissions
+    - mode
 
 - monit_file
   - tags:
@@ -98,7 +98,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
     - monitoring_status_code
     - monitoring_mode_code
     - size
-    - permissions
+    - mode
 
 - monit_process
   - tags:
@@ -181,7 +181,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
     - status_code
     - monitoring_status_code
     - monitoring_mode_code
-    - permissions
+    - mode
 
 - monit_program
   - tags:

@@ -1,6 +1,7 @@
 package redfish
 
 import (
+	"fmt"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -14,6 +15,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/common/tls"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -376,7 +378,7 @@ func TestDellApis(t *testing.T) {
 				"power_capacity_watts": 750.00,
 				"power_input_watts":    900.0,
 				"power_output_watts":   203.0,
-				"line_input_voltage":   206.00,
+				"line_input_voltage":   229.9,
 			},
 			time.Unix(0, 0),
 		),
@@ -437,6 +439,7 @@ func TestDellApis(t *testing.T) {
 	require.NoError(t, plugin.Init())
 	var acc testutil.Accumulator
 
+	require.NoError(t, plugin.Start(&acc))
 	err = plugin.Gather(&acc)
 	require.NoError(t, err)
 	require.True(t, acc.HasMeasurement("redfish_thermal_temperatures"))
@@ -566,7 +569,6 @@ func TestHPApis(t *testing.T) {
 			},
 			map[string]any{
 				"average_consumed_watts": 221.0,
-				"interval_in_min":        int64(20),
 				"max_consumed_watts":     252.0,
 				"min_consumed_watts":     220.0,
 				"power_capacity_watts":   1600.0,
@@ -620,6 +622,7 @@ func TestHPApis(t *testing.T) {
 	require.NoError(t, hpPlugin.Init())
 	var hpAcc testutil.Accumulator
 
+	require.NoError(t, hpPlugin.Start(&hpAcc))
 	err = hpPlugin.Gather(&hpAcc)
 	require.NoError(t, err)
 	require.True(t, hpAcc.HasMeasurement("redfish_thermal_temperatures"))
@@ -721,6 +724,7 @@ func TestHPilo4Apis(t *testing.T) {
 	require.NoError(t, hpPlugin.Init())
 	var hpAcc testutil.Accumulator
 
+	require.NoError(t, hpPlugin.Start(&hpAcc))
 	err = hpPlugin.Gather(&hpAcc)
 	require.NoError(t, err)
 	require.True(t, hpAcc.HasMeasurement("redfish_thermal_temperatures"))
@@ -773,11 +777,13 @@ func TestInvalidUsernameorPassword(t *testing.T) {
 
 	var acc testutil.Accumulator
 	require.NoError(t, r.Init())
-	u, err := url.Parse(ts.URL)
+	require.NoError(t, r.Start(&acc))
+	_, err := url.Parse(ts.URL)
 	require.NoError(t, err)
 	err = r.Gather(&acc)
-	require.ErrorContains(t, err, "received status code 401")
-	require.ErrorContains(t, err, "http://"+u.Host+"/redfish/v1/Systems/")
+
+	require.ErrorContains(t, err, "401: Unauthorized")
+	require.ErrorContains(t, err, "/redfish/v1/Systems/")
 }
 func TestNoUsernameorPasswordConfiguration(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -887,9 +893,11 @@ func TestInvalidDellJSON(t *testing.T) {
 			require.NoError(t, plugin.Init())
 
 			var acc testutil.Accumulator
+			require.NoError(t, plugin.Start(&acc))
 			err := plugin.Gather(&acc)
 			require.Error(t, err)
-			require.ErrorContains(t, err, "error parsing input from")
+
+			require.ErrorContains(t, err, "invalid character")
 		})
 	}
 }
@@ -962,9 +970,13 @@ func TestInvalidHPJSON(t *testing.T) {
 			require.NoError(t, plugin.Init())
 
 			var acc testutil.Accumulator
+			require.NoError(t, plugin.Start(&acc))
 			err := plugin.Gather(&acc)
 			require.Error(t, err)
-			require.ErrorContains(t, err, "error parsing input from")
+
+			//nolint:lll // Keep entire error message on one line
+			// Example : failed to retrieve some items: [{\"link\":\"/redfish/v1/Systems/1\",\"error\":\"invalid character '{' looking for beginning of object key string\"}]
+			require.ErrorContains(t, err, "invalid character")
 		})
 	}
 }
@@ -994,12 +1006,59 @@ func TestParseErrorIncludesContext(t *testing.T) {
 	require.NoError(t, plugin.Init())
 
 	var acc testutil.Accumulator
-	err := plugin.Gather(&acc)
-	require.ErrorContains(t, err, ts.URL+"/redfish/v1/Systems/System.Embedded.1")
-	require.ErrorContains(t, err, "text/html")
+	require.ErrorContains(t, plugin.Start(&acc), fmt.Sprintf("connecting to %q failed", ts.URL))
 }
 
-func TestSkipChassisWithoutReference(t *testing.T) {
+func TestUnknownComputerSystemID(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/redfish/v1/":
+			http.ServeFile(w, r, "testdata/base.json")
+		case "/redfish/v1/Systems/":
+			http.ServeFile(w, r, "testdata/dell/dell_available_systems.json")
+		case "/redfish/v1/Systems/System.Embedded.1":
+			http.ServeFile(w, r, "testdata/dell/dell_systems.json")
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer ts.Close()
+
+	plugin := &Redfish{
+		Address:          ts.URL,
+		Username:         config.NewSecret([]byte("test")),
+		Password:         config.NewSecret([]byte("test")),
+		ComputerSystemID: "System.Embedded.2",
+		IncludeMetrics:   []string{"thermal", "power"},
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	require.ErrorContains(t, plugin.Gather(&acc), `computer system "System.Embedded.2" not found`)
+}
+
+func TestTLSConfigIsUsed(t *testing.T) {
+	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "testdata/base.json")
+	}))
+	defer ts.Close()
+
+	plugin := &Redfish{
+		Address:          ts.URL,
+		Username:         config.NewSecret([]byte("test")),
+		Password:         config.NewSecret([]byte("test")),
+		ComputerSystemID: "System.Embedded.1",
+		IncludeMetrics:   []string{"thermal", "power"},
+		ClientConfig:     tls.ClientConfig{InsecureSkipVerify: true},
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+}
+
+func TestSkipChassisWithoutThermalAndPowerReference(t *testing.T) {
 	var mu sync.Mutex
 	var requested []string
 
@@ -1019,7 +1078,13 @@ func TestSkipChassisWithoutReference(t *testing.T) {
 		case "/redfish/v1/Systems/":
 			http.ServeFile(w, r, "testdata/hp/hp_available_systems.json")
 		case "/redfish/v1/Systems/1":
-			http.ServeFile(w, r, "testdata/hp/hp_systems_nolink.json")
+			http.ServeFile(w, r, "testdata/hp/hp_systems.json")
+		case "/redfish/v1/Chassis/1/Thermal":
+			w.WriteHeader(http.StatusNotFound)
+		case "/redfish/v1/Chassis/1/Power":
+			w.WriteHeader(http.StatusNotFound)
+		case "/redfish/v1/Chassis/1/":
+			http.ServeFile(w, r, "testdata/hp/hp_chassis_subsys.json")
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -1037,71 +1102,18 @@ func TestSkipChassisWithoutReference(t *testing.T) {
 	require.NoError(t, plugin.Init())
 
 	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
 	require.NoError(t, plugin.Gather(&acc))
 	require.Empty(t, acc.GetTelegrafMetrics())
 
-	// The empty reference must not be requested as it resolves to the web root
-	// There shouldn't be a request to any /redfish/v1/Chassis path
+	// The missing references must not be requested as they cause none/problematic metrics
+	// check that no thermal or power api was requested: /redfish/v1/Chassis/1/Power||Thermal
 	mu.Lock()
 	defer mu.Unlock()
 	for _, path := range requested {
-		require.NotContains(t, path, "/redfish/v1/Chassis")
+		require.NotContains(t, path, "/redfish/v1/Chassis/1/Thermal")
+		require.NotContains(t, path, "/redfish/v1/Chassis/1/Power")
 	}
-}
-
-func TestSkipChassisWithoutThermalAndPowerReference(t *testing.T) {
-	var mu sync.Mutex
-	var requested []string
-
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !checkAuth(r, "test", "test") {
-			http.Error(w, "Unauthorized.", http.StatusUnauthorized)
-			return
-		}
-
-		mu.Lock()
-		requested = append(requested, r.URL.Path)
-		mu.Unlock()
-
-		w.Header().Set("Content-Type", "application/json")
-
-		var body string
-		switch r.URL.Path {
-		case "/redfish/v1/Systems/1":
-			body = `{"Links": {"Chassis": [{"@odata.id": "/redfish/v1/Chassis/1"}]}}`
-		case "/redfish/v1/Chassis/1":
-			// Firmware exposing the newer ThermalSubsystem and PowerSubsystem
-			// resources does not provide the Thermal and Power ones
-			body = `{"ChassisType": "RackMount", "Model": "AS-1116CS-TN"}`
-		default:
-			t.Errorf("unexpected request for %q", r.URL.Path)
-			return
-		}
-
-		if _, err := w.Write([]byte(body)); err != nil {
-			t.Error(err)
-		}
-	}))
-	defer ts.Close()
-
-	plugin := &Redfish{
-		Address:          ts.URL,
-		Username:         config.NewSecret([]byte("test")),
-		Password:         config.NewSecret([]byte("test")),
-		ComputerSystemID: "1",
-		IncludeMetrics:   []string{"thermal", "power"},
-		Log:              testutil.Logger{},
-	}
-	require.NoError(t, plugin.Init())
-
-	var acc testutil.Accumulator
-	require.NoError(t, plugin.Gather(&acc))
-	require.Empty(t, acc.GetTelegrafMetrics())
-
-	// The missing references must not be requested as they resolve to the web root
-	mu.Lock()
-	defer mu.Unlock()
-	require.Equal(t, []string{"/redfish/v1/Systems/1", "/redfish/v1/Chassis/1"}, requested)
 }
 
 func TestIncludeTagSetsConfiguration(t *testing.T) {
@@ -1146,10 +1158,10 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 				"address":              address,
 				"health":               "OK",
 				"state":                "Enabled",
-				"rack":                 "",
-				"room":                 "",
-				"row":                  "",
-				"datacenter":           "",
+				"rack":                 "1",
+				"room":                 "2",
+				"row":                  "3",
+				"datacenter":           "SomeDatacenter",
 				"chassis_chassistype":  "RackMount",
 				"chassis_manufacturer": "HP",
 				"chassis_model":        "Proliant Gen10",
@@ -1176,10 +1188,10 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 				"address":              address,
 				"health":               "OK",
 				"state":                "Enabled",
-				"rack":                 "",
-				"room":                 "",
-				"row":                  "",
-				"datacenter":           "",
+				"rack":                 "1",
+				"room":                 "2",
+				"row":                  "3",
+				"datacenter":           "SomeDatacenter",
 				"chassis_chassistype":  "RackMount",
 				"chassis_manufacturer": "HP",
 				"chassis_model":        "Proliant Gen10",
@@ -1206,10 +1218,10 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 				"address":              address,
 				"health":               "OK",
 				"state":                "Enabled",
-				"rack":                 "",
-				"room":                 "",
-				"row":                  "",
-				"datacenter":           "",
+				"rack":                 "1",
+				"room":                 "2",
+				"row":                  "3",
+				"datacenter":           "SomeDatacenter",
 				"chassis_chassistype":  "RackMount",
 				"chassis_manufacturer": "HP",
 				"chassis_model":        "Proliant Gen10",
@@ -1234,10 +1246,10 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 				"address":              address,
 				"health":               "OK",
 				"state":                "Enabled",
-				"rack":                 "",
-				"room":                 "",
-				"row":                  "",
-				"datacenter":           "",
+				"rack":                 "1",
+				"room":                 "2",
+				"row":                  "3",
+				"datacenter":           "SomeDatacenter",
 				"chassis_chassistype":  "RackMount",
 				"chassis_manufacturer": "HP",
 				"chassis_model":        "Proliant Gen10",
@@ -1262,10 +1274,10 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 				"address":              address,
 				"health":               "OK",
 				"state":                "Enabled",
-				"rack":                 "",
-				"room":                 "",
-				"row":                  "",
-				"datacenter":           "",
+				"rack":                 "1",
+				"room":                 "2",
+				"row":                  "3",
+				"datacenter":           "SomeDatacenter",
 				"chassis_chassistype":  "RackMount",
 				"chassis_manufacturer": "HP",
 				"chassis_model":        "Proliant Gen10",
@@ -1288,10 +1300,10 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 				"name":                 "",
 				"member_id":            "0",
 				"address":              address,
-				"rack":                 "",
-				"room":                 "",
-				"row":                  "",
-				"datacenter":           "",
+				"rack":                 "1",
+				"room":                 "2",
+				"row":                  "3",
+				"datacenter":           "SomeDatacenter",
 				"chassis_chassistype":  "RackMount",
 				"chassis_manufacturer": "HP",
 				"chassis_model":        "Proliant Gen10",
@@ -1304,7 +1316,6 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 			},
 			map[string]any{
 				"average_consumed_watts": 221.0,
-				"interval_in_min":        int64(20),
 				"max_consumed_watts":     252.0,
 				"min_consumed_watts":     220.0,
 				"power_capacity_watts":   1600.0,
@@ -1321,10 +1332,10 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 				"address":              address,
 				"health":               "OK",
 				"state":                "Enabled",
-				"rack":                 "",
-				"room":                 "",
-				"row":                  "",
-				"datacenter":           "",
+				"rack":                 "1",
+				"room":                 "2",
+				"row":                  "3",
+				"datacenter":           "SomeDatacenter",
 				"chassis_chassistype":  "RackMount",
 				"chassis_manufacturer": "HP",
 				"chassis_model":        "Proliant Gen10",
@@ -1351,10 +1362,10 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 				"address":              address,
 				"health":               "OK",
 				"state":                "Enabled",
-				"rack":                 "",
-				"room":                 "",
-				"row":                  "",
-				"datacenter":           "",
+				"rack":                 "1",
+				"room":                 "2",
+				"row":                  "3",
+				"datacenter":           "SomeDatacenter",
 				"chassis_chassistype":  "RackMount",
 				"chassis_manufacturer": "HP",
 				"chassis_model":        "Proliant Gen10",
@@ -1381,10 +1392,12 @@ func TestIncludeTagSetsConfiguration(t *testing.T) {
 		ComputerSystemID: "1",
 		IncludeTagSets:   []string{"chassis", "chassis.location"},
 		IncludeMetrics:   []string{"thermal", "power"},
+		Log:              testutil.Logger{},
 	}
 	require.NoError(t, hpPlugin.Init())
 	var hpAcc testutil.Accumulator
 
+	require.NoError(t, hpPlugin.Start(&hpAcc))
 	err = hpPlugin.Gather(&hpAcc)
 	require.NoError(t, err)
 	require.True(t, hpAcc.HasMeasurement("redfish_thermal_temperatures"))

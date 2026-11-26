@@ -162,3 +162,58 @@ func TestOnMessage(t *testing.T) {
 		})
 	}
 }
+
+func TestOnMessagePartitionKeyTag(t *testing.T) {
+	tests := []struct {
+		name     string
+		tag      string
+		key      *string
+		expected map[string]string
+	}{
+		{
+			name:     "tag set",
+			tag:      "device",
+			key:      aws.String("device-42"),
+			expected: map[string]string{"device": "device-42"},
+		},
+		{
+			name:     "tag not set",
+			key:      aws.String("device-42"),
+			expected: map[string]string{},
+		},
+		{
+			name:     "tag set without partition key",
+			tag:      "device",
+			expected: map[string]string{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parser := &json.Parser{MetricName: "test"}
+			require.NoError(t, parser.Init())
+
+			plugin := &KinesisConsumer{
+				StreamName:      "foo",
+				PartitionKeyTag: tt.tag,
+				Log:             &testutil.Logger{},
+				parser:          parser,
+				records:         make(map[telegraf.TrackingID]iterator),
+			}
+			require.NoError(t, plugin.Init())
+
+			record := &types.Record{
+				Data:           []byte(`{"value": 1}`),
+				PartitionKey:   tt.key,
+				SequenceNumber: aws.String("1"),
+			}
+
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.onMessage(acc.WithTracking(1), "test", record))
+
+			actual := acc.GetTelegrafMetrics()
+			require.Len(t, actual, 1)
+			require.Equal(t, tt.expected, actual[0].Tags())
+		})
+	}
+}

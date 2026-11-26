@@ -53,6 +53,7 @@ type TableSource struct {
 	postgresql   *Postgresql
 	schema       string
 	metrics      []telegraf.Metric
+	batchIndices []int // Indices in the original input batch, not in metrics.
 	cursor       int
 	cursorValues []any
 	cursorError  error
@@ -74,7 +75,7 @@ type TableSource struct {
 func NewTableSources(p *Postgresql, metrics []telegraf.Metric) map[tableKey]*TableSource {
 	tableSources := make(map[tableKey]*TableSource)
 
-	for _, m := range metrics {
+	for i, m := range metrics {
 		schema := p.Schema
 		if p.SchemaTag != "" {
 			if value, ok := m.GetTag(p.SchemaTag); ok {
@@ -100,6 +101,7 @@ func NewTableSources(p *Postgresql, metrics []telegraf.Metric) map[tableKey]*Tab
 			tableSources[key] = tsrc
 		}
 		tsrc.AddMetric(m)
+		tsrc.batchIndices = append(tsrc.batchIndices, i)
 	}
 
 	return tableSources
