@@ -48,6 +48,32 @@ func TestInitSuccess(t *testing.T) {
 	}
 }
 
+func TestWriteBatchOrderedConfig(t *testing.T) {
+	for _, tt := range []struct {
+		name    string
+		setting string
+		ordered bool
+	}{
+		{name: "default", ordered: true},
+		{name: "unordered", setting: "write_batch_ordered = false"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := loadBatchConfig(t, "mongodb://localhost:27017", tt.setting)
+			require.Equal(t, new(tt.ordered), plugin.WriteBatchOrdered)
+		})
+	}
+}
+
+func loadBatchConfig(t *testing.T, dsn, setting string) *MongoDB {
+	t.Helper()
+	cfg := fmt.Sprintf("[[outputs.mongodb]]\ndsn = %q\nwrite_batch = true\n%s", dsn, setting)
+	c := config.NewConfig()
+	require.NoError(t, c.LoadConfigData([]byte(cfg), config.EmptySourcePath))
+	plugin := c.Outputs[0].Output.(*MongoDB)
+	require.NoError(t, plugin.Init())
+	return plugin
+}
+
 func TestInitFail(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -415,6 +441,56 @@ func TestConnectAndWriteX509AuthFailIntegration(t *testing.T) {
 
 			// Check for failing connect
 			require.ErrorContains(t, plugin.Connect(), tt.expected)
+		})
+	}
+}
+
+func TestWriteBatchOrderedIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	const port = "27017"
+	container := testutil.Container{
+		Image:              "mongo",
+		ExposedPorts:       []string{port},
+		WaitingFor:         wait.ForLog("Waiting for connections"),
+		HostConfigModifier: testutil.RaiseNofileLimit,
+	}
+	require.NoError(t, container.Start())
+	defer container.Terminate()
+	dsn := "mongodb://" + container.Address + ":" + container.Ports[port]
+
+	// Seed a regular collection so MongoDB enforces uniqueness of _id.
+	ctx := t.Context()
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(dsn))
+	require.NoError(t, err)
+	defer client.Disconnect(ctx)
+	collection := client.Database("telegraf").Collection("metrics")
+	_, err = collection.InsertOne(ctx, bson.M{"_id": "duplicate"})
+	require.NoError(t, err)
+
+	for _, tt := range []struct {
+		name      string
+		setting   string
+		wantCount int64
+	}{
+		{name: "default", wantCount: 0},
+		{name: "unordered", setting: "write_batch_ordered = false", wantCount: 1},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			plugin := loadBatchConfig(t, dsn, tt.setting)
+			require.NoError(t, plugin.Connect())
+			defer plugin.Close()
+
+			err := plugin.Write([]telegraf.Metric{
+				metric.New("metrics", nil, map[string]any{"_id": "duplicate"}, time.Now()),
+				metric.New("metrics", nil, map[string]any{"_id": tt.name}, time.Now()),
+			})
+			require.True(t, mongo.IsDuplicateKeyError(err), "got %v", err)
+			count, err := collection.CountDocuments(t.Context(), bson.M{"_id": tt.name})
+			require.NoError(t, err)
+			require.Equal(t, tt.wantCount, count)
 		})
 	}
 }

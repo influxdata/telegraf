@@ -70,6 +70,11 @@ to use them.
   ## fashion. Otherwise, write each metric individually.
   # write_batch = false
 
+  ## When write_batch is true, insert documents in order and stop at the first
+  ## write error. Set to false to let MongoDB attempt the rest of the batch
+  ## after an individual write fails.
+  # write_batch_ordered = true
+
   ## List of tags to use as metadata (wildcards accepted)
   ## If empty the "tags" element will be used as metadata field, otherwise
   ## a "metadata" element will be created containing the matching, existing
