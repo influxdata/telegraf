@@ -49,8 +49,11 @@ func LoadMibsFromPath(paths []string, log telegraf.Logger, loader MibLoader) err
 	if err != nil {
 		return err
 	}
+	// Imports can refer to a module in any configured directory.
 	for _, path := range folders {
 		loader.appendPath(path)
+	}
+	for _, path := range folders {
 		modules, err := os.ReadDir(path)
 		if err != nil {
 			log.Warnf("Can't read directory %v", modules)

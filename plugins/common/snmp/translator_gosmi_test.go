@@ -2,6 +2,8 @@ package snmp
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -27,6 +29,96 @@ func TestNewGosmiTranslator(t *testing.T) {
 	tr, err = NewGosmiTranslator([]string{"testdata"}, testutil.Logger{})
 	require.NoError(t, err)
 	require.NotNil(t, tr)
+}
+
+func TestGosmiTranslatorPathOrder(t *testing.T) {
+	const envVar = "TELEGRAF_TEST_GOSMI_PATH_ORDER"
+
+	if order := os.Getenv(envVar); order != "" {
+		t.Setenv("SMIPATH", t.TempDir())
+
+		root := t.TempDir()
+		stdDir := filepath.Join(root, "std")
+		providerDir := filepath.Join(root, "provider")
+		consumerDir := filepath.Join(root, "consumer")
+
+		fixtures := []struct {
+			dir     string
+			name    string
+			content string
+		}{
+			{
+				dir:  stdDir,
+				name: "SNMPv2-SMI.mib",
+				content: `SNMPv2-SMI DEFINITIONS ::= BEGIN
+org OBJECT IDENTIFIER ::= { iso 3 }
+dod OBJECT IDENTIFIER ::= { org 6 }
+internet OBJECT IDENTIFIER ::= { dod 1 }
+private OBJECT IDENTIFIER ::= { internet 4 }
+enterprises OBJECT IDENTIFIER ::= { private 1 }
+END
+`,
+			},
+			{
+				dir:  providerDir,
+				name: "EXAMPLE-ROOT.mib",
+				content: `EXAMPLE-ROOT DEFINITIONS ::= BEGIN
+IMPORTS enterprises FROM SNMPv2-SMI;
+exampleRoot OBJECT IDENTIFIER ::= { enterprises 32473 }
+END
+`,
+			},
+			{
+				dir:  consumerDir,
+				name: "EXAMPLE-CHILD.mib",
+				content: `EXAMPLE-CHILD DEFINITIONS ::= BEGIN
+IMPORTS exampleRoot FROM EXAMPLE-ROOT;
+exampleLeaf OBJECT IDENTIFIER ::= { exampleRoot 7 }
+END
+`,
+			},
+		}
+		for _, f := range fixtures {
+			require.NoError(t, os.MkdirAll(f.dir, 0o750))
+			require.NoError(t, os.WriteFile(filepath.Join(f.dir, f.name), []byte(f.content), 0o600))
+		}
+
+		var paths []string
+		switch order {
+		case "consumer-first":
+			paths = []string{consumerDir, providerDir, stdDir}
+		case "provider-first":
+			paths = []string{providerDir, consumerDir, stdDir}
+		default:
+			t.Fatalf("unexpected path order %q", order)
+		}
+
+		tr, err := NewGosmiTranslator(paths, testutil.Logger{})
+		require.NoError(t, err)
+
+		rootField := Field{Oid: "EXAMPLE-ROOT::exampleRoot"}
+		require.NoError(t, rootField.Init(tr))
+		require.Equal(t, ".1.3.6.1.4.1.32473", rootField.Oid)
+
+		childField := Field{Oid: "EXAMPLE-CHILD::exampleLeaf"}
+		require.NoError(t, childField.Init(tr))
+		require.Equal(t, ".1.3.6.1.4.1.32473.7", childField.Oid)
+		return
+	}
+
+	exe, err := os.Executable()
+	require.NoError(t, err)
+
+	// Each order needs a fresh process because gosmi keeps its module table globally.
+	runArg := "-test.run=^" + t.Name() + "$"
+	for _, order := range []string{"consumer-first", "provider-first"} {
+		t.Run(order, func(t *testing.T) {
+			cmd := exec.Command(exe, runArg)
+			cmd.Env = append(os.Environ(), envVar+"="+order)
+			output, err := cmd.CombinedOutput()
+			require.NoError(t, err, string(output))
+		})
+	}
 }
 
 func TestFieldInitGosmi(t *testing.T) {
