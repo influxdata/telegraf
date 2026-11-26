@@ -973,54 +973,11 @@ disk.capacity.usage.average
 * virtualDisk stats for VM
   * disk (name of virtual disk)
 
-#### Collect custom tag
+#### Collect additional properties
 
-`*_property_include` allow you to collect data that are not metrics.
-
-For example :
-
-```toml
-  host_property_include = ["summary.runtime.powerState", "summary.overallStatus", "summary.runtime.inMaintenanceMode", "summary.runtime.connectionState"]
-  vm_property_include = ["runtime.powerState", "runtime.powerState", "summary.config.memorySizeMB", "summary.config.memoryReservation"]
-  cluster_property_include = ["summary.overallStatus"]
-  datastore_property_include = ["summary.accessible"]
-  resource_pool_property_include = ["overallStatus"]
-```
-
-The <entity>_property_include settings allow to collect additional properties of the configured
-entity into an additional _properties metric. The properties are added as fields with the
+The `<entity>_property_include` settings allow to collect additional properties of the configured
+entity into an additional `_properties` metric. The properties are added as fields with the
 tag-set being identical to the one of the entity metrics.
-
-It is recommended to use it with `processors.enum` to convert as numeric fields.
-
-For example :
-
-```toml
-[[processors.enum]]
-  [[processors.enum.mapping]]
-    ## Names of the fields to map. Globs accepted.
-    tags = ["runtime_powerState"]
-    default = 0
-
-    ## Table of mappings
-    [processors.enum.mapping.value_mappings]
-      poweredOn = 1
-      suspended = 2
-      poweredOff = 3
-```
-
-It is recommended to use it with `processors.converter` to convert as fields
-to measurement.
-
-For example :
-
-```toml
-[[processors.converter]]
-  [[processors.converter.tags]]
-    ## Names of the fields to map. Globs accepted.
-    integer = ["runtime_powerState"]
-```
-
 ## Add a vSAN extension
 
 A vSAN resource is a special type of resource that can be collected by the
