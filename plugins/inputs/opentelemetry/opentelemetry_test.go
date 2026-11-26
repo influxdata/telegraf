@@ -29,6 +29,7 @@ import (
 	otlpprofiles "go.opentelemetry.io/proto/otlp/collector/profiles/v1development"
 	otlptrace "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	common "go.opentelemetry.io/proto/otlp/common/v1"
+	metrics "go.opentelemetry.io/proto/otlp/metrics/v1"
 	profiles "go.opentelemetry.io/proto/otlp/profiles/v1development"
 	resource "go.opentelemetry.io/proto/otlp/resource/v1"
 	"google.golang.org/grpc"
@@ -704,7 +705,7 @@ func TestClientCertTagsOverrideProfileAttributes(t *testing.T) {
 	}
 }
 
-func TestClientCertTagsMTLS(t *testing.T) {
+func TestClientCertificateTagsGRPC(t *testing.T) {
 	pki := testutil.NewPKI("../../../testutil/pki")
 	serverCfg := pki.TLSServerConfig()
 	serverCfg.TLSCipherSuites = nil
@@ -748,6 +749,88 @@ func TestClientCertTagsMTLS(t *testing.T) {
 	var rm metricdata.ResourceMetrics
 	require.NoError(t, reader.Collect(ctx, &rm))
 	require.NoError(t, exporter.Export(ctx, &rm))
+
+	require.Empty(t, acc.Errors)
+	actual := acc.GetTelegrafMetrics()
+	require.Len(t, actual, 1)
+	tags := actual[0].Tags()
+	require.Equal(t, "localhost", tags["tls_client_cn"])
+	require.Equal(t, "localhost", tags["tls_client_dns"])
+	require.Equal(t, "Telegraf Test CA", tags["tls_client_issuer"])
+}
+
+func TestClientCertificateTagsHTTP(t *testing.T) {
+	pki := testutil.NewPKI("../../../testutil/pki")
+	serverCfg := pki.TLSServerConfig()
+	serverCfg.TLSCipherSuites = nil
+	serverCfg.TLSMinVersion = ""
+	serverCfg.TLSMaxVersion = ""
+
+	plugin := &OpenTelemetry{
+		ServerConfig:   *serverCfg,
+		ServiceAddress: "https://127.0.0.1:0",
+		ClientCertTags: []string{"cn", "dns", "issuer"},
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	clientTLS, err := pki.TLSClientConfig().TLSConfig()
+	require.NoError(t, err)
+	clientTLS.ServerName = "localhost"
+
+	// Construct the metric message
+	msg := &otlpmetrics.ExportMetricsServiceRequest{
+		ResourceMetrics: []*metrics.ResourceMetrics{
+			{
+				Resource: &resource.Resource{},
+				ScopeMetrics: []*metrics.ScopeMetrics{
+					{
+						Scope: &common.InstrumentationScope{Name: "lib"},
+						Metrics: []*metrics.Metric{
+							{
+								Name: "mtls-counter",
+								Data: &metrics.Metric_Sum{
+									Sum: &metrics.Sum{
+										AggregationTemporality: metrics.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
+										IsMonotonic:            true,
+										DataPoints: []*metrics.NumberDataPoint{
+											{
+												TimeUnixNano: uint64(time.Now().UnixNano()),
+												Value:        &metrics.NumberDataPoint_AsInt{AsInt: 1},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	body, err := proto.Marshal(msg)
+	require.NoError(t, err)
+
+	// Send the message as binary protobuf via HTTPS using the client certificate
+	client := &http.Client{
+		Transport: &http.Transport{TLSClientConfig: clientTLS},
+		Timeout:   5 * time.Second,
+	}
+	defer client.CloseIdleConnections()
+
+	addr := plugin.listener.Addr().String()
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, "https://"+addr+"/v1/metrics", bytes.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/x-protobuf")
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+	respBody, err := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode, string(respBody))
 
 	require.Empty(t, acc.Errors)
 	actual := acc.GetTelegrafMetrics()
