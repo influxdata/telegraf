@@ -1588,6 +1588,11 @@ func TestClientDiscovery(t *testing.T) {
 			version:        "7.17.29",
 			discoveryError: "discovery unavailable",
 		},
+		{
+			name:           "v8 initial discovery failure",
+			version:        "8.19.18",
+			discoveryError: "discovery unavailable",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			var discoveredWrites, seedWrites, discoveries atomic.Int32
