@@ -146,6 +146,19 @@ func (t *Telegraf) reloadLoop() error {
 	reload <- true
 	for <-reload {
 		reload <- false
+
+		// Load the new configuration before starting the watchers, so they
+		// start from the revision that is actually running in this round.
+		// Otherwise the remote config watcher takes the previous revision as
+		// its baseline and triggers a second reload for the same change.
+		if reloadConfig {
+			c, err := t.loadConfiguration()
+			if err != nil {
+				return fmt.Errorf("[telegraf] Error running agent: %w", err)
+			}
+			t.cfg = c
+		}
+
 		ctx, cancel := context.WithCancel(context.Background())
 
 		signals := make(chan os.Signal, 1)
@@ -205,7 +218,7 @@ func (t *Telegraf) reloadLoop() error {
 			}
 		}()
 
-		err := t.runAgent(ctx, reloadConfig)
+		err := t.runAgent(ctx)
 		if err != nil && !errors.Is(err, context.Canceled) {
 			return fmt.Errorf("[telegraf] Error running agent: %w", err)
 		}
@@ -344,7 +357,12 @@ func (*Telegraf) watchRemoteConfigs(ctx context.Context, signals chan os.Signal,
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
+	// Start from the revision that was actually loaded, so a change made
+	// between loading the config and the first check is not missed.
 	lastModified := make(map[string]string, len(remoteConfigs))
+	for _, configURL := range remoteConfigs {
+		lastModified[configURL] = config.RemoteConfigLastModified(configURL)
+	}
 	for {
 		select {
 		case <-ctx.Done():
@@ -373,10 +391,17 @@ func (*Telegraf) watchRemoteConfigs(ctx context.Context, signals chan os.Signal,
 				}
 				resp.Body.Close()
 
+				// Keep the known revision on failed checks, otherwise a change
+				// made while the server was unavailable would never be noticed.
+				if resp.StatusCode != http.StatusOK {
+					log.Printf("W! Checking config %q for changes failed: %s\n", configURL, resp.Status)
+					continue
+				}
+
 				modified := resp.Header.Get("Last-Modified")
 				if modified == "" {
-					log.Printf("E! Last-Modified header not found, stopping the watcher for %s\n", configURL)
-					delete(lastModified, configURL)
+					log.Printf("E! Last-Modified header not found, cannot detect changes for %s\n", configURL)
+					continue
 				}
 
 				if lastModified[configURL] == "" {
@@ -438,14 +463,8 @@ func (t *Telegraf) getConfigFiles() error {
 	return nil
 }
 
-func (t *Telegraf) runAgent(ctx context.Context, reloadConfig bool) error {
+func (t *Telegraf) runAgent(ctx context.Context) error {
 	c := t.cfg
-	var err error
-	if reloadConfig {
-		if c, err = t.loadConfiguration(); err != nil {
-			return err
-		}
-	}
 
 	if !t.test && t.testWait == 0 && len(c.Outputs) == 0 {
 		return errors.New("no outputs found, probably invalid config file provided")
