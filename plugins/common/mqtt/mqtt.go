@@ -34,6 +34,10 @@ type MqttConfig struct {
 	Retain              bool               `toml:"retain"`
 	KeepAlive           int64              `toml:"keep_alive"`
 	PersistentSession   bool               `toml:"persistent_session"`
+	WillTopic           string             `toml:"will_topic"`
+	WillPayload         string             `toml:"will_payload"`
+	WillQoS             int                `toml:"will_qos"`
+	WillRetain          bool               `toml:"will_retain"`
 	PublishPropertiesV5 *PublishProperties `toml:"v5"`
 	ClientTrace         bool               `toml:"client_trace" deprecated:"1.37.0;1.45.0;use 'log_level' 'trace' instead"`
 
@@ -65,6 +69,15 @@ func NewClient(cfg *MqttConfig) (Client, error) {
 
 	if cfg.QoS > 2 || cfg.QoS < 0 {
 		return nil, fmt.Errorf("invalid QoS value %d; must be 0, 1 or 2", cfg.QoS)
+	}
+
+	if cfg.WillTopic != "" {
+		if cfg.WillQoS > 2 || cfg.WillQoS < 0 {
+			return nil, fmt.Errorf("invalid will QoS value %d; must be 0, 1 or 2", cfg.WillQoS)
+		}
+		if strings.ContainsAny(cfg.WillTopic, "+#") {
+			return nil, fmt.Errorf("invalid will topic %q; must not contain wildcards '+' or '#'", cfg.WillTopic)
+		}
 	}
 
 	switch cfg.Protocol {

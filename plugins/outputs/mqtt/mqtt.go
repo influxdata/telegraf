@@ -66,6 +66,14 @@ func (m *MQTT) Init() error {
 	if m.QoS > 2 || m.QoS < 0 {
 		return fmt.Errorf("qos value must be 0, 1, or 2: %d", m.QoS)
 	}
+	if m.WillTopic != "" {
+		if m.WillQoS > 2 || m.WillQoS < 0 {
+			return fmt.Errorf("will_qos value must be 0, 1, or 2: %d", m.WillQoS)
+		}
+		if strings.ContainsAny(m.WillTopic, "#+") {
+			return fmt.Errorf("found forbidden character in the will topic name %s", m.WillTopic)
+		}
+	}
 
 	// Prepare the topic
 	topic := hostnameRe.ReplaceAllString(m.Topic, `$1.Tag "host"$2`)
