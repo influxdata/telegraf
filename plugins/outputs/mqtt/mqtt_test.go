@@ -2,6 +2,7 @@ package mqtt
 
 import (
 	"fmt"
+	"net"
 	"path/filepath"
 	"sync"
 	"testing"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/common/mqtt"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
@@ -795,6 +797,26 @@ func createMetricMessageHandler(acc telegraf.Accumulator, parser telegraf.Parser
 			acc.AddMetric(m)
 		}
 	}
+}
+
+func TestConnectUnreachableIsRetryable(t *testing.T) {
+	// Get a free port and close it again, so nothing is listening there
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	addr := listener.Addr().String()
+	require.NoError(t, listener.Close())
+
+	plugin := &MQTT{
+		Servers:   []string{"tcp://" + addr},
+		KeepAlive: 30,
+		Timeout:   config.Duration(time.Second),
+		Log:       testutil.Logger{},
+	}
+	require.NoError(t, plugin.Init())
+
+	var serr *internal.StartupError
+	require.ErrorAs(t, plugin.Connect(), &serr)
+	require.True(t, serr.Retry)
 }
 
 func TestMissingServers(t *testing.T) {
