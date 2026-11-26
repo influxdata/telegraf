@@ -3,6 +3,9 @@ package statsd
 import (
 	"fmt"
 	"net"
+	"os"
+	"path/filepath"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -2302,6 +2305,206 @@ func TestUdp(t *testing.T) {
 		acc.GetTelegrafMetrics(),
 		testutil.IgnoreTime(),
 	)
+}
+
+// unixgramSocketPath returns a socket path short enough for every platform;
+// macOS limits unix socket paths to 104 bytes and t.TempDir() names are long.
+func unixgramSocketPath(t *testing.T, name string) string {
+	t.Helper()
+	dir, err := os.MkdirTemp("", "statsd") //nolint:usetesting // t.TempDir() paths exceed the macOS 104-byte socket path limit
+	require.NoError(t, err)
+	t.Cleanup(func() { os.RemoveAll(dir) })
+	return filepath.Join(dir, name)
+}
+
+func TestUnixgram(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping on Windows, as unixgram sockets are not supported")
+	}
+
+	sock := unixgramSocketPath(t, "statsd.sock")
+	statsd := Statsd{
+		Log:                    testutil.Logger{},
+		Protocol:               "unixgram",
+		ServiceAddress:         sock,
+		AllowedPendingMessages: 10000,
+		NumberWorkerThreads:    5,
+	}
+	var acc testutil.Accumulator
+	require.NoError(t, statsd.Start(&acc))
+	defer statsd.Stop()
+
+	conn, err := net.Dial("unixgram", sock)
+	require.NoError(t, err)
+	_, err = conn.Write([]byte("cpu.time_idle:42|c\n"))
+	require.NoError(t, err)
+	require.NoError(t, conn.Close())
+
+	require.Eventually(t, func() bool {
+		if err := statsd.Gather(&acc); err != nil {
+			return false
+		}
+		return acc.NMetrics() > 0
+	}, 5*time.Second, 10*time.Millisecond)
+
+	testutil.RequireMetricsEqual(t,
+		[]telegraf.Metric{
+			metric.New(
+				"cpu_time_idle",
+				map[string]string{
+					"metric_type": "counter",
+				},
+				map[string]any{
+					"value": 42,
+				},
+				time.Now(),
+				telegraf.Counter,
+			),
+		},
+		acc.GetTelegrafMetrics(),
+		testutil.IgnoreTime(),
+	)
+}
+
+func TestUnixgramSocketMode(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping on Windows, as unixgram sockets are not supported")
+	}
+
+	sock := unixgramSocketPath(t, "statsd.sock")
+	statsd := Statsd{
+		Log:                    testutil.Logger{},
+		Protocol:               "unixgram",
+		ServiceAddress:         sock,
+		SocketMode:             "777",
+		AllowedPendingMessages: 10000,
+		NumberWorkerThreads:    5,
+	}
+	var acc testutil.Accumulator
+	require.NoError(t, statsd.Start(&acc))
+	defer statsd.Stop()
+
+	fi, err := os.Stat(sock)
+	require.NoError(t, err)
+	require.Equal(t, os.FileMode(0o777), fi.Mode().Perm())
+}
+
+func TestUnixgramInvalidSocketMode(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping on Windows, as unixgram sockets are not supported")
+	}
+
+	sock := unixgramSocketPath(t, "statsd.sock")
+	statsd := Statsd{
+		Log:                    testutil.Logger{},
+		Protocol:               "unixgram",
+		ServiceAddress:         sock,
+		SocketMode:             "rwx",
+		AllowedPendingMessages: 10000,
+		NumberWorkerThreads:    5,
+	}
+	var acc testutil.Accumulator
+	require.ErrorContains(t, statsd.Start(&acc), "socket mode")
+}
+
+func TestUnixgramRejectsHostPort(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping on Windows, as unixgram sockets are not supported")
+	}
+
+	// Run in a scratch directory so a wrongly accepted address cannot leave
+	// a socket file named ":8125" behind.
+	t.Chdir(t.TempDir())
+
+	for _, addr := range []string{"", ":8125", "localhost:8125", "127.0.0.1:8125"} {
+		statsd := Statsd{
+			Log:                    testutil.Logger{},
+			Protocol:               "unixgram",
+			ServiceAddress:         addr,
+			AllowedPendingMessages: 10000,
+			NumberWorkerThreads:    5,
+		}
+		var acc testutil.Accumulator
+		require.Error(t, statsd.Start(&acc), addr)
+		if addr != "" {
+			require.NoFileExists(t, addr)
+		}
+	}
+
+	// A path that happens to contain a colon is still a path.
+	sock := unixgramSocketPath(t, "statsd:8125.sock")
+	statsd := Statsd{
+		Log:                    testutil.Logger{},
+		Protocol:               "unixgram",
+		ServiceAddress:         sock,
+		AllowedPendingMessages: 10000,
+		NumberWorkerThreads:    5,
+	}
+	var acc testutil.Accumulator
+	require.NoError(t, statsd.Start(&acc))
+	statsd.Stop()
+}
+
+func TestUnixgramStaleSocket(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping on Windows, as unixgram sockets are not supported")
+	}
+
+	// Leave a socket behind the way a crashed process would: closing a
+	// unixgram conn does not unlink its path.
+	sock := unixgramSocketPath(t, "statsd.sock")
+	stale, err := net.ListenUnixgram("unixgram", &net.UnixAddr{Name: sock, Net: "unixgram"})
+	require.NoError(t, err)
+	require.NoError(t, stale.Close())
+	require.FileExists(t, sock)
+
+	statsd := Statsd{
+		Log:                    testutil.Logger{},
+		Protocol:               "unixgram",
+		ServiceAddress:         sock,
+		AllowedPendingMessages: 10000,
+		NumberWorkerThreads:    5,
+	}
+	var acc testutil.Accumulator
+	require.NoError(t, statsd.Start(&acc))
+	require.FileExists(t, sock)
+
+	statsd.Stop()
+	require.NoFileExists(t, sock)
+}
+
+func TestUnixgramRefusesToRemove(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping on Windows, as unixgram sockets are not supported")
+	}
+
+	dir := filepath.Dir(unixgramSocketPath(t, "unused"))
+
+	file := filepath.Join(dir, "regular")
+	require.NoError(t, os.WriteFile(file, []byte("keep"), 0o600))
+
+	live := filepath.Join(dir, "live.sock")
+	conn, err := net.ListenUnixgram("unixgram", &net.UnixAddr{Name: live, Net: "unixgram"})
+	require.NoError(t, err)
+	defer conn.Close()
+
+	stream := filepath.Join(dir, "stream.sock")
+	ln, err := net.Listen("unix", stream)
+	require.NoError(t, err)
+	defer ln.Close()
+
+	for _, path := range []string{file, live, stream} {
+		statsd := Statsd{
+			Log:                    testutil.Logger{},
+			Protocol:               "unixgram",
+			ServiceAddress:         path,
+			AllowedPendingMessages: 10000,
+			NumberWorkerThreads:    5,
+		}
+		var acc testutil.Accumulator
+		require.Error(t, statsd.Start(&acc), path)
+		require.FileExists(t, path)
+	}
 }
 
 func TestUdpFillQueue(t *testing.T) {
