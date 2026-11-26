@@ -41,7 +41,10 @@ func (a *Elasticsearch) newClientV8() (client, error) {
 	if a.EnableSniffer {
 		// DiscoverNodesOnStart starts a goroutine that BaseClient.Close does not wait for.
 		if err := c.DiscoverNodes(); err != nil {
-			a.Log.Errorf("Discovering Elasticsearch nodes failed: %v", err)
+			if closeErr := c.Close(context.Background()); closeErr != nil {
+				a.Log.Debugf("Closing after failed startup: %v", closeErr)
+			}
+			return nil, fmt.Errorf("discovering Elasticsearch nodes failed: %w", err)
 		}
 	}
 	return &clientV8{client: c, log: a.Log}, nil
