@@ -24,7 +24,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
-	"github.com/influxdata/telegraf/internal"
 )
 
 var isolateLUN = regexp.MustCompile(`.*/([^/]+)/?$`)
@@ -1319,7 +1318,7 @@ func (e *endpoint) collectChunk(
 				e.hwMarks.put(moid, name, adjTS)
 			}
 			if len(objectRef.customProperties) != 0 {
-				mn, fn := e.makeMetricIdentifier(prefix, "properties")
+				mn, _ := e.makeMetricIdentifier(prefix, "properties")
 				bKey := mn + " " + v.Instance + " " + strconv.FormatInt(latestSample.UnixNano(), 10)
 				if _, found := buckets[bKey]; !found {
 					fields := maps.Clone(objectRef.customProperties)
