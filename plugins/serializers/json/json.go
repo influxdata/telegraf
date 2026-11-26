@@ -55,20 +55,14 @@ func (s *Serializer) Init() error {
 }
 
 func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
-	if s.Transformation == "" {
-		serialized, err := json.Marshal(s.createMetric(metric))
-		if err != nil {
-			return nil, err
-		}
-		return append(serialized, '\n'), nil
-	}
+	m := s.createMetric(metric)
 
 	var obj any
-	obj = s.createObject(metric)
-
-	if s.Transformation != "" {
+	if s.Transformation == "" {
+		obj = m
+	} else {
 		var err error
-		if obj, err = s.transform(obj); err != nil {
+		if obj, err = s.transform(m.toMap()); err != nil {
 			if errors.Is(err, jsonata.ErrUndefined) {
 				return nil, fmt.Errorf("%w (maybe configured for batch mode?)", err)
 			}
@@ -86,32 +80,21 @@ func (s *Serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 }
 
 func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
+	var obj any
 	if s.Transformation == "" {
 		batch := jsonBatch{Metrics: make([]jsonMetric, 0, len(metrics))}
 		for _, metric := range metrics {
 			batch.Metrics = append(batch.Metrics, s.createMetric(metric))
 		}
-		serialized, err := json.Marshal(batch)
-		if err != nil {
-			return nil, err
+		obj = batch
+	} else {
+		objects := make([]any, 0, len(metrics))
+		for _, metric := range metrics {
+			objects = append(objects, s.createMetric(metric).toMap())
 		}
-		return append(serialized, '\n'), nil
-	}
 
-	objects := make([]any, 0, len(metrics))
-	for _, metric := range metrics {
-		m := s.createObject(metric)
-		objects = append(objects, m)
-	}
-
-	var obj any
-	obj = map[string]any{
-		"metrics": objects,
-	}
-
-	if s.Transformation != "" {
 		var err error
-		if obj, err = s.transform(obj); err != nil {
+		if obj, err = s.transform(map[string]any{"metrics": objects}); err != nil {
 			if errors.Is(err, jsonata.ErrUndefined) {
 				return nil, fmt.Errorf("%w (maybe configured for non-batch mode?)", err)
 			}
@@ -129,7 +112,7 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 }
 
 // jsonMetric is one metric. Its fields are in the order that encoding/json
-// writes the keys of the map from createObject, so both give the same output.
+// writes the keys of the map from toMap, so both give the same output.
 type jsonMetric struct {
 	Fields    map[string]any    `json:"fields"`
 	Name      string            `json:"name"`
@@ -184,8 +167,8 @@ func (s *Serializer) createMetric(metric telegraf.Metric) jsonMetric {
 	return m
 }
 
-func (s *Serializer) createObject(metric telegraf.Metric) map[string]any {
-	m := s.createMetric(metric)
+// toMap returns the metric as a map, for the JSONata transformation.
+func (m jsonMetric) toMap() map[string]any {
 	return map[string]any{
 		"tags":      m.Tags,
 		"fields":    m.Fields,
