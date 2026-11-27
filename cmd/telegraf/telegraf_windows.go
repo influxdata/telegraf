@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -210,9 +209,6 @@ func installService(name string, cfg *serviceConfig) error {
 	}
 	for _, dn := range cfg.configDirs {
 		args = append(args, "--config-directory", dn)
-	}
-	if len(args) == 0 {
-		args = append(args, "--config", filepath.Join(programFiles, "Telegraf", "telegraf.conf"))
 	}
 	if cfg.watchConfig != "" {
 		args = append(args, "--watch-config", cfg.watchConfig)
