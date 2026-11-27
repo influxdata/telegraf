@@ -2,8 +2,10 @@ package mqtt
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
+	"sync"
 	"time"
 
 	mqttv5auto "github.com/eclipse/paho.golang/autopaho"
@@ -127,12 +129,47 @@ func (m *mqttv5Client) Connect() (bool, error) {
 		m.options.Errors = log
 	}
 
-	client, err := mqttv5auto.NewConnection(context.Background(), m.options)
+	// The connection manager retries forever, so give up once every broker
+	// failed once, like the v3 client does. Each round tries the brokers in
+	// the configured order and reports every failed broker to OnConnectError.
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	opts := m.options
+
+	var errsMu sync.Mutex
+	errs := make([]error, 0, len(m.options.BrokerUrls))
+	opts.OnConnectError = func(err error) {
+		if m.options.OnConnectError != nil {
+			m.options.OnConnectError(err)
+		}
+		// Stop collecting errors after leaving Connect, the hook keeps being
+		// called on reconnects but nobody is interested in those errors.
+		if ctx.Err() != nil {
+			return
+		}
+
+		// Cancel AwaitConnection once every broker failed
+		errsMu.Lock()
+		defer errsMu.Unlock()
+		errs = append(errs, err)
+		if len(errs) >= len(m.options.BrokerUrls) {
+			cancel()
+		}
+	}
+
+	client, err := mqttv5auto.NewConnection(context.Background(), opts)
 	if err != nil {
 		return false, err
 	}
 	m.client = client
-	return false, client.AwaitConnection(context.Background())
+
+	if client.AwaitConnection(ctx) == nil {
+		return false, nil
+	}
+
+	// Stop the connection manager so a retried Connect does not leak it
+	client.Disconnect(context.Background())
+	return false, errors.Join(errs...)
 }
 
 func (m *mqttv5Client) Publish(topic string, body []byte) error {
