@@ -25,6 +25,7 @@ type Execd struct {
 	Command      []string        `toml:"command"`
 	Environment  []string        `toml:"environment"`
 	RestartDelay config.Duration `toml:"restart_delay"`
+	BufferSize   config.Size     `toml:"buffer_size"`
 	Log          telegraf.Logger `toml:"-"`
 
 	parser     telegraf.Parser
@@ -164,6 +165,7 @@ func (e *Execd) cmdReadOutStream(out io.Reader) {
 
 func (e *Execd) cmdReadErr(out io.Reader) {
 	scanner := bufio.NewScanner(out)
+	scanner.Buffer(nil, int(e.BufferSize))
 
 	for scanner.Scan() {
 		msg := scanner.Text()
@@ -185,6 +187,10 @@ func (e *Execd) cmdReadErr(out io.Reader) {
 
 	if err := scanner.Err(); err != nil {
 		e.Log.Errorf("Error reading stderr: %s", err)
+		// Keep draining, or the process blocks on its next write once the pipe is full.
+		if _, err := io.Copy(io.Discard, out); err != nil {
+			e.Log.Errorf("Error draining stderr: %s", err)
+		}
 	}
 }
 
@@ -192,6 +198,7 @@ func init() {
 	processors.AddStreaming("execd", func() telegraf.StreamingProcessor {
 		return &Execd{
 			RestartDelay: config.Duration(10 * time.Second),
+			BufferSize:   config.Size(64 * 1024),
 		}
 	})
 }

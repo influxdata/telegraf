@@ -46,6 +46,10 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## Delay before the process is restarted after an unexpected termination
   # restart_delay = "10s"
 
+  ## Maximum size of a line read from the command error stream
+  ## Optional parameter. Default is 64 Kib
+  # buffer_size = "64Kib"
+
   ## Serialization format for communicating with the executed program
   ## Please note that the corresponding data-format must exist both in
   ## parsers and serializers
