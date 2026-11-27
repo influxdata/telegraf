@@ -4,6 +4,7 @@ package disk
 import (
 	_ "embed"
 	"fmt"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -18,12 +19,15 @@ import (
 var sampleConfig string
 
 type Disk struct {
-	MountPoints     []string        `toml:"mount_points"`
-	IgnoreFS        []string        `toml:"ignore_fs"`
-	IgnoreMountOpts []string        `toml:"ignore_mount_opts"`
-	Log             telegraf.Logger `toml:"-"`
+	MountPoints       []string        `toml:"mount_points"`
+	IgnoreFS          []string        `toml:"ignore_fs"`
+	IgnoreMountOpts   []string        `toml:"ignore_mount_opts"`
+	ReportMountStatus bool            `toml:"report_mount_status"`
+	FstabPath         string          `toml:"fstab_path"`
+	Log               telegraf.Logger `toml:"-"`
 
-	ps psutil.PS
+	ps          psutil.PS
+	fstabReader func() ([]fstabEntry, error)
 }
 
 func (*Disk) SampleConfig() string {
@@ -43,7 +47,21 @@ func (ds *Disk) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		return fmt.Errorf("error getting disk usage info: %w", err)
 	}
+
+	var expectedMounts []fstabEntry
+	var mountedPaths map[string]struct{}
+	if ds.ReportMountStatus {
+		expectedMounts, err = ds.readExpectedMounts()
+		if err != nil {
+			return fmt.Errorf("error reading fstab: %w", err)
+		}
+		mountedPaths = make(map[string]struct{}, len(disks))
+	}
+
 	for i, du := range disks {
+		if ds.ReportMountStatus {
+			mountedPaths[normalizeMountPath(du.Path)] = struct{}{}
+		}
 		if du.Total == 0 {
 			// Skip dummy filesystem (procfs, cgroupfs, ...)
 			continue
@@ -88,10 +106,96 @@ func (ds *Disk) Gather(acc telegraf.Accumulator) error {
 			"inodes_used":         du.InodesUsed,
 			"inodes_used_percent": inodesUsedPercent,
 		}
+		if ds.ReportMountStatus {
+			fields["mount_status"] = "mounted"
+		}
 		acc.AddGauge("disk", fields, tags)
 	}
 
+	if ds.ReportMountStatus {
+		ds.gatherUnmounted(acc, expectedMounts, mountedPaths)
+	}
+
 	return nil
+}
+
+func (ds *Disk) readExpectedMounts() ([]fstabEntry, error) {
+	if ds.fstabReader != nil {
+		return ds.fstabReader()
+	}
+	fstabPath := ds.FstabPath
+	if fstabPath == "" {
+		fstabPath = defaultFstabPath
+	}
+	return readFstabFile(fstabPath)
+}
+
+func (ds *Disk) gatherUnmounted(acc telegraf.Accumulator, expected []fstabEntry, mountedPaths map[string]struct{}) {
+	mountPointFilter := make(map[string]struct{}, len(ds.MountPoints))
+	for _, mp := range ds.MountPoints {
+		mountPointFilter[normalizeMountPath(mp)] = struct{}{}
+	}
+
+	ignoreFS := make(map[string]struct{}, len(ds.IgnoreFS)+1)
+	ignoreFS["autofs"] = struct{}{}
+	for _, fs := range ds.IgnoreFS {
+		ignoreFS[fs] = struct{}{}
+	}
+
+	ignoreOpts := make(map[string]struct{}, len(ds.IgnoreMountOpts))
+	for _, opt := range ds.IgnoreMountOpts {
+		ignoreOpts[opt] = struct{}{}
+	}
+
+	seen := make(map[string]struct{}, len(expected))
+	for _, entry := range expected {
+		if _, ok := seen[entry.mountpoint]; ok {
+			continue
+		}
+		seen[entry.mountpoint] = struct{}{}
+
+		if _, ok := mountedPaths[entry.mountpoint]; ok {
+			continue
+		}
+		if len(mountPointFilter) > 0 {
+			if _, ok := mountPointFilter[entry.mountpoint]; !ok {
+				continue
+			}
+		}
+		if _, ok := ignoreFS[entry.fstype]; ok {
+			continue
+		}
+		if hasAnyOpt(entry.opts, ignoreOpts) {
+			continue
+		}
+
+		device := entry.device
+		if device == "none" || device == "" {
+			device = entry.fstype
+		}
+		tags := map[string]string{
+			"path":   filepath.FromSlash(entry.mountpoint),
+			"device": strings.ReplaceAll(device, "/dev/", ""),
+			"fstype": entry.fstype,
+			"mode":   mountOptions(entry.opts).mode(),
+		}
+		fields := map[string]any{
+			"mount_status": "unmounted",
+		}
+		acc.AddGauge("disk", fields, tags)
+	}
+}
+
+func hasAnyOpt(opts []string, ignoreOpts map[string]struct{}) bool {
+	if len(ignoreOpts) == 0 {
+		return false
+	}
+	for _, opt := range opts {
+		if _, ok := ignoreOpts[opt]; ok {
+			return true
+		}
+	}
+	return false
 }
 
 type mountOptions []string

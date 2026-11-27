@@ -727,3 +727,291 @@ func TestDiskUsageIssues(t *testing.T) {
 	}
 	os.Clearenv()
 }
+
+func TestParseFstab(t *testing.T) {
+	input := `
+# /etc/fstab: static file system information.
+   # indented comment
+
+UUID=root-uuid /               ext4    errors=remount-ro 0       1
+/dev/sdb1      /mnt/data/      xfs     rw,noatime        0       2
+/dev/sdc1      /mnt/my\040dir  ext4    ro
+/dev/sdd1      none            swap    sw                0       0
+proc           /proc           proc    defaults          0       0
+sysfs          /sys            sysfs   defaults          0       0
+devpts         /dev/pts        devpts  gid=5,mode=620    0       0
+/dev/sr0       /media/cdrom    iso9660 ro,noauto         0       0
+malformed_line
+nas:/export    /mnt/nfs        nfs4    rw,_netdev        0       0
+`
+	entries, err := parseFstab(strings.NewReader(input))
+	require.NoError(t, err)
+
+	expected := []fstabEntry{
+		{
+			device:     "UUID=root-uuid",
+			mountpoint: "/",
+			fstype:     "ext4",
+			opts:       []string{"errors=remount-ro"},
+		},
+		{
+			device:     "/dev/sdb1",
+			mountpoint: "/mnt/data",
+			fstype:     "xfs",
+			opts:       []string{"rw", "noatime"},
+		},
+		{
+			device:     "/dev/sdc1",
+			mountpoint: "/mnt/my dir",
+			fstype:     "ext4",
+			opts:       []string{"ro"},
+		},
+		{
+			device:     "nas:/export",
+			mountpoint: "/mnt/nfs",
+			fstype:     "nfs4",
+			opts:       []string{"rw", "_netdev"},
+		},
+	}
+	require.Equal(t, expected, entries)
+}
+
+func TestMountStatus(t *testing.T) {
+	fstabContent := `
+# Expected mounts
+/dev/sda1       /               ext4    ro,noatime     0 1
+UUID=1234-5678  /mnt/backup     ext4    rw             0 2
+nas:/export     /mnt/nfs        nfs4    defaults       0 0
+/dev/sdc1       /mnt/my\040disk xfs     ro,nofail      0 0
+/dev/sdd1       /mnt/bind       none    bind           0 0
+/dev/sde1       /mnt/ignored    tmpfs   rw             0 0
+/dev/sdf1       /mnt/dummy      tmpfs   rw             0 0
+/dev/sdg1       none            swap    sw             0 0
+/dev/sr0        /mnt/cdrom      iso9660 ro,noauto      0 0
+proc            /proc           proc    defaults       0 0
+# Duplicate mount point should only emit once
+/dev/sdh1       /mnt/backup     ext4    rw             0 2
+`
+	fstabPath := filepath.Join(t.TempDir(), "fstab")
+	require.NoError(t, os.WriteFile(fstabPath, []byte(fstabContent), 0o600))
+
+	partitions := []disk.PartitionStat{
+		{
+			Device:     "/dev/sda1",
+			Mountpoint: "/",
+			Fstype:     "ext4",
+			Opts:       []string{"ro", "noatime"},
+		},
+		{
+			Device:     "tmpfs",
+			Mountpoint: "/mnt/dummy",
+			Fstype:     "tmpfs",
+			Opts:       []string{"rw"},
+		},
+	}
+	rootUsage := disk.UsageStat{
+		Path:        "/",
+		Fstype:      "ext4",
+		Total:       1000,
+		Free:        400,
+		Used:        600,
+		InodesTotal: 100,
+		InodesFree:  40,
+		InodesUsed:  60,
+	}
+	dummyUsage := disk.UsageStat{
+		Path:   "/mnt/dummy",
+		Fstype: "tmpfs",
+		Total:  0,
+	}
+
+	setupMock := func(t *testing.T) *psutiltest.MockPSDisk {
+		t.Helper()
+		mck := &mock.Mock{}
+		mps := &psutiltest.MockPSDisk{
+			SystemPS: &psutil.SystemPS{PSDiskDeps: &psutiltest.MockDiskUsage{Mock: mck}},
+			Mock:     mck,
+		}
+		mps.On("Partitions", true).Return(partitions, nil)
+		mps.On("OSGetenv", "HOST_MOUNT_PREFIX").Return("")
+		mps.On("PSDiskUsage", "/").Return(&rootUsage, nil).Maybe()
+		mps.On("PSDiskUsage", "/mnt/dummy").Return(&dummyUsage, nil).Maybe()
+		t.Cleanup(func() {
+			mps.AssertExpectations(t)
+		})
+		return mps
+	}
+
+	t.Run("mounted and unmounted entries", func(t *testing.T) {
+		mps := setupMock(t)
+		var acc testutil.Accumulator
+		plugin := &Disk{
+			ps:                mps,
+			IgnoreFS:          []string{"tmpfs"},
+			IgnoreMountOpts:   []string{"bind"},
+			ReportMountStatus: true,
+			FstabPath:         fstabPath,
+		}
+		require.NoError(t, plugin.Gather(&acc))
+
+		expected := []telegraf.Metric{
+			metric.New(
+				"disk",
+				map[string]string{
+					"path":   string(os.PathSeparator),
+					"device": "sda1",
+					"fstype": "ext4",
+					"mode":   "ro",
+				},
+				map[string]any{
+					"total":               uint64(1000),
+					"free":                uint64(400),
+					"used":                uint64(600),
+					"used_percent":        float64(60),
+					"inodes_total":        uint64(100),
+					"inodes_free":         uint64(40),
+					"inodes_used":         uint64(60),
+					"inodes_used_percent": float64(60),
+					"mount_status":        "mounted",
+				},
+				time.Unix(0, 0),
+				telegraf.Gauge,
+			),
+			metric.New(
+				"disk",
+				map[string]string{
+					"path":   filepath.FromSlash("/mnt/backup"),
+					"device": "UUID=1234-5678",
+					"fstype": "ext4",
+					"mode":   "rw",
+				},
+				map[string]any{
+					"mount_status": "unmounted",
+				},
+				time.Unix(0, 0),
+				telegraf.Gauge,
+			),
+			metric.New(
+				"disk",
+				map[string]string{
+					"path":   filepath.FromSlash("/mnt/nfs"),
+					"device": "nas:/export",
+					"fstype": "nfs4",
+					"mode":   "unknown",
+				},
+				map[string]any{
+					"mount_status": "unmounted",
+				},
+				time.Unix(0, 0),
+				telegraf.Gauge,
+			),
+			metric.New(
+				"disk",
+				map[string]string{
+					"path":   filepath.FromSlash("/mnt/my disk"),
+					"device": "sdc1",
+					"fstype": "xfs",
+					"mode":   "ro",
+				},
+				map[string]any{
+					"mount_status": "unmounted",
+				},
+				time.Unix(0, 0),
+				telegraf.Gauge,
+			),
+		}
+		testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime(), testutil.SortMetrics())
+	})
+
+	t.Run("mount_points filter applies to expected mounts", func(t *testing.T) {
+		mps := setupMock(t)
+		var acc testutil.Accumulator
+		plugin := &Disk{
+			ps:                mps,
+			MountPoints:       []string{"/", "/mnt/nfs/"},
+			ReportMountStatus: true,
+			FstabPath:         fstabPath,
+		}
+		require.NoError(t, plugin.Gather(&acc))
+
+		expected := []telegraf.Metric{
+			metric.New(
+				"disk",
+				map[string]string{
+					"path":   string(os.PathSeparator),
+					"device": "sda1",
+					"fstype": "ext4",
+					"mode":   "ro",
+				},
+				map[string]any{
+					"total":               uint64(1000),
+					"free":                uint64(400),
+					"used":                uint64(600),
+					"used_percent":        float64(60),
+					"inodes_total":        uint64(100),
+					"inodes_free":         uint64(40),
+					"inodes_used":         uint64(60),
+					"inodes_used_percent": float64(60),
+					"mount_status":        "mounted",
+				},
+				time.Unix(0, 0),
+				telegraf.Gauge,
+			),
+			metric.New(
+				"disk",
+				map[string]string{
+					"path":   filepath.FromSlash("/mnt/nfs"),
+					"device": "nas:/export",
+					"fstype": "nfs4",
+					"mode":   "unknown",
+				},
+				map[string]any{
+					"mount_status": "unmounted",
+				},
+				time.Unix(0, 0),
+				telegraf.Gauge,
+			),
+		}
+		testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime(), testutil.SortMetrics())
+	})
+
+	t.Run("mounted zero-total filesystem is not reported unmounted", func(t *testing.T) {
+		mps := setupMock(t)
+		var acc testutil.Accumulator
+		plugin := &Disk{
+			ps:                mps,
+			MountPoints:       []string{"/mnt/dummy"},
+			ReportMountStatus: true,
+			FstabPath:         fstabPath,
+		}
+		require.NoError(t, plugin.Gather(&acc))
+		require.Empty(t, acc.GetTelegrafMetrics())
+	})
+
+	t.Run("disabled by default leaves behavior unchanged", func(t *testing.T) {
+		mps := setupMock(t)
+		var acc testutil.Accumulator
+		plugin := &Disk{
+			ps:        mps,
+			FstabPath: filepath.Join(t.TempDir(), "nonexistent"),
+		}
+		require.NoError(t, plugin.Gather(&acc))
+
+		actual := acc.GetTelegrafMetrics()
+		require.Len(t, actual, 1)
+		_, hasStatus := actual[0].GetField("mount_status")
+		require.False(t, hasStatus)
+	})
+
+	t.Run("missing fstab returns error when enabled", func(t *testing.T) {
+		mps := setupMock(t)
+		var acc testutil.Accumulator
+		plugin := &Disk{
+			ps:                mps,
+			ReportMountStatus: true,
+			FstabPath:         filepath.Join(t.TempDir(), "missing-fstab"),
+		}
+		require.Error(t, plugin.Gather(&acc))
+		require.Empty(t, acc.GetTelegrafMetrics())
+	})
+}

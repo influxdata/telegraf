@@ -37,6 +37,13 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ## The 'mount' command reports options of all mounts in parathesis.
   ## Bind mounts can be ignored with the special 'bind' option.
   # ignore_mount_opts = []
+
+  ## Report mount status ("mounted" or "unmounted") for filesystems, including
+  ## expected mounts defined in fstab that are not currently mounted.
+  # report_mount_status = false
+
+  ## Path to the fstab file used when report_mount_status is enabled.
+  # fstab_path = "/etc/fstab"
 ```
 
 ### Docker container
@@ -70,6 +77,7 @@ docker run -v /:/hostfs:ro -e HOST_MOUNT_PREFIX=/hostfs -e HOST_PROC=/hostfs/pro
     - inodes_total (integer, files)
     - inodes_used (integer, files)
     - inodes_used_percent (float, percent)
+    - mount_status (string, `"mounted"` or `"unmounted"`, when `report_mount_status` is enabled)
 
 ## Troubleshooting
 
