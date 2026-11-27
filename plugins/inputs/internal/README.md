@@ -52,7 +52,8 @@ memstats are collected using the [Go runtime framework][memstats]
   - sys_bytes
   - total_alloc_bytes
 
-agent stats collect aggregate stats on all telegraf plugins.
+agent stats collect aggregate stats on all telegraf plugins. They are tagged
+with `version=<telegraf_version>` and `go_version=<go_build_version>`.
 
 - internal_agent
   - gather_errors    -- number of failing collection operations
@@ -69,7 +70,7 @@ agent stats collect aggregate stats on all telegraf plugins.
 
 internal_gather stats collect aggregate stats on all input plugins
 that are of the same input type. They are tagged with `input=<plugin_name>`
-`version=<telegraf_version>` and `go_version=<go_build_version>`.
+and `version=<telegraf_version>`.
 
 - internal_gather
   - errors            -- number of errors *logged* by the plugin
@@ -82,7 +83,7 @@ that are of the same input type. They are tagged with `input=<plugin_name>`
   - startup_errors    -- number of errors while starting the plugin
 
 internal_write stats collect aggregate stats on all output plugins
-that are of the same input type. They are tagged with `output=<plugin_name>`
+that are of the same output type. They are tagged with `output=<plugin_name>`
 and `version=<telegraf_version>`.
 
 - internal_write
