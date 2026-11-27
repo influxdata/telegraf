@@ -1798,6 +1798,7 @@ func TestClientClose(t *testing.T) {
 				t.Fatalf("unexpected client type %T", connection)
 			}
 			discoveryWG.Go(func() {
+				//nolint:errcheck // This request is deliberately held until the HTTP timeout.
 				_ = discover()
 			})
 
