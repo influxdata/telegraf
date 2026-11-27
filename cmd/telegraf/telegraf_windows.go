@@ -13,7 +13,7 @@ import (
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/eventlog"
 
-	"github.com/influxdata/telegraf/cmd/telegraf/commands/winservice"
+	"github.com/influxdata/telegraf/cmd/telegraf/commands"
 	"github.com/influxdata/telegraf/internal"
 )
 
@@ -35,7 +35,7 @@ func (t *Telegraf) Run() error {
 		fmt.Println("The use of --service is deprecated, please use the 'service' command instead!")
 		switch t.service {
 		case "install":
-			cfg := &winservice.Config{
+			cfg := &commands.ServiceConfig{
 				DisplayName:  t.serviceDisplayName,
 				RestartDelay: t.serviceRestartDelay,
 				AutoRestart:  t.serviceAutoRestart,
@@ -43,27 +43,27 @@ func (t *Telegraf) Run() error {
 				ConfigDirs:   t.configDir,
 				WatchConfig:  t.watchConfig,
 			}
-			if err := winservice.Install(t.serviceName, cfg); err != nil {
+			if err := commands.InstallService(t.serviceName, cfg); err != nil {
 				return err
 			}
 			fmt.Printf("Successfully installed service %q\n", t.serviceName)
 		case "uninstall":
-			if err := winservice.Uninstall(t.serviceName); err != nil {
+			if err := commands.UninstallService(t.serviceName); err != nil {
 				return err
 			}
 			fmt.Printf("Successfully uninstalled service %q\n", t.serviceName)
 		case "start":
-			if err := winservice.Start(t.serviceName); err != nil {
+			if err := commands.StartService(t.serviceName); err != nil {
 				return err
 			}
 			fmt.Printf("Successfully started service %q\n", t.serviceName)
 		case "stop":
-			if err := winservice.Stop(t.serviceName); err != nil {
+			if err := commands.StopService(t.serviceName); err != nil {
 				return err
 			}
 			fmt.Printf("Successfully stopped service %q\n", t.serviceName)
 		case "status":
-			status, err := winservice.Query(t.serviceName)
+			status, err := commands.QueryService(t.serviceName)
 			if err != nil {
 				return err
 			}

@@ -17,6 +17,20 @@ import (
 	"github.com/influxdata/telegraf/migrations"
 )
 
+func getSubcommands(goos string, actions commandActions) []*cli.Command {
+	items := []*cli.Command{
+		{Name: "version", Usage: "print current version to stdout", Action: actions.version},
+		configCommand(actions),
+		secretstoreCommand(actions),
+		pluginsCommand(actions),
+	}
+	switch goos {
+	case "all", "windows":
+		items = append(items, serviceCommand(actions.service))
+	}
+	return items
+}
+
 func configMigrateFlags() []cli.Flag {
 	return append(getGlobalFlags(),
 		&cli.BoolFlag{

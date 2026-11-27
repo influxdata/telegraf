@@ -177,6 +177,7 @@ func runApp(args []string, outputBuffer io.Writer, pprof Server, c TelegrafConfi
 		Commands: commands.Subcommands(runtime.GOOS, m),
 		Action:   action,
 	}
+
 	// Make sure we safely erase secrets
 	defer memguard.Purge()
 	defer logger.CloseLogging()

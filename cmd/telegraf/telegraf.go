@@ -112,6 +112,7 @@ func (t *Telegraf) Init(pprofErr <-chan error, f commands.Filters, g GlobalFlags
 	config.PrintPluginConfigSource = g.printPluginConfigSource
 }
 
+// InitSecretStores applies the CLI configuration and filters before a secrets command loads its stores.
 func (t *Telegraf) InitSecretStores(ctx *cli.Context) {
 	filters := commands.Filters{
 		Section:     []string{"inputs", "outputs", "processors", "aggregators"},

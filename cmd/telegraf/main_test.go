@@ -59,6 +59,7 @@ func (*MockTelegraf) Run() error {
 	return nil
 }
 
+// The mock serves secrets from the in-memory map without loading a configuration.
 func (*MockTelegraf) InitSecretStores(*cli.Context) {}
 
 func (*MockTelegraf) ListSecretStores() ([]string, error) {
@@ -379,13 +380,6 @@ func TestSecretsRemoveUnsupported(t *testing.T) {
 }
 
 func TestCommandConfig(t *testing.T) {
-	const (
-		outputHeader       = "#                            OUTPUT PLUGINS                                   #"
-		inputHeader        = "#                            INPUT PLUGINS                                    #"
-		aggregatorHeader   = "#                            AGGREGATOR PLUGINS                               #"
-		processorHeader    = "#                            PROCESSOR PLUGINS                                #"
-		serviceInputHeader = "#                            SERVICE INPUT PLUGINS                            #"
-	)
 	tests := []struct {
 		name            string
 		commands        []string
@@ -398,46 +392,46 @@ func TestCommandConfig(t *testing.T) {
 			name:     "deprecated flag --sample-config",
 			commands: []string{"--sample-config"},
 			expectedHeaders: []string{
-				outputHeader,
-				inputHeader,
-				aggregatorHeader,
-				processorHeader,
-				serviceInputHeader,
+				"OUTPUT PLUGINS",
+				"INPUT PLUGINS",
+				"AGGREGATOR PLUGINS",
+				"PROCESSOR PLUGINS",
+				"SERVICE INPUT PLUGINS",
 			},
 		},
 		{
 			name:     "no filters",
 			commands: []string{"config"},
 			expectedHeaders: []string{
-				outputHeader,
-				inputHeader,
-				aggregatorHeader,
-				processorHeader,
-				serviceInputHeader,
+				"OUTPUT PLUGINS",
+				"INPUT PLUGINS",
+				"AGGREGATOR PLUGINS",
+				"PROCESSOR PLUGINS",
+				"SERVICE INPUT PLUGINS",
 			},
 		},
 		{
 			name:     "filter sections for inputs",
 			commands: []string{"config", "--section-filter", "inputs"},
 			expectedHeaders: []string{
-				inputHeader,
+				"INPUT PLUGINS",
 			},
 			removedHeaders: []string{
-				outputHeader,
-				aggregatorHeader,
-				processorHeader,
+				"OUTPUT PLUGINS",
+				"AGGREGATOR PLUGINS",
+				"PROCESSOR PLUGINS",
 			},
 		},
 		{
 			name:     "filter sections for inputs,outputs",
 			commands: []string{"config", "--section-filter", "inputs:outputs"},
 			expectedHeaders: []string{
-				inputHeader,
-				outputHeader,
+				"INPUT PLUGINS",
+				"OUTPUT PLUGINS",
 			},
 			removedHeaders: []string{
-				aggregatorHeader,
-				processorHeader,
+				"AGGREGATOR PLUGINS",
+				"PROCESSOR PLUGINS",
 			},
 		},
 		{
@@ -517,10 +511,10 @@ func TestCommandConfig(t *testing.T) {
 			require.NoError(t, err)
 			output := buf.String()
 			for _, e := range test.expectedHeaders {
-				require.Contains(t, output, e, "expected header not found")
+				require.Regexp(t, "(?m)^# +"+e+" +#$", output, "expected header not found")
 			}
 			for _, r := range test.removedHeaders {
-				require.NotContains(t, output, r, "removed header found")
+				require.NotRegexp(t, "(?m)^# +"+r+" +#$", output, "removed header found")
 			}
 			for _, e := range test.expectedPlugins {
 				require.Contains(t, output, e, "expected plugin not found")

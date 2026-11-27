@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/urfave/cli/v2"
@@ -39,18 +40,42 @@ type commandActions struct {
 	service             serviceActions
 }
 
-func getSubcommands(goos string, actions commandActions) []*cli.Command {
-	items := []*cli.Command{
-		{Name: "version", Usage: "print current version to stdout", Action: actions.version},
-		configCommand(actions),
-		secretstoreCommand(actions),
-		pluginsCommand(actions),
+// ProcessFilterFlags combines filters from the command and its parent.
+func ProcessFilterFlags(ctx *cli.Context) Filters {
+	var section, input, output, aggregator, processor, secretstore string
+
+	// Support defining filters before and after the command
+	// The old style was:
+	// ./telegraf --section-filter inputs --input-filter cpu config >test.conf
+	// The new style is:
+	// ./telegraf config --section-filter inputs --input-filter cpu >test.conf
+	// To support the old style, check if the parent context has the filter flags defined
+	if len(ctx.Lineage()) >= 2 {
+		parent := ctx.Lineage()[1] // ancestor contexts in order from child to parent
+		section = parent.String("section-filter")
+		input = parent.String("input-filter")
+		output = parent.String("output-filter")
+		aggregator = parent.String("aggregator-filter")
+		processor = parent.String("processor-filter")
+		secretstore = parent.String("secretstore-filter")
 	}
-	switch goos {
-	case "all", "windows":
-		items = append(items, serviceCommand(actions.service))
+
+	// If both the parent and command filters are defined, append them together
+	section = appendFilter(section, ctx.String("section-filter"))
+	input = appendFilter(input, ctx.String("input-filter"))
+	output = appendFilter(output, ctx.String("output-filter"))
+	aggregator = appendFilter(aggregator, ctx.String("aggregator-filter"))
+	processor = appendFilter(processor, ctx.String("processor-filter"))
+	secretstore = appendFilter(secretstore, ctx.String("secretstore-filter"))
+
+	return Filters{
+		Section:     splitFilter(section),
+		Input:       splitFilter(input),
+		Output:      splitFilter(output),
+		Aggregator:  splitFilter(aggregator),
+		Processor:   splitFilter(processor),
+		Secretstore: splitFilter(secretstore),
 	}
-	return items
 }
 
 func versionAction(ctx *cli.Context) error {
@@ -243,49 +268,6 @@ func appendFilter(a, b string) string {
 	return b
 }
 
-// ProcessFilterFlags combines filters from the command and its parent.
-func ProcessFilterFlags(ctx *cli.Context) Filters {
-	var section, input, output, aggregator, processor, secretstore string
-
-	// Support defining filters before and after the command
-	// The old style was:
-	// ./telegraf --section-filter inputs --input-filter cpu config >test.conf
-	// The new style is:
-	// ./telegraf config --section-filter inputs --input-filter cpu >test.conf
-	// To support the old style, check if the parent context has the filter flags defined
-	if len(ctx.Lineage()) >= 2 {
-		parent := ctx.Lineage()[1] // ancestor contexts in order from child to parent
-		section = parent.String("section-filter")
-		input = parent.String("input-filter")
-		output = parent.String("output-filter")
-		aggregator = parent.String("aggregator-filter")
-		processor = parent.String("processor-filter")
-		secretstore = parent.String("secretstore-filter")
-	}
-
-	// If both the parent and command filters are defined, append them together
-	section = appendFilter(section, ctx.String("section-filter"))
-	input = appendFilter(input, ctx.String("input-filter"))
-	output = appendFilter(output, ctx.String("output-filter"))
-	aggregator = appendFilter(aggregator, ctx.String("aggregator-filter"))
-	processor = appendFilter(processor, ctx.String("processor-filter"))
-	secretstore = appendFilter(secretstore, ctx.String("secretstore-filter"))
-
-	sectionFilters := deleteEmpty(strings.Split(section, ":"))
-	inputFilters := deleteEmpty(strings.Split(input, ":"))
-	outputFilters := deleteEmpty(strings.Split(output, ":"))
-	aggregatorFilters := deleteEmpty(strings.Split(aggregator, ":"))
-	processorFilters := deleteEmpty(strings.Split(processor, ":"))
-	secretstoreFilters := deleteEmpty(strings.Split(secretstore, ":"))
-	return Filters{sectionFilters, inputFilters, outputFilters, aggregatorFilters, processorFilters, secretstoreFilters}
-}
-
-func deleteEmpty(s []string) []string {
-	var r []string
-	for _, str := range s {
-		if str != "" {
-			r = append(r, str)
-		}
-	}
-	return r
+func splitFilter(value string) []string {
+	return slices.DeleteFunc(strings.Split(value, ":"), func(s string) bool { return s == "" })
 }
