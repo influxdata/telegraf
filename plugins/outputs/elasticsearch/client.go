@@ -224,12 +224,8 @@ func preserveConnectionPool[Connection, Selector, Pool any](newPool func([]Conne
 	}
 }
 
-// startDiscovery runs a cancellable discovery loop for v6 and v7.
+// startDiscovery runs periodic discovery for v6 and v7 until canceled.
 func startDiscovery(ctx context.Context, discover func() error, log telegraf.Logger) {
-	if err := discover(); err != nil && ctx.Err() == nil {
-		log.Errorf("Discovering Elasticsearch nodes failed: %v", err)
-	}
-
 	ticker := time.NewTicker(15 * time.Minute)
 	defer ticker.Stop()
 	for {

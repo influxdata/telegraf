@@ -15,6 +15,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	elasticsearch5 "github.com/elastic/go-elasticsearch/v5"
@@ -1510,11 +1511,22 @@ func TestWriteIntegration(t *testing.T) {
 
 func TestClientDiscovery(t *testing.T) {
 	for _, tt := range []struct {
-		name    string
-		version string
+		name           string
+		version        string
+		discoveryError string
 	}{
 		{name: "v6", version: "6.8.23"},
 		{name: "v7", version: "7.17.29"},
+		{
+			name:           "v6 initial discovery failure",
+			version:        "6.8.23",
+			discoveryError: "discovery unavailable",
+		},
+		{
+			name:           "v7 initial discovery failure",
+			version:        "7.17.29",
+			discoveryError: "discovery unavailable",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			var discoveredWrites, seedWrites, discoveries atomic.Int32
@@ -1531,6 +1543,10 @@ func TestClientDiscovery(t *testing.T) {
 				switch r.URL.Path {
 				case "/_nodes/http":
 					discoveries.Add(1)
+					if tt.discoveryError != "" {
+						http.Error(w, tt.discoveryError, http.StatusServiceUnavailable)
+						return
+					}
 					_, err := fmt.Fprintf(w,
 						`{"nodes":{"node":{"roles":["data","ingest"],"http":{"publish_address":%q}}}}`,
 						strings.TrimPrefix(target.URL, "http://"),
@@ -1558,17 +1574,22 @@ func TestClientDiscovery(t *testing.T) {
 				Log:           testutil.Logger{},
 			}
 			require.NoError(t, plugin.Init())
-			require.NoError(t, plugin.Connect())
 			defer plugin.Close()
 
-			require.Eventually(t, func() bool {
-				return plugin.Write(testutil.MockMetrics()) == nil && discoveredWrites.Load() > 0
-			}, 5*time.Second, 10*time.Millisecond)
-			before := seedWrites.Load()
-			require.NoError(t, plugin.Write(testutil.MockMetrics()))
+			err := plugin.Connect()
+			if tt.discoveryError != "" {
+				require.ErrorContains(t, err, tt.discoveryError,
+					"Connect should fail when initial discovery fails")
+				return
+			}
+			require.NoError(t, err)
+
 			require.EqualValues(t, 1, discoveries.Load())
+			for range 2 {
+				require.NoError(t, plugin.Write(testutil.MockMetrics()))
+			}
 			require.EqualValues(t, 2, discoveredWrites.Load())
-			require.Equal(t, before, seedWrites.Load())
+			require.Zero(t, seedWrites.Load())
 		})
 	}
 }
@@ -1737,7 +1758,18 @@ func TestClientClose(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			started := make(chan struct{})
-			server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+			var discoveries atomic.Int32
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if discoveries.Add(1) == 1 {
+					_, err := fmt.Fprintf(w,
+						`{"nodes":{"node":{"roles":["data","ingest"],"http":{"publish_address":%q}}}}`,
+						r.Host,
+					)
+					if err != nil {
+						t.Error(err)
+					}
+					return
+				}
 				close(started)
 				<-r.Context().Done()
 			}))
@@ -1753,6 +1785,22 @@ func TestClientClose(t *testing.T) {
 			require.NoError(t, err)
 			defer plugin.Close()
 			defer connection.close()
+
+			// Start an in-flight request for the shutdown check.
+			var discover func() error
+			var discoveryWG *sync.WaitGroup
+			switch c := connection.(type) {
+			case *clientV6:
+				discover, discoveryWG = c.client.DiscoverNodes, &c.discoveryWG
+			case *clientV7:
+				discover, discoveryWG = c.client.DiscoverNodes, &c.discoveryWG
+			default:
+				t.Fatalf("unexpected client type %T", connection)
+			}
+			discoveryWG.Go(func() {
+				_ = discover()
+			})
+
 			select {
 			case <-started:
 			case <-time.After(5 * time.Second):
@@ -1770,6 +1818,22 @@ func TestClientClose(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestStartDiscovery(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(t.Context(), 15*time.Minute+5*time.Second)
+		defer cancel()
+
+		logger := &testutil.CaptureLogger{}
+		startDiscovery(ctx, func() error {
+			cancel()
+			return context.Canceled
+		}, logger)
+
+		require.ErrorIs(t, ctx.Err(), context.Canceled, "periodic discovery should run before the timeout")
+		require.Empty(t, logger.Errors())
+	})
 }
 
 type mockServer struct {

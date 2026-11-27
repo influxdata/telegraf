@@ -38,6 +38,10 @@ func (a *Elasticsearch) newClientV7() (client, error) {
 	}
 	client := &clientV7{client: c, log: a.Log}
 	if a.EnableSniffer {
+		if err := c.DiscoverNodes(); err != nil {
+			return nil, fmt.Errorf("discovering Elasticsearch nodes failed: %w", err)
+		}
+
 		// The discovery API accepts no context, so in-flight calls cannot be canceled.
 		ctx, cancel := context.WithCancel(context.Background())
 		client.cancelDiscovery = cancel
