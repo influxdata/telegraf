@@ -25,6 +25,7 @@ type Execd struct {
 	Command      []string        `toml:"command"`
 	Environment  []string        `toml:"environment"`
 	RestartDelay config.Duration `toml:"restart_delay"`
+	BufferSize   config.Size     `toml:"buffer_size"`
 	Log          telegraf.Logger `toml:"-"`
 
 	parser     telegraf.Parser
@@ -163,18 +164,11 @@ func (e *Execd) cmdReadOutStream(out io.Reader) {
 }
 
 func (e *Execd) cmdReadErr(out io.Reader) {
-	// A reader that stops on a long line leaves the pipe full and blocks the process.
-	reader := bufio.NewReader(out)
+	scanner := bufio.NewScanner(out)
+	scanner.Buffer(nil, int(e.BufferSize))
 
-	for {
-		line, err := reader.ReadString('\n')
-		if err != nil && line == "" {
-			if !errors.Is(err, io.EOF) {
-				e.Log.Errorf("Error reading stderr: %s", err)
-			}
-			return
-		}
-		msg := strings.TrimSuffix(strings.TrimSuffix(line, "\n"), "\r")
+	for scanner.Scan() {
+		msg := scanner.Text()
 		switch {
 		case strings.HasPrefix(msg, "E! "):
 			e.Log.Error(msg[3:])
@@ -190,12 +184,21 @@ func (e *Execd) cmdReadErr(out io.Reader) {
 			e.Log.Errorf("stderr: %q", msg)
 		}
 	}
+
+	if err := scanner.Err(); err != nil {
+		e.Log.Errorf("Error reading stderr: %s", err)
+		// Keep draining, or the process blocks on its next write once the pipe is full.
+		if _, err := io.Copy(io.Discard, out); err != nil {
+			e.Log.Errorf("Error draining stderr: %s", err)
+		}
+	}
 }
 
 func init() {
 	processors.AddStreaming("execd", func() telegraf.StreamingProcessor {
 		return &Execd{
 			RestartDelay: config.Duration(10 * time.Second),
+			BufferSize:   config.Size(64 * 1024),
 		}
 	})
 }

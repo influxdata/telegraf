@@ -211,28 +211,57 @@ func TestLongLinesOnStderr(t *testing.T) {
 	exe, err := os.Executable()
 	require.NoError(t, err)
 
-	plugin := &Execd{
-		Command:      []string{exe, "-case", "long-stderr"},
-		Environment:  []string{"PLUGINS_PROCESSORS_EXECD_MODE=application"},
-		RestartDelay: config.Duration(5 * time.Second),
-		Log:          &testutil.CaptureLogger{},
+	long := strings.Repeat("a", 70_000)
+	tests := []struct {
+		name       string
+		bufferSize config.Size
+		logged     bool
+	}{
+		{name: "default buffer drains the pipe", bufferSize: config.Size(64 * 1024)},
+		{name: "larger buffer logs the line", bufferSize: config.Size(128 * 1024), logged: true},
 	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			logger := &testutil.CaptureLogger{}
+			plugin := &Execd{
+				Command:      []string{exe, "-case", "long-stderr"},
+				Environment:  []string{"PLUGINS_PROCESSORS_EXECD_MODE=application"},
+				RestartDelay: config.Duration(5 * time.Second),
+				BufferSize:   tt.bufferSize,
+				Log:          logger,
+			}
 
-	parser := &influx.Parser{}
-	require.NoError(t, parser.Init())
-	plugin.SetParser(parser)
+			parser := &influx.Parser{}
+			require.NoError(t, parser.Init())
+			plugin.SetParser(parser)
 
-	serializer := &serializers_influx.Serializer{}
-	require.NoError(t, serializer.Init())
-	plugin.SetSerializer(serializer)
+			serializer := &serializers_influx.Serializer{}
+			require.NoError(t, serializer.Init())
+			plugin.SetSerializer(serializer)
 
-	var acc testutil.Accumulator
-	require.NoError(t, plugin.Start(&acc))
-	defer plugin.Stop()
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Start(&acc))
+			defer plugin.Stop()
 
-	require.Eventually(t, func() bool {
-		return acc.NMetrics() >= 1
-	}, 3*time.Second, 100*time.Millisecond)
+			require.Eventually(t, func() bool {
+				return acc.NMetrics() >= 1
+			}, 3*time.Second, 100*time.Millisecond)
+
+			logged := func() bool {
+				for _, m := range logger.Messages() {
+					if m.Text == long {
+						return true
+					}
+				}
+				return false
+			}
+			if tt.logged {
+				require.Eventually(t, logged, 3*time.Second, 100*time.Millisecond)
+			} else {
+				require.False(t, logged())
+			}
+		})
+	}
 }
 
 func TestCases(t *testing.T) {
