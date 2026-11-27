@@ -83,6 +83,16 @@
   without `sum` and `count` fields is now dropped with an error. Metrics
   already typed as histogram are not affected. Please check dashboards and
   alerts using the per-field series.
+- PR [#20271](https://github.com/influxdata/telegraf/pull/20271) removed the
+  default configuration locations from the systemd and Windows service
+  parameters to allow fully custom locations. If you are only using the default
+  locations with the Telegraf systemd service or if you are using the Windows
+  service, you don't have to change anything.However, if you are adding custom
+  configuration sources for systemd via the `/etc/defaults/telegraf` file and
+  need to use the default configuration locations, you have to manually add
+  `-config /etc/telegraf/telegraf.conf` and `-config-directory /etc/telegraf/telegraf.d`
+  to your `/etc/defaults/telegraf` file.
+
 ## v1.40.4 [2026-11-23]
 
 ### Bugfixes
