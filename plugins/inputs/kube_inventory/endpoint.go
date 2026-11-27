@@ -2,6 +2,7 @@ package kube_inventory
 
 import (
 	"context"
+	"maps"
 	"strings"
 
 	discoveryv1 "k8s.io/api/discovery/v1"
@@ -26,34 +27,42 @@ func gatherEndpoint(e discoveryv1.EndpointSlice, acc telegraf.Accumulator) {
 		return
 	}
 
-	fields := map[string]any{
+	sliceFields := map[string]any{
 		"created":    e.GetCreationTimestamp().UnixNano(),
 		"generation": e.Generation,
 	}
 
-	tags := map[string]string{
+	sliceTags := map[string]string{
 		"endpoint_name": e.Name,
 		"namespace":     e.Namespace,
 	}
 
 	for _, endpoint := range e.Endpoints {
+		// Each endpoint sets only the optional values it has, so start from
+		// the slice-wide values instead of carrying over the previous endpoint.
+		endpointFields := maps.Clone(sliceFields)
+		endpointTags := maps.Clone(sliceTags)
+
 		if endpoint.Conditions.Ready == nil {
-			fields["ready"] = true
+			endpointFields["ready"] = true
 		} else {
-			fields["ready"] = *endpoint.Conditions.Ready
+			endpointFields["ready"] = *endpoint.Conditions.Ready
 		}
 
 		if endpoint.Hostname != nil {
-			tags["hostname"] = *endpoint.Hostname
+			endpointTags["hostname"] = *endpoint.Hostname
 		}
 		if endpoint.NodeName != nil {
-			tags["node_name"] = *endpoint.NodeName
+			endpointTags["node_name"] = *endpoint.NodeName
 		}
 		if endpoint.TargetRef != nil {
-			tags[strings.ToLower(endpoint.TargetRef.Kind)] = endpoint.TargetRef.Name
+			endpointTags[strings.ToLower(endpoint.TargetRef.Kind)] = endpoint.TargetRef.Name
 		}
 
 		for _, port := range e.Ports {
+			fields := maps.Clone(endpointFields)
+			tags := maps.Clone(endpointTags)
+
 			if port.Port != nil {
 				fields["port"] = *port.Port
 			}

@@ -237,6 +237,86 @@ func TestEndpoint(t *testing.T) {
 			hasError: false,
 		},
 		{
+			name: "optional fields of one endpoint do not leak into the next",
+			handler: &mockHandler{
+				responseMap: map[string]any{
+					"/endpoints/": &discoveryv1.EndpointSliceList{
+						Items: []discoveryv1.EndpointSlice{
+							{
+								Endpoints: []discoveryv1.Endpoint{
+									{
+										Hostname: new("storage-6"),
+										NodeName: new("node-a"),
+										TargetRef: &corev1.ObjectReference{
+											Kind: "Pod",
+											Name: "storage-6",
+										},
+										Conditions: discoveryv1.EndpointConditions{
+											Ready: new(true),
+										},
+									},
+									{
+										Conditions: discoveryv1.EndpointConditions{
+											Ready: new(true),
+										},
+									},
+								},
+								Generation:        12,
+								Namespace:         "ns1",
+								Name:              "storage",
+								CreationTimestamp: metav1.Time{Time: now},
+								Ports: []discoveryv1.EndpointPort{
+									{
+										Name:     new("server"),
+										Protocol: new(corev1.Protocol("TCP")),
+										Port:     new(int32(8080)),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			output: []telegraf.Metric{
+				metric.New(
+					"kubernetes_endpoint",
+					map[string]string{
+						"endpoint_name": "storage",
+						"namespace":     "ns1",
+						"hostname":      "storage-6",
+						"node_name":     "node-a",
+						"pod":           "storage-6",
+						"port_name":     "server",
+						"port_protocol": "TCP",
+					},
+					map[string]any{
+						"ready":      true,
+						"port":       int32(8080),
+						"generation": int64(12),
+						"created":    now.UnixNano(),
+					},
+					time.Unix(0, 0),
+				),
+				metric.New(
+					"kubernetes_endpoint",
+					map[string]string{
+						"endpoint_name": "storage",
+						"namespace":     "ns1",
+						"port_name":     "server",
+						"port_protocol": "TCP",
+					},
+					map[string]any{
+						"ready":      true,
+						"port":       int32(8080),
+						"generation": int64(12),
+						"created":    now.UnixNano(),
+					},
+					time.Unix(0, 0),
+				),
+			},
+			hasError: false,
+		},
+		{
 			name: "endpoints null",
 			handler: &mockHandler{
 				responseMap: map[string]any{
