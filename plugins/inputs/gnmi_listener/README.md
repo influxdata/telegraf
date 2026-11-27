@@ -90,8 +90,11 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   # tls_min_version = "TLS12"
   ## Maximum TLS version to accept by the server
   # tls_max_version = ""
-  ## Whitelist for certificate DNS names to accept
-  # tls_allowed_dns_names = []
+  ## Allowed client certificates in the form <kind>:<expression>
+  ## Available prefixes are "cn", "org", "unit", "issuer", "sn", "dns", "email",
+  ## "ip" and "uri". Expressions might contain wildcards, "ip" may contain CIDR.
+  ## The client connection is accepted if at least one condition applies.
+  # tls_allowed_clients = []
 ```
 
 ### Supported Nokia devices

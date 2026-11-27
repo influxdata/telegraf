@@ -3,8 +3,8 @@ package tls
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
-	"slices"
 )
 
 // ServerConfig represents the standard server TLS config.
@@ -16,7 +16,10 @@ type ServerConfig struct {
 	TLSCipherSuites    []string `toml:"tls_cipher_suites"`
 	TLSMinVersion      string   `toml:"tls_min_version"`
 	TLSMaxVersion      string   `toml:"tls_max_version"`
-	TLSAllowedDNSNames []string `toml:"tls_allowed_dns_names"`
+	TLSAllowedDNSNames []string `toml:"tls_allowed_dns_names" deprecated:"1.41.0;1.50.0;use 'tls_allowed_clients' with 'dns' prefix instead"`
+	TLSAllowedClients  []string `toml:"tls_allowed_clients"`
+
+	clientFilter *certificateFilter
 }
 
 // TLSConfig returns a tls.Config, may be nil without error if TLS is not
@@ -78,9 +81,23 @@ func (c *ServerConfig) TLSConfig() (*tls.Config, error) {
 		return nil, fmt.Errorf("tls min version %d can't be greater than tls max version %d", tlsConfig.MinVersion, tlsConfig.MaxVersion)
 	}
 
-	// Since clientAuth is tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
-	// there must be certs to validate.
-	if len(c.TLSAllowedCACerts) > 0 && len(c.TLSAllowedDNSNames) > 0 {
+	// Prepare the client filtering if enabled
+	if len(c.TLSAllowedCACerts) > 0 && (len(c.TLSAllowedDNSNames) > 0 || len(c.TLSAllowedClients) > 0) {
+		// For backward compatibility
+		allowed := c.TLSAllowedClients
+		if len(c.TLSAllowedDNSNames) > 0 {
+			allowed = make([]string, 0, len(c.TLSAllowedDNSNames)+len(c.TLSAllowedClients))
+			for _, n := range c.TLSAllowedDNSNames {
+				allowed = append(allowed, "dns:"+n)
+			}
+			allowed = append(allowed, c.TLSAllowedClients...)
+		}
+
+		f, err := compileCertificateFilter(allowed)
+		if err != nil {
+			return nil, fmt.Errorf("compiling client certificate filter failed: %w", err)
+		}
+		c.clientFilter = f
 		tlsConfig.VerifyPeerCertificate = c.verifyPeerCertificate
 	}
 
@@ -92,14 +109,13 @@ func (c *ServerConfig) verifyPeerCertificate(rawCerts [][]byte, _ [][]*x509.Cert
 	// Let's review the client certificate.
 	cert, err := x509.ParseCertificate(rawCerts[0])
 	if err != nil {
-		return fmt.Errorf("could not validate peer certificate: %w", err)
+		return fmt.Errorf("could not parse peer certificate: %w", err)
 	}
 
-	for _, name := range cert.DNSNames {
-		if slices.Contains(c.TLSAllowedDNSNames, name) {
-			return nil
-		}
+	// Try to match the certificate against the "allowed" filter
+	if c.clientFilter.match(cert) {
+		return nil
 	}
 
-	return fmt.Errorf("peer certificate not in allowed DNS Name list: %v", cert.DNSNames)
+	return errors.New("peer certificate not in allowed list")
 }
