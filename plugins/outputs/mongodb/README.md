@@ -70,6 +70,9 @@ to use them.
   ## fashion. Otherwise, write each metric individually.
   # write_batch = false
 
+  ## Allow writing document batches unordered
+  # write_batch_unordered = false
+
   ## List of tags to use as metadata (wildcards accepted)
   ## If empty the "tags" element will be used as metadata field, otherwise
   ## a "metadata" element will be created containing the matching, existing

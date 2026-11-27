@@ -419,6 +419,48 @@ func TestConnectAndWriteX509AuthFailIntegration(t *testing.T) {
 	}
 }
 
+func TestWriteBatchUnorderedIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	const port = "27017"
+	container := testutil.Container{
+		Image:              "mongo",
+		ExposedPorts:       []string{port},
+		WaitingFor:         wait.ForLog("Waiting for connections"),
+		HostConfigModifier: testutil.RaiseNofileLimit,
+	}
+	require.NoError(t, container.Start())
+	defer container.Terminate()
+	dsn := "mongodb://" + container.Address + ":" + container.Ports[port]
+
+	// Seed a regular collection so MongoDB enforces uniqueness of _id.
+	ctx := t.Context()
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(dsn))
+	require.NoError(t, err)
+	defer client.Disconnect(ctx)
+	collection := client.Database("telegraf").Collection("metrics")
+	_, err = collection.InsertOne(ctx, bson.M{"_id": "duplicate"})
+	require.NoError(t, err)
+
+	plugin := &MongoDB{
+		Dsn:                 dsn,
+		WriteBatch:          true,
+		WriteBatchUnordered: true,
+	}
+	require.NoError(t, plugin.Init())
+	require.NoError(t, plugin.Connect())
+	defer plugin.Close()
+
+	err = plugin.Write([]telegraf.Metric{
+		metric.New("metrics", nil, map[string]any{"_id": "duplicate"}, time.Now()),
+		metric.New("metrics", nil, map[string]any{"_id": "valid"}, time.Now()),
+	})
+	require.True(t, mongo.IsDuplicateKeyError(err), "got %v", err)
+	require.NoError(t, collection.FindOne(ctx, bson.M{"_id": "valid"}).Err())
+}
+
 func TestWriteIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
