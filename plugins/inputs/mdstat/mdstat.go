@@ -158,8 +158,11 @@ func evalRecoveryLine(recoveryLineStr string) (recoveryLine, error) {
 
 func evalComponentDevices(deviceFields []string) string {
 	mdComponentDevices := make([]string, 0)
+	// Skip "mdX : active|inactive". Active arrays are followed by optional
+	// read-only flags and the personality, which never match the component
+	// pattern, while inactive arrays list their components right away.
 	if len(deviceFields) > 3 {
-		for _, field := range deviceFields[4:] {
+		for _, field := range deviceFields[3:] {
 			match := componentDeviceRE.FindStringSubmatch(field)
 			if match == nil {
 				continue
