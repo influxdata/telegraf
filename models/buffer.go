@@ -90,10 +90,28 @@ type BufferStats struct {
 	BufferLimit     selfstat.Stat
 }
 
+const (
+	// DropOldest makes a full buffer discard its oldest metrics to make room
+	// for new ones. This is the default.
+	DropOldest = "drop_oldest"
+	// DropNewest makes a full buffer discard new metrics and keep the ones
+	// that are already buffered.
+	DropNewest = "drop_newest"
+)
+
+// CheckDropStrategy verifies that the given drop strategy is valid.
+func CheckDropStrategy(strategy string) error {
+	switch strategy {
+	case "", DropOldest, DropNewest:
+		return nil
+	}
+	return fmt.Errorf("invalid buffer drop strategy %q", strategy)
+}
+
 // NewBuffer returns a new empty Buffer with the given capacity.
 //
 //nolint:revive //will move to structs later
-func NewBuffer(name, id, alias string, capacity int, strategy, path string, diskSync bool) (Buffer, error) {
+func NewBuffer(name, id, alias string, capacity int, strategy, dropStrategy, path string, diskSync bool) (Buffer, error) {
 	tags := map[string]string{
 		"_id":    id,
 		"output": name,
@@ -105,7 +123,18 @@ func NewBuffer(name, id, alias string, capacity int, strategy, path string, disk
 
 	switch strategy {
 	case "", "memory":
-		return NewMemoryBuffer(capacity, bs)
+		buf, err := NewMemoryBuffer(capacity, bs)
+		if err != nil {
+			return nil, err
+		}
+		switch dropStrategy {
+		case "", DropOldest:
+		case DropNewest:
+			buf.dropNewest = true
+		default:
+			return nil, fmt.Errorf("invalid buffer drop strategy %q", dropStrategy)
+		}
+		return buf, nil
 	case "disk_write_through":
 		return NewDiskBuffer(id, path, bs, diskSync)
 	case "discard":

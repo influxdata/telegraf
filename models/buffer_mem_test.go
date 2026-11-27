@@ -6,11 +6,12 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 )
 
 func TestMemoryBufferAcceptCallsMetricAccept(t *testing.T) {
-	buf, err := NewBuffer("test", "123", "", 5, "memory", "", true)
+	buf, err := NewBuffer("test", "123", "", 5, "memory", "", "", true)
 	require.NoError(t, err)
 	buf.Stats().MetricsAdded.Set(0)
 	buf.Stats().MetricsWritten.Set(0)
@@ -40,7 +41,7 @@ func TestCheckBufferSettings(t *testing.T) {
 }
 
 func TestDiscardBufferDropsMetrics(t *testing.T) {
-	buf, err := NewBuffer("test", "123", "", 5, "discard", "", true)
+	buf, err := NewBuffer("test", "123", "", 5, "discard", "", "", true)
 	require.NoError(t, err)
 	buf.Stats().MetricsDropped.Set(0)
 	defer buf.Close()
@@ -60,7 +61,7 @@ func TestDiscardBufferDropsMetrics(t *testing.T) {
 }
 
 func BenchmarkMemoryBufferAddMetrics(b *testing.B) {
-	buf, err := NewBuffer("test", "123", "", 10000, "memory", "", true)
+	buf, err := NewBuffer("test", "123", "", 10000, "memory", "", "", true)
 	require.NoError(b, err)
 	buf.Stats().MetricsAdded.Set(0)
 	buf.Stats().MetricsWritten.Set(0)
@@ -71,4 +72,107 @@ func BenchmarkMemoryBufferAddMetrics(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		buf.Add(m)
 	}
+}
+
+func TestCheckDropStrategy(t *testing.T) {
+	for _, strategy := range []string{"", DropOldest, DropNewest} {
+		require.NoError(t, CheckDropStrategy(strategy))
+	}
+	require.ErrorContains(t, CheckDropStrategy("unknown"), `invalid buffer drop strategy "unknown"`)
+
+	_, err := NewBuffer("test", "123", "", 5, "memory", "unknown", "", true)
+	require.ErrorContains(t, err, `invalid buffer drop strategy "unknown"`)
+}
+
+func TestMemoryBufferDropStrategy(t *testing.T) {
+	newMetric := func(v int) *mockMetric {
+		return &mockMetric{
+			Metric: metric.New("cpu", map[string]string{}, map[string]any{"value": v}, time.Unix(int64(v), 0)),
+		}
+	}
+	values := func(batch []telegraf.Metric) []int {
+		out := make([]int, 0, len(batch))
+		for _, m := range batch {
+			v, _ := m.GetField("value")
+			out = append(out, int(v.(int64)))
+		}
+		return out
+	}
+
+	tests := []struct {
+		name     string
+		strategy string
+		expected []int
+	}{
+		{name: "default drops oldest", expected: []int{3, 4, 5}},
+		{name: "drop_oldest drops oldest", strategy: DropOldest, expected: []int{3, 4, 5}},
+		{name: "drop_newest drops newest", strategy: DropNewest, expected: []int{1, 2, 3}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			buf, err := NewBuffer("test", "123", "", 3, "memory", tt.strategy, "", true)
+			require.NoError(t, err)
+			buf.Stats().MetricsAdded.Set(0)
+			buf.Stats().MetricsDropped.Set(0)
+			defer buf.Close()
+
+			var rejected int
+			for i := 1; i <= 5; i++ {
+				m := newMetric(i)
+				m.RejectF = func() { rejected++ }
+				buf.Add(m)
+			}
+			require.Equal(t, 3, buf.Len())
+			require.Equal(t, 2, rejected)
+			require.Equal(t, int64(2), buf.Stats().MetricsDropped.Get())
+
+			tx := buf.BeginTransaction(10)
+			require.Equal(t, tt.expected, values(tx.Batch))
+			tx.AcceptAll()
+			buf.EndTransaction(tx)
+		})
+	}
+}
+
+func TestMemoryBufferDropNewestReturnsDroppedCount(t *testing.T) {
+	buf, err := NewBuffer("test", "123", "", 2, "memory", DropNewest, "", true)
+	require.NoError(t, err)
+	defer buf.Close()
+
+	m := metric.New("cpu", map[string]string{}, map[string]any{"value": 1}, time.Unix(0, 0))
+	require.Equal(t, 0, buf.Add(m, m))
+	require.Equal(t, 3, buf.Add(m, m, m))
+	require.Equal(t, 2, buf.Len())
+}
+
+func TestMemoryBufferDropNewestWithOpenTransaction(t *testing.T) {
+	newMetric := func(v int) telegraf.Metric {
+		return metric.New("cpu", map[string]string{}, map[string]any{"value": v}, time.Unix(int64(v), 0))
+	}
+	values := func(batch []telegraf.Metric) []int {
+		out := make([]int, 0, len(batch))
+		for _, m := range batch {
+			v, _ := m.GetField("value")
+			out = append(out, int(v.(int64)))
+		}
+		return out
+	}
+
+	buf, err := NewBuffer("test", "123", "", 3, "memory", DropNewest, "", true)
+	require.NoError(t, err)
+	defer buf.Close()
+
+	buf.Add(newMetric(1), newMetric(2), newMetric(3))
+	tx := buf.BeginTransaction(3)
+
+	// The batch is still in flight and counts against the capacity, so new
+	// metrics must be dropped instead of displacing the batch on a failed write.
+	require.Equal(t, 2, buf.Add(newMetric(4), newMetric(5)))
+	tx.KeepAll()
+	buf.EndTransaction(tx)
+
+	tx = buf.BeginTransaction(10)
+	require.Equal(t, []int{1, 2, 3}, values(tx.Batch))
+	tx.AcceptAll()
+	buf.EndTransaction(tx)
 }

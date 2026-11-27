@@ -17,6 +17,10 @@ type MemoryBuffer struct {
 	size  int // number of metrics currently in the buffer
 	cap   int // the capacity of the buffer
 
+	// dropNewest makes a full buffer drop incoming metrics instead of
+	// overwriting the oldest buffered ones.
+	dropNewest bool
+
 	batchFirst int // index of the first metric in the batch
 	batchSize  int // number of metrics currently in the batch
 }
@@ -134,6 +138,11 @@ func (b *MemoryBuffer) length() int {
 func (b *MemoryBuffer) addMetric(m telegraf.Metric) int {
 	dropped := 0
 	// Check if Buffer is full
+	if b.dropNewest && b.size+b.batchSize >= b.cap {
+		// Keep the buffered metrics and drop the incoming one
+		b.metricDropped(m)
+		return 1
+	}
 	if b.size == b.cap {
 		b.metricDropped(b.buf[b.last])
 		dropped++
