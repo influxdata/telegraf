@@ -975,9 +975,11 @@ disk.capacity.usage.average
 
 #### Collect additional properties
 
-The `<entity>_property_include` settings allow to collect additional properties of the configured
-entity into an additional `_properties` metric. The properties are added as fields with the
-tag-set being identical to the one of the entity metrics.
+The `<entity>_property_include` settings allow to collect additional properties
+of the configured entity into an additional `_properties` metric. The properties
+are added as fields with the tag-set being identical to the one of the entity
+metrics.
+
 ## Add a vSAN extension
 
 A vSAN resource is a special type of resource that can be collected by the
