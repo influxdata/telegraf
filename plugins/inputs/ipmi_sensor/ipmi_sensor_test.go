@@ -248,6 +248,37 @@ func TestGatherCacheOptionBeforeCommand(t *testing.T) {
 	require.Equal(t, expected, calls)
 }
 
+func TestGatherCacheDumpUsesSdr(t *testing.T) {
+	cachePath := t.TempDir()
+	cacheFile := filepath.Join(cachePath, "_ipmi_cache")
+
+	i := &Ipmi{
+		Path:      "ipmitool",
+		Privilege: "USER",
+		Timeout:   config.Duration(time.Second * 5),
+		UseCache:  true,
+		CachePath: cachePath,
+		Sensors:   []string{"chassis_power_status"},
+		Log:       testutil.Logger{},
+	}
+
+	var calls [][]string
+	execCommand = func(command string, args ...string) *exec.Cmd {
+		calls = append(calls, args)
+		return fakeExecCommand(command, args...)
+	}
+
+	var acc testutil.Accumulator
+	require.NoError(t, i.Init())
+	require.NoError(t, acc.GatherError(i.Gather))
+
+	expected := [][]string{
+		{"sdr", "dump", cacheFile},
+		{"-S", cacheFile, "chassis", "power", "status"},
+	}
+	require.Equal(t, expected, calls)
+}
+
 // fakeExecCommand is a helper function that mock
 // the exec.Command call (and call the test binary)
 func fakeExecCommand(command string, args ...string) *exec.Cmd {

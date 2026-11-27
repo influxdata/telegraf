@@ -138,10 +138,9 @@ func (m *Ipmi) parse(acc telegraf.Accumulator, server, sensor string) error {
 		_, err := os.Stat(cacheFile)
 		if os.IsNotExist(err) {
 			// init cache file
-			dumpOpts := make([]string, 0, len(opts)+len(command)+2)
+			dumpOpts := make([]string, 0, len(opts)+3)
 			dumpOpts = append(dumpOpts, opts...)
-			dumpOpts = append(dumpOpts, command...)
-			dumpOpts = append(dumpOpts, "dump", cacheFile)
+			dumpOpts = append(dumpOpts, "sdr", "dump", cacheFile)
 			name := m.Path
 			if m.UseSudo {
 				// -n - avoid prompting the user for input of any kind
