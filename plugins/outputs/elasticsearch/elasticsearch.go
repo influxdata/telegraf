@@ -165,6 +165,11 @@ func (a *Elasticsearch) Connect() error {
 		return err
 	}
 
+	if major < 5 {
+		a.Close()
+		return fmt.Errorf("version %q not supported", version)
+	}
+
 	var c client
 	switch major {
 	case 5:
@@ -174,11 +179,8 @@ func (a *Elasticsearch) Connect() error {
 		c, err = a.newClientV5()
 	case 6:
 		c, err = a.newClientV6()
-	case 7:
-		c, err = a.newClientV7()
 	default:
-		a.Close()
-		return fmt.Errorf("version %q not supported", version)
+		c, err = a.newClientV7()
 	}
 	if err != nil {
 		a.Close()
