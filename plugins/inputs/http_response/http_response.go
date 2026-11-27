@@ -2,6 +2,7 @@
 package http_response
 
 import (
+	"context"
 	_ "embed"
 	"errors"
 	"fmt"
@@ -426,6 +427,11 @@ func (h *HTTPResponse) httpGather(cl client) (map[string]any, map[string]string,
 		h.setBodyReadError("The body of the HTTP Response is too large", bodyBytes, fields, tags)
 		return fields, tags, nil
 	} else if err != nil {
+		if isTimeoutError(err) {
+			h.Log.Debugf("Timeout while reading body of HTTP Response from %s: %s", cl.address, err.Error())
+			setResult("timeout", fields, tags)
+			return fields, tags, nil
+		}
 		h.setBodyReadError("Failed to read body of HTTP Response : "+err.Error(), bodyBytes, fields, tags)
 		return fields, tags, nil
 	}
@@ -480,6 +486,14 @@ func (h *HTTPResponse) setBodyReadError(errorMsg string, bodyBytes []byte, field
 	if h.ResponseStringMatch != "" {
 		fields["response_string_match"] = 0
 	}
+}
+
+func isTimeoutError(err error) bool {
+	if errors.Is(err, context.DeadlineExceeded) || os.IsTimeout(err) {
+		return true
+	}
+	var timeoutErr interface{ Timeout() bool }
+	return errors.As(err, &timeoutErr) && timeoutErr.Timeout()
 }
 
 func (h *HTTPResponse) setRequestAuth(request *http.Request) error {
