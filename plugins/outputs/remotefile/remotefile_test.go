@@ -2,6 +2,9 @@ package remotefile
 
 import (
 	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -9,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	rcloneconfig "github.com/rclone/rclone/fs/config"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -562,4 +567,72 @@ func TestTrackingMetrics(t *testing.T) {
 		defer mu.Unlock()
 		return len(input) == len(delivered)
 	}, time.Second, 100*time.Millisecond, "%d delivered but %d expected", len(delivered), len(expected))
+}
+
+func TestS3KMSEncryption(t *testing.T) {
+	cacheDir := t.TempDir()
+	previousCacheDir := rcloneconfig.GetCacheDir()
+	t.Cleanup(func() { require.NoError(t, rcloneconfig.SetCacheDir(previousCacheDir)) })
+	require.NoError(t, rcloneconfig.SetCacheDir(cacheDir))
+
+	const key = "arn:aws:kms:us-east-1:123456789012:key/00000000-0000-0000-0000-000000000001"
+	const expected = "test value=42i 1719410485000000000\n"
+	uploads := make(chan string, 1)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/mybucket":
+			w.Header().Set("Content-Type", "application/xml")
+			fmt.Fprint(w, "<ListBucketResult><IsTruncated>false</IsTruncated></ListBucketResult>")
+		case r.Method == http.MethodHead && r.URL.Path == "/mybucket/test":
+			w.WriteHeader(http.StatusNotFound)
+		case r.Method == http.MethodPut && r.URL.Path == "/mybucket/test":
+			assert.Equal(t, "aws:kms", r.Header.Get("X-Amz-Server-Side-Encryption"))
+			assert.Equal(t, key, r.Header.Get("X-Amz-Server-Side-Encryption-Aws-Kms-Key-Id"))
+			body, err := io.ReadAll(r.Body)
+			if !assert.NoError(t, err) {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			select {
+			case uploads <- string(body):
+			default:
+				t.Error("unexpected additional upload")
+			}
+			w.Header().Set("ETag", `"test-etag"`)
+		default:
+			t.Errorf("unexpected S3 request: %s %s", r.Method, r.URL.Path)
+			w.WriteHeader(http.StatusBadRequest)
+		}
+	}))
+	defer server.Close()
+
+	remote := fmt.Sprintf("s3,provider=AWS,region=us-east-1,endpoint='%s',"+
+		"access_key_id=test,secret_access_key=test,force_path_style=true,"+
+		"no_check_bucket=true,no_head=true,use_unsigned_payload=true,server_side_encryption='aws:kms',"+
+		"sse_kms_key_id='%s':mybucket", server.URL, key)
+	plugin := &File{
+		Remote:            config.NewSecret([]byte(remote)),
+		Files:             []string{"test"},
+		WriteBackInterval: config.Duration(time.Millisecond),
+		CompressionLevel:  -1,
+		Log:               &testutil.Logger{},
+	}
+	plugin.SetSerializerFunc(func() (telegraf.Serializer, error) {
+		serializer := &influx.Serializer{}
+		err := serializer.Init()
+		return serializer, err
+	})
+	require.NoError(t, plugin.Init())
+	t.Cleanup(func() { require.NoError(t, plugin.Close()) })
+	require.NoError(t, plugin.Connect())
+
+	point := metric.New("test", nil, map[string]any{"value": 42}, time.Unix(1719410485, 0))
+	require.NoError(t, plugin.Write([]telegraf.Metric{point}))
+	require.NoError(t, plugin.Close())
+	select {
+	case body := <-uploads:
+		require.Equal(t, expected, body)
+	default:
+		t.Fatal("S3 did not receive the upload")
+	}
 }

@@ -137,6 +137,7 @@ func (f *File) Connect() error {
 	}
 
 	// Setup the remote virtual filesystem
+	f.Log.Debugf("Parsed remote path %q", parsed.Path)
 	ctx, cancel := context.WithCancel(context.Background())
 	rootfs, err := info.NewFs(ctx, parsed.Name, parsed.Path, fs.ConfigMap(info.Prefix, info.Options, parsed.Name, parsed.Config))
 	if err != nil {
