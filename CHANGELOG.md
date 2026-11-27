@@ -28,6 +28,12 @@
   previously collapsed onto one series and now split per GPU, so queries and
   dashboards grouping these metrics should account for the new tag. The extra
   cardinality is bounded by the number of GPUs.
+- PR [#20267](https://github.com/influxdata/telegraf/pull/20267) stops the
+  optional `hostname`, `node_name` and `targetRef` kind tags of one
+  `inputs.kube_inventory` endpoint leaking onto the next endpoint of the same
+  EndpointSlice, and the `port` field leaking onto a port without a number.
+  Affected `kubernetes_endpoint` series lose the tags they wrongly carried, so
+  please check queries and dashboards grouping on them.
 - PR [#19558](https://github.com/influxdata/telegraf/pull/19558) changes the
   filenames written by `outputs.parquet` from
   `<measurement>-<YYYY-MM-DD>-<unix-seconds>.parquet` to
