@@ -193,9 +193,6 @@ to use them.
   # vsan_metric_exclude = [ "*" ] ## vSAN are not collected by default.
   ## Whether to skip verifying vSAN metrics against the ones from GetSupportedEntityTypes API.
   # vsan_metric_skip_verify = false ## false by default.
-  ## Custom vsan properties to collect.
-  ## If the properties are text-based, they will be added as tags; otherwise, they will be added as metrics.
-  # vsan_property_include = []
 
   ## Interval for sampling vSAN performance metrics, can be reduced down to
   ## 30 seconds for vSAN 8 U1.

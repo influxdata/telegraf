@@ -266,7 +266,7 @@ func newEndpoint(ctx context.Context, parent *VSphere, address *url.URL, log tel
 			collectInstances: false,
 			getObjects:       getClusters,
 			parent:           "datacenter",
-			propertyInclude:  parent.VSANPropertyInclude,
+			propertyInclude:  [],
 		},
 	}
 
