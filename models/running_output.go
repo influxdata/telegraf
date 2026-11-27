@@ -112,8 +112,7 @@ func NewRunningOutput(output telegraf.Output, config *OutputConfig, batchSize, b
 
 	b, err := NewBuffer(
 		config.Name, config.ID, config.Alias, bufferLimit,
-		config.BufferStrategy, config.BufferDirectory, config.BufferDiskSync,
-		WithDropStrategy(config.BufferDropStrategy),
+		config.BufferStrategy, config.BufferDropStrategy, config.BufferDirectory, config.BufferDiskSync,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("creating buffer failed: %w", err)

@@ -688,7 +688,7 @@ func TestWriteUnknownTopicWithBroker(t *testing.T) {
 		producer:        producer.(sarama.SyncProducerContext),
 		serializer:      serializer,
 	}
-	buffer, err := models.NewBuffer("kafka", t.Name(), "", 10, "memory", "", false)
+	buffer, err := models.NewBuffer("kafka", t.Name(), "", 10, "memory", "", "", false)
 	require.NoError(t, err)
 	defer func() { require.NoError(t, buffer.Close()) }()
 	var delivered []telegraf.DeliveryInfo
@@ -950,7 +950,7 @@ func TestWriteConfigurationErrorsWithBroker(t *testing.T) {
 			require.NoError(t, plugin.Connect())
 			defer func() { require.NoError(t, plugin.Close()) }()
 
-			buffer, err := models.NewBuffer("kafka", t.Name(), "", 10, "memory", "", false)
+			buffer, err := models.NewBuffer("kafka", t.Name(), "", 10, "memory", "", "", false)
 			require.NoError(t, err)
 			defer func() { require.NoError(t, buffer.Close()) }()
 			delivered := make(map[int]bool)

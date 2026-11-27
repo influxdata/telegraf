@@ -11,7 +11,7 @@ import (
 )
 
 func TestMemoryBufferAcceptCallsMetricAccept(t *testing.T) {
-	buf, err := NewBuffer("test", "123", "", 5, "memory", "", true)
+	buf, err := NewBuffer("test", "123", "", 5, "memory", "", "", true)
 	require.NoError(t, err)
 	buf.Stats().MetricsAdded.Set(0)
 	buf.Stats().MetricsWritten.Set(0)
@@ -41,7 +41,7 @@ func TestCheckBufferSettings(t *testing.T) {
 }
 
 func TestDiscardBufferDropsMetrics(t *testing.T) {
-	buf, err := NewBuffer("test", "123", "", 5, "discard", "", true)
+	buf, err := NewBuffer("test", "123", "", 5, "discard", "", "", true)
 	require.NoError(t, err)
 	buf.Stats().MetricsDropped.Set(0)
 	defer buf.Close()
@@ -61,7 +61,7 @@ func TestDiscardBufferDropsMetrics(t *testing.T) {
 }
 
 func BenchmarkMemoryBufferAddMetrics(b *testing.B) {
-	buf, err := NewBuffer("test", "123", "", 10000, "memory", "", true)
+	buf, err := NewBuffer("test", "123", "", 10000, "memory", "", "", true)
 	require.NoError(b, err)
 	buf.Stats().MetricsAdded.Set(0)
 	buf.Stats().MetricsWritten.Set(0)
@@ -80,7 +80,7 @@ func TestCheckDropStrategy(t *testing.T) {
 	}
 	require.ErrorContains(t, CheckDropStrategy("unknown"), `invalid buffer drop strategy "unknown"`)
 
-	_, err := NewBuffer("test", "123", "", 5, "memory", "", true, WithDropStrategy("unknown"))
+	_, err := NewBuffer("test", "123", "", 5, "memory", "unknown", "", true)
 	require.ErrorContains(t, err, `invalid buffer drop strategy "unknown"`)
 }
 
@@ -101,16 +101,16 @@ func TestMemoryBufferDropStrategy(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		opts     []BufferOption
+		strategy string
 		expected []int
 	}{
 		{name: "default drops oldest", expected: []int{3, 4, 5}},
-		{name: "drop_oldest drops oldest", opts: []BufferOption{WithDropStrategy(DropOldest)}, expected: []int{3, 4, 5}},
-		{name: "drop_newest drops newest", opts: []BufferOption{WithDropStrategy(DropNewest)}, expected: []int{1, 2, 3}},
+		{name: "drop_oldest drops oldest", strategy: DropOldest, expected: []int{3, 4, 5}},
+		{name: "drop_newest drops newest", strategy: DropNewest, expected: []int{1, 2, 3}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			buf, err := NewBuffer("test", "123", "", 3, "memory", "", true, tt.opts...)
+			buf, err := NewBuffer("test", "123", "", 3, "memory", tt.strategy, "", true)
 			require.NoError(t, err)
 			buf.Stats().MetricsAdded.Set(0)
 			buf.Stats().MetricsDropped.Set(0)
@@ -135,7 +135,7 @@ func TestMemoryBufferDropStrategy(t *testing.T) {
 }
 
 func TestMemoryBufferDropNewestReturnsDroppedCount(t *testing.T) {
-	buf, err := NewBuffer("test", "123", "", 2, "memory", "", true, WithDropStrategy(DropNewest))
+	buf, err := NewBuffer("test", "123", "", 2, "memory", DropNewest, "", true)
 	require.NoError(t, err)
 	defer buf.Close()
 
@@ -158,7 +158,7 @@ func TestMemoryBufferDropNewestWithOpenTransaction(t *testing.T) {
 		return out
 	}
 
-	buf, err := NewBuffer("test", "123", "", 3, "memory", "", true, WithDropStrategy(DropNewest))
+	buf, err := NewBuffer("test", "123", "", 3, "memory", DropNewest, "", true)
 	require.NoError(t, err)
 	defer buf.Close()
 

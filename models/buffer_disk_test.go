@@ -19,7 +19,7 @@ import (
 // https://github.com/influxdata/telegraf/issues/16696
 func TestDiskBufferTruncate(t *testing.T) {
 	// Create a disk buffer
-	buf, err := NewBuffer("test", "id123", "", 0, "disk_write_through", t.TempDir(), true)
+	buf, err := NewBuffer("test", "id123", "", 0, "disk_write_through", "", t.TempDir(), true)
 	require.NoError(t, err)
 	defer buf.Close()
 	diskBuf, ok := buf.(*DiskBuffer)
@@ -77,7 +77,7 @@ func TestDiskBufferTruncate(t *testing.T) {
 // https://github.com/influxdata/telegraf/issues/16981
 func TestDiskBufferEmptyReuse(t *testing.T) {
 	// Create a disk buffer
-	buf, err := NewBuffer("test", "id123", "", 0, "disk_write_through", t.TempDir(), true)
+	buf, err := NewBuffer("test", "id123", "", 0, "disk_write_through", "", t.TempDir(), true)
 	require.NoError(t, err)
 	defer buf.Close()
 	diskBuf, ok := buf.(*DiskBuffer)
@@ -127,7 +127,7 @@ func TestDiskBufferEmptyClose(t *testing.T) {
 	tmpdir := t.TempDir()
 
 	// Create a disk buffer
-	buf, err := NewBuffer("test", "id123", "", 0, "disk_write_through", tmpdir, true)
+	buf, err := NewBuffer("test", "id123", "", 0, "disk_write_through", "", tmpdir, true)
 	require.NoError(t, err)
 	defer buf.Close()
 	diskBuf, ok := buf.(*DiskBuffer)
@@ -155,7 +155,7 @@ func TestDiskBufferEmptyClose(t *testing.T) {
 	require.NoError(t, diskBuf.Close())
 
 	// Reopen the buffer with the parameters above to see the same buffer
-	reopened, err := NewBuffer("test", "id123", "", 0, "disk_write_through", tmpdir, true)
+	reopened, err := NewBuffer("test", "id123", "", 0, "disk_write_through", "", tmpdir, true)
 	require.NoError(t, err)
 	defer reopened.Close()
 	_, ok = reopened.(*DiskBuffer)
@@ -181,7 +181,7 @@ func TestDiskBufferEmptyClose(t *testing.T) {
 func TestDiskBufferEmptyCloseRemovesDirectory(t *testing.T) {
 	tmpdir := t.TempDir()
 
-	buf, err := NewBuffer("test", "id123", "", 0, "disk_write_through", tmpdir, true)
+	buf, err := NewBuffer("test", "id123", "", 0, "disk_write_through", "", tmpdir, true)
 	require.NoError(t, err)
 	require.DirExists(t, filepath.Join(tmpdir, "id123"))
 
@@ -204,7 +204,7 @@ func TestDiskBufferEmptyCloseRemovesDirectory(t *testing.T) {
 func TestDiskBufferNonEmptyCloseKeepsMetrics(t *testing.T) {
 	tmpdir := t.TempDir()
 
-	buf, err := NewBuffer("test", "id123", "", 0, "disk_write_through", tmpdir, true)
+	buf, err := NewBuffer("test", "id123", "", 0, "disk_write_through", "", tmpdir, true)
 	require.NoError(t, err)
 
 	m := metric.New("test", map[string]string{}, map[string]any{"value": 1}, time.Now())
@@ -215,7 +215,7 @@ func TestDiskBufferNonEmptyCloseKeepsMetrics(t *testing.T) {
 	require.DirExists(t, filepath.Join(tmpdir, "id123"))
 
 	// The metric should still be there after reopening the buffer
-	reopened, err := NewBuffer("test", "id123", "", 0, "disk_write_through", tmpdir, true)
+	reopened, err := NewBuffer("test", "id123", "", 0, "disk_write_through", "", tmpdir, true)
 	require.NoError(t, err)
 	defer reopened.Close()
 
@@ -231,7 +231,7 @@ func TestDiskBufferRetainsTrackingInformation(t *testing.T) {
 	var delivered int
 	mm, _ := metric.WithTracking(m, func(telegraf.DeliveryInfo) { delivered++ })
 
-	buf, err := NewBuffer("test", "123", "", 0, "disk_write_through", t.TempDir(), true)
+	buf, err := NewBuffer("test", "123", "", 0, "disk_write_through", "", t.TempDir(), true)
 	require.NoError(t, err)
 	buf.Stats().MetricsAdded.Set(0)
 	buf.Stats().MetricsWritten.Set(0)
@@ -289,7 +289,7 @@ func TestDiskBufferTrackingDroppedFromOldWal(t *testing.T) {
 	walfile.Close()
 
 	// Create a buffer
-	buf, err := NewBuffer("123", "123", "", 0, "disk_write_through", path, true)
+	buf, err := NewBuffer("123", "123", "", 0, "disk_write_through", "", path, true)
 	require.NoError(t, err)
 	buf.Stats().MetricsAdded.Set(0)
 	buf.Stats().MetricsWritten.Set(0)
@@ -340,7 +340,7 @@ func TestDiskBufferTrackingOnOutputOutage(t *testing.T) {
 	}
 
 	// Create a disk buffer
-	buf, err := NewBuffer("test", "id123", "", 0, "disk_write_through", t.TempDir(), true)
+	buf, err := NewBuffer("test", "id123", "", 0, "disk_write_through", "", t.TempDir(), true)
 	require.NoError(t, err)
 	defer buf.Close()
 	diskBuf, ok := buf.(*DiskBuffer)

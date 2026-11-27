@@ -99,22 +99,6 @@ const (
 	DropNewest = "drop_newest"
 )
 
-type bufferOptions struct {
-	dropStrategy string
-}
-
-// BufferOption customizes the buffer created by NewBuffer.
-type BufferOption func(*bufferOptions)
-
-// WithDropStrategy sets which metrics a full buffer drops, either DropOldest
-// (default) or DropNewest. It only affects buffers with a maximum capacity,
-// i.e. the memory buffer.
-func WithDropStrategy(strategy string) BufferOption {
-	return func(o *bufferOptions) {
-		o.dropStrategy = strategy
-	}
-}
-
 // CheckDropStrategy verifies that the given drop strategy is valid.
 func CheckDropStrategy(strategy string) error {
 	switch strategy {
@@ -127,15 +111,7 @@ func CheckDropStrategy(strategy string) error {
 // NewBuffer returns a new empty Buffer with the given capacity.
 //
 //nolint:revive //will move to structs later
-func NewBuffer(name, id, alias string, capacity int, strategy, path string, diskSync bool, opts ...BufferOption) (Buffer, error) {
-	var options bufferOptions
-	for _, opt := range opts {
-		opt(&options)
-	}
-	if err := CheckDropStrategy(options.dropStrategy); err != nil {
-		return nil, err
-	}
-
+func NewBuffer(name, id, alias string, capacity int, strategy, dropStrategy, path string, diskSync bool) (Buffer, error) {
 	tags := map[string]string{
 		"_id":    id,
 		"output": name,
@@ -151,7 +127,13 @@ func NewBuffer(name, id, alias string, capacity int, strategy, path string, disk
 		if err != nil {
 			return nil, err
 		}
-		buf.dropNewest = options.dropStrategy == DropNewest
+		switch dropStrategy {
+		case "", DropOldest:
+		case DropNewest:
+			buf.dropNewest = true
+		default:
+			return nil, fmt.Errorf("invalid buffer drop strategy %q", dropStrategy)
+		}
 		return buf, nil
 	case "disk_write_through":
 		return NewDiskBuffer(id, path, bs, diskSync)
