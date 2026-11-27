@@ -125,7 +125,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		// cannot be single-object encoded, so fall through to bare Avro binary.
 		if len(buf) >= 2 {
 			magicBytes := int(binary.BigEndian.Uint16(buf[:2]))
-			expectedMagic := int(binary.BigEndian.Uint16([]byte("c301")))
+			expectedMagic := 0xc301
 			if magicBytes == expectedMagic {
 				if len(buf) < 10 {
 					return nil, errors.New("buffer too short for Avro single-object encoding")

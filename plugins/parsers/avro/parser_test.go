@@ -97,7 +97,7 @@ func TestParseShortBuffer(t *testing.T) {
 
 	// Single-object-encoding marker present but the buffer is truncated before
 	// the eight-byte fingerprint completes.
-	_, err = bare.Parse([]byte{'c', '3', 0x00, 0x00, 0x00})
+	_, err = bare.Parse([]byte{0xc3, 0x01, 0x00, 0x00, 0x00})
 	require.ErrorContains(t, err, "single-object encoding")
 
 	// Confluent Wire Protocol expects a zero byte plus a four-byte schema ID.
