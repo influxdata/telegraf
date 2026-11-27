@@ -1,0 +1,27 @@
+snapshot_time             1793348133.890624008 secs.nsecs
+start_time                1793283841.364851282 secs.nsecs
+elapsed_time              64292.525772726 secs.nsecs
+open                      5933896 samples [usecs] 3 777558 296386488 1719435096986
+close                     5929238 samples [usecs] 3 9885 91716853 18399521443
+mknod                     3184874 samples [usecs] 21 777545 152923103 1662116388941
+link                      11 samples [usecs] 21 356 993 197173
+unlink                    3222516 samples [usecs] 17 43364 182378516 26879362426
+mkdir                     89292 samples [usecs] 37 5796 11531542 10440934704
+rmdir                     101527 samples [usecs] 20 8021 6146706 1853816406
+rename                    381034 samples [usecs] 20 5820 59391106 17851959612
+getattr                   6569303 samples [usecs] 0 9069 28479413 25976127441
+setattr                   2991613 samples [usecs] 5 17541 416404369 3037839823853
+getxattr                  422467 samples [usecs] 1 437 6138698 110046498
+setxattr                  143660 samples [usecs] 5 90558 20146815 13731597323
+statfs                    40172 samples [usecs] 0 37 185327 1729415
+sync                      64070 samples [usecs] 0 12532 51690407 170968363693
+samedir_rename            375131 samples [usecs] 20 5820 58488940 17389672268
+parallel_rename_file      379939 samples [usecs] 20 5820 58751610 17409637522
+parallel_rename_dir       1 samples [usecs] 56 56 56 3136
+crossdir_rename           5903 samples [usecs] 28 5648 902166 462287344
+rename_trylocks           1094 samples [usecs] 254 5648 639440 442318954
+read                      59 samples [usecs] 69 265 7200 974190
+write                     279 samples [usecs] 4 96 6963 281729
+read_bytes                59 samples [bytes] 4096 4096 241664 989855744
+write_bytes               279 samples [bytes] 155 282 64027 14894711
+punch                     143 samples [usecs] 16 298 4339 358861

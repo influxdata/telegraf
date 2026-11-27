@@ -1,0 +1,12 @@
+snapshot_time             1793348141.911366298 secs.nsecs
+start_time                1793283745.122068854 secs.nsecs
+elapsed_time              64396.789297444 secs.nsecs
+req_waittime              106554525 samples [usecs] 2 16524 1490760922 3593294427834
+req_qdepth                106554525 samples [reqs] 0 94 2655910 3056652
+req_active                106554525 samples [reqs] 1 123 278166942 7313998572
+req_timeout               106554525 samples [secs] 5 65 568499762 5164088958
+reqbuf_avail              234278654 samples [bufs] 42 64 14986999986 958741520986
+ldlm_flock_enqueue        10777384 samples [reqs] 1 1 10777384 10777384
+ldlm_ibits_enqueue        76194127 samples [reqs] 1 1 76194127 76194127
+mds_reint_setattr         6153067 samples [reqs] 1 1 6153067 6153067
+mds_reint_create          200973 samples [reqs] 1 1 200973 200973
