@@ -349,7 +349,6 @@ following works:
 - github.com/nwaples/tacplus [BSD 2-Clause "Simplified" License](https://github.com/nwaples/tacplus/blob/master/LICENSE)
 - github.com/oapi-codegen/runtime [Apache License 2.0](https://github.com/oapi-codegen/runtime/blob/main/LICENSE)
 - github.com/oklog/ulid [Apache License 2.0](https://github.com/oklog/ulid/blob/main/LICENSE)
-- github.com/olivere/elastic [MIT License](https://github.com/olivere/elastic/blob/release-branch.v7/LICENSE)
 - github.com/open-telemetry/opentelemetry-collector-contrib/pkg/pdatautil [Apache License 2.0](https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/LICENSE)
 - github.com/openconfig/gnmi [Apache License 2.0](https://github.com/openconfig/gnmi/blob/master/LICENSE)
 - github.com/openconfig/goyang [Apache License 2.0](https://github.com/openconfig/goyang/blob/master/LICENSE)

@@ -9,7 +9,7 @@ releases from v5.x up to v7.x.
 💻 all
 
 [elasticsearch]: https://www.elastic.co
-[client_lib]: http://olivere.github.io/elastic/
+[client_lib]: https://github.com/elastic/go-elasticsearch
 
 ## Elasticsearch indexes and templates
 
@@ -276,6 +276,8 @@ to use them.
   # password = "mypassword"
   ## HTTP bearer token authentication details
   # auth_bearer_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
+  ## If both basic and bearer authentication are configured, both are sent with
+  ## basic authentication first.
 
   ## Index Config
   ## The target index for metrics (Elasticsearch will create if it not exists).
@@ -383,8 +385,11 @@ the `default_tag_value` will be used instead.
 ### Optional parameters
 
 * `timeout`: Elasticsearch client timeout, defaults to "5s" if not set.
-* `enable_sniffer`: Set to true to ask Elasticsearch a list of all cluster
-  nodes, thus it is not necessary to list all nodes in the urls config option.
+* `enable_sniffer`: Set to true to let the client discover cluster
+  nodes every 15 minutes. The v5 client does not support
+  discovery; the plugin logs a warning and ignores this option.
+  The v6 client selects nodes with both the `data` and `ingest` roles. The v7
+  client excludes dedicated master nodes.
 * `health_check_interval`: Set the interval to check if the nodes are available,
   in seconds. Setting to 0 will disable the health check (not recommended in
   production).

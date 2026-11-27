@@ -1,0 +1,138 @@
+package elasticsearch
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"sync"
+
+	"github.com/elastic/go-elasticsearch/v6"
+	"github.com/elastic/go-elasticsearch/v6/estransport"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+)
+
+type clientV6 struct {
+	client          *elasticsearch.Client
+	log             telegraf.Logger
+	encoder         *internal.GzipEncoder
+	bodyHeaders     map[string]string
+	cancelDiscovery context.CancelFunc
+	discoveryWG     sync.WaitGroup
+}
+
+func (a *Elasticsearch) newClientV6() (client, error) {
+	transport := a.newRoundTripper()
+	c, err := elasticsearch.NewClient(elasticsearch.Config{
+		Addresses: a.URLs,
+		Header:    a.clientHeaders(),
+		Transport: transport,
+		// Telegraf owns write retries; replaying a bulk request can duplicate documents.
+		DisableRetry:       true,
+		ConnectionPoolFunc: preserveConnectionPool(estransport.NewConnectionPool),
+	})
+	if err != nil {
+		return nil, err
+	}
+	client := &clientV6{client: c, log: a.Log}
+	if a.EnableGzip {
+		client.bodyHeaders = map[string]string{"Content-Encoding": "gzip"}
+		encoder, err := internal.NewGzipEncoder()
+		if err != nil {
+			return nil, fmt.Errorf("setting up gzip encoder failed: %w", err)
+		}
+		client.encoder = encoder
+	}
+	if a.EnableSniffer {
+		if err := c.DiscoverNodes(); err != nil {
+			return nil, fmt.Errorf("discovering Elasticsearch nodes failed: %w", err)
+		}
+
+		// The discovery API accepts no context, so in-flight calls cannot be canceled.
+		ctx, cancel := context.WithCancel(context.Background())
+		client.cancelDiscovery = cancel
+		client.discoveryWG.Go(func() {
+			startDiscovery(ctx, c.DiscoverNodes, a.Log)
+		})
+	}
+	return client, nil
+}
+
+func (c *clientV6) close() {
+	if c.cancelDiscovery != nil {
+		c.cancelDiscovery()
+		c.discoveryWG.Wait()
+	}
+}
+
+func (c *clientV6) bulk(ctx context.Context, documents []document) error {
+	body, err := encodeBulk(documents, "metrics")
+	if err != nil {
+		return fmt.Errorf("error sending bulk request to Elasticsearch: %w", err)
+	}
+	requestBody := bytes.NewReader(body.Bytes())
+	if c.encoder != nil {
+		data, err := c.encoder.Encode(body.Bytes())
+		if err != nil {
+			return fmt.Errorf("error sending bulk request to Elasticsearch: %w", err)
+		}
+		requestBody = bytes.NewReader(data)
+	}
+	res, err := c.client.Bulk(
+		requestBody,
+		c.client.Bulk.WithContext(ctx),
+		c.client.Bulk.WithHeader(c.bodyHeaders),
+	)
+	if err != nil {
+		return fmt.Errorf("error sending bulk request to Elasticsearch: %w", err)
+	}
+	defer res.Body.Close()
+	return checkBulkResponse(res.StatusCode, res.Body, c.log)
+}
+
+func (c *clientV6) templateExists(ctx context.Context, name string) (bool, error) {
+	res, err := c.client.Indices.ExistsTemplate([]string{name}, c.client.Indices.ExistsTemplate.WithContext(ctx))
+	if err != nil {
+		return false, err
+	}
+	defer res.Body.Close()
+	if res.StatusCode == http.StatusNotFound {
+		return false, nil
+	}
+	if err := checkForError(res.StatusCode, res.Body); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func (c *clientV6) putTemplate(ctx context.Context, name, body string) error {
+	requestBody := bytes.NewReader([]byte(body))
+	if c.encoder != nil {
+		data, err := c.encoder.Encode([]byte(body))
+		if err != nil {
+			return err
+		}
+		requestBody = bytes.NewReader(data)
+	}
+	res, err := c.client.Indices.PutTemplate(
+		name,
+		requestBody,
+		c.client.Indices.PutTemplate.WithContext(ctx),
+		c.client.Indices.PutTemplate.WithHeader(c.bodyHeaders),
+	)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	if err := checkForError(res.StatusCode, res.Body); err != nil {
+		return err
+	}
+	var response templateResponse
+	if err := json.NewDecoder(res.Body).Decode(&response); err != nil {
+		return fmt.Errorf("decoding message body failed: %w", err)
+	}
+	return nil
+}
