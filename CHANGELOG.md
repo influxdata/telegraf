@@ -89,6 +89,7 @@
   without `sum` and `count` fields is now dropped with an error. Metrics
   already typed as histogram are not affected. Please check dashboards and
   alerts using the per-field series.
+
 ## v1.40.4 [2026-11-23]
 
 ### Bugfixes
