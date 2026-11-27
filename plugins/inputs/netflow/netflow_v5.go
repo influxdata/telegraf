@@ -45,7 +45,7 @@ func (*netflowv5Decoder) decode(srcIP net.IP, payload []byte) ([]telegraf.Metric
 			"sys_uptime":        msg.SysUptime,
 			"seq_number":        msg.FlowSequence,
 			"engine_type":       mapEngineType(msg.EngineType),
-			"sampling_interval": msg.SamplingInterval,
+			"sampling_interval": msg.SamplingInterval & 0x3fff,
 			"in_snmp":           record.Input,
 			"out_snmp":          record.Output,
 			"in_packets":        record.DPkts,
