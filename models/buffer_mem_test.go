@@ -144,3 +144,35 @@ func TestMemoryBufferDropNewestReturnsDroppedCount(t *testing.T) {
 	require.Equal(t, 3, buf.Add(m, m, m))
 	require.Equal(t, 2, buf.Len())
 }
+
+func TestMemoryBufferDropNewestWithOpenTransaction(t *testing.T) {
+	newMetric := func(v int) telegraf.Metric {
+		return metric.New("cpu", map[string]string{}, map[string]any{"value": v}, time.Unix(int64(v), 0))
+	}
+	values := func(batch []telegraf.Metric) []int {
+		out := make([]int, 0, len(batch))
+		for _, m := range batch {
+			v, _ := m.GetField("value")
+			out = append(out, int(v.(int64)))
+		}
+		return out
+	}
+
+	buf, err := NewBuffer("test", "123", "", 3, "memory", "", true, WithDropStrategy(DropNewest))
+	require.NoError(t, err)
+	defer buf.Close()
+
+	buf.Add(newMetric(1), newMetric(2), newMetric(3))
+	tx := buf.BeginTransaction(3)
+
+	// The batch is still in flight and counts against the capacity, so new
+	// metrics must be dropped instead of displacing the batch on a failed write.
+	require.Equal(t, 2, buf.Add(newMetric(4), newMetric(5)))
+	tx.KeepAll()
+	buf.EndTransaction(tx)
+
+	tx = buf.BeginTransaction(10)
+	require.Equal(t, []int{1, 2, 3}, values(tx.Batch))
+	tx.AcceptAll()
+	buf.EndTransaction(tx)
+}

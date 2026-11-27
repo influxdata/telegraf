@@ -138,7 +138,7 @@ func (b *MemoryBuffer) length() int {
 func (b *MemoryBuffer) addMetric(m telegraf.Metric) int {
 	dropped := 0
 	// Check if Buffer is full
-	if b.size == b.cap && b.dropNewest {
+	if b.dropNewest && b.size+b.batchSize >= b.cap {
 		// Keep the buffered metrics and drop the incoming one
 		b.metricDropped(m)
 		return 1
