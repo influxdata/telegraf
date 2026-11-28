@@ -91,6 +91,7 @@ to use them.
 
   ## Specify the metric type explicitly.
   ## This overrides the metric-type of the Telegraf metric. Globbing is allowed.
+  ## Histograms and summaries are not affected and keep their type.
   # [outputs.prometheus_client.metric_types]
   #   counter = []
   #   gauge = []
