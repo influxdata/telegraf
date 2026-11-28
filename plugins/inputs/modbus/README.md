@@ -116,6 +116,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##               FLOAT16-IEEE, FLOAT32-IEEE, FLOAT64-IEEE (IEEE 754 binary representation)
   ##               FIXED, UFIXED (fixed-point representation on input)
   ##               FLOAT_DEC_8E24M, FLOAT_UDEC_8E24M (8-bit exponent, 24-bit mantissa)
+  ##               BCD16, BCD32, BCD64 (binary-coded decimal)
   ##               STRING (byte-sequence converted to string)
   ## bit         - (optional) bit of the register, ONLY valid for BIT type
   ## scale       - the final numeric variable representation
@@ -192,6 +193,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ##                  INT16, UINT16, INT32, UINT32, INT64, UINT64 and
     ##                  FLOAT16, FLOAT32, FLOAT64 (IEEE 754 binary representation)
     ##                  FLOAT_DEC_8E24M, FLOAT_UDEC_8E24M (8-bit exponent, 24-bit mantissa)
+    ##                  BCD16, BCD32, BCD64 (binary-coded decimal)
     ##                  STRING (byte-sequence converted to string)
     ## length *1,2    - (optional) number of registers, ONLY valid for STRING type
     ## bit *1,2       - (optional) bit of the register, ONLY valid for BIT type
@@ -305,6 +307,7 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
     ##                 INT16, UINT16, INT32, UINT32, INT64, UINT64 and
     ##                 FLOAT16, FLOAT32, FLOAT64 (IEEE 754 binary representation)
     ##                 FLOAT_DEC_8E24M, FLOAT_UDEC_8E24M (8-bit exponent, 24-bit mantissa)
+    ##                 BCD16, BCD32, BCD64 (binary-coded decimal)
     ##                 STRING (byte-sequence converted to string)
     ## length *1   - (optional) number of registers, ONLY valid for STRING type
     ## bit *1,2    - (optional) bit of the register, ONLY valid for BIT type
@@ -492,6 +495,22 @@ For example, the registers `0xFD01 0xE240` decode to `123456 * 10^-3 = 123.456`
 for both types, while `0xFDFE 0x1DC0` decodes to `-123456 * 10^-3 = -123.456`
 for `FLOAT_DEC_8E24M`. These types occupy two registers.
 
+##### Binary-coded Decimal: `BCD16`, `BCD32`, `BCD64`
+
+The `BCD16`, `BCD32` and `BCD64` datatypes decode packed binary-coded decimal
+values of one, two or four registers. Every 4-bit nibble holds one decimal
+digit, with the most significant digit first, so the registers `0x0025 0x1124`
+decode to `251124` with `BCD32`. The decoded value is an unsigned integer and
+these types handle `byte_order`, `scale` and the output type like the unsigned
+integer types. A value with a nibble above 9 is not valid BCD and is left out of
+the metric.
+
+Devices often pack several numbers into BCD registers, for example a date as
+day, month and year. Use a processor such as [starlark][] to split the decoded
+value, e.g. `251124` into `25`, `11` and `24`.
+
+[starlark]: ../../processors/starlark/README.md
+
 ##### String: `STRING`
 
 This type is used to query the number of registers specified in the `address`
@@ -623,6 +642,8 @@ representations of floating point values exist. `FLOAT16` denotes a
 half-precision float with a 16-bit representation. The types `FLOAT_DEC_8E24M`
 and `FLOAT_UDEC_8E24M` denote a non-standard 32-bit float representation, see
 [above](#decade-exponent-floating-point-float_dec_8e24m-float_udec_8e24m).
+The types `BCD16`, `BCD32` and `BCD64` decode binary-coded decimal values, see
+[above](#binary-coded-decimal-bcd16-bcd32-bcd64).
 Usually the datatype of the register is listed in the datasheet of your modbus
 device in relation to the `address` described above.
 
@@ -790,6 +811,8 @@ representations of floating point values exist. `FLOAT16` denotes a
 half-precision float with a 16-bit representation. The types `FLOAT_DEC_8E24M`
 and `FLOAT_UDEC_8E24M` denote a non-standard 32-bit float representation, see
 [above](#decade-exponent-floating-point-float_dec_8e24m-float_udec_8e24m).
+The types `BCD16`, `BCD32` and `BCD64` decode binary-coded decimal values, see
+[above](#binary-coded-decimal-bcd16-bcd32-bcd64).
 Usually the datatype of the register is listed in the datasheet of your modbus
 device in relation to the `address` described above.
 

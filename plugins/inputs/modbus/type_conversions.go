@@ -71,6 +71,12 @@ func determineConverterScale(inType, byteOrder, outType string, scale float64) (
 		return determineConverterFDec8E24MScale(outType, byteOrder, scale, false)
 	case "FLOAT64":
 		return determineConverterF64Scale(outType, byteOrder, scale)
+	case "BCD16":
+		return determineConverterBCD16Scale(outType, byteOrder, scale)
+	case "BCD32":
+		return determineConverterBCD32Scale(outType, byteOrder, scale)
+	case "BCD64":
+		return determineConverterBCD64Scale(outType, byteOrder, scale)
 	}
 	return nil, fmt.Errorf("invalid input data-type: %s", inType)
 }
@@ -107,6 +113,29 @@ func determineConverterNoScale(inType, byteOrder, outType string) (fieldConverte
 		return determineConverterFDec8E24M(outType, byteOrder, false)
 	case "FLOAT64":
 		return determineConverterF64(outType, byteOrder)
+	case "BCD16":
+		return determineConverterBCD16(outType, byteOrder)
+	case "BCD32":
+		return determineConverterBCD32(outType, byteOrder)
+	case "BCD64":
+		return determineConverterBCD64(outType, byteOrder)
 	}
 	return nil, fmt.Errorf("invalid input data-type: %s", inType)
+}
+
+// decodeBCD decodes packed binary-coded decimal, where every 4-bit nibble holds
+// one decimal digit with the most significant digit first, e.g. 0x1234 is 1234.
+// The second return value is false if a nibble is above 9, i.e. not valid BCD.
+func decodeBCD(raw uint64) (uint64, bool) {
+	var value uint64
+	factor := uint64(1)
+	for ; raw > 0; raw >>= 4 {
+		digit := raw & 0x0f
+		if digit > 9 {
+			return 0, false
+		}
+		value += digit * factor
+		factor *= 10
+	}
+	return value, true
 }
