@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"testing"
 	"time"
 
@@ -1068,6 +1069,150 @@ func TestTimeout(t *testing.T) {
 	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, absentTags)
 }
 
+func TestBodyReadTimeout(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping test with sleep in short mode.")
+	}
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("partial response"))
+		if f, ok := w.(http.Flusher); ok {
+			f.Flush()
+		}
+		select {
+		case <-r.Context().Done():
+		case <-time.After(2 * time.Second):
+		}
+	}))
+	defer ts.Close()
+
+	tests := []struct {
+		name                string
+		responseStringMatch string
+	}{
+		{
+			name: "without response_string_match",
+		},
+		{
+			name:                "with response_string_match",
+			responseStringMatch: "expected",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := &HTTPResponse{
+				Log:                 testutil.Logger{},
+				URLs:                []string{ts.URL},
+				Method:              http.MethodGet,
+				ResponseTimeout:     config.Duration(time.Second),
+				ResponseStringMatch: tt.responseStringMatch,
+			}
+
+			var acc testutil.Accumulator
+			require.NoError(t, h.Init())
+			require.NoError(t, h.Gather(&acc))
+
+			expectedFields := map[string]any{
+				"http_response_code": http.StatusOK,
+				"response_time":      nil,
+				"result_type":        "timeout",
+				"result_code":        4,
+			}
+			expectedTags := map[string]any{
+				"server":      ts.URL,
+				"method":      http.MethodGet,
+				"status_code": "200",
+				"result":      "timeout",
+			}
+			absentFields := []string{"content_length", "response_string_match"}
+			checkOutput(t, &acc, expectedFields, expectedTags, absentFields, nil)
+		})
+	}
+}
+
+type errorReadCloser struct {
+	err error
+}
+
+func (e errorReadCloser) Read([]byte) (int, error) {
+	return 0, e.err
+}
+
+func (e errorReadCloser) Close() error {
+	return nil
+}
+
+func TestBodyReadErrorClassification(t *testing.T) {
+	tests := []struct {
+		name               string
+		readErr            error
+		expectedResult     string
+		expectedResultCode int
+	}{
+		{
+			name:               "wrapped context deadline exceeded",
+			readErr:            fmt.Errorf("reading body: %w", context.DeadlineExceeded),
+			expectedResult:     "timeout",
+			expectedResultCode: 4,
+		},
+		{
+			name:               "os deadline exceeded",
+			readErr:            os.ErrDeadlineExceeded,
+			expectedResult:     "timeout",
+			expectedResultCode: 4,
+		},
+		{
+			name:               "net op timeout error",
+			readErr:            &net.OpError{Op: "read", Net: "tcp", Err: os.ErrDeadlineExceeded},
+			expectedResult:     "timeout",
+			expectedResultCode: 4,
+		},
+		{
+			name:               "unexpected eof",
+			readErr:            io.ErrUnexpectedEOF,
+			expectedResult:     "body_read_error",
+			expectedResultCode: 2,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := &HTTPResponse{
+				Log:             testutil.Logger{},
+				URLs:            []string{"http://example.com"},
+				Method:          http.MethodGet,
+				ResponseTimeout: config.Duration(time.Second),
+			}
+			require.NoError(t, h.Init())
+			h.clients = []client{{
+				httpClient: &fakeClient{
+					statusCode: http.StatusOK,
+					body:       errorReadCloser{err: tt.readErr},
+				},
+				address: "http://example.com",
+			}}
+
+			var acc testutil.Accumulator
+			require.NoError(t, h.Gather(&acc))
+
+			expectedFields := map[string]any{
+				"http_response_code": http.StatusOK,
+				"result_type":        tt.expectedResult,
+				"result_code":        tt.expectedResultCode,
+			}
+			expectedTags := map[string]any{
+				"server":      "http://example.com",
+				"method":      http.MethodGet,
+				"status_code": "200",
+				"result":      tt.expectedResult,
+			}
+			checkOutput(t, &acc, expectedFields, expectedTags, nil, nil)
+		})
+	}
+}
+
 func TestBadRegex(t *testing.T) {
 	mux := setUpTestMux()
 	ts := httptest.NewServer(mux)
@@ -1091,11 +1236,12 @@ func TestBadRegex(t *testing.T) {
 
 type fakeClient struct {
 	statusCode int
+	body       io.ReadCloser
 	err        error
 }
 
 func (f *fakeClient) Do(_ *http.Request) (*http.Response, error) {
-	return &http.Response{StatusCode: f.statusCode}, f.err
+	return &http.Response{StatusCode: f.statusCode, Body: f.body}, f.err
 }
 
 func TestNetworkErrors(t *testing.T) {
