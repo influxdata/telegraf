@@ -174,7 +174,7 @@ func gatherDrive(s fireboardStats, acc telegraf.Accumulator) {
 		"uuid":  s.UUID,
 		"model": s.Model,
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"drive_percent": d.DrivePer,
 		"setpoint":      d.Setpoint,
 		"current_temp":  d.CurrentTemp,
@@ -231,7 +231,7 @@ func gatherAlerts(s fireboardStats, acc telegraf.Accumulator) {
 				"channel_name": ch.ChannelLabel,
 				"scale":        scale(ch.DegreeType),
 			}
-			fields := map[string]interface{}{
+			fields := map[string]any{
 				"enabled": a.Enabled,
 			}
 			if a.TempMax != nil {
@@ -257,7 +257,7 @@ func gatherDevice(s fireboardStats, acc telegraf.Accumulator) {
 		"uuid":  s.UUID,
 		"model": s.Model,
 	}
-	fields := map[string]interface{}{
+	fields := map[string]any{
 		"onboard_temp":  dl.OnboardTemp,
 		"signal_level":  dl.SignalLevel,
 		"vbatt":         dl.VBatt,
@@ -282,7 +282,7 @@ func gatherTemps(s fireboardStats, acc telegraf.Accumulator) {
 			"scale":        scale(t.DegreeType),
 			"channel_name": channelNames[t.Channel],
 		}
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"temperature": t.Temp,
 		}
 		acc.AddFields("fireboard", fields, tags)

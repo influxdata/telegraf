@@ -16,7 +16,11 @@ import (
 func TestFireboard(t *testing.T) {
 	// Create a test server with the const response JSON
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		require.Equal(t, "Telegraf", r.Header.Get("User-Agent"))
+		if ua := r.Header.Get("User-Agent"); ua != "Telegraf" {
+			w.WriteHeader(http.StatusBadRequest)
+			t.Errorf("unexpected User-Agent %q", ua)
+			return
+		}
 		w.WriteHeader(http.StatusOK)
 		if _, err := fmt.Fprintln(w, response); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -43,7 +47,7 @@ func TestFireboard(t *testing.T) {
 	require.NoError(t, err)
 
 	// --- FBX11E device: channel 1 with a matching channel entry ---
-	expectFields := map[string]interface{}{
+	expectFields := map[string]any{
 		"temperature": float64(79.9),
 	}
 	expectTags := map[string]string{
@@ -63,7 +67,7 @@ func TestFireboard(t *testing.T) {
 		"scale":        "Fahrenheit",
 		"channel_name": "",
 	}
-	expectFieldsSpark := map[string]interface{}{
+	expectFieldsSpark := map[string]any{
 		"temperature": float64(225.0),
 	}
 	acc.AssertContainsTaggedFields(t, "fireboard", expectFieldsSpark, expectTagsSpark)
@@ -76,7 +80,7 @@ func TestFireboard(t *testing.T) {
 		"pel_state":   "RUNNING",
 		"pel_profile": "Hickory",
 	}
-	driveFields := map[string]interface{}{
+	driveFields := map[string]any{
 		"drive_percent":    float64(42.5),
 		"setpoint":         float64(350.0),
 		"current_temp":     float64(348.2),
@@ -112,7 +116,7 @@ func TestFireboard(t *testing.T) {
 	// FBX11E has 4 channels with alerts but only channel 1 in latest_temps,
 	// so channels 2-4 must be suppressed (device off / probes disconnected).
 	acc.AssertContainsTaggedFields(t, "fireboard_alert",
-		map[string]interface{}{"enabled": true, "temp_max": float64(205.0)},
+		map[string]any{"enabled": true, "temp_max": float64(205.0)},
 		map[string]string{
 			"title": "telegraf-FireBoard", "uuid": "b55e766c-b308-49b5-93a4-df89fe31efd0",
 			"channel": "1", "channel_name": "Instant Probe", "scale": "Fahrenheit",
@@ -128,7 +132,7 @@ func TestFireboard(t *testing.T) {
 
 	// --- fireboard_device: FBXPD has device_log; FBX11E and FBXIR do not ---
 	acc.AssertContainsTaggedFields(t, "fireboard_device",
-		map[string]interface{}{
+		map[string]any{
 			"onboard_temp":  float64(95.0),
 			"signal_level":  int(-65),
 			"vbatt":         float64(12.3),
@@ -244,7 +248,9 @@ var response = `
       "modetype": 2,
       "drivetype": 1,
       "tiedchannel": 1,
-      "jsonraw": "{\"pelState\":\"RUNNING\",\"fanSpeedTarget\":60.0,\"lidPaused\":false,\"pelProfile\":\"Hickory\",\"pOut\":42.5,\"pErrSum\":1.2,\"pKdOut\":0.1,\"pKpOut\":40.0,\"pKiOut\":2.4,\"pLastErr\":-1.8,\"pKp\":10.0,\"pKi\":2.0,\"pKd\":0.5}"
+      "jsonraw": "{\"pelState\":\"RUNNING\",\"fanSpeedTarget\":60.0,\"lidPaused\":false,\"pelProfile\":\"Hickory\",` +
+	`\"pOut\":42.5,\"pErrSum\":1.2,\"pKdOut\":0.1,\"pKpOut\":40.0,\"pKiOut\":2.4,\"pLastErr\":-1.8,` +
+	`\"pKp\":10.0,\"pKi\":2.0,\"pKd\":0.5}"
     },
     "device_log": {
       "onboardTemp": 95.0,
