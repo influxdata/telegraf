@@ -58,6 +58,11 @@ func (mt *MetricTypes) Init() error {
 // DetermineType determines the type of the metric based on its name and the configured filters.
 func (mt *MetricTypes) DetermineType(name string, m telegraf.Metric) telegraf.ValueType {
 	metricType := m.Type()
+	// Histograms and summaries consist of several series and cannot be exported
+	// as a single counter or gauge value, so they keep their type.
+	if metricType == telegraf.Histogram || metricType == telegraf.Summary {
+		return metricType
+	}
 	if mt.filterCounter != nil && mt.filterCounter.Match(name) {
 		metricType = telegraf.Counter
 	}

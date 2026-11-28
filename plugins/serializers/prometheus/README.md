@@ -51,6 +51,7 @@ reporting others every bucket/quantile will continue to exist.
 
   ## Specify the metric type explicitly.
   ## This overrides the metric-type of the Telegraf metric. Globbing is allowed.
+  ## Histograms and summaries are not affected and keep their type.
   [outputs.file.prometheus_metric_types]
     counter = []
     gauge = []

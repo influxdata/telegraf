@@ -893,3 +893,64 @@ func TestNameSanitizationValidation(t *testing.T) {
 		})
 	}
 }
+
+func TestTypeMappingKeepsHistogramsAndSummaries(t *testing.T) {
+	tests := []struct {
+		name     string
+		mappings MetricTypes
+		metric   telegraf.Metric
+		expected string
+	}{
+		{
+			name:     "histogram matched by a gauge pattern",
+			mappings: MetricTypes{Gauge: []string{"http_*"}},
+			metric: metric.New(
+				"prometheus",
+				map[string]string{},
+				map[string]any{
+					"http_request_duration_seconds_count": 2.0,
+					"http_request_duration_seconds_sum":   0.5,
+				},
+				time.Unix(0, 0),
+				telegraf.Histogram,
+			),
+			expected: `
+# HELP http_request_duration_seconds Telegraf collected metric
+# TYPE http_request_duration_seconds histogram
+http_request_duration_seconds_bucket{le="+Inf"} 2
+http_request_duration_seconds_sum 0.5
+http_request_duration_seconds_count 2
+`,
+		},
+		{
+			name:     "summary matched by a counter pattern",
+			mappings: MetricTypes{Counter: []string{"rpc_*"}},
+			metric: metric.New(
+				"prometheus",
+				map[string]string{},
+				map[string]any{
+					"rpc_duration_seconds_count": 2.0,
+					"rpc_duration_seconds_sum":   0.5,
+				},
+				time.Unix(0, 0),
+				telegraf.Summary,
+			),
+			expected: `
+# HELP rpc_duration_seconds Telegraf collected metric
+# TYPE rpc_duration_seconds summary
+rpc_duration_seconds_sum 0.5
+rpc_duration_seconds_count 2
+`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &Serializer{FormatConfig{TypeMappings: tt.mappings}}
+			require.NoError(t, s.Init())
+
+			actual, err := s.Serialize(tt.metric)
+			require.NoError(t, err)
+			require.Equal(t, strings.TrimSpace(tt.expected), strings.TrimSpace(string(actual)))
+		})
+	}
+}
