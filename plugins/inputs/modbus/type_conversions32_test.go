@@ -227,6 +227,12 @@ func TestBCD32(t *testing.T) {
 		expectedErr string
 	}{
 		{
+			name:     "32-bit maximum",
+			inType:   "BCD32",
+			data:     []byte{0x99, 0x99, 0x99, 0x99},
+			expected: uint32(99999999),
+		},
+		{
 			// Day, month and year of a date as in issue #15925
 			name:     "32-bit native date",
 			inType:   "BCD32",

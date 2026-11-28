@@ -19,6 +19,12 @@ func TestBCD64(t *testing.T) {
 		expectedErr string
 	}{
 		{
+			name:     "64-bit maximum",
+			inType:   "BCD64",
+			data:     []byte{0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99, 0x99},
+			expected: uint64(9999999999999999),
+		},
+		{
 			name:     "64-bit native",
 			inType:   "BCD64",
 			data:     []byte{0x00, 0x00, 0x20, 0x26, 0x11, 0x25, 0x22, 0x30},

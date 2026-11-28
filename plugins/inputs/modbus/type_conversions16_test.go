@@ -19,6 +19,12 @@ func TestBCD16(t *testing.T) {
 		expectedErr string
 	}{
 		{
+			name:     "16-bit maximum",
+			inType:   "BCD16",
+			data:     []byte{0x99, 0x99},
+			expected: uint16(9999),
+		},
+		{
 			name:     "16-bit native",
 			inType:   "BCD16",
 			data:     []byte{0x12, 0x34},
