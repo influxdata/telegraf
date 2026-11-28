@@ -179,8 +179,10 @@ func (a *Elasticsearch) Connect() error {
 		c, err = a.newClientV5()
 	case 6:
 		c, err = a.newClientV6()
-	default:
+	case 7:
 		c, err = a.newClientV7()
+	default:
+		c, err = a.newClientV8()
 	}
 	if err != nil {
 		a.Close()

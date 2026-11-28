@@ -2,7 +2,7 @@
 
 This plugin writes metrics to [Elasticsearch][elasticsearch] via HTTP using the
 [Elastic client library][client_lib]. The plugin supports Elasticsearch
-releases from v5.x up to v7.x.
+releases from v5.x up to v8.x.
 
 ⭐ Telegraf v0.1.5
 🏷️ datastore, logging
@@ -389,7 +389,7 @@ the `default_tag_value` will be used instead.
   nodes every 15 minutes. The v5 client does not support
   discovery; the plugin logs a warning and ignores this option.
   The v6 client selects nodes with both the `data` and `ingest` roles. The v7
-  client excludes dedicated master nodes.
+  and v8 clients exclude dedicated master nodes.
 * `health_check_interval`: Set the interval to check if the nodes are available,
   in seconds. Setting to 0 will disable the health check (not recommended in
   production).
