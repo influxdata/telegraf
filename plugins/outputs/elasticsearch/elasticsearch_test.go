@@ -1597,7 +1597,7 @@ func TestClientDiscovery(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var discoveredWrites, seedWrites, discoveries atomic.Int32
 			target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.Header().Set("X-Elastic-Product", "Elasticsearch")
+				w.Header().Set("X-Elastic-Product", "Elasticsearch") // v8 SDK product check on bulk responses.
 				if r.URL.Path == "/_bulk" {
 					discoveredWrites.Add(1)
 				}
