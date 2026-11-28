@@ -1,7 +1,8 @@
 # OpenTelemetry Input Plugin
 
 This service plugin receives traces, metrics, logs and profiles from
-[OpenTelemetry][opentelemetry] clients and compatible agents via gRPC.
+[OpenTelemetry][opentelemetry] clients and compatible agents via gRPC or
+HTTP using the [OpenTelemetry Protocol (OTLP)][otlp].
 
 > [!NOTE]
 > Telegraf v1.32 through v1.35 support the Profiles signal using the v1
@@ -16,6 +17,7 @@ This service plugin receives traces, metrics, logs and profiles from
 💻 all
 
 [opentelemetry]: https://opentelemetry.io
+[otlp]: https://opentelemetry.io/docs/specs/otlp/
 
 ## Service Input <!-- @/docs/includes/service_input.md -->
 
@@ -39,16 +41,18 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
 ## Configuration
 
 ```toml @sample.conf
-# Receive OpenTelemetry traces, metrics, and logs over gRPC
+# Receive OpenTelemetry traces, metrics, logs and profiles over gRPC or HTTP
 [[inputs.opentelemetry]]
-  ## Override the default (0.0.0.0:4317) destination OpenTelemetry gRPC service
-  ## address:port
-  # service_address = "0.0.0.0:4317"
+  ## Address and protocol to listen on in the form "<protocol>://host[:port]".
+  ## Supported protocols are "grpc" (default port 4317) and
+  ## "http" (default port 4318). For HTTP, an optional "base path" can be
+  ## specified for the signal endpoints.
+  # service_address = "grpc://0.0.0.0:4317"
 
-  ## Override the default (5s) new connection timeout
+  ## Timeout for new connection (grpc) or read timeouts for header and body (http)
   # timeout = "5s"
 
-  ## gRPC Maximum Message Size
+  ## Maximum message size, for HTTP this is the size after decompression
   # max_msg_size = "4MB"
 
   ## Override the default span attributes to be used as line protocol tags.
@@ -115,6 +119,27 @@ plugin ordering. See [CONFIGURATION.md][CONFIGURATION.md] for more details.
   ##   uri    - URI entries of the subject alternative names
   # tls_client_certificate_tags = []
 ```
+
+### HTTP transport
+
+When using the `http` protocol in `service_address`, the plugin implements
+[OTLP/HTTP][otlphttp] and accepts `POST` requests on the following endpoints,
+prefixed by the path given in `service_address` (if any):
+
+| Signal   | Path                      |
+|----------|---------------------------|
+| traces   | `/v1/traces`              |
+| metrics  | `/v1/metrics`             |
+| logs     | `/v1/logs`                |
+| profiles | `/v1development/profiles` |
+
+Requests must be encoded as binary protobuf (`application/x-protobuf`) and may
+be compressed with `gzip`. JSON encoded requests (`application/json`) are
+currently not supported and are rejected with status `415`. TLS is enabled by
+the `tls_cert` and `tls_key` settings for both protocols. To receive data via
+gRPC and HTTP at the same time, configure two instances of the plugin.
+
+[otlphttp]: https://opentelemetry.io/docs/specs/otlp/#otlphttp
 
 ### Schema
 

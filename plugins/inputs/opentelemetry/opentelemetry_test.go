@@ -1,12 +1,15 @@
 package opentelemetry
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"io"
 	"math/big"
 	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -26,6 +29,7 @@ import (
 	otlpprofiles "go.opentelemetry.io/proto/otlp/collector/profiles/v1development"
 	otlptrace "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	common "go.opentelemetry.io/proto/otlp/common/v1"
+	metrics "go.opentelemetry.io/proto/otlp/metrics/v1"
 	profiles "go.opentelemetry.io/proto/otlp/profiles/v1development"
 	resource "go.opentelemetry.io/proto/otlp/resource/v1"
 	"google.golang.org/grpc"
@@ -33,6 +37,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/config"
@@ -120,7 +125,7 @@ func TestOpenTelemetry(t *testing.T) {
 	testutil.RequireMetricsEqual(t, expected, actual, options...)
 }
 
-func TestCases(t *testing.T) {
+func TestCasesGRPC(t *testing.T) {
 	// Get all directories in testdata
 	folders, err := os.ReadDir("testcases")
 	require.NoError(t, err)
@@ -128,11 +133,10 @@ func TestCases(t *testing.T) {
 	// Register the plugin
 	inputs.Add("opentelemetry", func() telegraf.Input {
 		return &OpenTelemetry{
-			ServiceAddress:      "127.0.0.1:0",
 			SpanDimensions:      otel2influx.DefaultOtelTracesToLineProtocolConfig().SpanDimensions,
 			LogRecordDimensions: otel2influx.DefaultOtelLogsToLineProtocolConfig().LogRecordDimensions,
-			ProfileDimensions:   []string{"host.name"},
 			Timeout:             config.Duration(5 * time.Second),
+			ProfileDimensions:   []string{"host.name"},
 		}
 	})
 
@@ -198,6 +202,7 @@ func TestCases(t *testing.T) {
 
 			// Setup and start the plugin
 			plugin := cfg.Inputs[0].Input.(*OpenTelemetry)
+			plugin.ServiceAddress = "grpc://127.0.0.1:0"
 			require.NoError(t, plugin.Init())
 
 			var acc testutil.Accumulator
@@ -251,6 +256,145 @@ func TestCases(t *testing.T) {
 
 			// Close the plugin to make sure all data is flushed
 			require.NoError(t, grpcClient.Close())
+			plugin.Stop()
+
+			// Check the metrics
+			require.Eventually(t, func() bool {
+				return acc.NMetrics() >= uint64(len(expected))
+			}, 3*time.Second, 100*time.Millisecond)
+			require.Empty(t, acc.Errors)
+
+			actual := acc.GetTelegrafMetrics()
+			testutil.RequireMetricsEqual(t, expected, actual, options...)
+		})
+	}
+}
+
+func TestCasesHTTPProtobuf(t *testing.T) {
+	// Get all directories in testdata
+	folders, err := os.ReadDir("testcases")
+	require.NoError(t, err)
+
+	// Register the plugin
+	inputs.Add("opentelemetry", func() telegraf.Input {
+		return &OpenTelemetry{
+			SpanDimensions:      otel2influx.DefaultOtelTracesToLineProtocolConfig().SpanDimensions,
+			LogRecordDimensions: otel2influx.DefaultOtelLogsToLineProtocolConfig().LogRecordDimensions,
+			Timeout:             config.Duration(5 * time.Second),
+			ProfileDimensions:   []string{"host.name"},
+		}
+	})
+
+	// Prepare the influx parser for expectations
+	parser := &influx.Parser{}
+	require.NoError(t, parser.Init())
+
+	for _, f := range folders {
+		// Only handle folders
+		if !f.IsDir() {
+			continue
+		}
+		testcasePath := filepath.Join("testcases", f.Name())
+		configFilename := filepath.Join(testcasePath, "telegraf.conf")
+		inputFiles := filepath.Join(testcasePath, "*.json")
+		expectedFilename := filepath.Join(testcasePath, "expected.out")
+		expectedErrorFilename := filepath.Join(testcasePath, "expected.err")
+
+		// Compare options
+		options := []cmp.Option{
+			testutil.IgnoreTime(),
+			testutil.SortMetrics(),
+			testutil.IgnoreFields("start_time_unix_nano"),
+		}
+
+		t.Run(f.Name(), func(t *testing.T) {
+			// Read the input data
+			inputs := make(map[string][][]byte)
+			matches, err := filepath.Glob(inputFiles)
+			require.NoError(t, err)
+			require.NotEmpty(t, matches)
+			sort.Strings(matches)
+			for _, fn := range matches {
+				buf, err := os.ReadFile(fn)
+				require.NoError(t, err)
+
+				key := strings.TrimSuffix(filepath.Base(fn), ".json")
+				key, _, _ = strings.Cut(key, "_")
+				inputs[key] = append(inputs[key], buf)
+			}
+
+			// Read the expected output if any
+			var expected []telegraf.Metric
+			if _, err := os.Stat(expectedFilename); err == nil {
+				var err error
+				expected, err = testutil.ParseMetricsFromFile(expectedFilename, parser)
+				require.NoError(t, err)
+			}
+
+			// Read the expected output if any
+			var expectedErrors []string
+			if _, err := os.Stat(expectedErrorFilename); err == nil {
+				var err error
+				expectedErrors, err = testutil.ParseLinesFromFile(expectedErrorFilename)
+				require.NoError(t, err)
+				require.NotEmpty(t, expectedErrors)
+			}
+
+			// Configure the plugin
+			cfg := config.NewConfig()
+			require.NoError(t, cfg.LoadConfig(configFilename))
+			require.Len(t, cfg.Inputs, 1)
+
+			// Setup and start the plugin
+			plugin := cfg.Inputs[0].Input.(*OpenTelemetry)
+			plugin.ServiceAddress = "http://127.0.0.1:0"
+			require.NoError(t, plugin.Init())
+
+			var acc testutil.Accumulator
+			require.NoError(t, plugin.Start(&acc))
+			defer plugin.Stop()
+
+			// Send all data to the plugin
+			addr := plugin.listener.Addr().String()
+			for msgtype, messages := range inputs {
+				for _, buf := range messages {
+					// Decode the JSON test input and determine the endpoint
+					var msg proto.Message
+					var path string
+					switch msgtype {
+					case "logs":
+						msg = &otlplogs.ExportLogsServiceRequest{}
+						path = "/v1/logs"
+					case "metrics":
+						msg = &otlpmetrics.ExportMetricsServiceRequest{}
+						path = "/v1/metrics"
+					case "profiles":
+						msg = &otlpprofiles.ExportProfilesServiceRequest{}
+						path = "/v1development/profiles"
+					case "traces":
+						msg = &otlptrace.ExportTraceServiceRequest{}
+						path = "/v1/traces"
+					default:
+						require.Failf(t, "unknown message type", "type %q", msgtype)
+					}
+					require.NoError(t, protojson.Unmarshal(buf, msg))
+					body, err := proto.Marshal(msg)
+					require.NoError(t, err)
+
+					// Send the message as binary protobuf via HTTP
+					req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, "http://"+addr+path, bytes.NewReader(body))
+					require.NoError(t, err)
+					req.Header.Set("Content-Type", "application/x-protobuf")
+					resp, err := http.DefaultClient.Do(req)
+					require.NoError(t, err)
+					respBody, err := io.ReadAll(resp.Body)
+					resp.Body.Close()
+					require.NoError(t, err)
+					require.Equal(t, http.StatusOK, resp.StatusCode, string(respBody))
+				}
+			}
+
+			// Close the plugin to make sure all data is flushed
 			plugin.Stop()
 
 			// Check the metrics
@@ -517,14 +661,25 @@ func TestClientCertTagsOverrideAttributes(t *testing.T) {
 		map[string]any{"value": 2}, time.Unix(0, 0), 0,
 	))
 
-	metrics := acc.GetTelegrafMetrics()
-	require.Len(t, metrics, 2)
-	require.Equal(t, map[string]string{
-		"tls_client_cn":  "client-1",
-		"tls_client_dns": "not-requested.example.org",
-		"other":          "x",
-	}, metrics[0].Tags())
-	require.Equal(t, map[string]string{"tls_client_cn": "client-1"}, metrics[1].Tags())
+	expected := []telegraf.Metric{
+		metric.New(
+			"test",
+			map[string]string{
+				"tls_client_cn":  "client-1",
+				"tls_client_dns": "not-requested.example.org",
+				"other":          "x",
+			},
+			map[string]any{"value": int64(1)},
+			time.Unix(0, 0),
+		),
+		metric.New(
+			"test",
+			map[string]string{"tls_client_cn": "client-1"},
+			map[string]any{"value": int64(2)},
+			time.Unix(0, 0),
+		),
+	}
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
 
 func TestClientCertTagsOverrideProfileAttributes(t *testing.T) {
@@ -550,18 +705,38 @@ func TestClientCertTagsOverrideProfileAttributes(t *testing.T) {
 	_, err = service.Export(peerContext(cert), req)
 	require.NoError(t, err)
 
-	metrics := acc.GetTelegrafMetrics()
-	require.NotEmpty(t, metrics)
-	for _, m := range metrics {
-		tags := m.Tags()
-		require.Equal(t, "client-1", tags["tls_client_cn"])
-		require.NotContains(t, tags, "tls_client_org")
-		require.Equal(t, "not-requested.example.org", tags["tls_client_dns"])
-		require.Equal(t, "x", tags["other"])
+	expected := []telegraf.Metric{
+		metric.New(
+			"profiles",
+			map[string]string{
+				"address":          "0x0",
+				"profile_id":       "",
+				"sample":           "0",
+				"sample_name":      "cpu",
+				"sample_type":      "cpu",
+				"sample_type_unit": "nanoseconds",
+				"sample_unit":      "nanoseconds",
+				"tls_client_cn":    "client-1",
+				"tls_client_dns":   "not-requested.example.org",
+				"other":            "x",
+			},
+			map[string]any{
+				"end_time_unix_nano":   int64(0),
+				"file_offset":          uint64(0),
+				"filename":             "main.go",
+				"location":             "main(main.go line 1)",
+				"memory_limit":         uint64(0),
+				"memory_start":         uint64(0),
+				"start_time_unix_nano": int64(0),
+				"value":                int64(42),
+			},
+			time.Unix(0, 0),
+		),
 	}
+	testutil.RequireMetricsEqual(t, expected, acc.GetTelegrafMetrics(), testutil.IgnoreTime())
 }
 
-func TestClientCertTagsMTLS(t *testing.T) {
+func TestClientCertificateTagsGRPC(t *testing.T) {
 	pki := testutil.NewPKI("../../../testutil/pki")
 	serverCfg := pki.TLSServerConfig()
 	serverCfg.TLSCipherSuites = nil
@@ -605,6 +780,88 @@ func TestClientCertTagsMTLS(t *testing.T) {
 	var rm metricdata.ResourceMetrics
 	require.NoError(t, reader.Collect(ctx, &rm))
 	require.NoError(t, exporter.Export(ctx, &rm))
+
+	require.Empty(t, acc.Errors)
+	actual := acc.GetTelegrafMetrics()
+	require.Len(t, actual, 1)
+	tags := actual[0].Tags()
+	require.Equal(t, "localhost", tags["tls_client_cn"])
+	require.Equal(t, "localhost", tags["tls_client_dns"])
+	require.Equal(t, "Telegraf Test CA", tags["tls_client_issuer"])
+}
+
+func TestClientCertificateTagsHTTP(t *testing.T) {
+	pki := testutil.NewPKI("../../../testutil/pki")
+	serverCfg := pki.TLSServerConfig()
+	serverCfg.TLSCipherSuites = nil
+	serverCfg.TLSMinVersion = ""
+	serverCfg.TLSMaxVersion = ""
+
+	plugin := &OpenTelemetry{
+		ServerConfig:   *serverCfg,
+		ServiceAddress: "https://127.0.0.1:0",
+		ClientCertTags: []string{"cn", "dns", "issuer"},
+	}
+	require.NoError(t, plugin.Init())
+
+	var acc testutil.Accumulator
+	require.NoError(t, plugin.Start(&acc))
+	defer plugin.Stop()
+
+	clientTLS, err := pki.TLSClientConfig().TLSConfig()
+	require.NoError(t, err)
+	clientTLS.ServerName = "localhost"
+
+	// Construct the metric message
+	msg := &otlpmetrics.ExportMetricsServiceRequest{
+		ResourceMetrics: []*metrics.ResourceMetrics{
+			{
+				Resource: &resource.Resource{},
+				ScopeMetrics: []*metrics.ScopeMetrics{
+					{
+						Scope: &common.InstrumentationScope{Name: "lib"},
+						Metrics: []*metrics.Metric{
+							{
+								Name: "mtls-counter",
+								Data: &metrics.Metric_Sum{
+									Sum: &metrics.Sum{
+										AggregationTemporality: metrics.AggregationTemporality_AGGREGATION_TEMPORALITY_CUMULATIVE,
+										IsMonotonic:            true,
+										DataPoints: []*metrics.NumberDataPoint{
+											{
+												TimeUnixNano: uint64(time.Now().UnixNano()),
+												Value:        &metrics.NumberDataPoint_AsInt{AsInt: 1},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	body, err := proto.Marshal(msg)
+	require.NoError(t, err)
+
+	// Send the message as binary protobuf via HTTPS using the client certificate
+	client := &http.Client{
+		Transport: &http.Transport{TLSClientConfig: clientTLS},
+		Timeout:   5 * time.Second,
+	}
+	defer client.CloseIdleConnections()
+
+	addr := plugin.listener.Addr().String()
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, "https://"+addr+"/v1/metrics", bytes.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/x-protobuf")
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+	respBody, err := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode, string(respBody))
 
 	require.Empty(t, acc.Errors)
 	actual := acc.GetTelegrafMetrics()

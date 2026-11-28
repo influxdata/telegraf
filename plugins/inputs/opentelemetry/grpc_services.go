@@ -2,14 +2,46 @@ package opentelemetry
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
+	"time"
 
 	"github.com/influxdata/influxdb-observability/common"
 	"github.com/influxdata/influxdb-observability/otel2influx"
 	"go.opentelemetry.io/collector/pdata/plog/plogotlp"
 	"go.opentelemetry.io/collector/pdata/pmetric/pmetricotlp"
 	"go.opentelemetry.io/collector/pdata/ptrace/ptraceotlp"
+	pprofileotlp "go.opentelemetry.io/proto/otlp/collector/profiles/v1development"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+
+	"github.com/influxdata/telegraf"
 )
+
+func (o *OpenTelemetry) startGRPCService(acc telegraf.Accumulator, tlsCfg *tls.Config) {
+	var grpcOptions []grpc.ServerOption
+	if tlsCfg != nil {
+		grpcOptions = append(grpcOptions, grpc.Creds(credentials.NewTLS(tlsCfg)))
+	}
+	if o.Timeout > 0 {
+		grpcOptions = append(grpcOptions, grpc.ConnectionTimeout(time.Duration(o.Timeout)))
+	}
+	if o.MaxMsgSize > 0 {
+		grpcOptions = append(grpcOptions, grpc.MaxRecvMsgSize(int(o.MaxMsgSize)))
+	}
+
+	o.grpcServer = grpc.NewServer(grpcOptions...)
+	ptraceotlp.RegisterGRPCServer(o.grpcServer, o.srvs.traces)
+	pmetricotlp.RegisterGRPCServer(o.grpcServer, o.srvs.metrics)
+	plogotlp.RegisterGRPCServer(o.grpcServer, o.srvs.logs)
+	pprofileotlp.RegisterProfilesServiceServer(o.grpcServer, o.srvs.profiles)
+
+	o.wg.Go(func() {
+		if err := o.grpcServer.Serve(o.listener); err != nil {
+			acc.AddError(fmt.Errorf("serving OpenTelemetry gRPC service failed: %w", err))
+		}
+	})
+}
 
 type traceService struct {
 	ptraceotlp.UnimplementedGRPCServer
