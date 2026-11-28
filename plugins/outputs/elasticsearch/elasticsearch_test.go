@@ -1684,6 +1684,11 @@ func TestClientDiscoveryEmpty(t *testing.T) {
 			version:  "7.17.29",
 			response: `{"nodes":{"master":{"roles":["master"],"http":{"publish_address":"127.0.0.1:9200"}}}}`,
 		},
+		{
+			name:     "v8 master-only nodes",
+			version:  "8.19.18",
+			response: `{"nodes":{"master":{"roles":["master"],"http":{"publish_address":"127.0.0.1:9200"}}}}`,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
