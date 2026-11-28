@@ -27,6 +27,9 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
+// The v8 SDK checks X-Elastic-Product on its first successful API response,
+// so mocks serving v8 bulk or template requests set the header.
+
 const servicePort = "9200"
 
 func TestConnect(t *testing.T) {
@@ -1597,7 +1600,7 @@ func TestClientDiscovery(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var discoveredWrites, seedWrites, discoveries atomic.Int32
 			target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.Header().Set("X-Elastic-Product", "Elasticsearch") // v8 SDK product check on bulk responses.
+				w.Header().Set("X-Elastic-Product", "Elasticsearch")
 				if r.URL.Path == "/_bulk" {
 					discoveredWrites.Add(1)
 				}
@@ -1607,7 +1610,6 @@ func TestClientDiscovery(t *testing.T) {
 			}))
 			defer target.Close()
 			seed := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.Header().Set("X-Elastic-Product", "Elasticsearch")
 				switch r.URL.Path {
 				case "/_nodes/http":
 					discoveries.Add(1)
