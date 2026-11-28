@@ -33,7 +33,7 @@ func (a *Elasticsearch) newClientV8() (client, error) {
 		DisableRetry:          true,
 		CompressRequestBody:   a.EnableGzip,
 		DiscoverNodesInterval: discoveryInterval,
-		Interceptors:          []elastictransport.InterceptorFunc{a.authInterceptor()},
+		Interceptors:          []elastictransport.InterceptorFunc{a.authInterceptor},
 	})
 	if err != nil {
 		return nil, err
@@ -51,17 +51,15 @@ func (a *Elasticsearch) newClientV8() (client, error) {
 	return &clientV8{client: c, log: a.Log}, nil
 }
 
-func (a *Elasticsearch) authInterceptor() elastictransport.InterceptorFunc {
-	return func(next elastictransport.RoundTripFunc) elastictransport.RoundTripFunc {
-		return func(req *http.Request) (*http.Response, error) {
-			if err := a.setAuth(req); err != nil {
-				if req.Body != nil {
-					req.Body.Close()
-				}
-				return nil, err
+func (a *Elasticsearch) authInterceptor(next elastictransport.RoundTripFunc) elastictransport.RoundTripFunc {
+	return func(req *http.Request) (*http.Response, error) {
+		if err := a.setAuth(req); err != nil {
+			if req.Body != nil {
+				req.Body.Close()
 			}
-			return next(req)
+			return nil, err
 		}
+		return next(req)
 	}
 }
 
