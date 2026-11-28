@@ -802,12 +802,12 @@ func TestWriteAuthentication(t *testing.T) {
 			name:     "rotating basic credentials",
 			username: "@{test:credential}",
 			password: "@{test:credential}",
-			expected: [][]string{{"Basic Zmlyc3Q6Zmlyc3Q="}, {"Basic c2Vjb25kOnNlY29uZA=="}},
+			expected: [][]string{{"Basic dGVzdC1maXJzdDp0ZXN0LWZpcnN0"}, {"Basic dGVzdC1zZWNvbmQ6dGVzdC1zZWNvbmQ="}},
 		},
 		{
 			name:        "rotating bearer token",
 			bearerToken: "@{test:credential}",
-			expected:    [][]string{{"Bearer first"}, {"Bearer second"}},
+			expected:    [][]string{{"Bearer test-first"}, {"Bearer test-second"}},
 		},
 		{
 			name:        "basic credentials precede bearer token",
@@ -815,32 +815,32 @@ func TestWriteAuthentication(t *testing.T) {
 			password:    "@{test:credential}",
 			bearerToken: "@{test:credential}",
 			expected: [][]string{
-				{"Basic Zmlyc3Q6Zmlyc3Q=", "Bearer first"},
-				{"Basic c2Vjb25kOnNlY29uZA==", "Bearer second"},
+				{"Basic dGVzdC1maXJzdDp0ZXN0LWZpcnN0", "Bearer test-first"},
+				{"Basic dGVzdC1zZWNvbmQ6dGVzdC1zZWNvbmQ=", "Bearer test-second"},
 			},
 		},
 		{
 			name:     "literal URL password",
-			userinfo: "user:%40%7Ba%3Ab%7D",
-			expected: [][]string{{"Basic dXNlcjpAe2E6Yn0="}, {"Basic dXNlcjpAe2E6Yn0="}},
+			userinfo: "user:%40%7Btest%3Apassword%7D",
+			expected: [][]string{{"Basic dXNlcjpAe3Rlc3Q6cGFzc3dvcmR9"}, {"Basic dXNlcjpAe3Rlc3Q6cGFzc3dvcmR9"}},
 		},
 		{
 			name:     "configured credentials override URL credentials",
 			userinfo: "urluser:urlpassword",
 			username: "@{test:credential}",
 			password: "@{test:credential}",
-			expected: [][]string{{"Basic Zmlyc3Q6Zmlyc3Q="}, {"Basic c2Vjb25kOnNlY29uZA=="}},
+			expected: [][]string{{"Basic dGVzdC1maXJzdDp0ZXN0LWZpcnN0"}, {"Basic dGVzdC1zZWNvbmQ6dGVzdC1zZWNvbmQ="}},
 		},
 		{
 			name:     "basic credentials precede configured authorization",
 			username: "@{test:credential}",
 			password: "@{test:credential}",
 			headers: map[string]any{
-				"Authorization": []any{"Custom first", "Custom second"},
+				"Authorization": []any{"Test first", "Test second"},
 			},
 			expected: [][]string{
-				{"Basic Zmlyc3Q6Zmlyc3Q=", "Custom first", "Custom second"},
-				{"Basic c2Vjb25kOnNlY29uZA==", "Custom first", "Custom second"},
+				{"Basic dGVzdC1maXJzdDp0ZXN0LWZpcnN0", "Test first", "Test second"},
+				{"Basic dGVzdC1zZWNvbmQ6dGVzdC1zZWNvbmQ=", "Test first", "Test second"},
 			},
 		},
 	}
@@ -866,7 +866,7 @@ func TestWriteAuthentication(t *testing.T) {
 						Timeout:         config.Duration(5 * time.Second),
 						Log:             testutil.Logger{},
 					}
-					credential := "first"
+					credential := "test-first"
 					resolvers := map[string]telegraf.ResolveFunc{
 						"@{test:credential}": func() ([]byte, bool, error) {
 							return []byte(credential), true, nil
@@ -880,7 +880,7 @@ func TestWriteAuthentication(t *testing.T) {
 					defer plugin.Close()
 
 					require.NoError(t, plugin.Write([]telegraf.Metric{testutil.TestMetric(1)}))
-					credential = "second"
+					credential = "test-second"
 					require.NoError(t, plugin.Write([]telegraf.Metric{testutil.TestMetric(1)}))
 
 					headers := server.headers()
