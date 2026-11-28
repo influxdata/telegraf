@@ -76,7 +76,7 @@ help:
 	@echo '  all          - download dependencies and compile telegraf binary'
 	@echo '  config       - generate the config from current repo state'
 	@echo '  deps         - download dependencies'
-	@echo '  docs         - embed sample-configurations into READMEs'
+	@echo '  docs         - generate CLI documentation and embed sample-configurations into READMEs'
 	@echo '  telegraf     - compile telegraf binary'
 	@echo '  test         - run short unit tests'
 	@echo '  fmt          - format source files'
@@ -108,6 +108,7 @@ version:
 	@echo $(version)-$(commit)
 
 build_tools:
+	$(HOSTGO) build -o ./tools/cli_flags/cli_flags$(EXEEXT) ./tools/cli_flags
 	$(HOSTGO) build -o ./tools/custom_builder/custom_builder$(EXEEXT) ./tools/custom_builder
 	$(HOSTGO) build -o ./tools/license_checker/license_checker$(EXEEXT) ./tools/license_checker
 	$(HOSTGO) build -o ./tools/readme_config_includer/generator$(EXEEXT) ./tools/readme_config_includer/generator.go
@@ -124,7 +125,10 @@ config:
 	$(HOSTGO) run ./cmd/telegraf config > etc/telegraf.conf
 
 .PHONY: docs
-docs: build_tools embed_readme_common embed_readme_inputs embed_readme_outputs embed_readme_processors embed_readme_aggregators embed_readme_secretstores
+docs: build_tools embed_readme_common embed_readme_inputs embed_readme_outputs embed_readme_processors embed_readme_aggregators embed_readme_secretstores cli_flags
+
+cli_flags:
+	./tools/cli_flags/cli_flags$(EXEEXT) docs/COMMANDS_AND_FLAGS.md
 
 .PHONY: build
 build:
@@ -228,6 +232,8 @@ clean:
 	rm -rf build
 	rm -rf cmd/telegraf/resource.syso
 	rm -rf cmd/telegraf/versioninfo.json
+	rm -f tools/cli_flags/cli_flags
+	rm -f tools/cli_flags/cli_flags.exe
 	rm -rf tools/config_includer/generator
 	rm -rf tools/config_includer/generator.exe
 	rm -rf tools/custom_builder/custom_builder

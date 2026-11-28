@@ -1,0 +1,20 @@
+# Telegraf Commands & Flags
+
+```sh
+telegraf --config config.toml
+telegraf config create --input-filter cpu > telegraf.conf
+telegraf version
+```
+
+Use `telegraf help` (alias `telegraf h`) to list commands.
+Pass `--help` or `-h` after any command to see its usage.
+The service command and service-related flags are Windows only.
+
+## Global options
+{{ .GlobalFlags }}{{ range .Sections }}
+{{ repeat "#" .Level }} {{ .Path }}
+
+{{ .Usage }}
+{{ if .ArgsUsage }}
+`{{ .Path }} {{ .ArgsUsage }}`
+{{ end }}{{ .Flags }}{{ end -}}

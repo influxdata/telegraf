@@ -1,57 +1,285 @@
 # Telegraf Commands & Flags
 
-The following page describes some of the commands and flags available via the
-Telegraf command line interface.
-
-## Usage
-
-General usage of Telegraf, requires passing in at least one config file with
-the plugins the user wishes to use:
-
-```bash
+```sh
 telegraf --config config.toml
-```
-
-## Help
-
-To get the full list of subcommands and flags run:
-
-```bash
-telegraf help
-```
-
-Here are some commonly used flags that users should be aware of:
-
-* `--config-directory`: Read all config files from a directory
-* `--debug`: Enable additional debug logging
-* `--once`: Run one collection and flush interval then exit
-* `--test`: Run only inputs, output to stdout, and exit
-
-Check out the full help out for more available flags and options.
-
-## Version
-
-While telegraf will print out the version when running, if a user is uncertain
-what version their binary is, run the version subcommand:
-
-```bash
+telegraf config create --input-filter cpu > telegraf.conf
 telegraf version
 ```
 
-## Config
+Use `telegraf help` (alias `telegraf h`) to list commands.
+Pass `--help` or `-h` after any command to see its usage.
+The service command and service-related flags are Windows only.
 
-The config subcommand allows users to print out a sample configuration to
-stdout. This subcommand can very quickly print out the default values for all
-or any of the plugins available in Telegraf.
+## Global options
 
-For example to print the example config for all plugins run:
+- `--test-wait` `<value>` — wait up to this many seconds for service inputs to
+  complete in test mode
+- `--config-url-retry-attempts` `<value>` — Number of attempts to obtain a
+  remote configuration via a URL during startup. Set to -1 for unlimited
+  attempts.
+- `--usage` `<value>` — print usage for a plugin, ie, 'telegraf --usage mysql'
+- `--pprof-addr` `<value>` — pprof host/IP and port to listen on (e.g.
+  'localhost:6060')
+- `--watch-config` `<value>` — monitoring config changes [notify, poll] of
+  --config and --config-directory options. Notify supports linux, *bsd, and
+  macOS. Poll is required for Windows and checks every 250ms.
+- `--watch-debounce-interval` `<value>` — Time duration to wait after a config
+  change before reloading
+- `--pidfile` `<value>` — file to write our pid to
+- `--password` `<value>` — password to unlock secret stores
+- `--old-env-behavior` — switch back to pre v1.27 environment replacement
+  behavior
+- `--print-plugin-config-source` — print the source for a given plugin
+- `--once` — run one gather and exit
+- `--debug` — turn on debug logging
+- `--quiet` — run in quiet mode
+- `--unprotected` — do not protect secrets in memory
+- `--test` — enable test mode: gather metrics, print them out, and exit. Note:
+  Test mode only runs inputs, processors, and aggregators, but not outputs
+- `--select` `<value>` — enable only plugins with labels matching the given
+  key-value selection. If no selectors are provided, all plugins are enabled.
+  Multiple key-value pairs in an option will be combined by AND, multiple
+  options are combined by OR. Key and value are separated by an equal sign,
+  multiple pairs are separated by semi-colon, values do accept wildcards.
+- `--watch-interval` `<value>` — Time duration to check for updates to config
+  files specified by --config and --config-directory options. Use with
+  '--watch-config poll'
+- `--config-url-watch-interval` `<value>` — Time duration to check for updates
+  to URL based configuration files
+- `--deprecation-list` — print all deprecated plugins or plugin options
+- `--input-list` — print available input plugins
+- `--output-list` — print available output plugins
+- `--version` — DEPRECATED: display the version and exit
+- `--sample-config` — DEPRECATED: print out full sample configuration
+- `--plugin-directory` `<value>` — DEPRECATED: path to directory containing
+  external plugins
+- `--config` `<value>` — configuration file to load
+- `--config-directory` `<value>` — directory containing additional *.conf
+  files
+- `--section-filter` `<value>` — filter the sections to print, separator is
+  ':'. Valid values are 'agent', 'global_tags', 'outputs', 'processors',
+  'aggregators' and 'inputs'
+- `--input-filter` `<value>` — filter the inputs to enable, separator is ':'
+- `--output-filter` `<value>` — filter the outputs to enable, separator is ':'
+- `--aggregator-filter` `<value>` — filter the aggregators to enable,
+  separator is ':'
+- `--processor-filter` `<value>` — filter the processors to enable, separator
+  is ':'
+- `--secretstore-filter` `<value>` — filter the secret stores to enable,
+  separator is ':'
+- `--strict-env-handling` — enforces strict and secure handling of environment
+  variables; will not work with non-string settings
+- `--non-strict-env-handling` — allow unsafe non-strict handling of
+  environment variables to replace non-string settings
+- `--service` `<value>` — operate on the service (windows only)
+- `--service-name` `<value>` — service name (windows only)
+- `--service-display-name` `<value>` — service display name (windows only)
+- `--service-restart-delay` `<value>` — duration for delaying the Windows
+  service restart on failure
+- `--service-auto-restart` — auto restart service on failure (windows only)
+- `--console` — run as console application (windows only)
 
-```bash
-telegraf config > telegraf.conf
-```
+## telegraf version
 
-If a user only wanted certain inputs or outputs, then the filters can be used:
+print current version to stdout
 
-```bash
-telegraf config --input-filter cpu --output-filter influxdb
-```
+## telegraf config
+
+commands for generating and migrating configurations
+
+- `--config` `<value>` — configuration file to load
+- `--config-directory` `<value>` — directory containing additional *.conf
+  files
+- `--section-filter` `<value>` — filter the sections to print, separator is
+  ':'. Valid values are 'agent', 'global_tags', 'outputs', 'processors',
+  'aggregators' and 'inputs'
+- `--input-filter` `<value>` — filter the inputs to enable, separator is ':'
+- `--output-filter` `<value>` — filter the outputs to enable, separator is ':'
+- `--aggregator-filter` `<value>` — filter the aggregators to enable,
+  separator is ':'
+- `--processor-filter` `<value>` — filter the processors to enable, separator
+  is ':'
+- `--secretstore-filter` `<value>` — filter the secret stores to enable,
+  separator is ':'
+- `--strict-env-handling` — enforces strict and secure handling of environment
+  variables; will not work with non-string settings
+- `--non-strict-env-handling` — allow unsafe non-strict handling of
+  environment variables to replace non-string settings
+
+### telegraf config check
+
+check configuration file(s) for issues
+
+- `--config` `<value>` — configuration file to load
+- `--config-directory` `<value>` — directory containing additional *.conf
+  files
+- `--section-filter` `<value>` — filter the sections to print, separator is
+  ':'. Valid values are 'agent', 'global_tags', 'outputs', 'processors',
+  'aggregators' and 'inputs'
+- `--input-filter` `<value>` — filter the inputs to enable, separator is ':'
+- `--output-filter` `<value>` — filter the outputs to enable, separator is ':'
+- `--aggregator-filter` `<value>` — filter the aggregators to enable,
+  separator is ':'
+- `--processor-filter` `<value>` — filter the processors to enable, separator
+  is ':'
+- `--secretstore-filter` `<value>` — filter the secret stores to enable,
+  separator is ':'
+- `--strict-env-handling` — enforces strict and secure handling of environment
+  variables; will not work with non-string settings
+- `--non-strict-env-handling` — allow unsafe non-strict handling of
+  environment variables to replace non-string settings
+
+### telegraf config create
+
+create a full sample configuration and show it
+
+- `--config` `<value>` — configuration file to load
+- `--config-directory` `<value>` — directory containing additional *.conf
+  files
+- `--section-filter` `<value>` — filter the sections to print, separator is
+  ':'. Valid values are 'agent', 'global_tags', 'outputs', 'processors',
+  'aggregators' and 'inputs'
+- `--input-filter` `<value>` — filter the inputs to enable, separator is ':'
+- `--output-filter` `<value>` — filter the outputs to enable, separator is ':'
+- `--aggregator-filter` `<value>` — filter the aggregators to enable,
+  separator is ':'
+- `--processor-filter` `<value>` — filter the processors to enable, separator
+  is ':'
+- `--secretstore-filter` `<value>` — filter the secret stores to enable,
+  separator is ':'
+- `--strict-env-handling` — enforces strict and secure handling of environment
+  variables; will not work with non-string settings
+- `--non-strict-env-handling` — allow unsafe non-strict handling of
+  environment variables to replace non-string settings
+
+### telegraf config migrate
+
+migrate deprecated plugins and options of the configuration(s)
+
+- `--config` `<value>` — configuration file to load
+- `--config-directory` `<value>` — directory containing additional *.conf
+  files
+- `--section-filter` `<value>` — filter the sections to print, separator is
+  ':'. Valid values are 'agent', 'global_tags', 'outputs', 'processors',
+  'aggregators' and 'inputs'
+- `--input-filter` `<value>` — filter the inputs to enable, separator is ':'
+- `--output-filter` `<value>` — filter the outputs to enable, separator is ':'
+- `--aggregator-filter` `<value>` — filter the aggregators to enable,
+  separator is ':'
+- `--processor-filter` `<value>` — filter the processors to enable, separator
+  is ':'
+- `--secretstore-filter` `<value>` — filter the secret stores to enable,
+  separator is ':'
+- `--strict-env-handling` — enforces strict and secure handling of environment
+  variables; will not work with non-string settings
+- `--non-strict-env-handling` — allow unsafe non-strict handling of
+  environment variables to replace non-string settings
+- `--force` — forces overwriting of an existing migration file
+
+## telegraf secrets
+
+commands for listing, adding and removing secrets on all known secret stores
+
+### telegraf secrets list
+
+list known secrets and secret stores
+
+`telegraf secrets list [secret store ID]...[secret store ID]`
+
+- `--reveal-secret` — also print the secret value
+
+### telegraf secrets get
+
+retrieves value of given secret from given store
+
+`telegraf secrets get <secret store ID> <secret key>`
+
+### telegraf secrets set
+
+create or modify a secret in the given store
+
+`telegraf secrets set <secret store ID> <secret key>`
+
+### telegraf secrets remove
+
+remove a secret from the given store
+
+`telegraf secrets remove <secret store ID> <secret key>`
+
+## telegraf plugins
+
+commands for printing available plugins
+
+- `--deprecated` — print only deprecated plugins
+
+### telegraf plugins inputs
+
+Print available input plugins
+
+- `--deprecated` — print only deprecated plugins
+
+### telegraf plugins outputs
+
+Print available output plugins
+
+- `--deprecated` — print only deprecated plugins
+
+### telegraf plugins processors
+
+Print available processor plugins
+
+- `--deprecated` — print only deprecated plugins
+
+### telegraf plugins aggregators
+
+Print available aggregator plugins
+
+- `--deprecated` — print only deprecated plugins
+
+### telegraf plugins secretstores
+
+Print available secretstore plugins
+
+- `--deprecated` — print only deprecated plugins
+
+### telegraf plugins parsers
+
+Print available parser plugins
+
+- `--deprecated` — print only deprecated plugins
+
+### telegraf plugins serializers
+
+Print available serializer plugins
+
+- `--deprecated` — print only deprecated plugins
+
+## telegraf service
+
+commands for operate on the Windows service
+
+### telegraf service install
+
+install Telegraf as a Windows service
+
+- `--display-name` `<value>` — service name as displayed in the service
+  manager
+- `--restart-delay` `<value>` — duration for delaying the service restart on
+  failure
+- `--auto-restart` — enable automatic service restart on failure
+
+### telegraf service uninstall
+
+remove the Telegraf Windows service
+
+### telegraf service start
+
+start the Telegraf Windows service
+
+### telegraf service stop
+
+stop the Telegraf Windows service
+
+### telegraf service status
+
+query the Telegraf Windows service status
