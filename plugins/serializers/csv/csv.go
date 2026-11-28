@@ -106,7 +106,10 @@ func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 
 	// Finish up
 	s.writer.Flush()
-	return s.buffer.Bytes(), nil
+
+	// Return a copy as the buffer is reused by the next call
+	out := make([]byte, 0, s.buffer.Len())
+	return append(out, s.buffer.Bytes()...), nil
 }
 
 func (s *Serializer) writeHeader(metric telegraf.Metric) error {
